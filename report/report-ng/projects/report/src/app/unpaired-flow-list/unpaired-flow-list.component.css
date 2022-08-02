@@ -1,0 +1,19 @@
+app-flow-nav-list {
+    width: calc(50% - 36px);
+    display: inline-block;
+    vertical-align: top;
+}
+
+mat-list {
+    display: inline-block;
+    vertical-align: top;
+}
+
+button {
+    background: none;
+    border: none;
+}
+
+mat-icon {
+    vertical-align: middle;
+}

@@ -1,0 +1,19 @@
+<div [ngStyle]="style" class="action" (click)="displayTransmission()" [ngClass]="class()">
+  <mat-icon>psychology</mat-icon>
+  <mat-icon *ngIf="hasBasis">foundation</mat-icon>
+  <span class="label">{{action.label}}</span>
+  <span class="tag" *ngFor="let tag of action.tags">{{tag}}</span>
+  <mat-icon *ngIf="hasActual">visibility</mat-icon>
+  <mat-icon *ngIf="assertionPassed">check_circle_outline</mat-icon>
+  <mat-icon *ngIf="assertionFailed">error_outline</mat-icon>
+  <div *ngIf="action.from < action.to" class="arrow" title="{{title}}">
+    <svg width="100%" height="14" preserveAspectRatio="xMaxYMid slice" viewBox="0 0 1400 14">
+      <polygon points="1400,7 1385,1 1390,6 0,6 0,8 1390,8 1385,13 1400,7"></polygon>
+    </svg>
+  </div>
+  <div *ngIf="action.from > action.to" class="arrow" title="{{title}}">
+    <svg width="100%" height="14" preserveAspectRatio="xMinYMid slice" viewBox="0 0 1400 14">
+      <polygon points="0,7 15,1 10,6 1400,6 1400,8 10,8 15,13 0,7"></polygon>
+    </svg>
+  </div>
+</div>

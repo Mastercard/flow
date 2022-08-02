@@ -1,0 +1,37 @@
+<mat-accordion>
+    <mat-expansion-panel *ngFor="let residue of residues; first as isFirst" [expanded]="isFirst">
+        <mat-expansion-panel-header>
+            <mat-panel-title>
+                {{residue.name}}
+            </mat-panel-title>
+            <mat-panel-description>
+                <mat-icon *ngIf="assertionPassed( residue )" class="pass">check_circle_outline</mat-icon>
+                <mat-icon *ngIf="assertionFailed( residue )" class="fail">error_outline</mat-icon>
+            </mat-panel-description>
+        </mat-expansion-panel-header>
+        <table>
+            <tr>
+                <th>Model</th>
+                <td>
+                    <pre>{{residue.raw | json}}</pre>
+                </td>
+            </tr>
+            <tr *ngIf="residue.full">
+                <th>Full</th>
+                <td>
+                    <td-ngx-text-diff [left]="residue.full.expect||''" [right]="residue.full.actual||''"
+                        [showToolbar]=false [format]="diffFormat">
+                    </td-ngx-text-diff>
+                </td>
+            </tr>
+            <tr *ngIf="residue.masked">
+                <th>Masked</th>
+                <td>
+                    <td-ngx-text-diff [left]="residue.masked.expect||''" [right]="residue.masked.actual||''"
+                        [showToolbar]=false [format]="diffFormat">
+                    </td-ngx-text-diff>
+                </td>
+            </tr>
+        </table>
+    </mat-expansion-panel>
+</mat-accordion>

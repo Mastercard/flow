@@ -1,0 +1,10 @@
+.no_data_warning {
+  color: red;
+  user-select: none;
+  font-size: large;
+}
+
+mat-icon {
+  vertical-align: middle;
+  padding-left: 25px;
+}

@@ -1,0 +1,44 @@
+.detail {
+  font-family: monospace;
+  white-space: pre;
+}
+
+.value {
+  padding-left: 1ch;
+}
+
+.ascii {
+  padding-left: 1ch;
+}
+
+.line {
+  font-family: monospace;
+  white-space: pre;
+}
+
+.displacement {
+  user-select: none;
+  padding-right: 0.5ch;
+}
+
+.hex {
+  padding-left: 0.5ch;
+  padding-right: 0.5ch;
+}
+
+.bar {
+  user-select: none;
+  padding-left: 0.5ch;
+  padding-right: 0.5ch;
+}
+
+.printable {
+  user-select: none;
+}
+
+.hovered {
+  background-color: #FF000055;
+}
+.same_value {
+  background-color: #00FF0055;
+}

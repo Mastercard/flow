@@ -1,0 +1,126 @@
+<mat-accordion id="summary">
+
+    <mat-expansion-panel id="removed" [disabled]="removedEntries.length ===0">
+        <mat-expansion-panel-header collapsedHeight="auto" expandedHeight="auto">
+            <mat-panel-title>
+                <h1>Removed {{removedEntries.length}}</h1>
+            </mat-panel-title>
+            <mat-panel-description>
+                <div>
+                    <div class="tag_display">
+                        On tags:
+                        <app-tag *ngFor="let tag of removedTags" [tag]="tag"></app-tag>
+                    </div>
+                    <div class="tag_display">
+                        {{deadTags.length}} deleted:
+                        <app-tag *ngFor="let tag of deadTags" [tag]="tag"></app-tag>
+                    </div>
+                </div>
+            </mat-panel-description>
+        </mat-expansion-panel-header>
+        <app-flow-nav-list [entries]="removedEntries" [basePath]="leftBasePath()" [showResult]="false">
+        </app-flow-nav-list>
+    </mat-expansion-panel>
+
+    <mat-expansion-panel id="added" [disabled]="addedEntries.length ===0">
+        <mat-expansion-panel-header collapsedHeight="auto" expandedHeight="auto">
+            <mat-panel-title>
+                <h1>Added {{addedEntries.length}}</h1>
+            </mat-panel-title>
+            <mat-panel-description>
+                <div>
+                    <div class="tag_display">
+                        On tags:
+                        <app-tag *ngFor="let tag of addedTags" [tag]="tag"></app-tag>
+                    </div>
+                    <div class="tag_display">
+                        {{deadTags.length}} added:
+                        <app-tag *ngFor="let tag of freshTags" [tag]="tag"></app-tag>
+                    </div>
+                </div>
+            </mat-panel-description>
+        </mat-expansion-panel-header>
+        <app-flow-nav-list [entries]="addedEntries" [basePath]="rightBasePath()" [showResult]="false">
+        </app-flow-nav-list>
+    </mat-expansion-panel>
+
+    <mat-expansion-panel id="changed" [disabled]="changedFlowCount ===0">
+        <mat-expansion-panel-header collapsedHeight="auto" expandedHeight="auto">
+            <mat-panel-title>
+                <h1>Changed {{changedFlowCount}}</h1>
+            </mat-panel-title>
+            <mat-panel-description>
+                <div>
+                    <div class="tag_display">
+                        On tags:
+                        <app-tag *ngFor="let tag of changedTags" [tag]="tag"></app-tag>
+                    </div>
+                    <div class="tag_display">
+                        {{alwaysTouchedTags.length}} always changed:
+                        <app-tag *ngFor="let tag of alwaysTouchedTags" [tag]="tag"></app-tag>
+                    </div>
+                </div>
+            </mat-panel-description>
+        </mat-expansion-panel-header>
+
+        <mat-accordion id="changes">
+            <mat-expansion-panel *ngFor="let change of changes">
+                <mat-expansion-panel-header collapsedHeight="auto" expandedHeight="auto">
+                    <mat-panel-title>
+                        {{changeTitle( change )}}
+                    </mat-panel-title>
+                    <mat-panel-description>
+                        <div class="description">
+                            <div class="tag_display">
+                                <app-tag *ngFor="let tag of tags( change )" [tag]="tag"></app-tag>
+                            </div>
+                            <div class="diff_display">
+                                <span *ngFor="let diff of change.diffs"
+                                    class="{{diff[0] === -1 ? 'rem' : 'add'}}">{{diff[1]}}</span>
+                            </div>
+                        </div>
+                    </mat-panel-description>
+                </mat-expansion-panel-header>
+                <app-flow-nav-list class="change" id="left" [entries]="leftEntries(change)" [basePath]="leftBasePath()"
+                    [showResult]="false">
+                </app-flow-nav-list>
+
+                <mat-list>
+                    <mat-list-item *ngFor="let entry of leftEntries(change); let i=index">
+                        <button class="diff_view_trigger" (click)="viewChange( change.pairs[i] )">
+                            <mat-icon>compare</mat-icon>
+                        </button>
+                    </mat-list-item>
+                </mat-list>
+
+                <app-flow-nav-list class="change" id="right" [entries]="rightEntries(change)"
+                    [basePath]="rightBasePath()" [showResult]="false">
+                </app-flow-nav-list>
+            </mat-expansion-panel>
+        </mat-accordion>
+    </mat-expansion-panel>
+
+    <mat-expansion-panel id="unchanged" [disabled]="unchangedEntries.length ===0">
+        <mat-expansion-panel-header collapsedHeight="auto" expandedHeight="auto">
+            <mat-panel-title>
+                <h1>Unchanged {{unchangedEntries.length}}</h1>
+            </mat-panel-title>
+            <mat-panel-description>
+                <div>
+                    <div class="tag_display">
+                        On tags:
+                        <app-tag *ngFor="let tag of unchangedTags" [tag]="tag"></app-tag>
+                    </div>
+                    <div class="tag_display">
+                        {{untouchedTags.length}} never changed:
+                        <app-tag *ngFor="let tag of untouchedTags" [tag]="tag"></app-tag>
+                    </div>
+                </div>
+            </mat-panel-description>
+        </mat-expansion-panel-header>
+
+        <app-flow-nav-list [entries]="unchangedEntries" [basePath]="rightBasePath()" [showResult]="false">
+        </app-flow-nav-list>
+    </mat-expansion-panel>
+
+</mat-accordion>

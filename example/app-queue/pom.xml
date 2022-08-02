@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.mastercard.test.flow.example</groupId>
+		<artifactId>app</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+	<artifactId>app-queue</artifactId>
+	<packaging>jar</packaging>
+	<description>Service that handles deferred processing</description>
+
+	<properties>
+		<main.class>com.mastercard.test.flow.example.app.queue.Main</main.class>
+		<exec.name>queue</exec.name>
+	</properties>
+
+	<dependencies>
+
+		<dependency>
+			<!-- application framework -->
+			<groupId>${project.groupId}</groupId>
+			<artifactId>app-api</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<!-- Test data -->
+			<groupId>${project.groupId}</groupId>
+			<artifactId>app-model</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- Test utilities -->
+			<groupId>${project.groupId}</groupId>
+			<artifactId>app-assert</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<!-- Makes a standalone executable jar -->
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+			</plugin>
+
+			<plugin>
+				<!-- makes that jar `chmod +x` executable -->
+				<groupId>org.skife.maven</groupId>
+				<artifactId>really-executable-jar-maven-plugin</artifactId>
+			</plugin>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

@@ -1,0 +1,75 @@
+div#change_controls {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: stretch;
+}
+
+#pair_links {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: stretch;
+}
+
+#nowt {
+    flex-grow: 1;
+    text-align: center;
+}
+
+.pair_link {
+    flex-grow: 1;
+}
+
+.drawer {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: stretch;
+}
+
+
+#line_count {
+    color: black;
+}
+
+#diff_type {
+    float: right;
+}
+
+#context {
+    float: right;
+}
+
+#top_nav {
+    float: right;
+}
+
+#bottom_nav {
+    float: right;
+}
+
+mat-drawer-content {
+    /* ensures that all of the controls are visible without scrolling */
+    min-height: calc(100vh - 100px);
+}
+
+.td-wrapper .line-number-col {
+    user-select: none;
+}
+
+.td-wrapper .line-number-col-left {
+    user-select: none;
+}
+
+.td-wrapper .prefix-col {
+    user-select: none;
+}
+
+.td-wrapper {
+    font-family: monospace;
+}

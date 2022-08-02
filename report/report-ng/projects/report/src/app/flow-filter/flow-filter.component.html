@@ -1,0 +1,35 @@
+<mat-expansion-panel id="filters" cdkDropListGroup>
+    <mat-expansion-panel-header>
+        <mat-panel-title>Filters</mat-panel-title>
+        <mat-panel-description>
+            <span class="description_match_out">{{descFilter}}</span>
+            <span class="include filter" *ngFor="let i of includeFilters">{{i}}</span>
+            <span class="exclude filter" *ngFor="let e of excludeFilters">{{e}}</span>
+            <mat-icon *ngIf="filterService.isLocked()">lock</mat-icon>
+        </mat-panel-description>
+    </mat-expansion-panel-header>
+    <div class="line">
+        <mat-form-field class="description_match_in" appearance="fill">
+            <mat-label>Description</mat-label>
+            <input id="desc_filter_input" matInput placeholder="matches..." type="text" [(ngModel)]="descFilter"
+                (ngModelChange)="descFilterUpdated()" [disabled]="filterService.isLocked()">
+            <span id="desc_clear_button" class="clear_button" *ngIf="descFilter && !filterService.isLocked()" matSuffix
+                mat-icon-button aria-label="Clear" (click)="descFilter='';descFilterUpdated()">
+                <mat-icon>close</mat-icon>
+            </span>
+        </mat-form-field>
+        <mat-button-toggle (change)="lock($event)" [checked]="filterService.isLocked()" matTooltip="Lock filters">
+            <mat-icon>lock</mat-icon>
+        </mat-button-toggle>
+
+        <mat-button-toggle (change)="clearFilters($event)" matTooltip="Clear all filters"
+            [disabled]="filterService.isLocked()">
+            <mat-icon>clear</mat-icon>
+        </mat-button-toggle>
+
+    </div>
+    <app-tag-filter id="tag_include" [type]="includeType" [tags]="tags" [disabled]="filterService.isLocked()">
+    </app-tag-filter>
+    <app-tag-filter id="tag_exclude" [type]="excludeType" [tags]="tags" [disabled]="filterService.isLocked()">
+    </app-tag-filter>
+</mat-expansion-panel>

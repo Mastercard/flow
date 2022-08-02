@@ -1,0 +1,38 @@
+.log_table {
+  overflow: auto;
+}
+
+.time {
+  padding: 3px;
+}
+
+.time_delta {
+  font-weight: lighter;
+  user-select: none;
+}
+
+.level {
+  padding: 3px;
+  font-weight: bolder;
+}
+
+.source {
+  padding: 3px;
+}
+
+.controls {
+  position: sticky;
+  top: 0;
+}
+
+.clear_button {
+  cursor: pointer;
+}
+
+.no_line_warning {
+  font-style: italic;
+}
+
+.message {
+  white-space: break-spaces;
+}

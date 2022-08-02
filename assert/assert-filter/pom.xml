@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.mastercard.test.flow</groupId>
+		<artifactId>assert</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+	<artifactId>assert-filter</artifactId>
+	<packaging>jar</packaging>
+	<description>Flow selection components</description>
+
+	<dependencies>
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>api</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>report-core</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<!-- filter configuration persistence -->
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+		</dependency>
+
+		<dependency>
+			<!-- cli input -->
+			<groupId>org.jline</groupId>
+			<artifactId>jline-reader</artifactId>
+		</dependency>
+
+		<dependency>
+			<!-- jline/jansi integration -->
+			<groupId>org.jline</groupId>
+			<artifactId>jline-terminal-jansi</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- for exercising the swing gui in tests -->
+			<groupId>org.assertj</groupId>
+			<artifactId>assertj-swing-junit</artifactId>
+			<version>3.9.2</version>
+			<scope>test</scope>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.pitest</groupId>
+				<artifactId>pitest-maven</artifactId>
+				<configuration>
+					<!-- I'm not saying these have to stay where they are, just that we 
+					     shouldn't let coverage slip down by accident -->
+					<mutationThreshold>95</mutationThreshold>
+					<coverageThreshold>95</coverageThreshold>
+					
+					<!-- pitest minions work in a headless environment so they cannot exercise the GUI -->
+					<!-- This leaves us with ~50% coverage in this project, which could mask legitimate
+					     issues in the code that *is* covered. Hence we're going to exclude the GUI 
+					     classes from analysis in order to have high thresholds on the remainder -->
+					<excludedClasses>com.mastercard.test.flow.assrt.filter.gui.*</excludedClasses>
+					<!-- This test causes pitest to hang -->
+					<excludedTestClasses>com.mastercard.test.flow.assrt.filter.cli.FailuresTest</excludedTestClasses>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

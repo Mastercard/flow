@@ -1,0 +1,44 @@
+.summary {
+    padding: 3px;
+}
+
+.tag_display {
+    display: flex;
+    flex-wrap: wrap
+}
+
+.diff_display {
+    display: flex;
+    flex-wrap: wrap
+}
+
+.rem {
+    margin: 0.25ch;
+    background-color: #FF000044;
+    font-family: monospace;
+}
+
+.add {
+    margin: 0.25ch;
+    background-color: #00FF0044;
+    font-family: monospace;
+}
+
+app-flow-nav-list.change {
+    width: calc(50% - 36px);
+    display: inline-block;
+}
+
+mat-list {
+    display: inline-block;
+}
+
+button {
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+mat-icon {
+    vertical-align: middle;
+}

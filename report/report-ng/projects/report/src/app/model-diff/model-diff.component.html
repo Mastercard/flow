@@ -1,0 +1,43 @@
+<mat-toolbar>
+    <app-menu current="diff"></app-menu>
+    <span id="title">Model Diff</span>
+</mat-toolbar>
+
+<mat-expansion-panel id="sources">
+    <mat-expansion-panel-header>
+        <mat-panel-title>
+            <span class="source_link">
+                <a id="from_link" href="{{from.input.value}}">{{from.linkText}}</a>
+                <mat-progress-bar [mode]="from.progressState" [value]="from.progressValue"></mat-progress-bar>
+            </span>
+            <span class="source_link">
+                <a id="to_link" href="{{to.input.value}}">{{to.linkText}}</a>
+                <mat-progress-bar [mode]="to.progressState" [value]="to.progressValue"></mat-progress-bar>
+            </span>
+        </mat-panel-title>
+    </mat-expansion-panel-header>
+    <div id="sources">
+        <app-model-diff-data-source #from label="from"></app-model-diff-data-source>
+        <button id="swap" (click)="swap()" tabindex="-1">
+            <mat-icon>swap_horiz</mat-icon>
+        </button>
+        <app-model-diff-data-source #to label="to"></app-model-diff-data-source>
+    </div>
+</mat-expansion-panel>
+
+<app-flow-filter></app-flow-filter>
+
+<mat-tab-group mat-stretch-tabs dynamicHeight [(selectedIndex)]="tabIndex" (selectedTabChange)="updateQuery()">
+    <mat-tab label="Paired" [disabled]="!hasPairs()">
+        <app-paired-flow-list></app-paired-flow-list>
+    </mat-tab>
+    <mat-tab label="Unpaired" [disabled]="!hasUnpairs()">
+        <app-unpaired-flow-list></app-unpaired-flow-list>
+    </mat-tab>
+    <mat-tab label="Changes">
+        <app-change-view></app-change-view>
+    </mat-tab>
+    <mat-tab label="Analysis">
+        <app-change-analysis></app-change-analysis>
+    </mat-tab>
+</mat-tab-group>

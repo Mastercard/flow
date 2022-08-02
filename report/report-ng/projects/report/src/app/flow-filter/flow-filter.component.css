@@ -1,0 +1,38 @@
+.line {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    align-content: stretch;
+    gap: 10px;
+}
+
+.description_match_in {
+    flex-grow: 1;
+}
+
+.description_match_out {
+    padding-left: 1ch;
+    padding-right: 1ch;
+    user-select: none;
+}
+
+.clear_button {
+    cursor: pointer;
+}
+
+.include {
+    background-color: rgba(0, 128, 0, 0.5);
+}
+
+.exclude {
+    background-color: rgba(128, 0, 0, 0.5);
+}
+
+.filter {
+    color: white;
+    border-radius: 10px;
+    padding-left: 1ch;
+    padding-right: 1ch;
+    user-select: none;
+}

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.mastercard.test.flow.example</groupId>
+		<artifactId>app</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+	<artifactId>app-itest</artifactId>
+	<packaging>jar</packaging>
+	<description>System integration test suite for exercising app instances</description>
+
+	<properties>
+		<main.class>com.mastercard.test.flow.example.app.itest.Main</main.class>
+	</properties>
+
+	<dependencies>
+
+		<dependency>
+			<!-- REST framework, used to run the services and serve the test report -->
+			<groupId>com.sparkjava</groupId>
+			<artifactId>spark-core</artifactId>
+		</dependency>
+
+		<!-- The test suite can instantiate the application, so obviously it needs 
+			to have the constituent services as dependencies -->
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>app-histogram</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>app-queue</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>app-store</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>app-core</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>app-ui</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>app-web-ui</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<!-- Test data -->
+			<groupId>${project.groupId}</groupId>
+			<artifactId>app-model</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- the means to exercise the test data -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>assert-junit5</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- Test utilities -->
+			<groupId>${project.groupId}</groupId>
+			<artifactId>app-assert</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+	</dependencies>
+</project>

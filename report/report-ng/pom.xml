@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.mastercard.test.flow</groupId>
+		<artifactId>report</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+	<artifactId>report-ng</artifactId>
+	<packaging>jar</packaging>
+	<description>Report webapp</description>
+
+	<properties>
+		<src.res.dir>${basedir}/dist/report</src.res.dir>
+		<src.index.file>${src.res.dir}/index.html</src.index.file>
+		<dst.res.dir>${basedir}/target/classes/com/mastercard/test/flow/report</dst.res.dir>
+	</properties>
+
+	<build>
+		<plugins>
+
+			<plugin>
+				<!-- Step 2: Fail the build with a useful message if the compiled content isn't there -->
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>3.0.0</version>
+				<executions>
+					<execution>
+						<id>enforce-content</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<phase>process-resources</phase>
+						<configuration>
+							<rules>
+								<requireFilesExist>
+									<message>Compiled application artifacts are missing!
+Build with
+ * '-Dnode=system' if you already have node installed
+ * '-Dnode=local' if you don't have node installed, but you'd like a local installation to be created
+ * '-Dnode=none' if you don't want to build the webapp at all (test coverage will be reduced)</message>
+									<files>
+										<file>${src.index.file}</file>
+									</files>
+								</requireFilesExist>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<!-- Step 3: copy the compiled content into the resources dir -->
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.2.0</version>
+				<executions>
+					<execution>
+						<id>copy-content-to-artifact</id>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<phase>process-resources</phase>
+						<configuration>
+							<outputDirectory>${dst.res.dir}</outputDirectory>
+							<resources>
+								<resource>
+									<directory>${src.res.dir}</directory>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<!-- Step 4: generate a manifest file that lists the content files -->
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>3.0.0</version>
+				<executions>
+					<execution>
+						<id>create-manifest</id>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<phase>process-resources</phase>
+						<configuration>
+							<target>
+								<fileset dir="${dst.res.dir}" excludes="manifest.txt" id="fileset"></fileset>
+								<pathconvert pathsep="${line.separator}" property="filelist" refid="fileset" targetos="unix">
+									<map from="${dst.res.dir}/" to=""></map>
+								</pathconvert>
+								<echo file="${dst.res.dir}/manifest.txt">${filelist}</echo>
+								<fixcrlf eol="unix" file="${dst.res.dir}/manifest.txt"></fixcrlf>
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<profiles>
+
+		<!-- The following profiles generate the compiled webapp artifacts -->
+		<!-- Once the compiled artifacts exist, you can trigger recompilation by explictly activating
+		the profile you *do* want, e.g.:  -->
+		<!-- if you *do* have node installed: `mvn -Psystem-node clean package -->
+		<!-- if you *don't* have node installed: `mvn -Plocal-node clean package -->
+
+		<profile>
+			<id>node-local</id>
+			<!-- Use this profile if you *don't* have node and yarn installed on your 
+				system. Maven will create a local installation (in your home directory) of 
+				the tools it needs -->
+			<activation>
+				<property>
+					<name>node</name>
+					<value>local</value>
+				</property>
+				<file>
+					<missing>${src.index.file}</missing>
+				</file>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<!-- Step 1: compile the angular projects into the dist directory -->
+						<groupId>com.github.eirslett</groupId>
+						<artifactId>frontend-maven-plugin</artifactId>
+						<configuration>
+							<nodeVersion>v16.5.0</nodeVersion>
+							<yarnVersion>v1.22.10</yarnVersion>
+							<installDirectory>${user.home}/.node</installDirectory>
+						</configuration>
+						<executions>
+							<execution>
+								<id>install node and npm</id>
+								<goals>
+									<goal>install-node-and-yarn</goal>
+								</goals>
+								<phase>initialize</phase>
+							</execution>
+							<execution>
+								<id>yarn install</id>
+								<goals>
+									<goal>yarn</goal>
+								</goals>
+								<phase>initialize</phase>
+								<configuration>
+									<arguments>install --mutex network</arguments>
+								</configuration>
+							</execution>
+							<execution>
+								<id>yarn run build</id>
+								<goals>
+									<goal>yarn</goal>
+								</goals>
+								<phase>generate-resources</phase>
+								<configuration>
+									<arguments>run build-all</arguments>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<profile>
+			<id>node-system</id>
+			<!-- Use this profile if you *do* have node and yarn installed, and you'd 
+				prefer to use those -->
+			<activation>
+				<property>
+					<name>node</name>
+					<value>system</value>
+				</property>
+				<file>
+					<missing>${src.index.file}</missing>
+				</file>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<!-- Step 1: compile the angular projects into the dist directory -->
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>yarn install</id>
+								<goals>
+									<goal>exec</goal>
+								</goals>
+								<phase>initialize</phase>
+								<configuration>
+									<executable>yarn</executable>
+									<arguments>
+										<argument>install</argument>
+										<argument>--mutex</argument>
+										<argument>network</argument>
+									</arguments>
+								</configuration>
+							</execution>
+							<execution>
+								<id>yarn run build</id>
+								<goals>
+									<goal>exec</goal>
+								</goals>
+								<phase>generate-resources</phase>
+								<configuration>
+									<executable>yarn</executable>
+									<arguments>
+										<argument>run</argument>
+										<argument>build-all</argument>
+									</arguments>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<profile>
+			<id>node-none</id>
+			<!-- Use this profile if you don't want any part of this node malarkey. We'll copy a dummy index.html into
+			     place to satisfy the enforce-content check, but it's not going to provide a useful visualisation
+			     of the flow data -->
+			<!-- The node=none property will disable the tests that assume the webapp is functional -->
+			<activation>
+				<property>
+					<name>node</name>
+					<value>none</value>
+				</property>
+				<file>
+					<missing>${src.index.file}</missing>
+				</file>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<!-- Step 1: copy a dummy index.html into the dist directory -->
+						<artifactId>maven-resources-plugin</artifactId>
+						<version>3.2.0</version>
+						<executions>
+							<execution>
+								<id>copy-dummy-index</id>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<phase>generate-resources</phase>
+								<configuration>
+									<outputDirectory>${src.res.dir}</outputDirectory>
+									<resources>
+										<resource>
+											<directory>src/main/resources/no-node</directory>
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+	</profiles>
+</project>

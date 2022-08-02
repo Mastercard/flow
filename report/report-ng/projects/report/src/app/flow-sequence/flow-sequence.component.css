@@ -1,0 +1,28 @@
+.header {
+	border-bottom: 2px solid #888;
+	height: 2em;
+	position: relative;
+}
+
+.entity {
+	bottom: 0;
+	display: block;
+	font-weight: bold;
+	left: 0;
+	position: absolute;
+	right: 0;
+	text-align: center;
+}
+
+.body {
+	padding-bottom: 0.5em;
+	padding-top: 0.5em;
+	position: relative;
+}
+
+.line {
+	border-left: 2px solid #DDD;
+	bottom: 0;
+	position: absolute;
+	top: 0;
+}

@@ -1,0 +1,42 @@
+.description {
+    padding-left: 0.5ch;
+}
+
+.tag {
+    color: gray;
+    padding-left: 0.5ch;
+}
+
+.link_icon {
+    vertical-align: middle;
+}
+
+#motivation {
+    padding: 1ch;
+}
+
+#trace {
+    font-family: monospace;
+}
+
+.list_horizontal {
+    display: flex;
+    flex-direction: row;
+    text-align: center;
+}
+
+mat-drawer-content {
+    /* ensures that all of the controls are visible without scrolling */
+    min-height: 411px;
+    padding-left: 0.5em;
+}
+
+mat-icon.pass {
+    padding-left: 0.25ch;
+    color: green;
+}
+
+mat-icon.fail {
+    padding-left: 0.25ch;
+    color: red;
+}

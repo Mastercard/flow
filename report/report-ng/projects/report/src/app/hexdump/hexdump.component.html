@@ -1,0 +1,14 @@
+<div class="detail">
+  <span class="index">index: {{ selectedIndex() }}</span>
+  <span class="value">value: 0x{{selectedValue(16, 2)}} 0d{{selectedValue(10, 3)}} 0b{{selectedValue(2, 8)}}</span>
+  <span class="ascii">ascii: {{selectedAscii()}}</span>
+</div>
+<div class="line" *ngFor="let d of displacements()">
+  <span class="displacement">{{formatDisplacment(d)}}</span>
+  <span class="hex" *ngFor="let i of offsets(d)" [ngClass]="classForValue(i)" (mouseenter)="select(i)"
+    (mouseleave)="select(undefined)">{{formatHex(i)}}</span>
+  <span class="bar"> |</span>
+  <span class="printable" *ngFor="let i of offsets(d)" [ngClass]="classForValue(i)" (mouseenter)="select(i)"
+    (mouseleave)="select(undefined)">{{formatPrintable(i)}}</span>
+  <span class=" bar">|</span>
+</div>

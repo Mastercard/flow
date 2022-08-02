@@ -1,0 +1,13 @@
+<mat-list-item>
+  <a mat-list-item href="{{basePath}}detail/{{entry.detail}}.html" class="{{lineClass}}">
+    <mat-icon *ngIf="isPass">check_circle_outline</mat-icon>
+    <mat-icon *ngIf="isFail">error_outline</mat-icon>
+    <mat-icon *ngIf="isSkip">help_outline</mat-icon>
+    <mat-icon *ngIf="isError">new_releases</mat-icon>
+    <span *ngIf="isPass || isFail || isSkip || isError" class="icon_pad"></span>
+    <span class="description">
+      {{entry.description}}
+    </span>
+  </a>
+  <app-tag *ngFor="let tag of tags()" [tag]="tag"></app-tag>
+</mat-list-item>

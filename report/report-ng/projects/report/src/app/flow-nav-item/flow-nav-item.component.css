@@ -1,0 +1,30 @@
+mat-icon {
+  vertical-align: middle;
+}
+
+.icon_pad {
+  padding-left: 1ch;
+}
+
+.pass mat-icon {
+  background-color: rgba(0, 192, 0, 1);
+  color: white;
+  border-radius: 1ch;
+}
+
+.fail mat-icon {
+  background-color: rgba(255, 0, 0, 1);
+  color: white;
+  border-radius: 1ch;
+}
+
+.skip mat-icon {
+  background-color: rgba(255, 0, 0, 0.5);
+  color: white;
+  border-radius: 1ch;
+}
+
+.error mat-icon {
+  color: rgba(255, 0, 0, 1);
+  border-radius: 1ch;
+}

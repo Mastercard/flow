@@ -1,0 +1,42 @@
+mat-icon {
+    vertical-align: middle;
+}
+
+.result {
+    padding: 0.5em;
+    white-space: nowrap;
+}
+
+#PASS mat-icon {
+    background-color: rgba(0, 192, 0, 1);
+    color: white;
+    border-radius: 1ch;
+}
+
+#FAIL mat-icon {
+    background-color: rgba(255, 0, 0, 1);
+    color: white;
+    border-radius: 1ch;
+}
+
+#SKIP mat-icon {
+    background-color: rgba(255, 0, 0, 0.5);
+    color: white;
+    border-radius: 1ch;
+}
+
+#ERROR mat-icon {
+    color: rgba(255, 0, 0, 1);
+    border-radius: 1ch;
+}
+
+#tag_sort_toggle {
+    float: right;
+}
+
+#tags {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+}

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.mastercard.test.flow.example</groupId>
+		<artifactId>app</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+	<artifactId>app-model</artifactId>
+	<packaging>jar</packaging>
+	<description>Library providing system description flows for creating tests with the Flows framework</description>
+
+	<dependencies>
+
+		<dependency>
+			<!-- How we define flow structure -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>builder</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<!-- HTTP messages -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>message-http</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<!-- JSON messages -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>message-json</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<!-- plain text messages -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>message-text</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<!-- SQL queries and results -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>message-sql</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<!-- browser interactions -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>message-web</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<!-- flow grouping -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>model</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<!-- Service interface definitions -->
+			<groupId>${project.groupId}</groupId>
+			<artifactId>app-api</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<!-- Logging support -->
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+		</dependency>
+
+		<dependency>
+			<!-- How we validate the model of the system -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>validation-junit5</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- Tooling to analyse model structure -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>coppice</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+	</dependencies>
+
+</project>

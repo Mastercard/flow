@@ -1,0 +1,15 @@
+.section {
+  border: none;
+  border-top: 0.3em dashed #DDD;
+  margin-top: 1em;
+  padding-top: 0.5em;
+}
+
+.title {
+  font-size: 1.2em;
+  color: #888;
+  margin-left: 0.5em;
+  text-align: left;
+  position: relative;
+  top: -0.2em;
+}

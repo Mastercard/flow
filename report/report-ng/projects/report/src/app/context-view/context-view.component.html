@@ -1,0 +1,17 @@
+<mat-accordion>
+    <mat-expansion-panel *ngFor="let item of context | keyvalue; first as isFirst" [expanded]="isFirst">
+        <mat-expansion-panel-header>
+            <mat-panel-title>
+                {{item.key}}
+            </mat-panel-title>
+        </mat-expansion-panel-header>
+        <table>
+            <tr>
+                <th>Model</th>
+                <td>
+                    <pre>{{item.value | json}}</pre>
+                </td>
+            </tr>
+        </table>
+    </mat-expansion-panel>
+</mat-accordion>

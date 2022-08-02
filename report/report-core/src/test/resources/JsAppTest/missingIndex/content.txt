@@ -1,0 +1,1 @@
+This file exists so that the destination directory is created

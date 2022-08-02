@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.mastercard.test.flow</groupId>
+		<artifactId>assert</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+	<artifactId>assert-junit5</artifactId>
+	<packaging>jar</packaging>
+	<description>JUnit5 comparison components</description>
+
+	<dependencies>
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>assert-core</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+		</dependency>
+
+		<dependency>
+			<!-- Required for the metatest that exercises our example test -->
+			<groupId>org.junit.platform</groupId>
+			<artifactId>junit-platform-launcher</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- Assert components use all of the model API, so it's a pain to mock -->
+			<groupId>${project.groupId}</groupId>
+			<artifactId>builder</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.pitest</groupId>
+				<artifactId>pitest-maven</artifactId>
+				<configuration>
+					<!-- I'm not saying these *have* to stay where they are, just that 
+				     we shouldn't let them slip down by accident -->
+					<mutationThreshold>82</mutationThreshold>
+					<coverageThreshold>97</coverageThreshold>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

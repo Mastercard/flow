@@ -1,0 +1,80 @@
+<div id="change_controls">
+
+    <mat-button-toggle [checked]="treeOpen" matTooltip="Show change list" (click)="toggleTree($event)">
+        <mat-icon>menu_open</mat-icon>
+    </mat-button-toggle>
+
+    <div id="pair_links">
+        <ng-container *ngIf="selected !== null; else nowt">
+            <app-flow-nav-list class="pair_link" *ngIf="selected.pair.left !== null"
+                [entries]="[selected.pair.left.entry]" [basePath]="leftBasePath()" [showResult]="false">
+            </app-flow-nav-list>
+            <app-flow-nav-list class="pair_link" *ngIf="selected.pair.right !== null"
+                [entries]="[selected.pair.right.entry]" [basePath]="rightBasePath()" [showResult]="false">
+            </app-flow-nav-list>
+        </ng-container>
+        <ng-template #nowt>
+            <div id="nowt">{{noChangeMessage}}</div>
+        </ng-template>
+    </div>
+
+    <div id="top_nav">
+        <mat-button-toggle-group (change)="navChange($event)">
+            <mat-button-toggle matTooltip="Previous" value="previous" [disabled]="!canPrevious()">
+                <mat-icon>navigate_before</mat-icon>
+            </mat-button-toggle>
+            <mat-button-toggle matTooltip="Next" value="next" [disabled]="!canNext()">
+                <mat-icon>navigate_next</mat-icon>
+            </mat-button-toggle>
+        </mat-button-toggle-group>
+    </div>
+</div>
+
+<mat-drawer-container>
+    <mat-drawer [opened]="treeOpen" mode="side" disableClose>
+        <div class="drawer">
+            <div>
+                <mat-button-toggle-group id="diff_type" name="diff_options" [(ngModel)]="diffFormat">
+                    <mat-button-toggle value="SideBySide" matTooltip="Side-by-side comparison">
+                        <mat-icon>vertical_split</mat-icon>
+                    </mat-button-toggle>
+                    <mat-button-toggle value="LineByLine" matTooltip="Line-by-line comparison">
+                        <mat-icon>horizontal_split</mat-icon>
+                    </mat-button-toggle>
+                </mat-button-toggle-group>
+            </div>
+            <mat-divider></mat-divider>
+            <div>
+
+                <mat-selection-list #selectionList [multiple]="false" (selectionChange)="selectionChange($event)">
+
+                    <ng-container *ngFor="let block of blocks">
+                        <div mat-subheaderheader *ngIf="block.items.length">{{block.header}}</div>
+                        <app-pair-select-item *ngFor="let item of block.items" [showResult]="false" [item]="item"
+                            [selectedIndex]="selected?.index ?? -1">
+                        </app-pair-select-item>
+                    </ng-container>
+
+                </mat-selection-list>
+            </div>
+        </div>
+    </mat-drawer>
+    <mat-drawer-content>
+        <td-ngx-text-diff *ngIf="hasDiffData()" [left]="diffLeft" [right]="diffRight" [diffContent]="diffObservable$"
+            [showToolbar]=false [format]="diffFormat">
+        </td-ngx-text-diff>
+    </mat-drawer-content>
+</mat-drawer-container>
+<div id="bottom_nav">
+    <mat-button-toggle-group (change)="navChange($event)">
+        <mat-button-toggle matTooltip="Previous" value="previous" [disabled]="!canPrevious()">
+            <mat-icon>navigate_before</mat-icon>
+        </mat-button-toggle>
+        <mat-button-toggle matTooltip="Top" value="top">
+            <mat-icon>expand_less</mat-icon>
+        </mat-button-toggle>
+        <mat-button-toggle matTooltip="Next" value="next" [disabled]="!canNext()">
+            <mat-icon>navigate_next</mat-icon>
+        </mat-button-toggle>
+    </mat-button-toggle-group>
+</div>

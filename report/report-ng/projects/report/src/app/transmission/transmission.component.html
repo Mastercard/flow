@@ -1,0 +1,21 @@
+<div class="no_data_warning" *ngIf="substitutionWarning">
+  <mat-icon>visibility_off</mat-icon>
+  Actual data not available, displaying expected message.
+</div>
+<app-msg-view *ngIf="effectiveDisplay==='Expected'" [options]="options" [dataDisplay]="options.dataDisplay"
+  [human]="action?.transmission?.full?.expect" [base64]="action?.transmission?.full?.expectBytes">
+</app-msg-view>
+<div *ngIf="effectiveDisplay === 'Diff' || effectiveDisplay === 'Basis'">
+  <td-ngx-text-diff *ngIf="hasDiffData(); else no_data_warning" [left]="diffLeft()" [right]="diffRight()"
+    [diffContent]="diffObservable$" [showToolbar]=false [format]="options.diffFormat">
+  </td-ngx-text-diff>
+  <ng-template #no_data_warning>
+    <div class="no_data_warning">
+      <mat-icon>visibility_off</mat-icon>
+      No data available!
+    </div>
+  </ng-template>
+</div>
+<app-msg-view *ngIf="effectiveDisplay === 'Actual'" [options]="options" [dataDisplay]="options.dataDisplay"
+  [human]="action?.transmission?.full?.actual" [base64]="action?.transmission?.full?.actualBytes">
+</app-msg-view>

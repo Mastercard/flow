@@ -1,0 +1,7 @@
+<mat-list-option class="line" [value]="item" [selected]="selectedIndex === item.index">
+    <div matLine class="description">{{description}}
+    </div>
+    <div matLine class="tags">
+        <app-tag *ngFor="let tag of tags" [tag]="tag"></app-tag>
+    </div>
+</mat-list-option>

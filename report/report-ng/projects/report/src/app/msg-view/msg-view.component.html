@@ -1,0 +1,6 @@
+<div *ngIf="showError" class="no_data_warning">
+  <mat-icon>visibility_off</mat-icon>
+  No {{options.dataDisplay}} data available!
+</div>
+<pre *ngIf="showContent">{{content}}</pre>
+<app-hexdump *ngIf="showHex" [bytes]="bytes"></app-hexdump>

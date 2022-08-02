@@ -1,0 +1,23 @@
+div#sources {
+    width: 100%;
+}
+
+button#swap {
+    border:none;
+    background: none;
+    width: 40px;
+    vertical-align: middle;
+    display:inline-block;
+}
+span.source_link {
+    text-align: center;
+    width: calc( 50% );
+    vertical-align: middle;
+    display:inline-block;
+}
+
+app-model-diff-data-source {
+    width: calc( 50% - 32px );
+    vertical-align: middle;
+    display:inline-block;
+}

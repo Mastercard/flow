@@ -1,0 +1,6 @@
+<mat-nav-list class="drag-list" cdkDropList (cdkDropListDropped)="drop($event)">
+  <div class="drag-box" *ngFor="let entry of entries" cdkDrag [cdkDragDisabled]="!draggable">
+    <app-flow-nav-item class="flow_item" [entry]="entry" [basePath]="basePath" [showResult]="showResult">
+    </app-flow-nav-item>
+  </div>
+</mat-nav-list>

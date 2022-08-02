@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.mastercard.test.flow</groupId>
+		<artifactId>parent</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+	<artifactId>doc</artifactId>
+	<packaging>jar</packaging>
+	<description>Documentation resources</description>
+
+	<properties>
+		<!-- this is a pointless indirection but it keeps the extracted snippets authentic -->
+		<flow.version>${project.version}</flow.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>api</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<!-- snippet-start:build -->
+		<dependency>
+			<!-- flow construction -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>builder</artifactId>
+			<version>${flow.version}</version>
+		</dependency>
+		<!-- snippet-end:build -->
+
+		<!-- snippet-start:message -->
+		<dependency>
+			<!-- simple text message type (other types packaged separately) -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>message-text</artifactId>
+			<version>${flow.version}</version>
+		</dependency>
+		<!-- snippet-end:message -->
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>message-json</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>message-http</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<!-- snippet-start:model -->
+		<dependency>
+			<!-- flow grouping -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>model</artifactId>
+			<version>${flow.version}</version>
+		</dependency>
+		<!-- snippet-end:model -->
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>validation-core</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>validation-junit4</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<!-- snippet-start:validation -->
+		<dependency>
+			<!-- system model validation -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>validation-junit5</artifactId>
+			<version>${flow.version}</version>
+		</dependency>
+		<!-- snippet-end:validation -->
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>report-core</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>assert-core</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>assert-junit4</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<!-- snippet-start:assertion -->
+		<dependency>
+			<!-- system assertion -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>assert-junit5</artifactId>
+			<version>${flow.version}</version>
+		</dependency>
+		<!-- snippet-end:assertion -->
+
+		<dependency>
+			<!-- testing -->
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- reflective access to source line numbers -->
+			<groupId>org.javassist</groupId>
+			<artifactId>javassist</artifactId>
+			<version>3.28.0-GA</version>
+			<scope>test</scope>
+		</dependency>
+
+	</dependencies>
+
+</project>

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.mastercard.test.flow</groupId>
+		<artifactId>report</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+	<artifactId>report-core</artifactId>
+	<packaging>jar</packaging>
+	<description>Report input/output</description>
+
+	<dependencies>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>api</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>report-ng</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- Report components use all of the model API, so it's a pain to mock -->
+			<groupId>${project.groupId}</groupId>
+			<artifactId>builder</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- Report components use all of the model API, so it's a pain to mock -->
+			<groupId>${project.groupId}</groupId>
+			<artifactId>message-text</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- Used to show how templates are populated -->
+			<groupId>io.github.java-diff-utils</groupId>
+			<artifactId>java-diff-utils</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- REST framework, used to serve the report for testing -->
+			<groupId>com.sparkjava</groupId>
+			<artifactId>spark-core</artifactId>
+			<version>2.9.3</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- We use a headless chrome instance to test the report, this 
+			     provides automatic management of the drivers for that -->
+			<groupId>io.github.bonigarcia</groupId>
+			<artifactId>webdrivermanager</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- This is how we drive the browser when testing the report -->
+			<groupId>org.seleniumhq.selenium</groupId>
+			<artifactId>selenium-java</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<!-- Logging support -->
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>1.7.32</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+
+			<plugin>
+				<groupId>org.pitest</groupId>
+				<artifactId>pitest-maven</artifactId>
+				<configuration>
+					<!-- I'm not saying these *have* to stay where they are, just that 
+				     we shouldn't let them slip down by accident -->
+					<mutationThreshold>95</mutationThreshold>
+					<coverageThreshold>95</coverageThreshold>
+					<excludedTestClasses>
+						<!-- We'd like the report before the heat-death of the
+						     universe, so avoid the selenium tests -->
+						<param>com.mastercard.test.flow.report.detail.*</param>
+						<param>com.mastercard.test.flow.report.diff.*</param>
+						<param>com.mastercard.test.flow.report.index.*</param>
+					</excludedTestClasses>
+				</configuration>
+			</plugin>
+
+		</plugins>
+	</build>
+</project>

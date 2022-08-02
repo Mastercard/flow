@@ -1,0 +1,69 @@
+graph {
+}
+
+node.transaction {
+	fill-color: gray;
+	stroke-color: black;
+	stroke-mode: plain;
+	stroke-width: 1px;
+	size: 10px;
+	text-visibility-mode: hidden;
+	text-visibility: 0.5;
+	text-size: 15;
+	text-offset: 0, 15;
+}
+
+node.selected {
+	fill-color: rgb(184,207,229); 
+	stroke-mode: plain;
+	stroke-color: rgb(99,130,191);
+	stroke-width: 1px;
+	size:20px;
+	text-visibility-mode: normal;
+	text-background-mode: rounded-box;
+}
+
+node.optimising {
+	shape: diamond;
+	fill-color: rgb(255,128,128); 
+	size:25px;
+}
+
+node.filtered_out {
+	fill-color: white;
+	stroke-color: gray;
+}
+
+edge.basis {
+  shape: blob;
+  arrow-shape: none;
+  fill-color: rgb(90,90,90);
+	text-visibility-mode: hidden;
+}
+
+edge.selected {
+  fill-color: rgb(180,180,180);
+	text-visibility-mode: normal;
+	text-size: 15;
+}
+
+edge.diff {
+  shape: line;
+  size: 1px;
+  arrow-shape: none;
+  fill-color: red;
+}
+
+edge.candidate {
+  shape: line;
+  size: 2px;
+  arrow-shape: none;
+  fill-color: red;
+}
+
+edge.optimal {
+  shape: line;
+  size: 5px;
+  arrow-shape: none;
+  fill-color: red;
+}

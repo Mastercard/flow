@@ -1,0 +1,22 @@
+.no_data_warning {
+  color: red;
+  user-select: none;
+  font-size: large;
+}
+
+.no_data_warning mat-icon {
+  vertical-align: middle;
+}
+
+.td-wrapper .line-number-col {
+  user-select: none;
+}
+.td-wrapper .line-number-col-left {
+  user-select: none;
+}
+.td-wrapper .prefix-col {
+  user-select: none;
+}
+.td-wrapper {
+  font-family: monospace;
+}

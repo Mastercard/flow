@@ -1,0 +1,2 @@
+<span *ngIf="unFiltered()" class="tag {{filterService.isLocked() ? 'disabled':''}}" (click)="clicked( $event )"
+    disabled="">{{tag}}</span>

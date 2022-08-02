@@ -1,0 +1,8 @@
+.tag {
+  color: gray;
+  padding-left: 0.5ch;
+}
+
+.tag:hover:not(.disabled) {
+  font-weight: bolder;
+}

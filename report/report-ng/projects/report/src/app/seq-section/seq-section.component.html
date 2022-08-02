@@ -1,0 +1,9 @@
+<div class="section">
+  <div class="title">
+    {{section.title}}
+  </div>
+  <div *ngFor="let item of section.item">
+    <app-seq-note *ngIf="isNote(item)" [entity]="entity" [note]="item"></app-seq-note>
+    <app-seq-action *ngIf="isAction(item)" [entity]="entity" [action]="item"></app-seq-action>
+  </div>
+</div>

@@ -1,0 +1,8 @@
+<ng-container *ngIf="error; else render">
+    Failed to grok data as index or flow
+    <pre>{{error_data | json}}</pre>
+</ng-container>
+<ng-template #render>
+    <app-index-route *ngIf="index" [index]="index"></app-index-route>
+    <app-detail *ngIf="flow" [flow]="flow"></app-detail>
+</ng-template>

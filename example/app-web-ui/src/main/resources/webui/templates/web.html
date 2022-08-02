@@ -1,0 +1,33 @@
+<html>
+	<head>
+		<title>Histogram</title>
+		<style>
+			.vbox {
+				display: flex;
+				flex-direction: column;
+				gap: 5px;
+				width: 400px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Histogram</h1>
+		<form action="web/process" method="post">
+			<div class="vbox">
+				<textarea
+					id="subject_input"
+					name="subject"
+					placeholder="subject text"></textarea>
+				<input 
+					id="characters_input"
+					name="characters"
+					type="text"
+					placeholder="characters of interest"></input>
+				<input
+					id="submit_button" 
+					type="submit"
+					value="Analyse"></input>
+			</div>
+		</form>
+	</body>
+</html>

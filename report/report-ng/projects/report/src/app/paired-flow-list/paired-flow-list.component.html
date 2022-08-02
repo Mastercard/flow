@@ -1,0 +1,13 @@
+<app-flow-nav-list id="left" [entries]="left()" [basePath]="leftBasePath()" [showResult]="false">
+</app-flow-nav-list>
+
+<mat-list>
+    <mat-list-item *ngFor="let entry of left(); let i=index">
+        <button mat-icon-button (click)="unpair( i )">
+            <mat-icon>link_off</mat-icon>
+        </button>
+    </mat-list-item>
+</mat-list>
+
+<app-flow-nav-list id="right" [entries]="right()" [basePath]="rightBasePath()" [showResult]="false">
+</app-flow-nav-list>

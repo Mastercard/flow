@@ -1,0 +1,15 @@
+<app-flow-nav-list id="left" [entries]="leftEntries" [basePath]="leftBasePath()" [showResult]="false"
+    [draggable]="true">
+</app-flow-nav-list>
+
+<mat-list>
+    <mat-list-item *ngFor="let entry of links(); let i=index">
+        <button mat-icon-button (click)="pair( i )">
+            <mat-icon>link</mat-icon>
+        </button>
+    </mat-list-item>
+</mat-list>
+
+<app-flow-nav-list id="right" [entries]="rightEntries" [basePath]="rightBasePath()" [showResult]="false"
+    [draggable]="true">
+</app-flow-nav-list>

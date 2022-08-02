@@ -1,0 +1,74 @@
+<div class="controls">
+  Show
+  <mat-form-field appearance="fill">
+    <mat-label>Levels</mat-label>
+    <mat-select id="level_select" [(ngModel)]="levels" (selectionChange)="applyFilters()" multiple>
+      <mat-option *ngFor="let level of allLevels" [value]="level">{{level}}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+  from
+  <mat-form-field appearance="standard">
+    <mat-label>Source</mat-label>
+    <input id="source_filter_input" matInput [(ngModel)]="sourcefilter" (keyup)="applyFilters()">
+    <span class="clear_button" *ngIf="sourcefilter" matSuffix mat-icon-button aria-label="Clear"
+      (click)="sourcefilter='';applyFilters()">
+      <mat-icon>close</mat-icon>
+    </span>
+  </mat-form-field>
+  containing
+  <mat-form-field appearance="standard">
+    <mat-label>Message</mat-label>
+    <input id="message_filter_input" matInput [(ngModel)]="messagefilter" (keyup)="applyFilters()">
+    <span class="clear_button" *ngIf="messagefilter" matSuffix mat-icon-button aria-label="Clear"
+      (click)="messagefilter='';applyFilters()">
+      <mat-icon>close</mat-icon>
+    </span>
+  </mat-form-field>
+</div>
+
+<div class="log_table">
+  <table mat-table [dataSource]="dataSource">
+    <ng-container matColumnDef="time">
+      <th mat-header-cell *matHeaderCellDef>Time</th>
+      <td mat-cell *matCellDef="let event; let idx = index">
+        <ng-container *ngIf="isParseable(event.time); else raw">
+          <div matTooltip="{{event.time}}" class="time">
+            <div class="time_sec">{{startDelta( idx )}}s</div>
+            <div class="time_delta">Δ&nbsp;{{prevDelta( idx )}}ms</div>
+          </div>
+        </ng-container>
+        <ng-template #raw>
+          <span>{{event.time}}</span>
+        </ng-template>
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="level">
+      <th mat-header-cell *matHeaderCellDef>Level</th>
+      <td mat-cell *matCellDef="let event">
+        <span class="level">{{event.level}}</span>
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="source">
+      <th mat-header-cell *matHeaderCellDef>Source</th>
+      <td mat-cell *matCellDef="let event">
+        <span class="source" matTooltip="{{event.source}}">{{shortSource(event.source)}}</span>
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="message">
+      <th mat-header-cell *matHeaderCellDef>Message</th>
+      <td mat-cell *matCellDef="let event">
+        <pre class="message">{{event.message}}</pre>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+    <tr class="mat-row" *matNoDataRow>
+      <td class="mat-cell" colspan="4"><span class="no_line_warning">No {{levels}} lines from "{{sourcefilter ||
+          'anywhere'}}" contain
+          "{{messagefilter||'anything'}}"</span></td>
+    </tr>
+  </table>
+</div>

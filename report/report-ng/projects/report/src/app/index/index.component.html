@@ -1,0 +1,22 @@
+<mat-toolbar>
+    <app-menu current="index"></app-menu>
+    <span id="model_title">{{index.meta.modelTitle}}</span>
+    <span>&nbsp;|&nbsp;</span>
+    <span id="test_title">{{index.meta.testTitle}}</span>
+    <span id="timestamp">{{timestamp}}</span>
+</mat-toolbar>
+
+<app-flow-filter [tags]="tags">
+</app-flow-filter>
+
+<app-tag-summary [entries]="filteredFlows"></app-tag-summary>
+
+<app-flow-nav-list [entries]="filteredFlows" *ngIf="!error">
+</app-flow-nav-list>
+
+
+<pre *ngIf="error">
+    There has been a problem!
+    {{error}}
+    {{error_data | json}}
+  </pre>

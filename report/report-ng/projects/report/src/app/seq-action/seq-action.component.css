@@ -1,0 +1,33 @@
+.action {
+  display: block;
+  position: relative;
+  text-align: center;
+}
+
+.action:hover {
+  background-color: lightgrey;
+  border-radius: 10px;
+}
+
+.selected {
+  background-color: lightskyblue;
+  border-radius: 10px;
+}
+
+.pass {
+  color: green;
+}
+
+.fail {
+  color: red;
+}
+
+.tag {
+  color: gray;
+  padding-left: 0.5ch;
+}
+
+mat-icon {
+  vertical-align: middle;
+  padding-left: 3px;
+}
