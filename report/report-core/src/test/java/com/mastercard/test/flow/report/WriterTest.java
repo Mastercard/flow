@@ -84,6 +84,7 @@ class WriterTest {
 						// files produced by the angular build have a content-hash suffix
 						// to avoid cached versions being used
 						.map( s -> s.replaceAll( "\\.[a-f0-9]{20}\\.(js|css)", ".<hash>.$1" ) )
+						.sorted()
 						.collect( Collectors.joining( "\n" ) ) );
 
 		String detail = new String( Files.readAllBytes( dir.resolve(
