@@ -133,10 +133,10 @@ class FilterTest {
 
 		FltrTst tst = new FltrTst( mdl );
 		Path badPath = Paths.get( "target", "no_such_report" );
-		assertEquals( "Invalid report directory 'target\\no_such_report'",
+		assertEquals( "Invalid report directory 'target/no_such_report'",
 				assertThrows( IllegalArgumentException.class,
 						() -> tst.loadFailuresIndices( badPath ) )
-								.getMessage(),
+								.getMessage().replace( '\\', '/' ),
 				"Loading a specific non-existent report fails noisily" );
 
 		// generate three reports
