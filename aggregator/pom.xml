@@ -130,24 +130,6 @@
 
 	<build>
 		<plugins>
-			<!-- Aggregates the mutation testing results of the other
-				projects when `mvn package` is run -->
-			<plugin>
-				<groupId>org.pitest</groupId>
-				<artifactId>pitest-maven</artifactId>
-				<executions>
-					<execution>
-						<id>pitest-mutation-coverage</id>
-						<phase>none</phase>
-					</execution>
-					<execution>
-						<id>report</id>
-						<goals>
-							<goal>report-aggregate</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
 
 			<plugin>
 				<!-- This is not a distributable artifact, so we never want to deploy it -->
@@ -168,4 +150,37 @@
 			</plugin>
 		</plugins>
 	</build>
+	<profiles>
+
+		<profile>
+
+			<id>aggregate</id>
+			<build>
+				<plugins>
+					<!-- Aggregates the mutation testing results of the other
+							projects when `mvn package` is run -->
+					<!-- It's in an optional profile to avoid failure on 
+							package when mutation results are not available -->
+					<plugin>
+						<groupId>org.pitest</groupId>
+						<artifactId>pitest-maven</artifactId>
+						<executions>
+							<execution>
+								<id>pitest-mutation-coverage</id>
+								<phase>none</phase>
+							</execution>
+							<execution>
+								<id>report</id>
+								<goals>
+									<goal>report-aggregate</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+
+				</plugins>
+			</build>
+		</profile>
+
+	</profiles>
 </project>

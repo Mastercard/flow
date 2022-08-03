@@ -159,7 +159,7 @@
 				</plugin>
 
 				<plugin>
-					<!-- `mvn org.pitest:pitest-maven:mutationCoverage package` to generate 
+					<!-- `mvn -Paggregate org.pitest:pitest-maven:mutationCoverage package` to generate 
 						target/pit-reports in each module and then collate them in aggregator -->
 					<!-- Alternatively you can create a 'target/mutate' file in a given 
 						project to have mutation testing performed for that project only on test 
