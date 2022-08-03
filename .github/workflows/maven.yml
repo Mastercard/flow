@@ -22,5 +22,11 @@ jobs:
         java-version: '8'
         distribution: 'temurin'
         cache: maven
+    - name: Set up Node
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16
+        cache: 'yarn'
+        cache-dependency-path: report/report-ng/yarn.lock
     - name: Build with Maven
-      run: mvn -B -Dnode=local package --file pom.xml
+      run: mvn -B -Dnode=system package --file pom.xml
