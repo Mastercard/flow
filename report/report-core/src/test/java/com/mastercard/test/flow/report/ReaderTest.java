@@ -110,13 +110,14 @@ class ReaderTest {
 		WriterTest.writeReport( dir );
 
 		// turns out to be quite difficult to provoke an IOException
-		// this does nothing on windows
 		File index = dir.resolve( "index.html" ).toFile();
-		index.setReadable( false );
-		// this does nothing on posix systems
+		// getting a lock only works on windows
 		try( RandomAccessFile raf = new RandomAccessFile( index, "rw" );
 				FileChannel channel = raf.getChannel();
 				FileLock lock = channel.lock() ) {
+
+			// setting the readable state only works on posix systems
+			index.setReadable( false );
 
 			Reader r = new Reader( dir );
 			IllegalStateException ise = assertThrows( IllegalStateException.class,
