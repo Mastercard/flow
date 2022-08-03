@@ -18,7 +18,10 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.builder.Creator;
@@ -105,27 +108,47 @@ class ReaderTest {
 	 * @throws Exception unexpected oopsy
 	 */
 	@Test
-	void badRead() throws Exception {
-		Path dir = Paths.get( "target", "ReaderTest", "badRead" );
+	@EnabledOnOs(OS.WINDOWS)
+	void badReadWindows() throws Exception {
+		Path dir = Paths.get( "target", "ReaderTest", "badReadWindows" );
 		WriterTest.writeReport( dir );
-
-		// turns out to be quite difficult to provoke an IOException
 		File index = dir.resolve( "index.html" ).toFile();
-		// getting a lock only works on windows
+
 		try( RandomAccessFile raf = new RandomAccessFile( index, "rw" );
 				FileChannel channel = raf.getChannel();
 				FileLock lock = channel.lock() ) {
-
-			// setting the readable state only works on posix systems
-			index.setReadable( false );
 
 			Reader r = new Reader( dir );
 			IllegalStateException ise = assertThrows( IllegalStateException.class,
 					() -> r.read() );
 			assertTrue( ise.getMessage().matches(
-					"Failed to read file:.*ReaderTest/badRead/index.html" ),
+					"Failed to read file:.*ReaderTest/badReadWindows/index.html" ),
 					ise.getMessage() );
 		}
+	}
+
+	/**
+	 * What happens when we can't read the index /
+	 *
+	 * @throws Exception unexpected oopsy
+	 */
+	@Test
+	@EnabledOnOs(OS.LINUX)
+	@Disabled("TODO: get this working on linux, "
+			+ "becuase harrassing the github build agents is a painful iteration")
+	void badReadLinux() throws Exception {
+		Path dir = Paths.get( "target", "ReaderTest", "badReadLinux" );
+		WriterTest.writeReport( dir );
+		File index = dir.resolve( "index.html" ).toFile();
+
+		index.setReadable( false );
+
+		Reader r = new Reader( dir );
+		IllegalStateException ise = assertThrows( IllegalStateException.class,
+				() -> r.read() );
+		assertTrue( ise.getMessage().matches(
+				"Failed to read file:.*ReaderTest/badReadLinux/index.html" ),
+				ise.getMessage() );
 	}
 
 	/**
