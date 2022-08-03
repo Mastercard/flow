@@ -34,6 +34,6 @@ This model can then be:
 
 ## Links
 
- * This project is copyright © 2022 Mastercard, and is released under the [Apache version 2.0 licence](LICENCE.txt).
+ * This project is copyright © 2022 Mastercard, and is released under the [Apache version 2.0 licence](LICENCE).
  * [Contribution guidance](CONTRIBUTING.md).
  * [Changelog](CHANGELOG.md)

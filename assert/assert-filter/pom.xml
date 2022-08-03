@@ -68,7 +68,7 @@
 					     shouldn't let coverage slip down by accident -->
 					<mutationThreshold>95</mutationThreshold>
 					<coverageThreshold>95</coverageThreshold>
-					
+
 					<!-- pitest minions work in a headless environment so they cannot exercise the GUI -->
 					<!-- This leaves us with ~50% coverage in this project, which could mask legitimate
 					     issues in the code that *is* covered. Hence we're going to exclude the GUI 

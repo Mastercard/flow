@@ -46,7 +46,7 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	 * Matches header lines
 	 */
 	protected static final Pattern HEADER_PATTERN = Pattern
-			.compile( "(?<name>.*?):(?<value>.*)" );
+			.compile( "(?<name>[^:]*?):(?<value>.*)" );
 
 	private final Supplier<Map<String, Object>> basis;
 	private Optional<ExposedMasking> body = Optional.empty();
