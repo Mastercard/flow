@@ -34,6 +34,8 @@
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<jline.version>3.21.0</jline.version>
+		<sonar.organization>mastercard</sonar.organization>
+		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 	</properties>
 
 	<dependencyManagement>
@@ -150,7 +152,7 @@
 					<!-- `mvn sortpom:sort` to format the pom files -->
 					<groupId>com.github.ekryd.sortpom</groupId>
 					<artifactId>sortpom-maven-plugin</artifactId>
-					<version>3.2.0</version>
+					<version>3.0.1</version>
 					<configuration>
 						<lineSeparator>\n</lineSeparator>
 						<nrOfIndentSpace>-1</nrOfIndentSpace>
@@ -306,10 +308,10 @@
 					<plugin>
 						<groupId>org.pitest</groupId>
 						<artifactId>pitest-maven</artifactId>
-					<configuration>
-						<historyInputFile>target/pit_hist</historyInputFile>
-						<historyOutputFile>target/pit_hist</historyOutputFile>
-					</configuration>
+						<configuration>
+							<historyInputFile>target/pit_hist</historyInputFile>
+							<historyOutputFile>target/pit_hist</historyOutputFile>
+						</configuration>
 					</plugin>
 				</plugins>
 			</build>
