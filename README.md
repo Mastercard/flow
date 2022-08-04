@@ -17,6 +17,10 @@ Testing framework
 
 <!-- title end -->
 
+[![](https://github.com/Mastercard/flow/actions/workflows/maven.yml/badge.svg)](actions/workflows/maven.yml)
+[![](https://github.com/Mastercard/flow/actions/workflows/codeql-analysis.yml/badge.svg)](actions/workflows/codeql-analysis.yml)
+![GitHub](https://img.shields.io/github/license/Mastercard/flow)
+
 ## Overview
 
 This project provides a framework in which the flow of data in a system can be modelled.

@@ -34,10 +34,12 @@ class Util {
 
 	/**
 	 * @param line The line number
-	 * @return A link fragment to highlight that line numbers
+	 * @return A link fragment to highlight that line number
 	 */
 	static String lineFragment( int line ) {
-		return String.format( "#%s", line );
+		// Bitbucket links will be broken pending
+		// https://jira.atlassian.com/browse/BSERV-13422
+		return String.format( "#L%s,%s", line, line );
 	}
 
 	/**
@@ -46,7 +48,9 @@ class Util {
 	 * @return A link fragment to highlight that line range
 	 */
 	static String lineFragment( int from, int to ) {
-		return String.format( "#%s-%s", from, to );
+		// Bitbucket links will be broken pending
+		// https://jira.atlassian.com/browse/BSERV-13422
+		return String.format( "#L%s-L%s,%s-%s", from, to, from, to );
 	}
 
 	/**
