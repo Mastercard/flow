@@ -13,7 +13,7 @@ By default the report will be saved to a timestamped directory under `target/mct
 
 <!-- code_link_start -->
 
-[AbstractFlocessor.reporting(Reporting)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#153-160
+[AbstractFlocessor.reporting(Reporting)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L153-L160,153-160
 [Reporting]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Reporting.java
 
 <!-- code_link_end -->
@@ -35,7 +35,7 @@ You can use [`Replay.isActive()`][Replay.isActive()] in your assertion component
 
 <!-- code_link_start -->
 
-[Replay.isActive()]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Replay.java#39-46
+[Replay.isActive()]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Replay.java#L39-L46,39-46
 
 <!-- code_link_end -->
 
@@ -144,7 +144,7 @@ empty = Creator.build( flow -> flow
 						.response( coreRes() ) )
 				.response( jsonRes() ) ) );
 ```
-[Snippet context](../../../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Direct.java#56-73)
+[Snippet context](../../../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Direct.java#L56-L73,56-73)
 
 <!-- snippet end -->
 
@@ -157,11 +157,11 @@ Interaction structure can be changed when deriving a flow via the following meth
 
 <!-- code_link_start -->
 
-[Response.call(Function)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/steps/Response.java#30-36
-[Builder.addCall(Predicate,int,Function)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#106-117
-[Builder.removeCall(Predicate)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#121-127
-[Builder.subset(Predicate)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#131-139
-[Builder.superset(Actor, Message, Message)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#149-158
+[Response.call(Function)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/steps/Response.java#L30-L36,30-36
+[Builder.addCall(Predicate,int,Function)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#L106-L117,106-117
+[Builder.removeCall(Predicate)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#L121-L127,121-127
+[Builder.subset(Predicate)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#L131-L139,131-139
+[Builder.superset(Actor, Message, Message)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#L149-L158,149-158
 
 <!-- code_link_end -->
 
@@ -176,7 +176,7 @@ You can see this happening in [`BenTest`][BenTest].
 <!-- code_link_start -->
 
 [Consequests]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Consequests.java
-[Assertion.assertConsequests(Consequests)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Assertion.java#87-93
+[Assertion.assertConsequests(Consequests)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Assertion.java#L87-L93,87-93
 
 <!-- code_link_end -->
 
@@ -226,18 +226,18 @@ Consider the following worked example:
 <!-- code_link_start -->
 
 [flow.Unpredictable]: ../../../../api/src/main/java/com/mastercard/test/flow/Unpredictable.java
-[AbstractMessage.masking(Unpredictable,UnaryOperator)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/AbstractMessage.java#45-52
-[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#165-172
+[AbstractMessage.masking(Unpredictable,UnaryOperator)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/AbstractMessage.java#L45-L52,45-52
+[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L165-L172,165-172
 [mask.BenSys]: ../../test/java/com/mastercard/test/flow/doc/mask/BenSys.java
 [mask.DieSys]: ../../test/java/com/mastercard/test/flow/doc/mask/DieSys.java
 [mask.Unpredictables]: ../../test/java/com/mastercard/test/flow/doc/mask/Unpredictables.java
-[AbstractMessage.masking(Unpredictable,UnaryOperator)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/AbstractMessage.java#45-52
-[Rolling?d\+]: ../../test/java/com/mastercard/test/flow/doc/mask/Rolling.java#30
+[AbstractMessage.masking(Unpredictable,UnaryOperator)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/AbstractMessage.java#L45-L52,45-52
+[Rolling?d\+]: ../../test/java/com/mastercard/test/flow/doc/mask/Rolling.java#L30,30
 [msg.Mask]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java
-[msg.Mask.andThen(Consumer)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java#289-291
-[BenDiceTest?masking]: ../../test/java/com/mastercard/test/flow/doc/mask/BenDiceTest.java#31
+[msg.Mask.andThen(Consumer)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java#L289-L291,289-291
+[BenDiceTest?masking]: ../../test/java/com/mastercard/test/flow/doc/mask/BenDiceTest.java#L31,31
 [BenTest]: ../../test/java/com/mastercard/test/flow/doc/mask/BenTest.java
-[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#165-172
+[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L165-L172,165-172
 
 <!-- code_link_end -->
 
@@ -255,9 +255,9 @@ You can see usage of these types in the example system:
 <!-- code_link_start -->
 
 [flow.Context]: ../../../../api/src/main/java/com/mastercard/test/flow/Context.java
-[Builder.context(Context)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#225-232
+[Builder.context(Context)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#L225-L232,225-232
 [assrt.Applicator]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Applicator.java
-[AbstractFlocessor.applicators(Applicator...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#192-198
+[AbstractFlocessor.applicators(Applicator...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L192-L198,192-198
 [model.ctx.QueueProcessing]: ../../../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/ctx/QueueProcessing.java
 [QueueProcessingApplicator]: ../../../../example/app-assert/src/main/java/com/mastercard/test/flow/example/app/assrt/ctx/QueueProcessingApplicator.java
 
@@ -280,7 +280,7 @@ You can see usage of these types in the example system:
 
 [flow.Residue]: ../../../../api/src/main/java/com/mastercard/test/flow/Residue.java
 [assrt.Checker]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Checker.java
-[AbstractFlocessor.checkers(Checker...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#205-211
+[AbstractFlocessor.checkers(Checker...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L205-L211,205-211
 [model.rsd.DBItems]: ../../../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/rsd/DBItems.java
 [DBItemsChecker]: ../../../../example/app-assert/src/main/java/com/mastercard/test/flow/example/app/assrt/rsd/DBItemsChecker.java
 
@@ -336,7 +336,7 @@ Assertion components will satisfy dependencies as observed data is extracted fro
 <!-- code_link_start -->
 
 [flow.Dependency]: ../../../../api/src/main/java/com/mastercard/test/flow/Dependency.java
-[Builder.dependency(Flow,Function)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#204-214
+[Builder.dependency(Flow,Function)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#L204-L214,204-214
 [dep.BenSys]: ../../test/java/com/mastercard/test/flow/doc/dep/BenSys.java
 [dep.Storage]: ../../test/java/com/mastercard/test/flow/doc/dep/Storage.java
 
@@ -364,7 +364,7 @@ The [`Chain`][builder.Chain] class offers a convenient way to add the chain tag 
 
 <!-- code_link_start -->
 
-[Builder.prerequisite(Flow)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#191-197
+[Builder.prerequisite(Flow)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#L191-L197,191-197
 [builder.Chain]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Chain.java
 [Deferred]: ../../../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Deferred.java
 
