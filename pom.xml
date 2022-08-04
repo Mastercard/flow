@@ -159,14 +159,14 @@
 				</plugin>
 
 				<plugin>
-					<!-- `mvn -Paggregate org.pitest:pitest-maven:mutationCoverage package` to generate 
+					<!-- `mvn -Paggregate -Dnode=none -DexcludedGroups=gui clean test org.pitest:pitest-maven:mutationCoverage package` to generate 
 						target/pit-reports in each module and then collate them in aggregator -->
 					<!-- Alternatively you can create a 'target/mutate' file in a given 
-						project to have mutation testing performed for that project only on test 
-						compilation -->
+						project to have mutation testing performed for a single project only on
+						a `test-compile` invocation -->
 					<groupId>org.pitest</groupId>
 					<artifactId>pitest-maven</artifactId>
-					<version>1.8.1</version>
+					<version>1.9.4</version>
 					<configuration>
 						<timestampedReports>false</timestampedReports>
 						<exportLineCoverage>true</exportLineCoverage>
@@ -175,16 +175,12 @@
 							<value>XML</value>
 						</outputFormats>
 						<threads>8</threads>
-						<!-- incremental analysis support. Much faster iteration but can give incorrect 
-							results, so delete the file if you're seeing unexpected mutant survival -->
-						<historyInputFile>target/pit_hist</historyInputFile>
-						<historyOutputFile>target/pit_hist</historyOutputFile>
 					</configuration>
 					<dependencies>
 						<dependency>
 							<groupId>org.pitest</groupId>
 							<artifactId>pitest-junit5-plugin</artifactId>
-							<version>0.15</version>
+							<version>1.0.0</version>
 						</dependency>
 					</dependencies>
 				</plugin>
@@ -293,6 +289,27 @@
 								<phase>test-compile</phase>
 							</execution>
 						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<profile>
+			<!-- By default mutation testing will be started from fresh on every invocation, but
+			     when you're working on a single class this can slow down your iteration cycle.
+			     Activating this profile with `-Piterate` will cause pitest to take account of
+			     historic results and only exercise the changes since last time. This is much
+			     faster, but can sometimes give erroneous results -->
+			<id>iterate</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.pitest</groupId>
+						<artifactId>pitest-maven</artifactId>
+					<configuration>
+						<historyInputFile>target/pit_hist</historyInputFile>
+						<historyOutputFile>target/pit_hist</historyOutputFile>
+					</configuration>
 					</plugin>
 				</plugins>
 			</build>
