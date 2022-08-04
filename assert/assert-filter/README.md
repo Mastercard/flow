@@ -38,7 +38,7 @@ Some aspects of filtering behaviour can be controlled by system properties:
 
 ## GUI
 
-Calling [`blockForUpdates()`][Filter!.blockForUpdates()] on a `Filter` instance while system property `mctf.filter.update` is `gui` (or `true` in a GUI environment) will cause an graphical interface to be displayed to the user to allow them to update the include and exclude tag sets, and then to choose which of the flows that pass those filters should be exercised.
+Calling [`blockForUpdates()`][Filter!.blockForUpdates()] on a `Filter` instance while system property `mctf.filter.update` is `gui` (or `true` in a GUI environment) will cause a graphical interface to be displayed to the user to allow them to update the include and exclude tag sets, and then to choose which of the flows that pass those filters should be exercised.
 
 <!-- code_link_start -->
 
