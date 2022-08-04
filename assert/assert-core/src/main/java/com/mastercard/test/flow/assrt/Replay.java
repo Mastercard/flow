@@ -2,7 +2,6 @@ package com.mastercard.test.flow.assrt;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Objects;
 import java.util.Optional;
 
 import com.mastercard.test.flow.Interaction;
@@ -111,9 +110,8 @@ public class Replay {
 					ie.description, ie.tags, ie.detail );
 		}
 
-		// find the matching interaction
-		InteractionData id = findMatch( t.expected(), fd.root );
-		if( id == null ) {
+		// Check the interactions match
+		if( !matches( t.expected(), fd.root ) ) {
 			return String.format( "No data for interaction %s -> %s %s",
 					t.expected().requester(),
 					t.expected().responder(),
@@ -121,7 +119,7 @@ public class Replay {
 		}
 
 		// populate the assert with the actuals from the report
-		populate( t, id );
+		populate( t, fd.root );
 		return null;
 	}
 
@@ -140,30 +138,6 @@ public class Replay {
 					"Failed to find execution report in " + Options.ARTIFACT_DIR.value() );
 		}
 		return report.toString();
-	}
-
-	/**
-	 * Searches through a {@link FlowData} for {@link InteractionData} between the
-	 * same actors and carrying the same tags as an {@link Interaction}
-	 *
-	 * @param ntr      The interaction from a system model
-	 * @param flowData The data from a historic assertion of that model
-	 * @return The historic {@link InteractionData} that matches the
-	 *         {@link Interaction}, or <code>null</code> if there is no matching
-	 *         data
-	 */
-	private static InteractionData findMatch( Interaction ntr, InteractionData id ) {
-		if( id == null ) {
-			return null;
-		}
-		if( matches( ntr, id ) ) {
-			return id;
-		}
-		return id.children.stream()
-				.map( c -> findMatch( ntr, c ) )
-				.filter( Objects::nonNull )
-				.findFirst()
-				.orElse( null );
 	}
 
 	/**
