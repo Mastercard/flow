@@ -17,8 +17,8 @@ Testing framework
 
 <!-- title end -->
 
-[![](actions/workflows/maven.yml/badge.svg)](actions/workflows/maven.yml)
-[![](actions/workflows/codeql-analysis.yml/badge.svg)](actions/workflows/codeql-analysis.yml)
+[![](https://github.com/Mastercard/flow/actions/workflows/maven.yml/badge.svg)](actions/workflows/maven.yml)
+[![](https://github.com/Mastercard/flow/actions/workflows/codeql-analysis.yml/badge.svg)](actions/workflows/codeql-analysis.yml)
 ![GitHub](https://img.shields.io/github/license/Mastercard/flow)
 
 ## Overview
