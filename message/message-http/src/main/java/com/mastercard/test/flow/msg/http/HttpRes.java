@@ -19,8 +19,8 @@ import com.mastercard.test.flow.util.Bytes;
  */
 public class HttpRes extends HttpMsg<HttpRes> {
 
-	private static final Pattern REQ_PATTERN = Pattern
-			.compile( "^(?<version>.*?)\\s+(?<status>.*?)\\s+(?<text>.*?)\r\n"
+	private static final Pattern RES_PATTERN = Pattern
+			.compile( "^(?<version>\\S+?) (?<status>\\S+?) (?<text>.*?)\r\n"
 					+ "(?<headers>.*?)\r\n"
 					+ "\r\n"
 					+ "(?<body>.*)$", Pattern.DOTALL );
@@ -46,7 +46,7 @@ public class HttpRes extends HttpMsg<HttpRes> {
 	public HttpRes( byte[] content, Function<byte[], Message> bodyParse ) {
 		this();
 
-		Matcher m = REQ_PATTERN.matcher( new String( content, UTF_8 ) );
+		Matcher m = RES_PATTERN.matcher( new String( content, UTF_8 ) );
 		if( m.matches() ) {
 			set( VERSION, m.group( "version" ).trim() );
 			set( HttpRes.STATUS, m.group( "status" ).trim() );

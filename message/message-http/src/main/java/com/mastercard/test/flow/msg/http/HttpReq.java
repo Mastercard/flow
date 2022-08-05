@@ -39,7 +39,7 @@ public class HttpReq extends HttpMsg<HttpReq> {
 	public static final String PATH_VAR_PRESUFIX = "%";
 
 	private static final Pattern REQ_PATTERN = Pattern
-			.compile( "^(?<method>.*?)\\s+(?<path>\\S+?)\\s+(?<version>\\S+?)\r\n"
+			.compile( "^(?<method>\\w+?) (?<path>\\S+?) (?<version>\\S+?)\r\n"
 					+ "(?<headers>.*?)\r\n"
 					+ "\r\n"
 					+ "(?<body>.*)$", Pattern.DOTALL );
