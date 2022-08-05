@@ -245,7 +245,7 @@ public class Result extends AbstractMessage<Result> {
 
 	private static class ResultSetStructure {
 		@JsonProperty("warning")
-		private static final String WARNING = "This is not representative of an actual wire protocol";
+		private final String warning = "This is not representative of an actual wire protocol";
 
 		@JsonProperty("columns")
 		final List<String> columns;

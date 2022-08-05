@@ -103,34 +103,33 @@ public class Instance {
 		} );
 
 		// build the spark endpoints
-		services.forEach( service -> {
-			Operations.get( service ).forEach( operation -> {
-				Operation op = operation.getAnnotation( Operation.class );
-				if( !methods.containsKey( op.method() ) ) {
-					throw new IllegalStateException( "unsupported method " + op.method() );
-				}
+		services.forEach( service -> Operations.get( service )
+				.forEach( operation -> {
+					Operation op = operation.getAnnotation( Operation.class );
+					if( !methods.containsKey( op.method() ) ) {
+						throw new IllegalStateException( "unsupported method " + op.method() );
+					}
 
-				LOG.info( "Mapping {} {} to {}", op.method(), op.path(), operation );
-				methods.get( op.method() ).accept(
-						op.path(),
-						( req, res ) -> {
-							res.type( op.resContentType() );
-							if( LOG.isDebugEnabled() ) {
-								LOG.debug( "Request {} {} {} {}", req.requestMethod(), req.pathInfo(),
-										req.headers().stream()
-												.map( n -> n + ":" + req.headers( n ) )
-												.collect( Collectors.joining( "," ) ),
-										req.body() );
-							}
+					LOG.info( "Mapping {} {} to {}", op.method(), op.path(), operation );
+					methods.get( op.method() ).accept(
+							op.path(),
+							( req, res ) -> {
+								res.type( op.resContentType() );
+								if( LOG.isDebugEnabled() ) {
+									LOG.debug( "Request {} {} {} {}", req.requestMethod(), req.pathInfo(),
+											req.headers().stream()
+													.map( n -> n + ":" + req.headers( n ) )
+													.collect( Collectors.joining( "," ) ),
+											req.body() );
+								}
 
-							String response = Operations.invokeLocal( service, operation,
-									req::params, req::queryParams, req::headers, req::body );
+								String response = Operations.invokeLocal( service, operation,
+										req::params, req::queryParams, req::headers, req::body );
 
-							LOG.debug( "Response {}", response );
-							return response;
-						} );
-			} );
-		} );
+								LOG.debug( "Response {}", response );
+								return response;
+							} );
+				} ) );
 		sparkService.awaitInitialization();
 
 		if( LOG.isInfoEnabled() ) {
