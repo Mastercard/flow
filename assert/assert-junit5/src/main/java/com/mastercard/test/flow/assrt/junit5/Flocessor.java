@@ -91,7 +91,6 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 
 	private static URI testSource( Flow flow ) {
 		URI uri = null;
-		System.out.println( flow.meta().trace() );
 		try {
 			String addendaStripped = flow.meta().trace().replaceAll( " \\[.*?\\]$", "" );
 
