@@ -1,7 +1,7 @@
 package com.mastercard.test.flow.builder.mutable;
 
 import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import com.mastercard.test.flow.Dependency;
 import com.mastercard.test.flow.Flow;
@@ -14,7 +14,7 @@ import com.mastercard.test.flow.builder.concrete.ConcreteFlow;
 public class MutableDependency {
 
 	private final MutableFieldAddress source;
-	private Function<Object, Object> mutation = Function.identity();
+	private UnaryOperator<Object> mutation = UnaryOperator.identity();
 	private final MutableFieldAddress sink;
 
 	/**
@@ -51,7 +51,7 @@ public class MutableDependency {
 	 * @param m The new mutation
 	 * @return <code>this</code>
 	 */
-	public MutableDependency mutation( Function<Object, Object> m ) {
+	public MutableDependency mutation( UnaryOperator<Object> m ) {
 		mutation = m;
 		return this;
 	}

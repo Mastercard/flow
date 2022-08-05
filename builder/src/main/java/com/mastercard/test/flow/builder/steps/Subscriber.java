@@ -2,6 +2,7 @@ package com.mastercard.test.flow.builder.steps;
 
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 
 import com.mastercard.test.flow.Dependency;
 import com.mastercard.test.flow.Flow;
@@ -38,7 +39,7 @@ public class Subscriber<R> {
 	 *                 {@link Message}
 	 * @return <code>this</code>
 	 */
-	public final Subscriber<R> mutate( Function<Object, Object> mutation ) {
+	public final Subscriber<R> mutate( UnaryOperator<Object> mutation ) {
 		building.mutation( mutation );
 		return this;
 	}

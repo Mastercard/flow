@@ -278,8 +278,9 @@ class LazyModelTest {
 	 */
 	@Test
 	void registrationOrder() {
+		LazyModel m = new LazyModel();
 		String e = assertThrows( IllegalArgumentException.class,
-				() -> new LazyModel().with( Deps.class, NoDeps.class ) ).getMessage();
+				() -> m.with( Deps.class, NoDeps.class ) ).getMessage();
 		assertEquals(
 				"Unsatisfied dependencies [class com.mastercard.test.flow.model.LazyModelTest$NoDeps] for "
 						+ "public com.mastercard.test.flow.model.LazyModelTest$Deps(com.mastercard.test.flow.model.LazyModelTest$NoDeps)",
@@ -305,10 +306,12 @@ class LazyModelTest {
 	 */
 	@Test
 	void constructors() {
+		LazyModel m = new LazyModel();
 		assertThrows( IllegalArgumentException.class,
-				() -> new LazyModel().with( TwoConstructor.class ) );
+				() -> m.with( TwoConstructor.class ) );
+
 		assertThrows( IllegalArgumentException.class,
-				() -> new LazyModel().with( BadConstructor.class ) );
+				() -> m.with( BadConstructor.class ) );
 	}
 
 	private static void assertModel( Model m,

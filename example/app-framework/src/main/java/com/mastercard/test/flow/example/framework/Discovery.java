@@ -10,7 +10,7 @@ import java.net.MulticastSocket;
 import java.net.SocketException;
 import java.net.URL;
 import java.util.Set;
-import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -88,6 +88,7 @@ public class Discovery {
 					}
 					catch( @SuppressWarnings("unused") InterruptedException e ) {
 						// no-one cares
+						Thread.currentThread().interrupt();
 					}
 				}
 				LOG.trace( "Advertisement ended" );
@@ -109,7 +110,7 @@ public class Discovery {
 	 *               if all dependencies are satisfied
 	 * @return <code>this</code>
 	 */
-	public Discovery listen( BiFunction<String, URL, Boolean> action ) {
+	public Discovery listen( BiPredicate<String, URL> action ) {
 
 		Thread listen = new Thread( () -> {
 			byte[] data = new byte[8096];
@@ -131,16 +132,13 @@ public class Discovery {
 							pkt.getAddress().getHostAddress(), advert.port(),
 							"" );
 					satisfied = advert.services()
-							.anyMatch( svc -> action.apply( svc, remote ) );
+							.anyMatch( svc -> action.test( svc, remote ) );
 				}
 
 				LOG.debug( "Listen shutdown" );
 			}
 			catch( SocketException se ) {
-				if( shouldStop ) {
-					// expected consequence of shutdown
-				}
-				else {
+				if( !shouldStop ) {
 					throw new UncheckedIOException( se );
 				}
 			}

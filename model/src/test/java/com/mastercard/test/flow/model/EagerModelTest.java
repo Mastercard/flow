@@ -177,9 +177,9 @@ class EagerModelTest {
 	 */
 	@Test
 	void emptyModel() {
-		IllegalStateException e = Assertions.assertThrows(
-				IllegalStateException.class,
-				() -> new EmptyModel().flows() );
+		EmptyModel m = new EmptyModel();
+		IllegalStateException e = Assertions.assertThrows( IllegalStateException.class,
+				() -> m.flows() );
 		assertEquals( ""
 				+ "No flows registered in class com.mastercard.test.flow.model.EagerModelTest$EmptyModel."
 				+ " Have you called members() in the constructor?",

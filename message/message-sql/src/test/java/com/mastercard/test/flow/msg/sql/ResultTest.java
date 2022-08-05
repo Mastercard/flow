@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
+import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -24,8 +25,9 @@ class ResultTest {
 	@Test
 	void badBytes() {
 		byte[] bytes = "{]".getBytes( UTF_8 );
+		Result result = new Result( "" ).peer( bytes );
 		IllegalStateException e = Assertions.assertThrows( IllegalStateException.class,
-				() -> new Result( "" ).peer( bytes ).asHuman() );
+				() -> result.asHuman() );
 		Assertions.assertEquals( ""
 				+ "Failed to parse\n"
 				+ "{]\n"
@@ -158,13 +160,15 @@ class ResultTest {
 				+ " ijk : null",
 				res.asHuman() );
 
+		Object o = new Object();
 		IllegalArgumentException iae = assertThrows( IllegalArgumentException.class,
-				() -> res.set( "0:0", new Object() ) );
+				() -> res.set( "0:0", o ) );
 		assertTrue( iae.getMessage().startsWith( "Field '0:0' - Possibly-mutable value type" ),
 				iae.getMessage() );
 
+		List<Object> l = Arrays.asList( "1", new Object() );
 		iae = assertThrows( IllegalArgumentException.class,
-				() -> res.set( "0", Arrays.asList( "1", new Object() ) ) );
+				() -> res.set( "0", l ) );
 		assertTrue( iae.getMessage().startsWith( "Field '0:1' - Possibly-mutable value type" ),
 				iae.getMessage() );
 	}

@@ -3,7 +3,7 @@ package com.mastercard.test.flow.builder.mutable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +20,7 @@ class MutableDependencyTest {
 	 */
 	@Test
 	void fields() {
-		Function<Object, Object> mut = String::valueOf;
+		UnaryOperator<Object> mut = String::valueOf;
 
 		MutableDependency dep = new MutableDependency();
 
@@ -41,7 +41,7 @@ class MutableDependencyTest {
 	 */
 	@Test
 	void inheritance() {
-		Function<Object, Object> mut = String::valueOf;
+		UnaryOperator<Object> mut = String::valueOf;
 		ConcreteDependency cd = new MutableDependency()
 				.source( s -> s.field( "source field" ) )
 				.mutation( mut )

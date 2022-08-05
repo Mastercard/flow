@@ -119,11 +119,10 @@ class DescriptionCompleter implements Completer {
 	 *
 	 * @param word   the command
 	 * @param filter The filter to update
-	 * @param errors Populate this if problems are encountered
 	 * @return <code>true</code> if the command was a valid description filter
 	 *         command
 	 */
-	public static boolean offer( String word, Filter filter, List<String> errors ) {
+	public static boolean offer( String word, Filter filter ) {
 		Inclusion inclusion = Inclusion.match( word );
 		if( inclusion == null ) {
 			return false;

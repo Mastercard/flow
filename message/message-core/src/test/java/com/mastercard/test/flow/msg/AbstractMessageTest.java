@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Set;
 
 import org.junit.jupiter.api.Assertions;
@@ -151,11 +152,11 @@ class AbstractMessageTest {
 
 		// by default we only let the basic value types be set
 		IllegalArgumentException iae = assertThrows( IllegalArgumentException.class,
-				() -> msg.set( "field", new ArrayList<>() ) );
+				() -> msg.set( "field", Collections.EMPTY_LIST ) );
 		assertEquals( ""
-				+ "Field 'field' - Possibly-mutable value type class java.util.ArrayList\n"
+				+ "Field 'field' - Possibly-mutable value type class java.util.Collections$EmptyList\n"
 				+ "If you're sure that this type is immutable, then you can call\n"
-				+ "  AbstractMessage.registerImmutable( ArrayList.class )\n"
+				+ "  AbstractMessage.registerImmutable( EmptyList.class )\n"
 				+ "to suppress this error.\n"
 				+ "You can also override\n"
 				+ "  AbstractMessage.validateValueType( field, value )\n"

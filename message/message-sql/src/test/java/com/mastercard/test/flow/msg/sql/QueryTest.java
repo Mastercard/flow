@@ -25,8 +25,9 @@ class QueryTest {
 	@Test
 	void badBytes() {
 		byte[] bytes = "{]".getBytes( UTF_8 );
+		Query query = new Query( "" ).peer( bytes );
 		IllegalArgumentException e = Assertions.assertThrows( IllegalArgumentException.class,
-				() -> new Query( "" ).peer( bytes ).asHuman() );
+				() -> query.asHuman() );
 		Assertions.assertEquals( "Failed to parse '{]' ([123, 93])", e.getMessage() );
 	}
 

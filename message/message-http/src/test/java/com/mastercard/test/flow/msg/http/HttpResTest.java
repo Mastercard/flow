@@ -117,8 +117,9 @@ class HttpResTest {
 			}
 		} );
 
+		byte[] badBytes = (resdata + "bad data").getBytes( UTF_8 );
 		IllegalArgumentException iae = assertThrows( IllegalArgumentException.class,
-				() -> req.peer( (resdata + "bad data").getBytes( UTF_8 ) ) );
+				() -> req.peer( badBytes ) );
 		assertEquals( ""
 				+ "Failed to parse  from body content\n"
 				+ "UTF8:[bad data]\n"

@@ -36,6 +36,9 @@ import com.mastercard.test.flow.assrt.filter.Filter;
  */
 class FlowPanel extends JPanel {
 
+	private static final String RESET = "Reset";
+	private static final String RESET_FLOW_SELECTION = "Reset flow selection";
+
 	private static final long serialVersionUID = 1L;
 
 	private final transient Filter filter;
@@ -49,7 +52,7 @@ class FlowPanel extends JPanel {
 
 	private final JButton include = new JButton( "✔" );
 	private final JButton exclude = new JButton( "✖" );
-	private final JButton reset = new JButton( "Reset" );
+	private final JButton reset = new JButton( RESET );
 
 	/**
 	 * Flows whose descriptions match this are highlighted in the lists
@@ -168,7 +171,7 @@ class FlowPanel extends JPanel {
 			refresh();
 		} );
 
-		reset.setToolTipText( "Reset flow selection" );
+		reset.setToolTipText( RESET_FLOW_SELECTION );
 		reset.addActionListener( ac -> {
 			if( filter.indices().isEmpty() && Filter.historicReport() != null ) {
 				filter.loadFailureIndices();
@@ -283,14 +286,14 @@ class FlowPanel extends JPanel {
 			}
 			else {
 				reset.setEnabled( false );
-				reset.setText( "Reset" );
-				reset.setToolTipText( "Reset flow selection" );
+				reset.setText( RESET );
+				reset.setToolTipText( RESET_FLOW_SELECTION );
 			}
 		}
 		else {
 			reset.setEnabled( true );
-			reset.setText( "Reset" );
-			reset.setToolTipText( "Reset flow selection" );
+			reset.setText( RESET );
+			reset.setToolTipText( RESET_FLOW_SELECTION );
 		}
 
 		updateListener.run();

@@ -104,8 +104,9 @@ class MaskTest {
 	 */
 	@Test
 	void badChars() {
+		Mask m = new Mask();
 		Assertions.assertThrows( IllegalArgumentException.class,
-				() -> new Mask().chars( "a", "" ) );
+				() -> m.chars( "a", "" ) );
 	}
 
 	/**

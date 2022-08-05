@@ -64,7 +64,7 @@ public class DBItemsChecker extends Checker<DBItems> {
 			while( rs.next() ) {
 				items.put( rs.getString( "id" ), rs.getString( "data" ) );
 			}
-			LOG.info( "Dumped " + items );
+			LOG.info( "Dumped {}", items );
 			return items;
 		}
 		catch( SQLException e ) {

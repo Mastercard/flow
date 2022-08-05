@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -172,7 +173,7 @@ public class Flw implements Flow {
 		}
 
 		@Override
-		public Function<Object, Object> mutation() {
+		public UnaryOperator<Object> mutation() {
 			throw new UnsupportedOperationException();
 		}
 

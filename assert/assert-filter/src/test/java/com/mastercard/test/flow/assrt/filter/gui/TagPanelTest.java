@@ -15,7 +15,7 @@ import com.mastercard.test.flow.assrt.filter.mock.Mdl;
 @Tag("gui")
 @SuppressWarnings("static-method")
 @DisabledIf("isHeadless")
-public class TagPanelTest {
+class TagPanelTest {
 
 	/**
 	 * @return true if we're running in an environment where these tests are

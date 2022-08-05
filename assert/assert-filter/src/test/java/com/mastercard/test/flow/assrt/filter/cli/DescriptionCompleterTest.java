@@ -108,8 +108,7 @@ class DescriptionCompleterTest extends AbstractFilterTest {
 			Model mdl = new Mdl().withFlows(
 					"abc []", "bcd []", "cde []" );
 			Filter filter = new Filter( mdl );
-			ArrayList<String> errors = new ArrayList<>();
-			assertTrue( DescriptionCompleter.offer( in, filter, errors ) );
+			assertTrue( DescriptionCompleter.offer( in, filter ) );
 			assertEquals( out, filter.indices().toString(), "for " + in );
 		};
 
@@ -135,15 +134,14 @@ class DescriptionCompleterTest extends AbstractFilterTest {
 		Model mdl = new Mdl().withFlows(
 				"abc []", "bcd []", "cde []" );
 		Filter filter = new Filter( mdl );
-		ArrayList<String> errors = new ArrayList<>();
 		assertEquals( "[]", filter.indices().toString(), "initial" );
-		DescriptionCompleter.offer( "/b", filter, errors );
+		DescriptionCompleter.offer( "/b", filter );
 		assertEquals( "[0, 1]", filter.indices().toString(), "after /b" );
-		DescriptionCompleter.offer( "/d", filter, errors );
+		DescriptionCompleter.offer( "/d", filter );
 		assertEquals( "[1]", filter.indices().toString(), "after /d" );
-		DescriptionCompleter.offer( "?a", filter, errors );
+		DescriptionCompleter.offer( "?a", filter );
 		assertEquals( "[1]", filter.indices().toString(), "after ?a" );
-		DescriptionCompleter.offer( "?b", filter, errors );
+		DescriptionCompleter.offer( "?b", filter );
 		assertEquals( "[]", filter.indices().toString(), "after ?b" );
 	}
 

@@ -104,9 +104,9 @@ class DependenciesTest {
 		Mockito.when( mocks.srcMsg.peer( ArgumentMatchers.any() ) )
 				.thenThrow( npe );
 
+		Dependencies d = new Dependencies( mocks.model );
 		IllegalArgumentException iae = assertThrows( IllegalArgumentException.class,
-				() -> new Dependencies( mocks.model )
-						.publish( mocks.src, mocks.srcNtr, mocks.srcMsg, mocks.actual ) );
+				() -> d.publish( mocks.src, mocks.srcNtr, mocks.srcMsg, mocks.actual ) );
 
 		assertEquals( ""
 				+ "Failed to parse AVA->BEN [a, b, c] msg_type from\n"

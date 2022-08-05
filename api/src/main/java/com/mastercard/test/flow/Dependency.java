@@ -1,6 +1,6 @@
 package com.mastercard.test.flow;
 
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 /**
  * Defines an inter-{@link Flow} data dependency. These should be fulfilled when
@@ -22,7 +22,7 @@ public interface Dependency {
 	 *         {@link #source()} and before it gets populated into the
 	 *         {@link #sink()}
 	 */
-	Function<Object, Object> mutation();
+	UnaryOperator<Object> mutation();
 
 	/**
 	 * Defines the destination of the data dependency
