@@ -146,8 +146,10 @@ class WebSequenceTest {
 	 */
 	@Test
 	void peerFail() {
+		WebSequence ws = new WebSequence();
+		byte[] badBytes = "{]".getBytes( UTF_8 );
 		UncheckedIOException uioe = assertThrows( UncheckedIOException.class,
-				() -> new WebSequence().peer( "{]".getBytes( UTF_8 ) ) );
+				() -> ws.peer( badBytes ) );
 		assertEquals( "Failed to parse '{]' ([123, 93])", uioe.getMessage() );
 		assertEquals( "Unexpected close marker ']': expected '}' "
 				+ "(for Object starting at [Source: (byte[])\"{]\"; line: 1, column: 1])\n"

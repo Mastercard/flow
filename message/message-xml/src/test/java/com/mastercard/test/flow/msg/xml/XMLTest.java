@@ -353,9 +353,9 @@ class XMLTest {
 	@Test
 	void badData() {
 		{
-			byte[] bytes = "this isn't xml!".getBytes( UTF_8 );
+			XML xml = new XML( "this isn't xml!".getBytes( UTF_8 ) );
 			IllegalStateException ise = assertThrows( IllegalStateException.class,
-					() -> new XML( bytes ).content() );
+					() -> xml.content() );
 			assertEquals( ""
 					+ "Failed to parse\n"
 					+ "this isn't xml!\n"
@@ -363,9 +363,9 @@ class XMLTest {
 					ise.getMessage() );
 		}
 		{
-			byte[] bytes = "<?xml version='1.1'?>".getBytes( UTF_8 );
+			XML xml = new XML( "<?xml version='1.1'?>".getBytes( UTF_8 ) );
 			IllegalStateException ise = assertThrows( IllegalStateException.class,
-					() -> new XML( bytes ).content() );
+					() -> xml.content() );
 			assertEquals( ""
 					+ "Failed to parse\n"
 					+ "<?xml version='1.1'?>\n"

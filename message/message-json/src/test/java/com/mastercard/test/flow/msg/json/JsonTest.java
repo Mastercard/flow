@@ -27,8 +27,9 @@ class JsonTest {
 	@Test
 	void badInput() {
 		byte[] bytes = "{]".getBytes( UTF_8 );
+		Json json = new Json( bytes );
 		IllegalArgumentException e = Assertions.assertThrows( IllegalArgumentException.class,
-				() -> new Json( bytes ).content() );
+				() -> json.content() );
 		Assertions.assertEquals( "Failed to parse '{]' ([123, 93])", e.getMessage() );
 	}
 
