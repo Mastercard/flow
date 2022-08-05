@@ -404,10 +404,10 @@ class DeriverTest extends BuilderTest {
 				} ) );
 
 		{
+			Flow f = CreatorTest.basicFlow();
 			Exception e = Assertions.assertThrows(
-					IllegalStateException.class, () -> Deriver
-							.build( CreatorTest.basicFlow(), flw -> flw
-									.addCall( i -> true, a -> miref.get() ) ) );
+					IllegalStateException.class, () -> Deriver.build( f, flw -> flw
+							.addCall( i -> true, a -> miref.get() ) ) );
 			assertEquals( "Failed to return to origin", e.getMessage() );
 		}
 	}

@@ -23,7 +23,7 @@ import com.mastercard.test.flow.report.Writer;
 @Tag("gui")
 @SuppressWarnings("static-method")
 @DisabledIf("isHeadless")
-public class FlowPanelTest {
+class FlowPanelTest {
 
 	/**
 	 * @return true if we're running in an environment where these tests are

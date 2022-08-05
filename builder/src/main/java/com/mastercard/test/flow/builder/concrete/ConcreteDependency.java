@@ -1,6 +1,6 @@
 package com.mastercard.test.flow.builder.concrete;
 
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import com.mastercard.test.flow.Dependency;
 import com.mastercard.test.flow.FieldAddress;
@@ -11,7 +11,7 @@ import com.mastercard.test.flow.FieldAddress;
 public class ConcreteDependency implements Dependency {
 
 	private final ConcreteFieldAddress source;
-	private final Function<Object, Object> mutation;
+	private final UnaryOperator<Object> mutation;
 	private final ConcreteFieldAddress sink;
 
 	/**
@@ -19,7 +19,7 @@ public class ConcreteDependency implements Dependency {
 	 * @param mutation How field is altered in transit
 	 * @param sink     Where field goes to
 	 */
-	public ConcreteDependency( ConcreteFieldAddress source, Function<Object, Object> mutation,
+	public ConcreteDependency( ConcreteFieldAddress source, UnaryOperator<Object> mutation,
 			ConcreteFieldAddress sink ) {
 		this.source = source;
 		this.mutation = mutation;
@@ -32,7 +32,7 @@ public class ConcreteDependency implements Dependency {
 	}
 
 	@Override
-	public Function<Object, Object> mutation() {
+	public UnaryOperator<Object> mutation() {
 		return mutation;
 	}
 
