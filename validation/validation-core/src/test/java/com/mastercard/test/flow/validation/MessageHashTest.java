@@ -155,22 +155,20 @@ class MessageHashTest {
 	 */
 	@Test
 	void failure() {
-		try {
-			mh.expect( model(), "foo" );
-			Assertions.fail( "Should has failed by now!" );
-		}
-		catch( AssertionError e ) {
-			assertEquals( ""
-					+ "expected: <\"foo\"> but was: <\"ALL MESSAGES\",\n"
-					+ "\"00000000000000000000000000000000 0000 0 B\",\n"
-					+ "\"ALL <-> AVA\",\n"
-					+ "\"00000000000000000000000000000000 0000 0 B\",\n"
-					+ "\"REQUESTS --> BEN\",\n"
-					+ "\"00000000000000000000000000000000 0000 0 B\",\n"
-					+ "\"RESPONSES <-- CHE\",\n"
-					+ "\"00000000000000000000000000000000 0000 0 B\">",
-					e.getMessage() );
-		}
+		Model model = model();
+		AssertionError ae = assertThrows( AssertionError.class,
+				() -> mh.expect( model, "foo" ) );
+		assertEquals( ""
+				+ "expected: <\"foo\"> but was: <\"ALL MESSAGES\",\n"
+				+ "\"00000000000000000000000000000000 0000 0 B\",\n"
+				+ "\"ALL <-> AVA\",\n"
+				+ "\"00000000000000000000000000000000 0000 0 B\",\n"
+				+ "\"REQUESTS --> BEN\",\n"
+				+ "\"00000000000000000000000000000000 0000 0 B\",\n"
+				+ "\"RESPONSES <-- CHE\",\n"
+				+ "\"00000000000000000000000000000000 0000 0 B\">",
+				ae.getMessage() );
+
 	}
 
 	/**
