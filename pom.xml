@@ -36,6 +36,14 @@
 		<jline.version>3.21.0</jline.version>
 		<sonar.organization>mastercard</sonar.organization>
 		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
+		<!-- The health of the example project is not terribly interesting, and
+		     it seems a little unfair to be dinged for code that sonar can't 
+		     exercise due to living in a headless environment, so... -->
+		<sonar.exclusions>
+			**/example/**/*.java,
+			**/com/mastercard/test/flow/assrt/filter/gui/*.java,
+			**/com/mastercard/test/flow/validation/coppice/**/*.java
+		</sonar.exclusions>
 	</properties>
 
 	<dependencyManagement>
