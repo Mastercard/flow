@@ -87,10 +87,11 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 	 * <code>full.class.name.methodname(simpleclassname.java:linenumber)</code>,
 	 * Capturing <code>full.class.name</code> and <code>linenumber</code>
 	 */
-	private static final Pattern TRACE = Pattern.compile( "(\\S+)\\.\\S+?\\.java:(\\d+)\\)" );
+	private static final Pattern TRACE = Pattern.compile( "(\\S+)\\.[^.]+?\\.java:(\\d+)\\)" );
 
 	private static URI testSource( Flow flow ) {
 		URI uri = null;
+		System.out.println( flow.meta().trace() );
 		try {
 			String addendaStripped = flow.meta().trace().replaceAll( " \\[.*?\\]$", "" );
 

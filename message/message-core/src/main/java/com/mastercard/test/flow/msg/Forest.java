@@ -134,10 +134,10 @@ public class Forest {
 		public final String name;
 		public final Deque<Integer> indices;
 		/**
-		 * Any amount of anything, optionally followed by a non-zero amount of anything
-		 * surrounded by square brackets
+		 * Any amount of anything except [, optionally followed by a non-zero amount of
+		 * anything surrounded by square brackets
 		 */
-		private static final Pattern PATTERN = Pattern.compile( "^(.*?)(?:\\[(.+)\\])?$" );
+		private static final Pattern PATTERN = Pattern.compile( "^([^\\[]*?)(?:\\[(.+)\\])?$" );
 
 		public PathElement( String pe ) {
 			Matcher em = PATTERN.matcher( pe );
