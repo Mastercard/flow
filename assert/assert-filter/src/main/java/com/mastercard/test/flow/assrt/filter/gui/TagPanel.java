@@ -35,6 +35,8 @@ import com.mastercard.test.flow.assrt.filter.Filter;
  */
 class TagPanel extends JPanel {
 
+	private static final String SWAP_SELECTED_TAGS = "Swap selected tags";
+
 	private static final long serialVersionUID = 1L;
 
 	private final transient Filter filter;
@@ -138,7 +140,7 @@ class TagPanel extends JPanel {
 			inex.setEnabled( !includedTags.isSelectionEmpty() || !excludedTags.isSelectionEmpty() );
 		} );
 
-		avin.setToolTipText( "Swap selected tags" );
+		avin.setToolTipText( SWAP_SELECTED_TAGS );
 		avin.addActionListener( ac -> {
 			if( !availableTags.isSelectionEmpty() ) {
 				Set<String> s = filter.includedTags();
@@ -154,7 +156,7 @@ class TagPanel extends JPanel {
 			refresh();
 		} );
 
-		avin.setToolTipText( "Swap selected tags" );
+		avin.setToolTipText( SWAP_SELECTED_TAGS );
 		avex.addActionListener( ac -> {
 			if( !availableTags.isSelectionEmpty() ) {
 				Set<String> s = filter.excludedTags();
@@ -170,7 +172,7 @@ class TagPanel extends JPanel {
 			refresh();
 		} );
 
-		avin.setToolTipText( "Swap selected tags" );
+		avin.setToolTipText( SWAP_SELECTED_TAGS );
 		inex.addActionListener( ac -> {
 			if( !includedTags.isSelectionEmpty() ) {
 				Set<String> in = filter.includedTags();
@@ -310,12 +312,9 @@ class TagPanel extends JPanel {
 			Component cell = super.getListCellRendererComponent( list, value, index, isSelected,
 					cellHasFocus );
 
-//			System.out.println( "\nTagPanel.TagRenderer.getListCellRendererComponent()" );
-//			System.out.println( value );
-//			System.out.println( tagFilter );
 			boolean regexMatch = tagFilter.matcher( String.valueOf( value ) ).find();
 			boolean tagLimitMatch = tagLimit.test( String.valueOf( value ) );
-//			System.out.println( regexMatch + " " + tagLimitMatch );
+
 			if( !regexMatch || !tagLimitMatch ) {
 				cell.setFont( cell.getFont().deriveFont( Font.ITALIC ) );
 				cell.setForeground( Color.GRAY );

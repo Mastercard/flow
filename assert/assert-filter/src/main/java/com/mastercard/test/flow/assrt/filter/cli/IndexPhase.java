@@ -92,7 +92,7 @@ class IndexPhase extends TagPhase {
 			else if( updateIndices( word ) ) {
 				// index filter
 			}
-			else if( DescriptionCompleter.offer( word, filter, errors ) ) {
+			else if( DescriptionCompleter.offer( word, filter ) ) {
 				// description search filter
 			}
 			else {

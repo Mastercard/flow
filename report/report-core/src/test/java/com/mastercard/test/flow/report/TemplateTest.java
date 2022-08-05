@@ -156,8 +156,8 @@ class TemplateTest {
 			assertThrows( IllegalArgumentException.class, () -> new Template( tp ) );
 		}
 
-		assertThrows( UncheckedIOException.class,
-				() -> new Template( Paths.get( "no such file" ) ) );
+		Path p = Paths.get( "no such file" );
+		assertThrows( UncheckedIOException.class, () -> new Template( p ) );
 	}
 
 	/**
@@ -175,12 +175,14 @@ class TemplateTest {
 	}
 
 	/**
-	 * Whos what happens when non-serialisable data is supplied
+	 * Show what happens when non-serialisable data is supplied
 	 */
 	@Test
 	void badInsert() {
+		Object o = new Object();
+		Path p = Paths.get( "" );
 		UncheckedIOException uioe = assertThrows( UncheckedIOException.class,
-				() -> TEMPLATE.insert( new Object(), Paths.get( "" ) ) );
+				() -> TEMPLATE.insert( o, p ) );
 		assertEquals( InvalidDefinitionException.class, uioe.getCause().getClass() );
 	}
 }
