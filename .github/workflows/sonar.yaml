@@ -1,12 +1,12 @@
 name: Sonar
 on:
   push:
-    branches:
-      - master
+    branches: [ "main" ]
   pull_request:
-    types: [opened, synchronize, reopened]
+    branches: [ "main" ]
   schedule:
-    - cron: "0 12 * * *"
+    - cron: '0 8 * * 1'
+
 jobs:
   build:
     name: Build
