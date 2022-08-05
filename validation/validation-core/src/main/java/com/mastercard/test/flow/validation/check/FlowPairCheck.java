@@ -64,7 +64,7 @@ public abstract class FlowPairCheck implements Validation {
 	/**
 	 * Implement this with your pair-checking logic
 	 *
-	 * @param left A flow
+	 * @param left  A flow
 	 * @param right The other flow
 	 * @return violation text, if a problem is detected
 	 */
