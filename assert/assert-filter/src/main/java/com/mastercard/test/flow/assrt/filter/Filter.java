@@ -164,25 +164,35 @@ public class Filter {
 
 			includeTags.clear();
 			includeTags.addAll( tags );
-			indices.clear();
-			taggedFlows = null;
-
-			if( constructingFlows ) {
-				int idx = 0;
-				for( Flow flow : taggedFlows() ) {
-					if( current.contains( flow ) ) {
-						indices.add( idx );
-					}
-					idx++;
-				}
-
-				if( indices.size() == idx ) {
-					// all flows are included, so no point in the index filter values
-					indices.clear();
-				}
-			}
+			matchIndexSelection( current );
 		}
 		return this;
+	}
+
+	/**
+	 * Called when the tag filters have been changed, this method will update the
+	 * index filters to retain previously-selected flows
+	 *
+	 * @param previous The set of flows that used to pass the index filters
+	 */
+	private void matchIndexSelection( Set<Flow> previous ) {
+		indices.clear();
+		taggedFlows = null;
+
+		if( constructingFlows ) {
+			int idx = 0;
+			for( Flow flow : taggedFlows() ) {
+				if( previous.contains( flow ) ) {
+					indices.add( idx );
+				}
+				idx++;
+			}
+
+			if( indices.size() == idx ) {
+				// all flows are included, so no point in the index filter values
+				indices.clear();
+			}
+		}
 	}
 
 	/**
@@ -210,22 +220,7 @@ public class Filter {
 
 			excludeTags.clear();
 			excludeTags.addAll( tags );
-			indices.clear();
-			taggedFlows = null;
-
-			if( constructingFlows ) {
-				int idx = 0;
-				for( Flow flow : taggedFlows() ) {
-					if( current.contains( flow ) ) {
-						indices.add( idx );
-					}
-					idx++;
-				}
-
-				if( indices.size() == idx ) {
-					indices.clear();
-				}
-			}
+			matchIndexSelection( current );
 		}
 		return this;
 	}
