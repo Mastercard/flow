@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import com.mastercard.test.flow.report.Mdl;
 import com.mastercard.test.flow.report.ReportTestUtil;
 import com.mastercard.test.flow.report.ReportTestUtil.Served;
+import com.mastercard.test.flow.report.seq.Browser;
 import com.mastercard.test.flow.report.seq.IndexSequence;
 
 /**
@@ -66,7 +67,14 @@ abstract class AbstractIndexTest {
 	}
 
 	/**
-	 * Checks index title elements
+	 * Checks index title elements.
+	 * <p>
+	 * If this test is failing due to the format of the timestamp then the problem
+	 * may be the browser locale configuration. Check comments in
+	 * {@link Browser#get()} and the maven-surefire-plugin configuration in the pom
+	 * file for more details on this issue. If you're running on linux then you'll
+	 * need to set environment variable <code>LANG=en_GB</code>
+	 * </p>
 	 */
 	@Test
 	void title() {

@@ -1,4 +1,4 @@
-name: Testing
+name: Mutation
 
 on:
   push:
@@ -8,7 +8,10 @@ on:
 
 jobs:
   build:
+
     runs-on: ubuntu-latest
+    env:
+      LANG: en_GB
     steps:
     - uses: actions/checkout@v3
 
@@ -26,11 +29,18 @@ jobs:
         cache: 'yarn'
         cache-dependency-path: report/report-ng/yarn.lock
 
-    - name: Build with Maven
-      run: mvn -B -Dnode=system package
+    - name: Run mutation testing
+      run: mvn -Paggregate -Dnode=system test org.pitest:pitest-maven:mutationCoverage package
 
-    - name: Save flow execution reports
+    - name: Save aggregated mutation report
       uses: actions/upload-artifact@v3
       with:
-        name: flow_execution_reports
-        path: '**/target/mctf/latest'
+        name: mutation_report
+        path: aggregator/target/pit-reports
+
+    - name: Save project mutation reports
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: project_mutation_reports
+        path: '**/target/pit-reports'

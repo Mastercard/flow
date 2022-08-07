@@ -104,7 +104,14 @@ class ModelDiffTest {
 	}
 
 	/**
-	 * Exercises the link to the "from" index
+	 * Exercises the link to the "from" index.
+	 * <p>
+	 * If this test is failing due to the format of the timestamps then the problem
+	 * may be the browser locale configuration. Check comments in
+	 * {@link Browser#get()} and the maven-surefire-plugin configuration in the pom
+	 * file for more details on this issue. If you're running on linux then you'll
+	 * need to set environment variable <code>LANG=en_GB</code>
+	 * </p>
 	 */
 	@Test
 	void fromLink() {
@@ -117,7 +124,14 @@ class ModelDiffTest {
 	}
 
 	/**
-	 * Exercises the link to the "to" index
+	 * Exercises the link to the "to" index.
+	 * <p>
+	 * If this test is failing due to the format of the timestamps then the problem
+	 * may be the browser locale configuration. Check comments in
+	 * {@link Browser#get()} and the maven-surefire-plugin configuration in the pom
+	 * file for more details on this issue. If you're running on linux then you'll
+	 * need to set environment variable <code>LANG=en_GB</code>
+	 * </p>
 	 */
 	@Test
 	void toLink() {
