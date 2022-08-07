@@ -39,11 +39,9 @@
 		<!-- The health of the example project is not terribly interesting, and
 		     it seems a little unfair to be dinged for code that sonar can't 
 		     exercise due to living in a headless environment, so... -->
-		<sonar.exclusions>
-			**/example/**/*.java,
+		<sonar.exclusions>**/example/**/*.java,
 			**/com/mastercard/test/flow/assrt/filter/gui/*.java,
-			**/com/mastercard/test/flow/validation/coppice/**/*.java
-		</sonar.exclusions>
+			**/com/mastercard/test/flow/validation/coppice/**/*.java</sonar.exclusions>
 	</properties>
 
 	<dependencyManagement>
@@ -400,20 +398,16 @@
 			<!-- Runs the example application integration test. -->
 			<!-- Invoke with `mkdir -p target; mvn -Peait test` -->
 			<id>eait</id>
-
-			<properties>
-				<!-- We only want the example app integration test -->
-				<test>com.mastercard.test.flow.example.app.itest.IntegrationTest</test>
-				<!-- don't fail projects that don't contain the integration test -->
-				<failIfNoTests>false</failIfNoTests>
-			</properties>
-
 			<build>
 				<plugins>
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-surefire-plugin</artifactId>
 						<configuration>
+							<!-- We only want the example app integration test -->
+							<test>com.mastercard.test.flow.example.app.itest.IntegrationTest</test>
+							<!-- don't fail projects that don't contain the integration test -->
+							<failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
 							<!-- Runs the tests in maven's JVM, so we can interact with the CLI 
 							     from the terminal -->
 							<forkCount>0</forkCount>
