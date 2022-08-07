@@ -92,6 +92,19 @@
 
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<environmentVariables>
+					<!-- tests assume UK-format datetimes (DD/MM/YYYY, 24-hour time). On windows we
+					     achieve this by passing lang=en_GB when building the driver (see Browser class).
+				       On linux, chrome ignores that argument (see https://bugs.chromium.org/p/chromium/issues/detail?id=755338)
+				       we have to set an environment variable instead -->
+						<LANG>en_GB</LANG>
+					</environmentVariables>
+				</configuration>
+			</plugin>
 
 			<plugin>
 				<groupId>org.pitest</groupId>

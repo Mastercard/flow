@@ -1,0 +1,39 @@
+name: Mutation
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    env:
+      LANG: en_GB
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up JDK 8
+      uses: actions/setup-java@v3
+      with:
+        java-version: '8'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Run mutation testing
+      run: mvn -Paggregate -Dnode=none test org.pitest:pitest-maven:mutationCoverage package
+
+# by default preserve just the aggregated report
+    - uses: actions/upload-artifact@v3
+      with:
+        name: mutation report
+        path: aggregator/target/pit-reports
+
+# if mutation testing failed then preserve all of the individual project reports
+    - uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: project reports
+        path: **/target/pit-reports

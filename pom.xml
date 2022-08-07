@@ -324,7 +324,7 @@
 		</profile>
 
 		<profile>
-			<!-- Sets some convenient system properties when we're doing a full mutation testing run -->
+			<!-- Sets some convenient plugin configuration when we're doing a full mutation testing run -->
 			<id>aggregate</id>
 			<build>
 				<plugins>
