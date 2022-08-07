@@ -109,24 +109,21 @@ public class History {
 			}
 		}
 
-		if( !Options.SUPPRESS_DEPENDENCY_CHECK.isTrue() ) {
-			/// the check has not been suppressed...
-			if( statefulness == State.FUL ) {
-				// ... and the system is stateful...
-				Optional<String> depFailure = flow.dependencies()
-						.map( d -> d.source().flow() )
-						// ... and the flow has a dependency that intersects with the system ...
-						.filter( f -> Flows.intersects( f, system ) )
-						.map( this::get )
-						.filter( r -> !r.processed )
-						// ... and that dependency has not been processed ...
-						.map( r -> "Missing dependency" )
-						// ... so there's no point proceeding
-						.findFirst();
+		if( statefulness == State.FUL && !Options.SUPPRESS_DEPENDENCY_CHECK.isTrue() ) {
+			// the system is stateful and the check has not been suppressed...
+			Optional<String> depFailure = flow.dependencies()
+					.map( d -> d.source().flow() )
+					// ... and the flow has a dependency that intersects with the system ...
+					.filter( f -> Flows.intersects( f, system ) )
+					.map( this::get )
+					.filter( r -> !r.processed )
+					// ... and that dependency has not been processed ...
+					.map( r -> "Missing dependency" )
+					// ... so there's no point proceeding
+					.findFirst();
 
-				if( depFailure.isPresent() ) {
-					return depFailure;
-				}
+			if( depFailure.isPresent() ) {
+				return depFailure;
 			}
 		}
 

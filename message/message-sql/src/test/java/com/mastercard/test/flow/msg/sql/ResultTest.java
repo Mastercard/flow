@@ -19,6 +19,7 @@ import com.mastercard.test.flow.msg.AbstractMessage;
  */
 @SuppressWarnings("static-method")
 class ResultTest {
+
 	/**
 	 * Unrecognised content is noisily rejected
 	 */

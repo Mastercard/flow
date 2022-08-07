@@ -37,7 +37,7 @@ public class Result extends AbstractMessage<Result> {
 	 */
 	public static final String COLUMNS = "columns";
 	private static final Pattern ROW_COL_PTRN = Pattern.compile(
-			"([0-9]+):([0-9]+)" );
+			"(\\d+):(\\d+)" );
 
 	private final Supplier<ResultSetStructure> basis;
 

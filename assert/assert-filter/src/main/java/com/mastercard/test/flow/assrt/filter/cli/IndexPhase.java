@@ -115,11 +115,7 @@ class IndexPhase extends TagPhase {
 		int low = Integer.parseInt( m.group( 2 ) );
 		boolean range = "-".equals( m.group( 3 ) );
 		String highStr = m.group( 4 );
-		int high = range
-				? highStr.isEmpty()
-						? (int) filter.flows().count() // unbounded
-						: Integer.parseInt( highStr ) // bounded
-				: low; // single index
+		int high = highIndex( low, range, highStr );
 
 		// sort input
 		int l = low;
@@ -150,6 +146,19 @@ class IndexPhase extends TagPhase {
 		}
 		filter.indices( indices );
 		return true;
+	}
+
+	private int highIndex( int low, boolean range, String highStr ) {
+		if( range ) {
+			if( highStr.isEmpty() ) {
+				// unbounded
+				return (int) filter.flows().count();
+			}
+			// bounded;
+			return Integer.parseInt( highStr );
+		}
+		// single index
+		return low;
 	}
 
 	private void printFlows( Cli cli ) {
