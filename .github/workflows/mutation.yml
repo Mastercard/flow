@@ -32,14 +32,14 @@ jobs:
     - name: Run mutation testing
       run: mvn -Paggregate -Dnode=system test org.pitest:pitest-maven:mutationCoverage package
 
-# by default preserve just the aggregated report
-    - uses: actions/upload-artifact@v3
+    - name: Save aggregated mutation report
+      uses: actions/upload-artifact@v3
       with:
         name: mutation_report
         path: aggregator/target/pit-reports
 
-# if mutation testing failed then preserve all of the individual project reports
-    - uses: actions/upload-artifact@v3
+    - name: Save project mutation reports
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: project_mutation_reports

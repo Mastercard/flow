@@ -33,9 +33,8 @@ jobs:
       with:
         languages: ${{ matrix.language }}
 
-    - run: |
-        echo "Run, Build Application using script"
-        mvn -B -Dnode=none test-compile
+    - name: Build with Maven
+    - run: mvn -B -Dnode=none test-compile
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2

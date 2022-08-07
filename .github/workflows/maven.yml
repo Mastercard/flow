@@ -29,7 +29,8 @@ jobs:
     - name: Build with Maven
       run: mvn -B -Dnode=system package
 
-    - uses: actions/upload-artifact@v3
+    - name: Save flow execution reports
+      uses: actions/upload-artifact@v3
       with:
         name: flow_execution_reports
         path: '**/target/mctf/latest'
