@@ -126,4 +126,27 @@
 
 	</dependencies>
 
+	<build>
+		<plugins>
+
+			<plugin>
+				<!-- This is not a distributable artifact, so we never want to deploy it -->
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<!-- We're not interested in the documentation either -->
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
 </project>
