@@ -27,4 +27,4 @@ jobs:
     - name: Publish to GitHub Packages
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      run: mvn deploy
+      run: mvn -Dnode=system deploy
