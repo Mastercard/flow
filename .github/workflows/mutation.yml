@@ -36,4 +36,4 @@ jobs:
       if: failure()
       with:
         name: project reports
-        path: **/target/pit-reports
+        path: '**/target/pit-reports'
