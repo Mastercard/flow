@@ -22,18 +22,25 @@ jobs:
         distribution: 'temurin'
         cache: maven
 
+    - name: Set up Node
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16
+        cache: 'yarn'
+        cache-dependency-path: report/report-ng/yarn.lock
+
     - name: Run mutation testing
-      run: mvn -Paggregate -Dnode=none test org.pitest:pitest-maven:mutationCoverage package
+      run: mvn -Paggregate -Dnode=system test org.pitest:pitest-maven:mutationCoverage package
 
 # by default preserve just the aggregated report
     - uses: actions/upload-artifact@v3
       with:
-        name: mutation report
+        name: mutation_report
         path: aggregator/target/pit-reports
 
 # if mutation testing failed then preserve all of the individual project reports
     - uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: project reports
+        name: project_mutation_reports
         path: '**/target/pit-reports'

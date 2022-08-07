@@ -31,5 +31,5 @@ jobs:
 
     - uses: actions/upload-artifact@v3
       with:
-        name: flow execution reports
+        name: flow_execution_reports
         path: '**/target/mctf/latest'
