@@ -80,7 +80,7 @@
 				<!-- testing for test components -->
 				<groupId>org.junit.platform</groupId>
 				<artifactId>junit-platform-launcher</artifactId>
-				<version>1.8.2</version>
+				<version>1.9.0</version>
 			</dependency>
 
 			<dependency>
