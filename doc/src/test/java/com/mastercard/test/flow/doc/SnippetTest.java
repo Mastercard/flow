@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -17,11 +18,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestFactory;
 
 /**
@@ -58,11 +61,30 @@ import org.junit.jupiter.api.TestFactory;
  * enough of the fully-qualified class name to resolve the ambiguity.
  * </p>
  */
+// This test will fail in the middle of release preparation as all the
+// ${project.version} usages get transformed into the actual version
+@Tag("avoid_on_release")
 class SnippetTest {
 
 	private static final String MD_START = "<!-- snippet start -->";
 	private static final String MD_END = "<!-- snippet end -->";
 	private static final Pattern MD_SNIPPET_DESCRIPTOR = Pattern.compile( "<!-- (.*):(.*) -->" );
+
+	private static final Map<Path, UnaryOperator<String>> MUTATIONS;
+	static {
+		Map<Path, UnaryOperator<String>> m = new HashMap<>();
+		// Ideally we'd have a
+		// <properties> <flow.version>${project.version}</flow.version> </properties>
+		// in the pom so that the dependencies are consistent with how they'd be
+		// declared in an actual client project.
+		// https://issues.apache.org/jira/browse/MRELEASE-799 scuppers that, so we're
+		// reduced to mutating the snippets as they are extracted. The markdown will
+		// look ok, but it'll be inconsistent with the actual pom file.
+		// I'm unhappy about this.
+		m.put( Paths.get( "pom.xml" ).getFileName(),
+				s -> s.replace( "${project.version}", "${flow.version}" ) );
+		MUTATIONS = Collections.unmodifiableMap( m );
+	}
 
 	private static final Map<String, Delimiter> SOURCE_DELIMITERS;
 	static {
@@ -135,7 +157,8 @@ class SnippetTest {
 
 				while( lines.hasNext() ) {
 					lineNumber++;
-					String line = lines.next();
+					String line = MUTATIONS.getOrDefault( file.getFileName(), s -> s )
+							.apply( lines.next() );
 
 					Delimiter sd = delimiter( file );
 					Matcher start = sd.start.matcher( line.trim() );
