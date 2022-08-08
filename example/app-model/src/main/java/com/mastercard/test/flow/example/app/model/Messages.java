@@ -74,7 +74,7 @@ public class Messages {
 				.set( HttpRes.STATUS_TEXT, "OK" )
 				.set( HttpMsg.header( "Content-Type" ), "application/json" )
 				.set( HttpMsg.header( "Date" ), "Sun, 06 Jun 2021 19:50:29 GMT" )
-				.set( HttpMsg.header( "Server" ), "Jetty(9.4.31.v20200723)" )
+				.set( HttpMsg.header( "Server" ), "Jetty(9.4.48.v20220622)" )
 				.set( HttpMsg.header( "Transfer-Encoding" ), "chunked" )
 				.set( HttpMsg.BODY, body )
 				.masking( Unpredictables.CLOCK, m -> m
