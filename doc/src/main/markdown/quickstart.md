@@ -60,7 +60,7 @@ Add a dependency:
 	<version>${flow.version}</version>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L26-L31,26-31)
+[Snippet context](../../../pom.xml#L21-L26,21-26)
 
 <!-- snippet end -->
 
@@ -108,7 +108,7 @@ For our purposes the [`Text` message type][txt.Text] is appropriate, so we add a
 	<version>${flow.version}</version>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L35-L40,35-40)
+[Snippet context](../../../pom.xml#L30-L35,30-35)
 
 <!-- snippet end -->
 
@@ -195,7 +195,7 @@ To package flows together we'll need:
 	<version>${flow.version}</version>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L56-L61,56-61)
+[Snippet context](../../../pom.xml#L51-L56,51-56)
 
 <!-- snippet end -->
 
@@ -242,7 +242,7 @@ To use these, add a dependency:
 	<version>${flow.version}</version>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L77-L82,77-82)
+[Snippet context](../../../pom.xml#L72-L77,72-77)
 
 <!-- snippet end -->
 
@@ -293,7 +293,7 @@ Add a dependency:
 	<version>${flow.version}</version>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L104-L109,104-109)
+[Snippet context](../../../pom.xml#L99-L104,99-104)
 
 <!-- snippet end -->
 

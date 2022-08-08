@@ -10,11 +10,6 @@
 	<packaging>jar</packaging>
 	<description>Documentation resources</description>
 
-	<properties>
-		<!-- this is a pointless indirection but it keeps the extracted snippets authentic -->
-		<flow.version>${project.version}</flow.version>
-	</properties>
-
 	<dependencies>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
@@ -27,7 +22,7 @@
 			<!-- flow construction -->
 			<groupId>com.mastercard.test.flow</groupId>
 			<artifactId>builder</artifactId>
-			<version>${flow.version}</version>
+			<version>${project.version}</version>
 		</dependency>
 		<!-- snippet-end:build -->
 
@@ -36,7 +31,7 @@
 			<!-- simple text message type (other types packaged separately) -->
 			<groupId>com.mastercard.test.flow</groupId>
 			<artifactId>message-text</artifactId>
-			<version>${flow.version}</version>
+			<version>${project.version}</version>
 		</dependency>
 		<!-- snippet-end:message -->
 
@@ -57,7 +52,7 @@
 			<!-- flow grouping -->
 			<groupId>com.mastercard.test.flow</groupId>
 			<artifactId>model</artifactId>
-			<version>${flow.version}</version>
+			<version>${project.version}</version>
 		</dependency>
 		<!-- snippet-end:model -->
 
@@ -78,7 +73,7 @@
 			<!-- system model validation -->
 			<groupId>com.mastercard.test.flow</groupId>
 			<artifactId>validation-junit5</artifactId>
-			<version>${flow.version}</version>
+			<version>${project.version}</version>
 		</dependency>
 		<!-- snippet-end:validation -->
 
@@ -105,7 +100,7 @@
 			<!-- system assertion -->
 			<groupId>com.mastercard.test.flow</groupId>
 			<artifactId>assert-junit5</artifactId>
-			<version>${flow.version}</version>
+			<version>${project.version}</version>
 		</dependency>
 		<!-- snippet-end:assertion -->
 

@@ -29,6 +29,12 @@
 		<module>doc</module>
 	</modules>
 
+	<scm>
+		<connection>scm:git:git://github.com/Mastercard/flow.git</connection>
+		<developerConnection>scm:git:git@github.com:Mastercard/flow.git</developerConnection>
+		<url>https://github.com/Mastercard/flow</url>
+	</scm>
+
 	<distributionManagement>
 		<repository>
 			<id>github</id>
@@ -271,6 +277,18 @@
 						</configuration>
 					</execution>
 				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>3.0.0-M6</version>
+				<configuration>
+					<arguments>-DexcludedGroups=avoid_on_release</arguments>
+					<autoVersionSubmodules>true</autoVersionSubmodules>
+					<lineSeparator>lf</lineSeparator>
+					<tagNameFormat>@{project.version}</tagNameFormat>
+				</configuration>
 			</plugin>
 
 		</plugins>
