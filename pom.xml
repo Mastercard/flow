@@ -284,7 +284,7 @@
 				<artifactId>maven-release-plugin</artifactId>
 				<version>3.0.0-M6</version>
 				<configuration>
-					<arguments>-DexcludedGroups=avoid_on_release</arguments>
+					<arguments>-Dnode=system -DexcludedGroups=avoid_on_release</arguments>
 					<autoVersionSubmodules>true</autoVersionSubmodules>
 					<lineSeparator>lf</lineSeparator>
 					<tagNameFormat>@{project.version}</tagNameFormat>
