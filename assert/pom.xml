@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>parent</artifactId>
-		<version>0.0.1-SNAPSHOT</version>
+		<version>0.0.1</version>
 	</parent>
 	<artifactId>assert</artifactId>
 	<packaging>pom</packaging>
@@ -16,7 +16,7 @@
 		<module>assert-junit5</module>
 	</modules>
 	<dependencyManagement>
-		<dependencies></dependencies>
+		<dependencies />
 	</dependencyManagement>
 	<build>
 		<pluginManagement>

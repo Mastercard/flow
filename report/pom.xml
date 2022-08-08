@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>parent</artifactId>
-		<version>0.0.1-SNAPSHOT</version>
+		<version>0.0.1</version>
 	</parent>
 	<artifactId>report</artifactId>
 	<packaging>pom</packaging>
@@ -14,7 +14,7 @@
 		<module>report-ng</module>
 	</modules>
 	<dependencyManagement>
-		<dependencies></dependencies>
+		<dependencies />
 	</dependencyManagement>
 	<build>
 		<pluginManagement>

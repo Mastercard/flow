@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>report</artifactId>
-		<version>0.0.1-SNAPSHOT</version>
+		<version>0.0.1</version>
 	</parent>
 	<artifactId>report-ng</artifactId>
 	<packaging>jar</packaging>
@@ -84,12 +84,12 @@ Build with
 						<phase>process-resources</phase>
 						<configuration>
 							<target>
-								<fileset dir="${dst.res.dir}" excludes="manifest.txt" id="fileset"></fileset>
+								<fileset dir="${dst.res.dir}" excludes="manifest.txt" id="fileset" />
 								<pathconvert pathsep="${line.separator}" property="filelist" refid="fileset" targetos="unix">
-									<map from="${dst.res.dir}/" to=""></map>
+									<map from="${dst.res.dir}/" to="" />
 								</pathconvert>
 								<echo file="${dst.res.dir}/manifest.txt">${filelist}</echo>
-								<fixcrlf eol="unix" file="${dst.res.dir}/manifest.txt"></fixcrlf>
+								<fixcrlf eol="unix" file="${dst.res.dir}/manifest.txt" />
 							</target>
 						</configuration>
 					</execution>
