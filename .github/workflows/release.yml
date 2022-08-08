@@ -24,9 +24,15 @@ jobs:
         cache-dependency-path: report/report-ng/yarn.lock
 
     - name: Configure Git User
+<<<<<<< HEAD
       run: |
         git config user.email "actions@github.com"
         git config user.name "GitHub Actions"
+=======
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+>>>>>>> origin/main
 
     - name: Create release and publish to GitHub Packages
       env:
