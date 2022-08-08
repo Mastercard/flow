@@ -30,8 +30,8 @@
 	</modules>
 
 	<scm>
-		<connection>scm:git:git://github.com/Mastercard/flow.git</connection>
-		<developerConnection>scm:git:git@github.com:Mastercard/flow.git</developerConnection>
+		<connection>scm:git:https://github.com/Mastercard/flow.git</connection>
+		<developerConnection>scm:git:https://github.com/Mastercard/flow.git</developerConnection>
 		<url>https://github.com/Mastercard/flow</url>
 	</scm>
 
