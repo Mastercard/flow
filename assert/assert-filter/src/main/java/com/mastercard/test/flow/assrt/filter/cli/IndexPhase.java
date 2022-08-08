@@ -154,7 +154,7 @@ class IndexPhase extends TagPhase {
 				// unbounded
 				return (int) filter.flows().count();
 			}
-			// bounded;
+			// bounded
 			return Integer.parseInt( highStr );
 		}
 		// single index
