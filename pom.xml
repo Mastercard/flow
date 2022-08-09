@@ -289,7 +289,6 @@
 					<arguments>-Dnode=system -DexcludedGroups=avoid_on_release</arguments>
 					<autoVersionSubmodules>true</autoVersionSubmodules>
 					<lineSeparator>lf</lineSeparator>
-					<tagNameFormat>@{project.version}</tagNameFormat>
 				</configuration>
 			</plugin>
 
