@@ -15,9 +15,6 @@
 		<module>validation-junit5</module>
 		<module>coppice</module>
 	</modules>
-	<dependencyManagement>
-		<dependencies />
-	</dependencyManagement>
 	<build>
 		<pluginManagement>
 			<plugins>

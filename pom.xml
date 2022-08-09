@@ -32,15 +32,14 @@
 	<scm>
 		<connection>scm:git:https://github.com/Mastercard/flow.git</connection>
 		<developerConnection>scm:git:https://github.com/Mastercard/flow.git</developerConnection>
+		<tag>HEAD</tag>
 		<url>https://github.com/Mastercard/flow</url>
-	  <tag>HEAD</tag>
-  </scm>
+	</scm>
 
 	<distributionManagement>
 		<repository>
-			<id>github</id>
-			<name>GitHub Mastercard Apache Maven Packages</name>
-			<url>https://maven.pkg.github.com/Mastercard/flow</url>
+			<id>ossrh</id>
+			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
 		</repository>
 	</distributionManagement>
 
@@ -178,6 +177,8 @@
 						<lineSeparator>\n</lineSeparator>
 						<nrOfIndentSpace>-1</nrOfIndentSpace>
 						<createBackupFile>false</createBackupFile>
+						<expandEmptyElements>false</expandEmptyElements>
+						<spaceBeforeCloseEmptyElement>true</spaceBeforeCloseEmptyElement>
 					</configuration>
 				</plugin>
 
