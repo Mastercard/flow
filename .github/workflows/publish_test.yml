@@ -1,0 +1,32 @@
+name: Publish execution reports
+
+on:
+  workflow_run:
+    workflows: [ "Testing" ]
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: pages
+        
+    - name: Shuffle history
+      run: |
+        rm -rf execution/oldest;
+        mv execution/older execution/oldest;
+        mv execution/latest execution/older;
+
+    - name: Download reports
+      uses: dawidd6/action-download-artifact@v2
+      with:
+        workflow: test.yml
+        workflow_conclusion: success
+        branch: master
+        name: flow_execution_reports
+        path: execution/latest
+
+    - name: Commit and push
+      uses: stefanzweifel/git-auto-commit-action@v4
