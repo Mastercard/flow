@@ -3,6 +3,7 @@ name: Publish execution reports
 on:
   workflow_run:
     workflows: [ "Testing" ]
+    types:[ "completed" ]
     branches: [ "main" ]
 
 jobs:
@@ -15,9 +16,9 @@ jobs:
         
     - name: Shuffle history
       run: |
-        rm -rf execution/oldest;
-        mv execution/older execution/oldest;
-        mv execution/latest execution/older;
+        rm -rf execution/oldest || true;
+        mv execution/older execution/oldest || true;
+        mv execution/latest execution/older || true;
 
     - name: Download reports
       uses: dawidd6/action-download-artifact@v2
