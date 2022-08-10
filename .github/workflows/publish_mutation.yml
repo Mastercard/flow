@@ -1,0 +1,32 @@
+name: Publish mutation reports
+
+on:
+  workflow_run:
+    workflows: [ "Mutation" ]
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: pages
+        
+    - name: Shuffle history
+      run: |
+        rm -rf mutation/oldest
+        mv mutation/older mutation/oldest
+        mv mutation/latest mutation/older
+
+    - name: Download reports
+      uses: dawidd6/action-download-artifact@v2
+      with:
+        workflow: mutation.yml
+        workflow_conclusion: success
+        branch: master
+        name: mutation_report
+        path: mutation/latest
+
+    - name: Commit and push
+      uses: stefanzweifel/git-auto-commit-action@v4
