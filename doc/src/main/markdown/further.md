@@ -188,6 +188,9 @@ Look at the [example system](../../../../example) to see this in action:
  * The [`IntegrationTest`][IntegrationTest] exercises the complete system. The test launches an instance of each of the services, waits for them to start up fully, and then hits the system entrypoints with requests.
  * Each subsystem has its own test that exercises it in isolation, e.g.: [`CoreTest`][CoreTest], a subclass of [`AbstractServiceTest`][AbstractServiceTest]. Here a single service is started up and hit with requests. We've introduced a `MockService` to take the part of the other services - its responses are harvested from the system model data.
 
+You can find the execution reports that are produced by these tests listed [here](https://mastercard.github.io/flow/).
+Note how all tests present the same set of expected data, but each exercises a different subset of it according to the system under test.
+
 The ability to drive multiple levels of testing from a single system model is the key strength of this framework. If the isolation tests are all passing, then you can have good confidence that the integration test will also pass.
 
 <!-- code_link_start -->
