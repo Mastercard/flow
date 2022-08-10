@@ -3,6 +3,7 @@ name: Publish mutation reports
 on:
   workflow_run:
     workflows: [ "Mutation" ]
+    types:[ "completed" ]
     branches: [ "main" ]
 
 jobs:
@@ -15,9 +16,9 @@ jobs:
         
     - name: Shuffle history
       run: |
-        rm -rf mutation/oldest
-        mv mutation/older mutation/oldest
-        mv mutation/latest mutation/older
+        rm -rf mutation/oldest || true;
+        mv mutation/older mutation/oldest || true;
+        mv mutation/latest mutation/older || true;
 
     - name: Download reports
       uses: dawidd6/action-download-artifact@v2
