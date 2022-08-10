@@ -3,7 +3,7 @@ name: Publish execution reports
 on:
   workflow_run:
     workflows: [ "Testing" ]
-    types:[ "completed" ]
+    types: [ "completed" ]
     branches: [ "main" ]
 
 jobs:

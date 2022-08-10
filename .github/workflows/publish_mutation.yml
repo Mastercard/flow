@@ -3,7 +3,7 @@ name: Publish mutation reports
 on:
   workflow_run:
     workflows: [ "Mutation" ]
-    types:[ "completed" ]
+    types: [ "completed" ]
     branches: [ "main" ]
 
 jobs:
