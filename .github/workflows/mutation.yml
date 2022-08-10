@@ -44,3 +44,24 @@ jobs:
       with:
         name: project_mutation_reports
         path: '**/target/pit-reports'
+
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: pages
+
+    - name: Shuffle
+      run: |
+        rm -rf mutation/oldest || true;
+        mv mutation/older mutation/oldest || true;
+        mv mutation/latest mutation/older || true;
+
+    - name: Download
+      uses: actions/download-artifact@v3
+      with:
+        path: mutation/latest
+
+    - name: Commit
+      uses: stefanzweifel/git-auto-commit-action@v4
