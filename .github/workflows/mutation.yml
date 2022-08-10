@@ -46,6 +46,7 @@ jobs:
         path: '**/target/pit-reports'
 
   publish:
+    needs: build
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
