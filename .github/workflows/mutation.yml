@@ -58,7 +58,7 @@ jobs:
     - name: Download
       uses: actions/download-artifact@v3
       with:
-        path: mutation/latest
+        path: mutation/ingest
 
     - name: Ingest
       run: perl regen_index.pl >> $GITHUB_STEP_SUMMARY
