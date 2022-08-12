@@ -45,7 +45,7 @@ import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.validation.coppice.graph.CachingDiffDistance;
 
 /**
- * Provides a linked tree and graph view of a transaction hierarchy
+ * Provides a linked tree and graph view of a flow hierarchy
  */
 public class GraphTree implements SelectionManager.Client {
 
@@ -61,11 +61,11 @@ public class GraphTree implements SelectionManager.Client {
 	 */
 	final Map<String, Flow> graphNodes = new HashMap<>();
 
-	private DefaultMutableTreeNode root = new DefaultMutableTreeNode( "Transactions" );
+	private DefaultMutableTreeNode root = new DefaultMutableTreeNode( "Flows" );
 	/**
 	 * The tree component
 	 */
-	TransactionTree tree = new TransactionTree( root );
+	FlowTree tree = new FlowTree( root );
 	private final Map<Flow, DefaultMutableTreeNode> treeNodes = new HashMap<>();
 
 	private final Map<Flow, Integer> basisDistance = new HashMap<>();
@@ -310,7 +310,7 @@ public class GraphTree implements SelectionManager.Client {
 			n.setAttribute( "ui.label", flow.meta().id() );
 			graphNodes.put( n.getId(), flow );
 		}
-		GraphView.addUIClass( n, "transaction" );
+		GraphView.addUIClass( n, "floe" );
 
 		addEdge( flow.basis(), flow, "basis" );
 
@@ -456,13 +456,13 @@ public class GraphTree implements SelectionManager.Client {
 		}
 	}
 
-	private static class TransactionTree extends JTree {
+	private static class FlowTree extends JTree {
 
 		private static final long serialVersionUID = 1L;
 
 		private Predicate<Flow> filter = t -> true;
 
-		public TransactionTree( DefaultMutableTreeNode root ) {
+		public FlowTree( DefaultMutableTreeNode root ) {
 			super( root, false );
 			getSelectionModel().setSelectionMode( TreeSelectionModel.SINGLE_TREE_SELECTION );
 		}

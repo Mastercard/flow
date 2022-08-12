@@ -31,7 +31,7 @@ import com.mastercard.test.flow.util.Flows;
 import com.mastercard.test.flow.util.Transmission;
 
 /**
- * Displays the details of a transaction
+ * Displays the details of a flow
  */
 public class FlowView {
 

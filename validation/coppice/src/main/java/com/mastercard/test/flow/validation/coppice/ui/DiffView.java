@@ -22,7 +22,7 @@ import com.mastercard.test.flow.validation.coppice.Coppice;
 import com.mastercard.test.flow.validation.coppice.Diff;
 
 /**
- * Displays the difference between two transactions
+ * Displays the difference between two flows
  */
 public class DiffView {
 
@@ -109,7 +109,7 @@ public class DiffView {
 			destinationName.setEnabled( destination != null );
 			destinationName.setText( Optional.ofNullable( destination )
 					.map( t -> t.meta().description() )
-					.orElse( "Drop transaction here" ) );
+					.orElse( "Drop flow here" ) );
 		}
 
 		if( destination != null ) {

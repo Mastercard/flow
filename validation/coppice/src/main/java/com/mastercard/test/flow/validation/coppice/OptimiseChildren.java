@@ -19,12 +19,11 @@ import com.mastercard.test.flow.validation.coppice.ui.GraphView;
 import com.mastercard.test.flow.validation.coppice.ui.Progress;
 
 /**
- * This task optimises the entire inheritance tree for the targeted transaction:
+ * This task optimises the entire inheritance tree for the targeted flow:
  * <ol>
- * <li>Identify all inheritance-compatible transactions in the corpus</li>
- * <li>Remove the existing inheritance links for those transactions</li>
- * <li>All of these transaction effectively form a fully-connected graph, with
- * the diff distance between transactions being the edge cost.</li>
+ * <li>Remove the existing inheritance links for all flows</li>
+ * <li>All of these flows effectively form a fully-connected graph, with the
+ * diff distance between flows being the edge cost.</li>
  * <li>Find the minimum spanning tree of the diff graph. The MST is the optimal
  * inheritance structure.</li>
  * </ol>
@@ -60,7 +59,7 @@ class OptimiseChildren implements Runnable {
 		display.graph().forceAnimation( true );
 		GraphView.addUIClass( display.getNode( txn ), "optimising" );
 
-		// find compatible transactions
+		// find compatible flows
 		List<Flow> compat = corpus.stream()
 				.collect( Collectors.toList() );
 

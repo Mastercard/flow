@@ -41,10 +41,10 @@ public class FlowTransfer {
 	static final Map<JComponent, Consumer<Flow>> sinks = new HashMap<>();
 
 	/**
-	 * Registers a drag source of transactions
+	 * Registers a drag source of flows
 	 *
-	 * @param list The list that holds transactions
-	 * @param get  how to get the dragged transaction
+	 * @param list The list that holds flows
+	 * @param get  how to get the dragged flow
 	 */
 	public static void registerSource( JList<?> list, Supplier<Flow> get ) {
 		sources.put( list, get );
@@ -53,10 +53,10 @@ public class FlowTransfer {
 	}
 
 	/**
-	 * Registers a drag source of transactions
+	 * Registers a drag source of flows
 	 *
-	 * @param tree The tree that holds transactions
-	 * @param get  how to get the dragged transaction
+	 * @param tree The tree that holds flows
+	 * @param get  how to get the dragged flow
 	 */
 	public static void registerSource( JTree tree, Supplier<Flow> get ) {
 		sources.put( tree, get );
@@ -64,7 +64,7 @@ public class FlowTransfer {
 		tree.setTransferHandler( EXPORT );
 	}
 
-	private static final TransferHandler EXPORT = new TransferHandler( "transaction" ) {
+	private static final TransferHandler EXPORT = new TransferHandler( "flow" ) {
 
 		private static final long serialVersionUID = 1L;
 
@@ -100,16 +100,16 @@ public class FlowTransfer {
 	};
 
 	/**
-	 * Registers a drop target for dragged transactions
+	 * Registers a drop target for dragged flows
 	 *
 	 * @param c   The component
-	 * @param set What to do with dropped transactions
+	 * @param set What to do with dropped flows
 	 */
 	public static void registerSink( JComponent c,
 			Consumer<Flow> set ) {
 		sinks.put( c, set );
 		DataFlavor flava = flavour();
-		c.setTransferHandler( new TransferHandler( "transaction" ) {
+		c.setTransferHandler( new TransferHandler( "flow" ) {
 
 			private static final long serialVersionUID = 1L;
 

@@ -661,7 +661,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		report( w -> w.with( flow, d -> {
 			d.tags.add( Writer.SKIP_TAG );
 			logCapture.end( flow ).forEach( d.logs::add );
-			d.logs.add( warn( "Skipping transaction: " + reason ) );
+			d.logs.add( warn( "Skipping flow: " + reason ) );
 		} ),
 				// ... but don't bother browsing the report
 				false );

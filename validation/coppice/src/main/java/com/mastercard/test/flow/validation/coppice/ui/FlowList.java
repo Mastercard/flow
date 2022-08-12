@@ -43,11 +43,11 @@ public class FlowList extends JPanel implements SelectionManager.Client {
 	 * A list of things that are interested in filter changes
 	 */
 	final List<Consumer<Predicate<Flow>>> filterListeners = new ArrayList<>();
-	private final List<Flow> allTransactions = new ArrayList<>();
+	private final List<Flow> allFlows = new ArrayList<>();
 	private final JList<Flow> list = new JList<>();
 
 	/**
-	 * @param opener What to do when a transaction is clicked
+	 * @param opener What to do when a flow is clicked
 	 */
 	public FlowList( Consumer<Flow> opener ) {
 		filter.setName( "txn_filter" );
@@ -84,7 +84,7 @@ public class FlowList extends JPanel implements SelectionManager.Client {
 	 */
 	public FlowList with( Flow flw ) {
 		SwingUtilities.invokeLater( () -> {
-			allTransactions.add( flw );
+			allFlows.add( flw );
 			refresh();
 		} );
 		return this;
@@ -104,7 +104,7 @@ public class FlowList extends JPanel implements SelectionManager.Client {
 	 */
 	public void sort() {
 		SwingUtilities.invokeLater( () -> {
-			allTransactions.sort( Comparator.comparing( f -> f.meta().id() ) );
+			allFlows.sort( Comparator.comparing( f -> f.meta().id() ) );
 			refresh();
 		} );
 	}
@@ -139,7 +139,7 @@ public class FlowList extends JPanel implements SelectionManager.Client {
 				.allMatch( flow.meta().id().toLowerCase()::contains )
 				&& excludes.stream()
 						.noneMatch( flow.meta().id().toLowerCase()::contains );
-		Vector<Flow> filtered = allTransactions.stream()
+		Vector<Flow> filtered = allFlows.stream()
 				.filter( pred )
 				.collect( Collectors.toCollection( Vector::new ) );
 		list.setListData( filtered );

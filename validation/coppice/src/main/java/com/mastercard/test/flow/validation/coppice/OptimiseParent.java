@@ -20,10 +20,10 @@ import com.mastercard.test.flow.validation.coppice.ui.GraphView;
 import com.mastercard.test.flow.validation.coppice.ui.Progress;
 
 /**
- * This task will, for a single transaction, find the most similar transaction
- * in the corpus. Given that we should try to minimise the number of edits
- * between transactions, the identified closest peer would be a good candidate
- * to use as the inheritance basis.
+ * This task will, for a single flow, find the most similar flow in the corpus.
+ * Given that we should try to minimise the number of edits between flows, the
+ * identified closest peer would be a good candidate to use as the inheritance
+ * basis.
  */
 class OptimiseParent implements Runnable {
 
