@@ -5,7 +5,7 @@
 
 Aggregates build artifacts
 
- * [../flow](..) Testing framework
+ * [../flow](https://github.com/Mastercard/flow) Testing framework
 
 <!-- title end -->
 

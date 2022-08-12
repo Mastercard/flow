@@ -5,7 +5,7 @@
 
 Comparing models against systems
 
- * [../flow](..) Testing framework
+ * [../flow](https://github.com/Mastercard/flow) Testing framework
  * [assert-filter](assert-filter) Flow selection components
  * [assert-core](assert-core) Core comparison components
  * [assert-junit4](assert-junit4) JUnit4 comparison components

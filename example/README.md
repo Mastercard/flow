@@ -5,7 +5,7 @@
 
 Service constellation to exercise the flow framework
 
- * [../flow](..) Testing framework
+ * [../flow](https://github.com/Mastercard/flow) Testing framework
  * [app-framework](app-framework) Library providing a simple microservice framework
  * [app-api](app-api) Library providing interfaces that define the REST API for each service in the example application
  * [app-web-ui](app-web-ui) Front-end service that presents an HTML interface to the system

@@ -5,7 +5,7 @@
 
 Implementations of the Message interface
 
- * [../flow](..) Testing framework
+ * [../flow](https://github.com/Mastercard/flow) Testing framework
  * [message-core](message-core) Message implementation utilities
  * [message-http](message-http) HypterText Transfer Protocol messages
  * [message-json](message-json) JavaScript Object Notation Messages

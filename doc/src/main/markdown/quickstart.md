@@ -2,7 +2,7 @@
 
 This guide will take you from an empty project to a full, if basic, flow-tested system.
 
- * [Project root](../../../../)
+ * [Project root](https://github.com/Mastercard/flow)
 
 ## Dependency management
 
