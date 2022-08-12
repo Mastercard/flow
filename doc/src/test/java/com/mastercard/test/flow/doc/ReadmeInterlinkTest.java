@@ -141,10 +141,19 @@ class ReadmeInterlinkTest {
 		 *         is no parent.
 		 */
 		String parentLink() {
-			return parent != null
-					? String.format( "\n * [../%s](..) %s",
-							parent.name(), parent.description )
-					: "";
+			if( parent == null ) {
+				// root readme, nowhere to go
+				return "";
+			}
+			if( parent.parent == null ) {
+				// 1st-level, github has a weird thing where just linking to `..` and hoping for
+				// the root page results in a 404. It works fine on stash ¯\_(ツ)_/¯
+				return String.format( "\n * [../%s](https://github.com/Mastercard/flow) %s",
+						parent.name(), parent.description );
+			}
+			// general case, works on 2nd level and, presumably, beyond
+			return String.format( "\n * [../%s](..) %s",
+					parent.name(), parent.description );
 		}
 
 		/**

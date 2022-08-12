@@ -5,7 +5,7 @@
 
 Implementations of the Flow and Interaction interfaces
 
- * [../flow](..) Testing framework
+ * [../flow](https://github.com/Mastercard/flow) Testing framework
 
 <!-- title end -->
 

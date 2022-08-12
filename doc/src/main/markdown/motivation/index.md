@@ -1,6 +1,6 @@
 # Motivation
 
- * [Project root](../../../../../)
+ * [Project root](https://github.com/Mastercard/flow)
 
 This document describes the sequence of lessons that we had to learn before arriving at the approach taken by this project.
 Most of these lessons will be crushingly obvious for experienced developers, but software is a world in which it's very easy to get lost in the details of _how_ so it's valuable to revisit the axioms of _why_.
@@ -200,3 +200,10 @@ The Flow testing framework is the result of these lessons:
 While this framework will not be suitable for every situation, we feel that the lessons that drove its creation are fundamental to software testing.
 The most important of these lessons is this: tests are documentation, so they should be optimised for readability.
 While it is important that tests are automated, stable, quick and easy to run, and so on, these factors do not capture the _why_ of testing: human comprehension does.
+
+---
+
+ * [Project root](https://github.com/Mastercard/flow)
+ * [Example execution report](https://mastercard.github.io/flow/execution/latest/flow_execution_reports/example/app-itest/target/mctf/latest/index.html)
+ * [Quickstart guide](../quickstart.md)
+ * [Further reading](../further.md)

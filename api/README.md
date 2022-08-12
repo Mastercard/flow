@@ -5,7 +5,7 @@
 
 Core type declarations
 
- * [../flow](..) Testing framework
+ * [../flow](https://github.com/Mastercard/flow) Testing framework
 
 <!-- title end -->
 

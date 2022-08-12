@@ -2,7 +2,7 @@
 
 This guide explores some features that will be useful as the system model grows in complexity.
 
- * [Project root](../../../../)
+ * [Project root](https://github.com/Mastercard/flow)
 
 ## Execution report
 
