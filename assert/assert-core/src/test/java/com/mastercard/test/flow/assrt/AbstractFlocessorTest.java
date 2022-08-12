@@ -174,7 +174,7 @@ class AbstractFlocessorTest {
 
 		assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
 		assertTrue( fd.tags.contains( "SKIP" ), fd.tags.toString() );
-		assertEquals( "Skipping transaction: Ancestor failed", msg );
+		assertEquals( "Skipping flow: Ancestor failed", msg );
 	}
 
 	/**
@@ -204,7 +204,7 @@ class AbstractFlocessorTest {
 
 		assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
 		assertTrue( fd.tags.contains( "SKIP" ), fd.tags.toString() );
-		assertEquals( "Skipping transaction: Missing dependency", msg );
+		assertEquals( "Skipping flow: Missing dependency", msg );
 	}
 
 	/**
@@ -254,7 +254,7 @@ class AbstractFlocessorTest {
 
 		assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
 		assertTrue( fd.tags.contains( "SKIP" ), fd.tags.toString() );
-		assertEquals( "Skipping transaction: "
+		assertEquals( "Skipping flow: "
 				+ "Implicitly depends on D, which is not part of the system under test",
 				msg );
 	}

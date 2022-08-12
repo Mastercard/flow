@@ -13,7 +13,7 @@ public class Animation {
 	private static final boolean DISABLED = Boolean.getBoolean( "anim.disable" );
 
 	/**
-	 * How quickly transactions are added to the actual hierarchy
+	 * How quickly flows are added to the actual hierarchy
 	 */
 	public static Animation ADDITION = new Animation( 20 );
 

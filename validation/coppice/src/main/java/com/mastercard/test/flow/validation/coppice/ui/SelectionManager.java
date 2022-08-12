@@ -40,7 +40,7 @@ public class SelectionManager {
 	}
 
 	/**
-	 * Call this when the selected transaction has changed
+	 * Call this when the selected flow has changed
 	 *
 	 * @param txn The new selection
 	 */

@@ -19,7 +19,7 @@ public class ConcreteMetadata implements Metadata {
 	private final String trace;
 
 	/**
-	 * @param description A short description of the transaction
+	 * @param description A short description of the {@link Flow}
 	 * @param tags        A set of descriptive tags for the {@link Flow}
 	 * @param motivation  A longer description of why the {@link Flow} exists
 	 * @param trace       An identifier for where in the codebase the {@link Flow}

@@ -29,9 +29,9 @@ import com.mastercard.test.flow.assrt.filter.FilterOptions;
 
 /**
  * Shows a graphical interface to allow the filters to be updated before we run
- * the tests. Crucially, we get the chance to choose tags before transactions
- * are built - this can improve performance by avoiding building flows that will
- * not be exercised.
+ * the tests. Crucially, we get the chance to choose tags before flows are built
+ * - this can improve performance by avoiding building flows that will not be
+ * exercised.
  */
 public class FilterGui extends JFrame {
 
