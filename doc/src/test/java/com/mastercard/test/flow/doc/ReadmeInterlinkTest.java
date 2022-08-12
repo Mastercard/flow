@@ -133,7 +133,9 @@ class ReadmeInterlinkTest {
 			return section.contains( name() )
 					&& section.contains( description )
 					&& section.contains( parentLink() )
-					&& childLinks().allMatch( section::contains );
+					&& childLinks()
+							.map( String::trim )
+							.allMatch( section::contains );
 		}
 
 		/**
