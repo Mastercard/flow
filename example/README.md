@@ -39,17 +39,17 @@ The diagram below illustrates the services and their interdependencies.
 
 ```mermaid
 graph TD
-    USER([USER<br>Needs characters counted]) -- browser --> WEB_UI[WEB_UI<br>Browser interface]
-    USER -- POST/GET --> UI[UI<br>HTTP interface]
     OPS(OPS<br>Provokes queue) -- POST --> QUEUE[QUEUE<br>Stores and processes<br>deferred operations]
+    USER([USER<br>Needs characters counted]) -- GET/POST --> UI[UI<br>HTTP interface]
+    USER -- browser --> WEB_UI[WEB_UI<br>Browser interface]
     subgraph example system
-    STORE[STORE<br>Key/Value store] -- SQL --> DB[(DB<br>)]
     CORE[CORE<br>Orchestrates processing] -- POST --> HISTOGRAM[HISTOGRAM<br>Counts characters]
-    CORE -- POST/GET --> QUEUE
-    WEB_UI -- POST --> UI
-    QUEUE -- DELETE/GET/PUT --> STORE
+    CORE -- GET/POST --> QUEUE
     QUEUE -- POST --> CORE
-    UI -- POST/GET --> CORE
+    QUEUE -- DELETE/GET/PUT --> STORE[STORE<br>Key/Value store]
+    STORE -- SQL --> DB[(DB<br>)]
+    UI -- GET/POST --> CORE
+    WEB_UI -- POST --> UI
     end
 ```
 

@@ -8,12 +8,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -33,7 +35,7 @@ import com.mastercard.test.flow.util.Flows;
  * system model that drives testing
  */
 @SuppressWarnings("static-method")
-public class SystemDiagramTest {
+class SystemDiagramTest {
 
 	/**
 	 * Extra data about system actors for the purposes of the diagram
@@ -72,15 +74,17 @@ public class SystemDiagramTest {
 	@Test
 	void regenerate() throws Exception {
 		// map from requester to responder to a set of call characterisations
-		Map<Actor, Map<Actor, Set<String>>> calls = new HashMap<>();
+		Map<Actor,
+				Map<Actor, Set<String>>> calls = new TreeMap<>( Comparator.comparing( Actor::name ) );
 
 		ExampleSystem.MODEL.flows()
 				.flatMap( Flows::interactions )
-				.forEach( ntr -> {
-					calls.computeIfAbsent( ntr.requester(), q -> new HashMap<>() )
-							.computeIfAbsent( ntr.responder(), s -> new HashSet<>() )
-							.add( characterise( ntr.request() ) );
-				} );
+				.forEach( ntr -> calls
+						.computeIfAbsent( ntr.requester(),
+								q -> new TreeMap<>( Comparator.comparing( Actor::name ) ) )
+						.computeIfAbsent( ntr.responder(),
+								s -> new TreeSet<>() )
+						.add( characterise( ntr.request() ) ) );
 
 		StringBuilder mm = new StringBuilder( "```mermaid\ngraph TD\n" );
 		Set<Actor> defined = new HashSet<>();
@@ -88,6 +92,7 @@ public class SystemDiagramTest {
 		// Start with external actors
 		Stream.of( Meta.values() )
 				.filter( m -> !m.internal )
+				.sorted( Comparator.comparing( Meta::name ) )
 				.map( m -> Actors.valueOf( m.name() ) )
 				.forEach( ext -> {
 					Map<Actor, Set<String>> cts = calls.remove( ext );
