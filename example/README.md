@@ -6,14 +6,20 @@
 Service constellation to exercise the flow framework
 
  * [../flow](https://github.com/Mastercard/flow) Testing framework
+
+Application libraries:
  * [app-framework](app-framework) Library providing a simple microservice framework
  * [app-api](app-api) Library providing interfaces that define the REST API for each service in the example application
+
+Services:
  * [app-web-ui](app-web-ui) Front-end service that presents an HTML interface to the system
  * [app-ui](app-ui) Front-end service that accepts external requests
  * [app-core](app-core) Service that orchestrates functionality between services in the example application
  * [app-histogram](app-histogram) Service that counts characters in a given set of text
  * [app-queue](app-queue) Service that handles deferred processing
  * [app-store](app-store) Service that provides data storage
+
+Test modules:
  * [app-model](app-model) Library providing system description flows for creating tests with the Flows framework
  * [app-assert](app-assert) Test library providing shared assertion components
  * [app-itest](app-itest) System integration test suite for exercising app instances
@@ -29,17 +35,25 @@ the data flows between them.
 
 The diagram below illustrates the services and their interdependencies.
 
-![Example application service diagrm](src/main/doc/example-app-services.svg)
+<!-- system_diagram_start -->
 
-## Sub-Modules
+```mermaid
+graph TD
+    OPS(OPS<br>Provokes queue) -- POST --> QUEUE[QUEUE<br>Stores and processes<br>deferred operations]
+    USER([USER<br>Needs characters counted]) -- GET/POST --> UI[UI<br>HTTP interface]
+    USER -- browser --> WEB_UI[WEB_UI<br>Browser interface]
+    subgraph example system
+    CORE[CORE<br>Orchestrates processing] -- POST --> HISTOGRAM[HISTOGRAM<br>Counts characters]
+    CORE -- GET/POST --> QUEUE
+    QUEUE -- POST --> CORE
+    QUEUE -- DELETE/GET/PUT --> STORE[STORE<br>Key/Value store]
+    STORE -- SQL --> DB[(DB<br>)]
+    UI -- GET/POST --> CORE
+    WEB_UI -- POST --> UI
+    end
+```
 
-The sub-modules in this project can be grouped into the following
-categories:
-
- * Application libraries: [app-framework](app-framework), [app-api](app-api)
- * Services: [app-ui](app-ui), [app-core](app-core), [app-queue](app-queue),
-[app-store](app-store), [app-histogram](app-histogram)
- * Test modules: [app-model](app-model), [app-assert](app-assert), [app-itest](app-itest)
+<!-- system_diagram_end -->
 
 ## Starting the services
 

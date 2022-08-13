@@ -382,3 +382,13 @@ The assertion components supplied in this framework will exhibit some default be
  * Flows will be skipped during processing if their basis flow has suffered an assertion failure. This behaviour is based on the assumption that the child flow is likely to suffer the same assertion failure as its parent, and there's little point in spamming the test results with duplicates of the same failure. This check can be suppressed by setting `mctf.suppress.basis=true`
  * Flows will be skipped if their dependency flows suffered an error during processing. The assumption here is that the dependent flow has no hope of success if the dependency failed. This check can be suppressed by setting `mctf.suppress.dependency=true`
 
+## Beyond testing
+
+As the system model exists in its own right independent of any test assertion mechanism, it can be used for more than just testing.
+For example, the [example system diagram](../../../../example/README.md) is [generated][SystemDiagramTest] from the system model.
+
+<!-- code_link_start -->
+
+[SystemDiagramTest]: ../../../../example/app-model/src/test/java/com/mastercard/test/flow/example/app/model/SystemDiagramTest.java
+
+<!-- code_link_end -->
