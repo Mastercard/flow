@@ -55,6 +55,75 @@ graph TD
 
 <!-- system_diagram_end -->
 
+
+<details>
+<summary>Artifact dependency structure</summary>
+Solid lines are `compile`-scope dependencies, dotted are `test`-scope.
+
+<!-- start_module_diagram:example -->
+
+```mermaid
+graph LR
+  subgraph com.mastercard.test.flow
+    api --> message-core
+    api --> builder
+    api --> model
+    api --> validation-core
+    api --> coppice
+    api --> report-core
+    assert-core --> assert-junit4
+    assert-core --> assert-junit5
+    assert-filter --> assert-core
+    message-core --> message-http
+    message-core --> message-json
+    message-core --> message-sql
+    message-core --> message-text
+    message-core --> message-web
+    message-core --> message-xml
+    report-core --> assert-filter
+    report-ng --> report-core
+    validation-core --> validation-junit4
+    validation-core --> validation-junit5
+  end
+  subgraph com.mastercard.test.flow.example
+    app-api --> app-web-ui
+    app-api --> app-ui
+    app-api --> app-core
+    app-api --> app-histogram
+    app-api --> app-queue
+    app-api --> app-store
+    app-api --> app-model
+    app-assert -.-> app-web-ui
+    app-assert -.-> app-ui
+    app-assert -.-> app-core
+    app-assert -.-> app-histogram
+    app-assert -.-> app-queue
+    app-assert -.-> app-store
+    app-assert -.-> app-itest
+    app-core --> app-itest
+    app-framework --> app-api
+    app-histogram --> app-itest
+    app-model --> app-assert
+    app-queue --> app-itest
+    app-store --> app-itest
+    app-ui --> app-itest
+    app-web-ui --> app-itest
+  end
+  assert-junit5 --> app-assert
+  builder --> app-model
+  coppice -.-> app-model
+  message-http --> app-model
+  message-json --> app-model
+  message-sql --> app-model
+  message-text --> app-model
+  message-web --> app-model
+  model --> app-model
+  validation-junit5 -.-> app-model
+```
+
+<!-- end_module_diagram -->
+</details>
+
 ## Starting the services
 
 To exercise this application, start each of the individual services.

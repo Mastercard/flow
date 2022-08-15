@@ -39,6 +39,39 @@ These tests produce a rich execution report, [for example](https://mastercard.gi
  * [Further reading](doc/src/main/markdown/further.md): Covers more advanced usage.
  * The submodules under [example](example) illustrate a complete service constellation with flow-based testing
 
+<details>
+<summary>Artifact dependency structure</summary>
+
+<!-- start_module_diagram:framework -->
+
+```mermaid
+graph LR
+  subgraph com.mastercard.test.flow
+    api --> message-core
+    api --> builder
+    api --> model
+    api --> validation-core
+    api --> coppice
+    api --> report-core
+    assert-core --> assert-junit4
+    assert-core --> assert-junit5
+    assert-filter --> assert-core
+    message-core --> message-http
+    message-core --> message-json
+    message-core --> message-sql
+    message-core --> message-text
+    message-core --> message-web
+    message-core --> message-xml
+    report-core --> assert-filter
+    report-ng --> report-core
+    validation-core --> validation-junit4
+    validation-core --> validation-junit5
+  end
+```
+
+<!-- end_module_diagram -->
+</details>
+
 ## Links
 
  * This project is copyright © 2022 Mastercard, and is released under the [Apache version 2.0 licence](LICENCE).
