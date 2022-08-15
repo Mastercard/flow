@@ -48,7 +48,7 @@ public class Text extends AbstractMessage<Text> {
 
 	@Override
 	public Text peer( byte[] content ) {
-		return copyMasksTo( new Text( new String( content, UTF_8 ) ) );
+		return copyMasksTo( new Text( content ) );
 	}
 
 	@Override

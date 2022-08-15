@@ -11,11 +11,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -503,7 +505,8 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		try {
 			// work out the context updates
 			Set<Class<? extends Context>> unupdated = new HashSet<>( currentContext.keySet() );
-			List<Context> contextUpdates = new ArrayList<>();
+			Set<Context> contextUpdates = new TreeSet<>(
+					Comparator.comparing( ctx -> ctx.getClass().getName() ) );
 			flow.context()
 					.filter( ctx -> ctx.domain().stream().anyMatch( systemUnderTest::contains ) )
 					.forEach( ctx -> {

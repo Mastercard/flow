@@ -5,6 +5,7 @@ import static com.mastercard.test.flow.builder.Sets.set;
 import com.mastercard.test.flow.Actor;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
+import com.mastercard.test.flow.assrt.mock.AltTestContext;
 import com.mastercard.test.flow.assrt.mock.Flw;
 import com.mastercard.test.flow.assrt.mock.Mdl;
 import com.mastercard.test.flow.assrt.mock.TestContext;
@@ -100,6 +101,47 @@ public class TestModel {
 	}
 
 	/**
+	 * @return As with {@link #abc()}, but all of the messages will fail to parse
+	 *         actual content
+	 */
+	public static Model abcWithParseFailures() {
+		Flow abc = Creator.build( flow -> flow
+				.meta( data -> data
+						.description( "abc" ) )
+				.call( a -> a
+						.from( Actors.A )
+						.to( Actors.B )
+						.request( new FailText( "A request to B" ) )
+						.call( b -> b
+								.to( Actors.C )
+								.request( new FailText( "B request to C" ) )
+								.response( new FailText( "C response to B" ) ) )
+						.response( new FailText( "B response to A" ) ) ) );
+
+		return new Mdl().withFlows( abc );
+	}
+
+	private static class FailText extends Text {
+		private final String content;
+
+		public FailText( String s ) {
+			super( s );
+			content = s;
+		}
+
+		@Override
+		public Text peer( byte[] bytes ) {
+			System.out.println( "TestModel.FailText.peer()" );
+			throw new IllegalArgumentException( "kaboom!" );
+		}
+
+		@Override
+		public Text child() {
+			return new FailText( content );
+		}
+	}
+
+	/**
 	 * @return A model with two flows with a dependency between them, calling from A
 	 *         to B to C
 	 */
@@ -134,6 +176,7 @@ public class TestModel {
 				.meta( data -> data
 						.description( "abc" ) )
 				.context( new TestContext().value( "first ctx" ) )
+				.context( new AltTestContext().value( "alt ctx" ) )
 				.call( a -> a
 						.from( Actors.A )
 						.to( Actors.B )
@@ -147,7 +190,8 @@ public class TestModel {
 		Flow def = Deriver.build( abc, flow -> flow
 				.meta( data -> data
 						.description( "def" ) )
-				.context( TestContext.class, c -> c.value( "second ctx" ) ) );
+				.context( TestContext.class, c -> c.value( "second ctx" ) )
+				.context( AltTestContext.class, null ) );
 
 		return new Mdl().withFlows( abc, def );
 	}
