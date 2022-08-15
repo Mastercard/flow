@@ -25,15 +25,7 @@
 		</dependency>
 
 		<dependency>
-			<!-- Test data -->
-			<groupId>${project.groupId}</groupId>
-			<artifactId>app-model</artifactId>
-			<version>${project.version}</version>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<!-- Test utilities -->
+			<!-- Test data and utilities -->
 			<groupId>${project.groupId}</groupId>
 			<artifactId>app-assert</artifactId>
 			<version>${project.version}</version>
