@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import com.mastercard.test.flow.Context;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
+import com.mastercard.test.flow.assrt.mock.AltTestContext;
 import com.mastercard.test.flow.assrt.mock.TestContext;
 
 /**
@@ -45,6 +46,23 @@ class ApplicatorTest {
 			};
 
 	/**
+	 * Records context switches to {@link #ctxSwitchLog}
+	 */
+	static final Applicator<
+			AltTestContext> ALT_APPLICATOR = new Applicator<AltTestContext>( AltTestContext.class, 0 ) {
+
+				@Override
+				public void transition( AltTestContext from, AltTestContext to ) {
+					ctxSwitchLog.add( String.format( "switch from %s to %s", from, to ) );
+				}
+
+				@Override
+				public Comparator<AltTestContext> order() {
+					return Comparator.comparing( System::identityHashCode );
+				}
+			};
+
+	/**
 	 * Clears the context switch log
 	 */
 	@BeforeEach
@@ -60,7 +78,7 @@ class ApplicatorTest {
 
 		TestFlocessor tf = new TestFlocessor( "contextSwitch", TestModel.withContext() )
 				.system( State.FUL, B )
-				.applicators( APPLICATOR )
+				.applicators( APPLICATOR, ALT_APPLICATOR )
 				.behaviour( assrt -> {
 					assrt.actual().response( assrt.expected().response().content() );
 				} );
@@ -77,7 +95,9 @@ class ApplicatorTest {
 				" | B response to A | B response to A |" ),
 				copypasta( tf.events() ) );
 		assertEquals( copypasta(
+				"switch from null to AltTestContext[alt ctx]",
 				"switch from null to TestContext[first ctx]",
+				"switch from AltTestContext[alt ctx] to null",
 				"switch from TestContext[first ctx] to TestContext[second ctx]" ),
 				copypasta( ctxSwitchLog ) );
 	}
@@ -97,7 +117,7 @@ class ApplicatorTest {
 		tf.execute();
 
 		assertEquals( copypasta(
-				"abc [] error No applicator for context type class com.mastercard.test.flow.assrt.mock.TestContext",
+				"abc [] error No applicator for context type class com.mastercard.test.flow.assrt.mock.AltTestContext",
 				"def [] error No applicator for context type class com.mastercard.test.flow.assrt.mock.TestContext" ),
 				copypasta( tf.events() ) );
 		assertEquals( copypasta( "" ),

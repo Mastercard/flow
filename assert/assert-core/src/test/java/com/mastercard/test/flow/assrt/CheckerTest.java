@@ -36,6 +36,29 @@ class CheckerTest {
 	}
 
 	/**
+	 * Shows that residues with no checker implementations are ignored
+	 */
+	@Test
+	void unchecked() {
+		TestFlocessor tf = new TestFlocessor( "", TestModel.withResidue() )
+				.system( State.FUL, B )
+				.behaviour( assrt -> {
+					// no message assertions
+				} );
+
+		tf.execute();
+
+		assertEquals( copypasta(
+				"SKIP No assertions made",
+				"SKIP No assertions made" ),
+				copypasta( tf.events() ) );
+		assertEquals( copypasta(
+				"abc [] SKIP",
+				"def [] SKIP" ),
+				copypasta( tf.results() ) );
+	}
+
+	/**
 	 * Shows that residues are checked and that the results are recorded for
 	 * failure-avoidance purposes
 	 */

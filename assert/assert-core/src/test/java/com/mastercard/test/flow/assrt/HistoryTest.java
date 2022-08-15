@@ -78,6 +78,32 @@ class HistoryTest {
 	}
 
 	/**
+	 * The dependency has been processed
+	 */
+	@Test
+	void dependencyPresent() {
+		History hst = new History();
+		hst.recordResult( dependency, Result.SUCCESS );
+
+		assertEquals( null, hst.skipReason(
+				dependent, State.FUL, Collections.singleton( Actors.BEN ) )
+				.orElse( null ) );
+	}
+
+	/**
+	 * The dependency has not been processed
+	 */
+	@Test
+	void dependencyMissing() {
+		History hst = new History();
+
+		assertEquals( "Missing dependency", hst.skipReason(
+				dependent, State.FUL, Collections.singleton( Actors.BEN ) )
+				.orElse( null ) );
+
+	}
+
+	/**
 	 * The dependency has failed
 	 */
 	@Test
