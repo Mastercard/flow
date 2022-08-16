@@ -58,7 +58,7 @@ graph TD
 
 <details>
 <summary>Artifact dependency structure</summary>
-Solid lines are `compile`-scope dependencies, dotted are `test`-scope.
+    Solid lines are <code>compile</code>-scope dependencies, dotted are <code>test</code>-scope.
 
 <!-- start_module_diagram:example -->
 
