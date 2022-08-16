@@ -83,7 +83,7 @@ class WriterTest {
 						.map( s -> s.replace( '\\', '/' ) )
 						// files produced by the angular build have a content-hash suffix
 						// to avoid cached versions being used
-						.map( s -> s.replaceAll( "\\.[a-f0-9]{20}\\.(js|css)", ".<hash>.$1" ) )
+						.map( s -> s.replaceAll( "\\.[a-f0-9]{16}\\.(js|css)", ".<hash>.$1" ) )
 						.sorted()
 						.collect( Collectors.joining( "\n" ) ) );
 

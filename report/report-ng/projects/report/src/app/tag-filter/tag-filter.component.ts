@@ -1,5 +1,5 @@
 import { Component, OnInit, Input, ViewChild, ElementRef } from '@angular/core';
-import { FormControl } from '@angular/forms';
+import { UntypedFormControl } from '@angular/forms';
 import { MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { MatChipInputEvent } from '@angular/material/chips';
 import { ENTER } from '@angular/cdk/keycodes';
@@ -27,7 +27,7 @@ export class TagFilterComponent implements OnInit {
   availableTags: Set<string> = new Set();
   completionTags!: Observable<string[]>;
 
-  ctrl = new FormControl();
+  ctrl = new UntypedFormControl();
   separatorKeysCodes: number[] = [ENTER];
 
   @ViewChild('filterInput') filterInput!: ElementRef<HTMLInputElement>;

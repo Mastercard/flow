@@ -84,6 +84,12 @@ Build with
 						<phase>process-resources</phase>
 						<configuration>
 							<target>
+								<!-- By default angular puts `type="module"` attributes on the script elements.
+								     These break viewing a report on the filesystem. We really like that use-case,
+								     so we're going to remove those attributes here -->
+								<replace file="${dst.res.dir}/index.html" value="">
+									<replacetoken><![CDATA[type="module"]]></replacetoken>
+								</replace>
 								<fileset dir="${dst.res.dir}" excludes="manifest.txt" id="fileset" />
 								<pathconvert pathsep="${line.separator}" property="filelist" refid="fileset" targetos="unix">
 									<map from="${dst.res.dir}/" to="" />

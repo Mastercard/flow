@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, Input, OnInit } from '@angular/core';
-import { FormControl } from '@angular/forms';
+import { UntypedFormControl } from '@angular/forms';
 import { ProgressBarMode } from '@angular/material/progress-bar';
 import { ActivatedRoute } from '@angular/router';
 import { debounceTime, distinctUntilChanged, tap } from 'rxjs/operators';
@@ -19,7 +19,7 @@ export class ModelDiffDataSourceComponent implements OnInit {
   readonly end = "// END_JSON_DATA";
 
   @Input() label = "";
-  @Input() input = new FormControl('');
+  @Input() input = new UntypedFormControl('');
 
   linkText: string = "";
   progressState: ProgressBarMode = 'query';
