@@ -85,4 +85,4 @@ Credit for the sequence diagram on the flow detail pages belongs to [geraintluff
 
 The text diff component is sourced from [ABenassi87/ngx-text-diff](https://github.com/ABenassi87/ngx-text-diff).
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 12.1.2.
+This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 12.1.2 and has since been upgraded to 14.1.2.
