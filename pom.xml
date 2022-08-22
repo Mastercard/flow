@@ -157,7 +157,7 @@
 					<!-- `mvn formatter:format` to apply the format -->
 					<groupId>net.revelc.code.formatter</groupId>
 					<artifactId>formatter-maven-plugin</artifactId>
-					<version>2.16.0</version>
+					<version>2.20.0</version>
 					<configuration>
 						<!-- This plugin only executes in the child modules, so we need to 
 							step one dir up and then back down to the format file. If we end up with 
