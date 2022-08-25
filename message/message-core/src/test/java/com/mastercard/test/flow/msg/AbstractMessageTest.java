@@ -4,6 +4,7 @@ import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,7 +26,7 @@ class AbstractMessageTest {
 	}
 
 	/**
-	 * The minimal concrete type we'll use to test the functiuonality of
+	 * The minimal concrete type we'll use to test the functionality of
 	 * {@link AbstractMessage}
 	 */
 	private static class ConcreteMessage extends AbstractMessage<ConcreteMessage> {
@@ -46,9 +47,25 @@ class AbstractMessageTest {
 									u.field(),
 									u.value() == AbstractMessage.DELETE
 											? "The special deletion value"
-											: u.value() ) )
+											: valueString( u.value() ) ) )
 							.collect( joining( "\n  " ) ))
 									.trim();
+		}
+
+		private static final String valueString( Object value ) {
+			if( value.getClass().isArray() ) {
+				StringBuilder sb = new StringBuilder();
+				sb.append( "[" );
+				for( int i = 0; i < Array.getLength( value ); i++ ) {
+					if( i != 0 ) {
+						sb.append( "," );
+					}
+					sb.append( valueString( Array.get( value, i ) ) );
+				}
+				sb.append( "]" );
+				return sb.toString();
+			}
+			return String.valueOf( value );
 		}
 
 		@Override
@@ -83,11 +100,13 @@ class AbstractMessageTest {
 	@Test
 	void set() {
 		ConcreteMessage msg = new ConcreteMessage( "msg" )
-				.set( "foo", "bar" );
+				.set( "foo", "bar" )
+				.set( "enum", NPrdctbl.FOO );
 
 		Assertions.assertEquals( ""
 				+ "msg\n"
-				+ "  foo=bar",
+				+ "  foo=bar\n"
+				+ "  enum=FOO",
 				msg.asHuman() );
 	}
 
@@ -170,5 +189,38 @@ class AbstractMessageTest {
 		// doing
 		AbstractMessage.registerImmutable( ArrayList.class );
 		msg.set( "field", new ArrayList<>() );
+	}
+
+	/**
+	 * Shows that setting arrays takes a defensive copy
+	 */
+	@Test
+	void arrayDefense() {
+		ConcreteMessage msg = new ConcreteMessage( "msg" );
+
+		Object[][] array = { { 1 } };
+		msg.set( "field", array );
+		array[0][0] = 2;
+		assertEquals( "msg\n"
+				+ "  field=[[1]]",
+				msg.asHuman(),
+				"The value set in the message has not changed" );
+
+		array[0][0] = new Object();
+		IllegalArgumentException iae = assertThrows( IllegalArgumentException.class,
+				() -> msg.set( "field", array ) );
+		assertEquals( ""
+				+ "Field 'field[0][0]' - Possibly-mutable value type class java.lang.Object\n"
+				+ "If you're sure that this type is immutable, then you can call\n"
+				+ "  AbstractMessage.registerImmutable( Object.class )\n"
+				+ "to suppress this error.\n"
+				+ "You can also override\n"
+				+ "  AbstractMessage.validateValueType( field, value )\n"
+				+ "in your subclass implementation to do validation more suitable\n"
+				+ "for your requirements. Please be fully aware of the implications\n"
+				+ "of mutable value types in your message fields: the interface\n"
+				+ "contract of child() is put at risk and the resulting failures\n"
+				+ "can be painful to debug", iae.getMessage(),
+				"Array contents are searched for suspicious types" );
 	}
 }

@@ -132,7 +132,7 @@ public class Result extends AbstractMessage<Result> {
 	}
 
 	@Override
-	protected void validateValueType( String field, Object value ) {
+	protected Object validateValueType( String field, Object value ) {
 		// We want to allow adding rows with a list. We copy the list values anyway, so
 		// have no fears about mutability
 		if( field.matches( "\\d+" ) && value instanceof List<?> ) {
@@ -142,10 +142,9 @@ public class Result extends AbstractMessage<Result> {
 				super.validateValueType( field + ":" + idx, o );
 				idx++;
 			}
+			return value;
 		}
-		else {
-			super.validateValueType( field, value );
-		}
+		return super.validateValueType( field, value );
 	}
 
 	@Override

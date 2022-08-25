@@ -322,8 +322,9 @@ class JsonTest {
 	void badContent() {
 		Json json = new Json() {
 			@Override
-			protected void validateValueType( String field, Object value ) {
+			protected Object validateValueType( String field, Object value ) {
 				// allow everything
+				return value;
 			}
 		};
 		json.set( "field", new Object() );

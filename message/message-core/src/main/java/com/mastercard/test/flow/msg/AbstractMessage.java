@@ -2,6 +2,7 @@ package com.mastercard.test.flow.msg;
 
 import static java.util.stream.Collectors.toCollection;
 
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -105,8 +106,8 @@ public abstract class AbstractMessage<T extends AbstractMessage<T>>
 
 	@Override
 	public T set( String field, Object value ) {
-		validateValueType( field, value );
-		updates.add( new Update( field, value ) );
+		Object validValue = validateValueType( field, value );
+		updates.add( new Update( field, validValue ) );
 		return self();
 	}
 
@@ -119,27 +120,47 @@ public abstract class AbstractMessage<T extends AbstractMessage<T>>
 			.collect( toCollection( HashSet::new ) );
 
 	/**
+	 * This method is called for every field update. This gives implementors the
+	 * opportunity to validate and alter values (e.g.: taking a defensive copy of
+	 * mutable types)
+	 *
 	 * @param field The field address that we're trying to populate
 	 * @param value The value that we've been asked to populate into the message
+	 * @return A validated value for that field
 	 */
-	@SuppressWarnings("static-method")
-	protected void validateValueType( String field, Object value ) {
-		if( value != null && value != DELETE && !value.getClass().isPrimitive()
-				&& !immutableTypes.contains( value.getClass() ) ) {
-			throw new IllegalArgumentException( ""
-					+ "Field '" + field + "' - Possibly-mutable value type " + value.getClass() + "\n"
-					+ "If you're sure that this type is immutable, then you can call\n"
-					+ "  AbstractMessage.registerImmutable( " + value.getClass().getSimpleName()
-					+ ".class )\n"
-					+ "to suppress this error.\n"
-					+ "You can also override\n"
-					+ "  AbstractMessage.validateValueType( field, value )\n"
-					+ "in your subclass implementation to do validation more suitable\n"
-					+ "for your requirements. Please be fully aware of the implications\n"
-					+ "of mutable value types in your message fields: the interface\n"
-					+ "contract of child() is put at risk and the resulting failures\n"
-					+ "can be painful to debug" );
+	protected Object validateValueType( String field, Object value ) {
+		if( value != null ) {
+			// we can take a defensive copy
+			if( value.getClass().isArray() ) {
+				Object copy = Array.newInstance(
+						value.getClass().getComponentType(),
+						Array.getLength( value ) );
+				for( int i = 0; i < Array.getLength( copy ); i++ ) {
+					Array.set( copy, i,
+							validateValueType( field + "[" + i + "]", Array.get( value, i ) ) );
+				}
+				return copy;
+			}
+			if( value != DELETE
+					&& !value.getClass().isPrimitive()
+					&& !value.getClass().isEnum()
+					&& !immutableTypes.contains( value.getClass() ) ) {
+				throw new IllegalArgumentException( ""
+						+ "Field '" + field + "' - Possibly-mutable value type " + value.getClass() + "\n"
+						+ "If you're sure that this type is immutable, then you can call\n"
+						+ "  AbstractMessage.registerImmutable( " + value.getClass().getSimpleName()
+						+ ".class )\n"
+						+ "to suppress this error.\n"
+						+ "You can also override\n"
+						+ "  AbstractMessage.validateValueType( field, value )\n"
+						+ "in your subclass implementation to do validation more suitable\n"
+						+ "for your requirements. Please be fully aware of the implications\n"
+						+ "of mutable value types in your message fields: the interface\n"
+						+ "contract of child() is put at risk and the resulting failures\n"
+						+ "can be painful to debug" );
+			}
 		}
+		return value;
 	}
 
 	/**

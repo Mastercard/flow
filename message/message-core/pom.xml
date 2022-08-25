@@ -43,7 +43,7 @@
 				<artifactId>pitest-maven</artifactId>
 				<configuration>
 					<!-- I'm not saying these *have* to stay at 100, just that 
-				     we shouldn't let them slip down by accident -->
+					     we shouldn't let them slip down by accident -->
 					<mutationThreshold>100</mutationThreshold>
 					<coverageThreshold>100</coverageThreshold>
 				</configuration>
