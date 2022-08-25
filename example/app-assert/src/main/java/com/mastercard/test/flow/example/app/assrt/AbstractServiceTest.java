@@ -8,10 +8,12 @@ import static com.mastercard.test.flow.example.app.model.ExampleSystem.Unpredict
 
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
@@ -75,6 +77,18 @@ public abstract class AbstractServiceTest {
 	@AfterAll
 	public static void stopDependencies() {
 		dependencyInstance.stop();
+	}
+
+	/**
+	 * It's pretty easy to create a dependency version mismatch between slf4j and
+	 * slf4j-simple that breaks logging behaviour. The end result of this is fairly
+	 * subtle - no logs appear in the execution reports. This test will assert that
+	 * the log file is being created as expected.
+	 */
+	@AfterAll
+	static void checkLogs() {
+		Assertions.assertTrue( Files.exists( Util.LOG_FILE_PATH ),
+				"logging behaviour broken!" );
 	}
 
 	/**

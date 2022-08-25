@@ -61,7 +61,6 @@
 			<!-- REST framework, used to serve the report for testing -->
 			<groupId>com.sparkjava</groupId>
 			<artifactId>spark-core</artifactId>
-			<version>2.9.4</version>
 			<scope>test</scope>
 		</dependency>
 
@@ -81,10 +80,9 @@
 		</dependency>
 
 		<dependency>
-			<!-- Logging support -->
+			<!-- Logging support - captures content from spark -->
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
-			<version>2.0.0</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
