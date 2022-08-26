@@ -7,6 +7,7 @@ import com.mastercard.test.flow.Actor;
 import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.builder.mutable.MutableInteraction;
 import com.mastercard.test.flow.example.app.model.ExampleSystem.Actors;
+import com.mastercard.test.flow.util.InteractionPredicate;
 
 /**
  * Utilities for working with the interactions in our system
@@ -20,37 +21,43 @@ public class Interactions {
 	/**
 	 * Identifies all interactions
 	 */
-	public static final Predicate<Interaction> ALL = i -> true;
+	public static final Predicate<Interaction> ALL = new InteractionPredicate();
 
 	/**
 	 * Identifies interactions with the {@link Actors#WEB_UI}
 	 */
-	public static final Predicate<Interaction> WEB_UI = ntr -> ntr.responder() == Actors.WEB_UI;
+	public static final Predicate<Interaction> WEB_UI = new InteractionPredicate()
+			.to( Actors.WEB_UI );
 
 	/**
 	 * Identifies interactions with the {@link Actors#UI}
 	 */
-	public static final Predicate<Interaction> UI = ntr -> ntr.responder() == Actors.UI;
+	public static final Predicate<Interaction> UI = new InteractionPredicate()
+			.to( Actors.UI );
 
 	/**
 	 * Identifies interactions with the {@link Actors#CORE}
 	 */
-	public static final Predicate<Interaction> CORE = ntr -> ntr.responder() == Actors.CORE;
+	public static final Predicate<Interaction> CORE = new InteractionPredicate()
+			.to( Actors.CORE );
 
 	/**
 	 * Identifies interactions with the {@link Actors#QUEUE}
 	 */
-	public static final Predicate<Interaction> QUEUE = ntr -> ntr.responder() == Actors.QUEUE;
+	public static final Predicate<Interaction> QUEUE = new InteractionPredicate()
+			.to( Actors.QUEUE );
 
 	/**
 	 * Identifies interactions with the {@link Actors#STORE}
 	 */
-	public static final Predicate<Interaction> STORE = ntr -> ntr.responder() == Actors.STORE;
+	public static final Predicate<Interaction> STORE = new InteractionPredicate()
+			.to( Actors.STORE );
 
 	/**
 	 * Identifies interactions with the {@link Actors#HISTOGRAM}
 	 */
-	public static final Predicate<Interaction> HISTOGRAM = ntr -> ntr.responder() == Actors.HISTOGRAM;
+	public static final Predicate<Interaction> HISTOGRAM = new InteractionPredicate()
+			.to( Actors.HISTOGRAM );
 
 	/**
 	 * Changes actors in an existing interaction structure
