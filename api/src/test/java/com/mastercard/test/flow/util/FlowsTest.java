@@ -3,6 +3,8 @@ package com.mastercard.test.flow.util;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Constructor;
@@ -13,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -82,14 +85,14 @@ class FlowsTest {
 
 	private static final Interaction interaction( Actor from, String request,
 			Actor to, String response ) {
-		Interaction m = Mockito.mock( Interaction.class );
-		Mockito.when( m.requester() ).thenReturn( from );
+		Interaction ntr = Mockito.mock( Interaction.class );
+		Mockito.when( ntr.requester() ).thenReturn( from );
 		Message req = message( request );
-		Mockito.when( m.request() ).thenReturn( req );
-		Mockito.when( m.responder() ).thenReturn( to );
+		Mockito.when( ntr.request() ).thenReturn( req );
+		Mockito.when( ntr.responder() ).thenReturn( to );
 		Message res = message( response );
-		Mockito.when( m.response() ).thenReturn( res );
-		return m;
+		Mockito.when( ntr.response() ).thenReturn( res );
+		return ntr;
 	}
 
 	private static final Message message( String name ) {
@@ -189,6 +192,53 @@ class FlowsTest {
 								i.requester().name(), i.request().assertable(),
 								i.responder().name(), i.response().assertable() ) )
 						.collect( joining( "\n" ) ) );
+	}
+
+	/**
+	 * Exercises {@link Flows#find(Flow, java.util.function.Predicate)}
+	 */
+	@Test
+	void find() {
+		Flow flow = flow( "flow", "", null );
+
+		assertFalse( Flows.find( flow, i -> false ).isPresent() );
+
+		assertEquals( "AVA > abc | BEN < cba",
+				Flows.find( flow, i -> true )
+						.map( i -> String.format( "%s > %s | %s < %s",
+								i.requester().name(), i.request().assertable(),
+								i.responder().name(), i.response().assertable() ) )
+						.get() );
+	}
+
+	/**
+	 * Exercises {@link Flows#get(Flow, java.util.function.Predicate)}
+	 */
+	@Test
+	void get() {
+		Flow flow = flow( "flow", "", null );
+
+		Interaction i = Flows.get( flow, n -> true );
+		assertEquals( "AVA > abc | BEN < cba",
+				String.format( "%s > %s | %s < %s",
+						i.requester().name(), i.request().assertable(),
+						i.responder().name(), i.response().assertable() ) );
+
+		Predicate<Interaction> none = new Predicate<Interaction>() {
+			@Override
+			public boolean test( Interaction t ) {
+				return false;
+			}
+
+			@Override
+			public String toString() {
+				return "predicate tostring";
+			}
+		};
+
+		IllegalArgumentException iae = assertThrows( IllegalArgumentException.class,
+				() -> Flows.get( flow, none ) );
+		assertEquals( "No interaction matching 'predicate tostring' in flow []", iae.getMessage() );
 	}
 
 	/**

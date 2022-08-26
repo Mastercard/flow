@@ -8,7 +8,9 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -68,6 +70,34 @@ public class Flows {
 	 */
 	public static Stream<Interaction> interactions( Flow flow ) {
 		return Stream.concat( Stream.of( flow.root() ), descendents( flow.root() ) );
+	}
+
+	/**
+	 * Looks for an {@link Interaction} in a {@link Flow}
+	 *
+	 * @param flow        The {@link Flow} to search
+	 * @param interaction How to recognise the {@link Interaction} of interest
+	 * @return The chronologically first {@link Interaction} in the {@link Flow}
+	 *         that satisfies the supplied condition
+	 * @see InteractionPredicate
+	 */
+	public static Optional<Interaction> find( Flow flow, Predicate<Interaction> interaction ) {
+		return interactions( flow ).filter( interaction ).findFirst();
+	}
+
+	/**
+	 * Extracts a single {@link Interaction} from a {@link Flow}
+	 *
+	 * @param flow        The {@link Flow} to search
+	 * @param interaction How to recognise the {@link Interaction} of interest
+	 * @return The chronologically first {@link Interaction} in the {@link Flow}
+	 *         that satisfies the supplied condition
+	 * @throws IllegalArgumentException if there is no such {@link Interaction}
+	 * @see InteractionPredicate
+	 */
+	public static Interaction get( Flow flow, Predicate<Interaction> interaction ) {
+		return find( flow, interaction ).orElseThrow( () -> new IllegalArgumentException(
+				"No interaction matching '" + interaction + "' in " + flow.meta().id() ) );
 	}
 
 	/**
