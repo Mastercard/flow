@@ -2,7 +2,7 @@
  * Copyright (c) 2021 Mastercard. All rights reserved.
  */
 
-package com.mastercard.test.flow.validation.coppice.graph;
+package com.mastercard.test.flow.validation.graph;
 
 import static java.util.stream.Collectors.joining;
 

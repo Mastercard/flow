@@ -13,11 +13,11 @@ import org.graphstream.graph.Edge;
 import org.graphstream.graph.Node;
 
 import com.mastercard.test.flow.Flow;
-import com.mastercard.test.flow.validation.coppice.graph.CachingDiffDistance;
 import com.mastercard.test.flow.validation.coppice.ui.Animation;
 import com.mastercard.test.flow.validation.coppice.ui.GraphTree;
 import com.mastercard.test.flow.validation.coppice.ui.GraphView;
 import com.mastercard.test.flow.validation.coppice.ui.Progress;
+import com.mastercard.test.flow.validation.graph.CachingDiffDistance;
 
 /**
  * This task will, for a single flow, find the most similar flow in the corpus.

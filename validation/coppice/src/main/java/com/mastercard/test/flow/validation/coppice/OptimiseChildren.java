@@ -11,12 +11,12 @@ import java.util.stream.Collectors;
 import javax.swing.Timer;
 
 import com.mastercard.test.flow.Flow;
-import com.mastercard.test.flow.validation.coppice.graph.CachingDiffDistance;
-import com.mastercard.test.flow.validation.coppice.graph.DiffGraph;
 import com.mastercard.test.flow.validation.coppice.ui.Animation;
 import com.mastercard.test.flow.validation.coppice.ui.GraphTree;
 import com.mastercard.test.flow.validation.coppice.ui.GraphView;
 import com.mastercard.test.flow.validation.coppice.ui.Progress;
+import com.mastercard.test.flow.validation.graph.CachingDiffDistance;
+import com.mastercard.test.flow.validation.graph.DiffGraph;
 
 /**
  * This task optimises the entire inheritance tree for the targeted flow:
