@@ -97,12 +97,8 @@ public class ModelTaggingCheck implements Validation {
 			sb.append( ")\n         .union(" );
 			sb.append( union.stream()
 					.collect( joining( QUOTE_COMMA_QUOTE, QUOTE, QUOTE ) ) );
-			sb.append( ")" );
 		}
-		if( intersection.isEmpty() && union.isEmpty() ) {
-			sb.append( ")" );
-		}
-		sb.append( ";" );
+		sb.append( ");" );
 		return sb.toString();
 	}
 

@@ -65,7 +65,7 @@ class ModelTaggingCheckTest extends AbstractValidationTest {
 				new TaggedGroup(),
 				"a,b,c" ),
 				"  details: Inaccurate tagging\n"
-						+ " expected: new TaggedGroup(\"a\", \"b\", \"c\";\n"
+						+ " expected: new TaggedGroup(\"a\", \"b\", \"c\");\n"
 						+ "   actual: new TaggedGroup();\n"
 						+ "offenders: " );
 
@@ -99,8 +99,8 @@ class ModelTaggingCheckTest extends AbstractValidationTest {
 				leaf( "right", new TaggedGroup( "b", "c" ), "b,c,d" ) ),
 				"left : pass",
 				"  details: Inaccurate tagging\n"
-						+ " expected: new TaggedGroup(\"b\", \"c\", \"d\";\n"
-						+ "   actual: new TaggedGroup(\"b\", \"c\";\n"
+						+ " expected: new TaggedGroup(\"b\", \"c\", \"d\");\n"
+						+ "   actual: new TaggedGroup(\"b\", \"c\");\n"
 						+ "offenders: ",
 				"  details: Inaccurate tagging\n"
 						+ " expected: new TaggedGroup(\"b\")\n"
