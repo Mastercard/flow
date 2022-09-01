@@ -61,14 +61,30 @@ class ModelTaggingCheckTest extends AbstractValidationTest {
 	 */
 	@Test
 	void violation() {
-		test( leaf( "leaf",
+		test( leaf( "empty model tags",
+				new TaggedGroup(),
+				"a,b,c" ),
+				"  details: Inaccurate tagging\n"
+						+ " expected: new TaggedGroup(\"a\", \"b\", \"c\";\n"
+						+ "   actual: new TaggedGroup();\n"
+						+ "offenders: " );
+
+		test( leaf( "empty flow tags",
+				new TaggedGroup( "a", "b", "c" ).union( "d" ) ),
+				"  details: Inaccurate tagging\n"
+						+ " expected: new TaggedGroup();\n"
+						+ "   actual: new TaggedGroup(\"a\", \"b\", \"c\")\n"
+						+ "         .union(\"d\");\n"
+						+ "offenders: " );
+
+		test( leaf( "mismatch",
 				new TaggedGroup( "a", "b", "c" ).union( "d" ),
 				"a,b,c", "b,c,d" ),
 				"  details: Inaccurate tagging\n"
-						+ " expected: new TaggedGroup(\"a\", \"b\", \"c\")\n"
-						+ "         .union(\"d\");\n"
-						+ "   actual: new TaggedGroup(\"b\", \"c\")\n"
+						+ " expected: new TaggedGroup(\"b\", \"c\")\n"
 						+ "         .union(\"a\", \"d\");\n"
+						+ "   actual: new TaggedGroup(\"a\", \"b\", \"c\")\n"
+						+ "         .union(\"d\");\n"
 						+ "offenders: " );
 	}
 
@@ -83,14 +99,14 @@ class ModelTaggingCheckTest extends AbstractValidationTest {
 				leaf( "right", new TaggedGroup( "b", "c" ), "b,c,d" ) ),
 				"left : pass",
 				"  details: Inaccurate tagging\n"
-						+ " expected: new TaggedGroup(\"b\", \"c\";\n"
-						+ "   actual: new TaggedGroup(\"b\", \"c\", \"d\";\n"
+						+ " expected: new TaggedGroup(\"b\", \"c\", \"d\";\n"
+						+ "   actual: new TaggedGroup(\"b\", \"c\";\n"
 						+ "offenders: ",
 				"  details: Inaccurate tagging\n"
 						+ " expected: new TaggedGroup(\"b\")\n"
-						+ "         .union(\"a\", \"c\", \"x\");\n"
-						+ "   actual: new TaggedGroup(\"b\")\n"
 						+ "         .union(\"a\", \"c\", \"d\");\n"
+						+ "   actual: new TaggedGroup(\"b\")\n"
+						+ "         .union(\"a\", \"c\", \"x\");\n"
 						+ "offenders: " );
 	}
 
