@@ -34,10 +34,20 @@ class ModuleDiagramTest {
 			"com.mastercard.test.flow:aggregator",
 			"com.mastercard.test.flow:doc" ).collect( toSet() );
 
+	/**
+	 * Maps from the groupID to the scope of links that we're interested in within
+	 * that group.
+	 */
 	private static final Map<String, Set<String>> SCOPES;
 	static {
 		Map<String, Set<String>> m = new HashMap<>();
+		// For the framework we want to show *what* will be included transitively if you
+		// consume an artifact. We've got some test-scope dependencies in here to
+		// avoid excessive mocking, but they just cloud the diagram.
 		m.put( "com.mastercard.test.flow", Stream.of( "compile" ).collect( toSet() ) );
+		// For the example service it's important to show *how* the framework
+		// dependencies are consumed - e.g. assert and validation are always test scope,
+		// the model doesn't make it into the distributable artifacts, etc
 		m.put( "com.mastercard.test.flow.example", Stream.of( "compile", "test" ).collect( toSet() ) );
 		SCOPES = Collections.unmodifiableMap( m );
 	}
@@ -133,8 +143,6 @@ class ModuleDiagramTest {
 			this.type = type;
 			this.toGroup = toGroup;
 			this.toArtifact = toArtifact;
-
-			System.out.println( this + " " + intraGroup() );
 		}
 
 		public boolean intraGroup() {
