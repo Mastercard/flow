@@ -70,4 +70,17 @@ public class Histograph {
 				.collect( joining( "\n" ) );
 	}
 
+	/**
+	 * @return The minimum value to be plotted
+	 */
+	public int getMinimum() {
+		return minimum;
+	}
+
+	/**
+	 * @return The maximum value to be plotted
+	 */
+	public int getMaximum() {
+		return maximum;
+	}
 }

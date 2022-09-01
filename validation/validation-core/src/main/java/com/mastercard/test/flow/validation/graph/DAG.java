@@ -8,6 +8,7 @@ import static java.util.stream.Collectors.joining;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
@@ -15,7 +16,7 @@ import java.util.stream.Stream;
  *
  * @param <S> item type
  */
-class DAG<S> {
+public class DAG<S> {
 
 	private final DAG<S> parent;
 	private final S value;
@@ -73,6 +74,16 @@ class DAG<S> {
 		return Stream.concat(
 				Stream.of( value ),
 				children().flatMap( DAG::values ) );
+	}
+
+	/**
+	 * Recurses over the DAG structure
+	 *
+	 * @param visitor called once for every node
+	 */
+	public void traverse( Consumer<DAG<S>> visitor ) {
+		visitor.accept( this );
+		children().forEach( c -> c.traverse( visitor ) );
 	}
 
 	@Override

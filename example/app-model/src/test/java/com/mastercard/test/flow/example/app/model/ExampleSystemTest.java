@@ -12,7 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 
 import com.mastercard.test.flow.Actor;
+import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.example.app.model.ExampleSystem.Actors;
+import com.mastercard.test.flow.validation.InheritanceHealth;
 import com.mastercard.test.flow.validation.MessageHash;
 import com.mastercard.test.flow.validation.junit5.Validator;
 
@@ -43,7 +45,7 @@ class ExampleSystemTest {
 	 * </ul>
 	 */
 	@Test
-	void hashes() {
+	void messageHashes() {
 		MessageHash mh = new MessageHash( Assertions::assertEquals )
 				.hashingEverything();
 
@@ -91,5 +93,52 @@ class ExampleSystemTest {
 				"51B9735B70AE590E97230E245263CC7B 0009 1.1 KiB",
 				"RESPONSES <-- HISTOGRAM",
 				"4C0832B1D6CB88891B5D6C902D35F7B1 0009 1.6 KiB" );
+	}
+
+	/**
+	 * <p>
+	 * Checks the health of the inheritance structure. Choosing an inappropriate
+	 * inheritance basis for a new {@link Flow} creates technical debt - the
+	 * extraneous message updates that could have been avoided with a better basis
+	 * choice.
+	 * </p>
+	 * <p>
+	 * This test will be updated every time a flow is added. If the increase in the
+	 * "Actual" cost metric is higher than the rise in the "Optimal" metric, then
+	 * that's an indicator that a better basis choice is available.
+	 * </p>
+	 * <p>
+	 * Note that this is only a very rough guide - human considerations of code
+	 * organisation almost certainly take precedence.
+	 * </p>
+	 */
+	@Test
+	void inheritanceHealth() {
+		new InheritanceHealth( 0, 150, 20, Assertions::assertEquals )
+				.expect( ExampleSystem.MODEL,
+						"Actual            | Optimal          ",
+						"roots         354 | roots         117",
+						"edges         434 | edges         482",
+						"total         788 | total         599",
+						"        3  25.00% |         3  21.43%",
+						"        1   8.33% |         2  14.29%",
+						"        0   0.00% |         2  14.29%",
+						"        2  16.67% |         3  21.43%",
+						"        1   8.33% |         0   0.00%",
+						"        0   0.00% |         0   0.00%",
+						"        2  16.67% |         0   0.00%",
+						"        2  16.67% |         2  14.29%",
+						"        0   0.00% |         0   0.00%",
+						"        0   0.00% |         0   0.00%",
+						"        0   0.00% |         1   7.14%",
+						"        0   0.00% |         0   0.00%",
+						"        1   8.33% |         0   0.00%",
+						"        0   0.00% |         0   0.00%",
+						"        0   0.00% |         1   7.14%",
+						"        0   0.00% |         0   0.00%",
+						"        0   0.00% |         0   0.00%",
+						"        0   0.00% |         0   0.00%",
+						"        0   0.00% |         0   0.00%",
+						"        0   0.00% |         0   0.00%" );
 	}
 }
