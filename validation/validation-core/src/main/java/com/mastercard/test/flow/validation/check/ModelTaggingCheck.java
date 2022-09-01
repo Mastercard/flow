@@ -71,8 +71,8 @@ public class ModelTaggingCheck implements Validation {
 					.collect( Collectors.toCollection( TreeSet::new ) );
 			modelUnionTags.removeAll( modelIntersectionTags );
 
-			String expected = formatCopypasta( modelUnionTags, modelIntersectionTags );
-			String actual = formatCopypasta( flowUnionTags, flowIntersectionTags );
+			String expected = formatCopypasta( flowUnionTags, flowIntersectionTags );
+			String actual = formatCopypasta( modelUnionTags, modelIntersectionTags );
 
 			if( !expected.equals( actual ) ) {
 				return new Violation( this, "Inaccurate tagging", expected, actual );
@@ -97,9 +97,8 @@ public class ModelTaggingCheck implements Validation {
 			sb.append( ")\n         .union(" );
 			sb.append( union.stream()
 					.collect( joining( QUOTE_COMMA_QUOTE, QUOTE, QUOTE ) ) );
-			sb.append( ")" );
 		}
-		sb.append( ";" );
+		sb.append( ");" );
 		return sb.toString();
 	}
 

@@ -4,7 +4,7 @@
 
 	<groupId>com.mastercard.test.flow</groupId>
 	<artifactId>parent</artifactId>
-	<version>0.0.2-SNAPSHOT</version>
+	<version>0.0.5-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>flow</name>
 	<description>Testing framework</description>
@@ -318,6 +318,7 @@
 					<arguments>-Dnode=system -DexcludedGroups=avoid_on_release</arguments>
 					<autoVersionSubmodules>true</autoVersionSubmodules>
 					<lineSeparator>lf</lineSeparator>
+					<tagNameFormat>v@{project.version}</tagNameFormat>
 				</configuration>
 			</plugin>
 
@@ -476,6 +477,29 @@
 								<mctf.itest.report.serve>true</mctf.itest.report.serve>
 							</systemPropertyVariables>
 						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<profile>
+			<!-- Signs artifacts for release -->
+			<id>release</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+						<version>3.0.1</version>
+						<executions>
+							<execution>
+								<id>sign-artifacts</id>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+								<phase>verify</phase>
+							</execution>
+						</executions>
 					</plugin>
 				</plugins>
 			</build>
