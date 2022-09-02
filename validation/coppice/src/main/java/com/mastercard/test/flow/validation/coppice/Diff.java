@@ -28,35 +28,6 @@ public class Diff {
 	/**
 	 * @param from A string
 	 * @param to   Another string
-	 * @return The number of lines of difference between the two
-	 */
-	public static int diffDistance( String from, String to ) {
-
-		return DiffUtils.diff(
-				Arrays.asList( from.split( "\n" ) ),
-				Arrays.asList( to.split( "\n" ) ), false ).getDeltas()
-				.stream()
-				.mapToInt( delta -> {
-					switch( delta.getType() ) {
-						case DELETE:
-							return delta.getSource().getLines().size();
-						case INSERT:
-							return delta.getTarget().getLines().size();
-						case CHANGE:
-							return Math.max(
-									delta.getSource().getLines().size(),
-									delta.getTarget().getLines().size() );
-						default:
-							return 0;
-					}
-				} )
-				.sum();
-
-	}
-
-	/**
-	 * @param from A string
-	 * @param to   Another string
 	 * @return Styled HTML that shows the differences between the strings
 	 */
 	public static String diffHTML( String from, String to ) {

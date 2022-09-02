@@ -52,7 +52,6 @@ graph LR
     api --> builder
     api --> model
     api --> validation-core
-    api --> coppice
     api --> report-core
     assert-core --> assert-junit4
     assert-core --> assert-junit5
@@ -67,6 +66,7 @@ graph LR
     report-ng --> report-core
     validation-core --> validation-junit4
     validation-core --> validation-junit5
+    validation-core --> coppice
   end
 ```
 

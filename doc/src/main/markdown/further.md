@@ -382,6 +382,29 @@ The assertion components supplied in this framework will exhibit some default be
  * Flows will be skipped during processing if their basis flow has suffered an assertion failure. This behaviour is based on the assumption that the child flow is likely to suffer the same assertion failure as its parent, and there's little point in spamming the test results with duplicates of the same failure. This check can be suppressed by setting `mctf.suppress.basis=true`
  * Flows will be skipped if their dependency flows suffered an error during processing. The assumption here is that the dependent flow has no hope of success if the dependency failed. This check can be suppressed by setting `mctf.suppress.dependency=true`
 
+## Inheritance health
+
+This framework offers an inheritance mechanism to compress message data - instead of each flow carrying a complete copy of every message, they will typically hold a reference to an existing flow (the basis) and a set of updates that distinguish the new flow from the basis.
+At runtime a flow's data is constructed on request by taking a copy of the basis and applying the updates.
+
+This mechanism reduces runtime memory usage and reduces the effort required for widely-scoped changes to shared message fields, but it introduces a new risk - choosing the wrong inheritance basis.
+If an inappropriate basis flow is chosen then many message updates must be made to get to the intended goal. Every message update is technical debt that should be avoided where possible.
+
+The buildup of this debt can be monitored by adding a test that uses the [`InheritanceHealth`][InheritanceHealth] class, [for example][ExampleSystemTest].
+Such a test computes metrics and a cost histogram about the actual inheritance hierarchy and a theoretical optimal hierarchy.
+Every flow that is added will cause these metrics to increase, but if the actual metric increases more than the optimal then that's an indicator that a better inheritance basis exists for the new flow.
+
+The [coppice tool](../../../../validation/coppice) can visualise this process and offers a way to find the best choice of inheritance basis.
+
+Bear in mind that the inheritance health metrics are extremely rough guides - human considerations of code organisation should take precedence.
+
+<!-- code_link_start -->
+
+[InheritanceHealth]: ../../../../validation/validation-core/src/main/java/com/mastercard/test/flow/validation/InheritanceHealth.java
+[ExampleSystemTest]: ../../../../example/app-model/src/test/java/com/mastercard/test/flow/example/app/model/ExampleSystemTest.java
+
+<!-- code_link_end -->
+
 ## Beyond testing
 
 As the system model exists in its own right independent of any test assertion mechanism, it can be used for more than just testing.

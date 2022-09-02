@@ -42,7 +42,7 @@ import org.graphstream.graph.implementations.AbstractElement;
 import org.graphstream.ui.graphicGraph.GraphicElement;
 
 import com.mastercard.test.flow.Flow;
-import com.mastercard.test.flow.validation.coppice.graph.CachingDiffDistance;
+import com.mastercard.test.flow.validation.graph.CachingDiffDistance;
 
 /**
  * Provides a linked tree and graph view of a flow hierarchy

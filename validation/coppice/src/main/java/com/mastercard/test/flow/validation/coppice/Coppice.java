@@ -4,22 +4,16 @@
 
 package com.mastercard.test.flow.validation.coppice;
 
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
-
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyVetoException;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -44,12 +38,9 @@ import javax.swing.event.InternalFrameListener;
 
 import org.graphstream.ui.graphicGraph.GraphPosLengthUtils;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.mastercard.test.flow.Flow;
-import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.Model;
-import com.mastercard.test.flow.validation.coppice.graph.CachingDiffDistance;
+import com.mastercard.test.flow.validation.InheritanceHealth;
 import com.mastercard.test.flow.validation.coppice.ui.Animation;
 import com.mastercard.test.flow.validation.coppice.ui.DiffView;
 import com.mastercard.test.flow.validation.coppice.ui.FlowList;
@@ -59,6 +50,7 @@ import com.mastercard.test.flow.validation.coppice.ui.GraphTree;
 import com.mastercard.test.flow.validation.coppice.ui.Progress;
 import com.mastercard.test.flow.validation.coppice.ui.Range;
 import com.mastercard.test.flow.validation.coppice.ui.SelectionManager;
+import com.mastercard.test.flow.validation.graph.CachingDiffDistance;
 
 /**
  * A GUI tool to examine the internal structure of a system model
@@ -66,8 +58,8 @@ import com.mastercard.test.flow.validation.coppice.ui.SelectionManager;
 public class Coppice {
 
 	private final CachingDiffDistance<Flow> diffDistance = new CachingDiffDistance<>(
-			Coppice::flatten,
-			Diff::diffDistance );
+			InheritanceHealth::flatten,
+			InheritanceHealth::diffDistance );
 
 	private List<Flow> flows = new ArrayList<>();
 
@@ -375,68 +367,6 @@ public class Coppice {
 		Thread t = new Thread( task, taskView.getTitle() );
 		t.setDaemon( true );
 		t.start();
-	}
-
-	private static final ObjectMapper JSON = new ObjectMapper()
-			.enable( SerializationFeature.INDENT_OUTPUT );
-
-	/**
-	 * Dumps a flow's data to a string such that it can be usefully compared
-	 *
-	 * @param flow A flow
-	 * @return A string representation of the flow
-	 */
-	private static String flatten( Flow flow ) {
-		List<String> lines = new ArrayList<>();
-
-		lines.add( "Identity:" );
-		lines.add( "  " + flow.meta().description() );
-		flow.meta().tags().forEach( t -> lines.add( "  " + t ) );
-
-		lines.add( "Motivation:" );
-		lines.add( "  " + flow.meta().motivation() );
-
-		lines.add( "Context:" );
-		flow.context().forEach( ctx -> {
-			lines.add( "  " + ctx.name() + ":" );
-			try {
-				Stream.of( JSON.writeValueAsString( ctx ).replace( "\r", "" ).split( "\n" ) )
-						.map( l -> "  " + l )
-						.forEach( lines::add );
-			}
-			catch( IOException ioe ) {
-				throw new UncheckedIOException( "Failed to serialise " + ctx, ioe );
-			}
-		} );
-
-		lines.add( "Interactions:" );
-		flatten( flow.root(), lines, "  " );
-
-		return lines.stream().collect( joining( "\n" ) );
-	}
-
-	private static void flatten( Interaction ntr, List<String> lines, String indent ) {
-		lines.add( String.format( "%s┌REQUEST %s 🠖 %s %s", indent, ntr.requester(), ntr.responder(),
-				ntr.tags() ) );
-		Stream.of( ntr.request().assertable().split( "\n" ) )
-				.map( l -> indent + "│" + l )
-				.forEach( lines::add );
-
-		List<Interaction> children = ntr.children().collect( toList() );
-		if( children.isEmpty() ) {
-			lines.add( indent + "└" );
-		}
-		else {
-			lines.add( indent + "╘ Provokes:" );
-			children.forEach( c -> flatten( c, lines, indent + "  " ) );
-		}
-
-		lines.add( String.format( "%s┌RESPONSE %s 🠔 %s %s", indent, ntr.requester(), ntr.responder(),
-				ntr.tags() ) );
-		Stream.of( ntr.response().assertable().split( "\n" ) )
-				.map( l -> indent + "│" + l )
-				.forEach( lines::add );
-		lines.add( indent + "└" );
 	}
 
 }

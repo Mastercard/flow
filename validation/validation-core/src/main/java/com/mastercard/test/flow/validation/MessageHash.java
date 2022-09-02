@@ -208,7 +208,11 @@ public class MessageHash {
 				copypasta( lines.stream() ) );
 	}
 
-	private static String copypasta( Stream<String> content ) {
+	/**
+	 * @param content Lines of content
+	 * @return A string that can be trivially copypasta'd into a java source file
+	 */
+	static String copypasta( Stream<String> content ) {
 		return content
 				.map( s -> s.replace( "\r", "" ) )
 				.flatMap( s -> Stream.of( s.split( "\n" ) ) )
