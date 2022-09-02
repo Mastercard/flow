@@ -2,6 +2,7 @@ package com.mastercard.test.flow.validation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -20,6 +21,46 @@ class HistographTest {
 	private static final Map<Integer, Integer> LINEAR = IntStream.range( 0, 10 )
 			.mapToObj( Integer::valueOf )
 			.collect( Collectors.toMap( k -> k, v -> v ) );
+
+	/**
+	 * Exercises range accessors
+	 */
+	@Test
+	void accessors() {
+		Histograph hg = new Histograph( 1, 2, 3 );
+		assertEquals( 1, hg.getMinimum() );
+		assertEquals( 2, hg.getMaximum() );
+	}
+
+	/**
+	 * No values
+	 */
+	@Test
+	void empty() {
+		assertEquals( ""
+				+ "        0   0.00%\n"
+				+ "        0   0.00%\n"
+				+ "        0   0.00%\n"
+				+ "        0   0.00%\n"
+				+ "        0   0.00%",
+				new Histograph( 0, 5, 5 )
+						.graph( Collections.emptyMap() ) );
+	}
+
+	/**
+	 * A single value
+	 */
+	@Test
+	void single() {
+		assertEquals( ""
+				+ "        0   0.00%\n"
+				+ "        0   0.00%\n"
+				+ "        0   0.00%\n"
+				+ "        0   0.00%\n"
+				+ "        1  100.00%",
+				new Histograph( 0, 4, 5 )
+						.graph( Collections.singletonMap( 4, 1 ) ) );
+	}
 
 	/**
 	 * Demonstrates graph height

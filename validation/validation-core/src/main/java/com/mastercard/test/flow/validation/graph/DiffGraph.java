@@ -26,10 +26,6 @@ public class DiffGraph<S> {
 		// default no-op
 	};
 
-	private BiConsumer<S, S> proximityListener = ( parent, child ) -> {
-		// default no-op
-	};
-
 	/**
 	 * @param diff The function that calculates the distance between nodes. Returns:
 	 *             <ul>
@@ -68,26 +64,16 @@ public class DiffGraph<S> {
 				.map( v -> new PrimNode<>( mst, v, diff ) )
 				.collect( toCollection( HashSet::new ) );
 
-		available.forEach( a -> proximityListener.accept( mst.value(), a.value() ) );
-
 		// Repeatedly find the node that is not yet in the MST but that is closest to it
 		PrimNode<S> closest = null;
 		while( null != (closest = available.stream()
 				.min( PrimNode.CLOSEST )
-				.filter( PrimNode::connected )
 				.orElse( null )) ) {
 			// add it to the MST
 			available.remove( closest );
 			DAG<S> added = closest.joinTree();
 			mstListener.accept( added.parent().value(), added.value() );
-
-			// Recalculate everyone's distance to the MST
-			available.forEach( a -> proximityListener.accept( a.update( added ).value(), a.value() ) );
-			// we could avoid iterating over every node by only considering those that have
-			// edges to the added one, but our graph is likely to be extremely
-			// well-connected, so:
-			// * we're not bothering to store that data
-			// * it wouldn't save us any time
+			available.forEach( a -> a.update( added ) );
 		}
 
 		return mst;
@@ -103,30 +89,4 @@ public class DiffGraph<S> {
 		return this;
 	}
 
-	/**
-	 * @param l A callback that will be invoked when the distance between a node and
-	 *          the Minimum Spanning Tree is updated. The arguments will be
-	 *          <code>( parent, child )</code>
-	 * @return <code>this</code>
-	 */
-	public DiffGraph<S> withProximityListener( BiConsumer<S, S> l ) {
-		proximityListener = l;
-		return this;
-	}
-
-	/**
-	 * @param from a node
-	 * @param to   a node
-	 * @return The distance between the supplied nodes
-	 */
-	public int distance( S from, S to ) {
-		return diff.apply( from, to );
-	}
-
-	/**
-	 * @return The number of nodes
-	 */
-	public int size() {
-		return nodes.size();
-	}
 }

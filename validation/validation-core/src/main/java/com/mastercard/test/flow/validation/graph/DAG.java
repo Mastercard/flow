@@ -4,12 +4,13 @@
 
 package com.mastercard.test.flow.validation.graph;
 
-import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toCollection;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 /**
  * A Directed Acyclic Graph, or tree.
@@ -61,41 +62,34 @@ public class DAG<S> {
 	}
 
 	/**
-	 * @return The child nodes
-	 */
-	public Stream<DAG<S>> children() {
-		return children.stream();
-	}
-
-	/**
-	 * @return A stream of all values in this tree, in depth-first order
-	 */
-	public Stream<S> values() {
-		return Stream.concat(
-				Stream.of( value ),
-				children().flatMap( DAG::values ) );
-	}
-
-	/**
 	 * Recurses over the DAG structure
 	 *
 	 * @param visitor called once for every node
 	 */
 	public void traverse( Consumer<DAG<S>> visitor ) {
 		visitor.accept( this );
-		children().forEach( c -> c.traverse( visitor ) );
+		children.stream().forEach( c -> c.traverse( visitor ) );
 	}
 
 	@Override
 	public String toString() {
-		return toString( "" );
+		return toString( "" ).trim();
 	}
 
 	private String toString( String indent ) {
-		String childIndent = indent + value + " | ";
-		return indent + value
-				+ children()
-						.map( c -> "\n" + c.toString( childIndent ) )
-						.collect( joining() );
+		StringBuilder sb = new StringBuilder();
+		sb.append( indent ).append( value ).append( "\n" );
+		Deque<DAG<S>> cq = children.stream()
+				.sorted( ( a, b ) -> String.valueOf( a.value ).compareTo( String.valueOf( b.value ) ) )
+				.collect( toCollection( ArrayDeque::new ) );
+
+		while( !cq.isEmpty() ) {
+			DAG<S> c = cq.removeFirst();
+			String corner = cq.isEmpty() ? "└" : "├";
+			sb.append( c.toString( indent
+					.replace( '└', ' ' )
+					.replace( '├', '│' ) + corner ) );
+		}
+		return sb.toString();
 	}
 }

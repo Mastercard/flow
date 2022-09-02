@@ -52,11 +52,11 @@ import com.mastercard.test.flow.validation.graph.DiffGraph;
  * spanning tree</a> of the graph.
  * </p>
  * <p>
- * This class provides a mechanism by which the cost of the actual inheritance
- * structure can be compared to the cost of the optimal inheritance structure.
- * If the charts produced are committed to version control and checked by a test
- * then the quality of the basis choices for newly-added {@link Flow}s can be
- * monitored.
+ * This class provides a mechanism by which the cost of the <i>actual</i>
+ * inheritance structure can be compared to the cost of the <i>optimal</i>
+ * inheritance structure. If the metrics produced are committed to version
+ * control and checked by a test then the quality of the basis choices for
+ * newly-added {@link Flow}s can be monitored.
  * </p>
  */
 public class InheritanceHealth {
@@ -132,15 +132,24 @@ public class InheritanceHealth {
 	 * @param expected The expected health metrics
 	 */
 	public void expect( Model model, String... expected ) {
-		int total = (int) model.flows()
-				// we don't know how many flows there are, so pass -1 for the progress fraction
-				.map( f -> progress( Phase.BUILD, f, -1, 1 ) )
-				.count();
+		AtomicInteger total = new AtomicInteger( 0 );
+		model.flows().forEach( f -> {
+			// we don't know how many flows there are, so pass -1 for the progress fraction
+			total.incrementAndGet();
+			progress( Phase.BUILD, f, -1, 1 );
+		} );
 
-		StructureCost actual = actualCost( model, total );
-		StructureCost optimal = optimalCost( model, total );
+		if( total.get() == 0 ) {
+			assertion.accept(
+					MessageHash.copypasta( Stream.of( expected ) ),
+					MessageHash.copypasta( Stream.of( "empty model" ) ) );
+			return;
+		}
 
-		Histograph hstg = new Histograph( min, max, Math.min( max - min, heightLimit ) );
+		StructureCost actual = actualCost( model, total.get() );
+		StructureCost optimal = optimalCost( model, total.get() );
+
+		Histograph hstg = new Histograph( min, max, Math.min( max - min + 1, heightLimit ) );
 		Deque<String> actualLines = Stream.of( actual.toString( "Actual", hstg ).split( "\n" ) )
 				.collect( toCollection( ArrayDeque::new ) );
 		Deque<String> optimalLines = Stream.of( optimal.toString( "Optimal", hstg ).split( "\n" ) )
@@ -164,7 +173,7 @@ public class InheritanceHealth {
 		model.flows()
 				.forEach( flow -> {
 					if( flow.basis() == null ) {
-						rootWeight.addAndGet( flatten( flow ).split( "\n" ).length );
+						rootWeight.addAndGet( diffDistance.stringify( flow ).split( "\n" ).length );
 					}
 					else {
 						edgeCosts.compute(
@@ -187,9 +196,10 @@ public class InheritanceHealth {
 		Flow root = model.flows()
 				.filter( f -> f.basis() == null )
 				.findFirst()
-				.orElseThrow( () -> new IllegalArgumentException( "No flows?" ) );
+				.orElseThrow( () -> new IllegalArgumentException( "No root flows?" ) );
 
 		AtomicInteger count = new AtomicInteger( 0 );
+		progress( Phase.OPTIMISE, root, count.incrementAndGet(), total );
 		DAG<Flow> optimal = dg.withMSTListener(
 				( parent, child ) -> progress( Phase.OPTIMISE, child, count.incrementAndGet(), total ) )
 				.minimumSpanningTree( root );
@@ -199,7 +209,7 @@ public class InheritanceHealth {
 		TreeMap<Integer, Integer> edgeCosts = new TreeMap<>();
 		optimal.traverse( dag -> {
 			if( dag.parent() == null ) {
-				rootWeight.addAndGet( flatten( dag.value() ).split( "\n" ).length );
+				rootWeight.addAndGet( diffDistance.stringify( dag.value() ).split( "\n" ).length );
 			}
 			else {
 				edgeCosts.compute(
@@ -212,10 +222,9 @@ public class InheritanceHealth {
 		return new StructureCost( rootWeight.get(), edgeCosts );
 	}
 
-	private Flow progress( Phase phase, Flow flow, int current, int total ) {
+	private void progress( Phase phase, Flow flow, int current, int total ) {
 		Optional.ofNullable( progress.get( phase ) )
 				.ifPresent( l -> l.accept( flow, (float) current / total ) );
-		return flow;
 	}
 
 	private static class StructureCost {
@@ -228,14 +237,15 @@ public class InheritanceHealth {
 		}
 
 		String toString( String name, Histograph hstg ) {
-			if( edgeCosts.firstKey() < hstg.getMinimum() ) {
+
+			if( !edgeCosts.isEmpty() && edgeCosts.firstKey() < hstg.getMinimum() ) {
 				throw new IllegalArgumentException(
 						String.format( ""
 								+ "Minimum edge weight %s lower than plot range minimum %s\n."
 								+ "Decrease the plot range minimum to at most %s and try again.",
 								edgeCosts.firstKey(), hstg.getMinimum(), edgeCosts.firstKey() ) );
 			}
-			if( edgeCosts.lastKey() > hstg.getMaximum() ) {
+			if( !edgeCosts.isEmpty() && edgeCosts.lastKey() > hstg.getMaximum() ) {
 				throw new IllegalArgumentException(
 						String.format( ""
 								+ "Maximum edge weight %s higher than plot range maximum %s\n."
@@ -302,14 +312,15 @@ public class InheritanceHealth {
 		} );
 
 		lines.add( "Interactions:" );
-		flatten( flow.root(), lines, "  " );
+		Optional.ofNullable( flow.root() )
+				.ifPresent( r -> flatten( r, lines, "  " ) );
 
 		return lines.stream().collect( joining( "\n" ) );
 	}
 
 	private static void flatten( Interaction ntr, List<String> lines, String indent ) {
-		lines.add( String.format( "%s┌REQUEST %s 🠖 %s %s", indent, ntr.requester(), ntr.responder(),
-				ntr.tags() ) );
+		lines.add( String.format( "%s┌REQUEST %s 🠖 %s %s", indent,
+				ntr.requester().name(), ntr.responder().name(), ntr.tags() ) );
 		Stream.of( ntr.request().assertable().split( "\n" ) )
 				.map( l -> indent + "│" + l )
 				.forEach( lines::add );
@@ -320,11 +331,11 @@ public class InheritanceHealth {
 		}
 		else {
 			lines.add( indent + "╘ Provokes:" );
-			children.forEach( c -> flatten( c, lines, indent + "  " ) );
+			children.forEach( c -> flatten( c, lines, indent ) );
 		}
 
-		lines.add( String.format( "%s┌RESPONSE %s 🠔 %s %s", indent, ntr.requester(), ntr.responder(),
-				ntr.tags() ) );
+		lines.add( String.format( "%s┌RESPONSE %s 🠔 %s %s", indent,
+				ntr.requester().name(), ntr.responder().name(), ntr.tags() ) );
 		Stream.of( ntr.response().assertable().split( "\n" ) )
 				.map( l -> indent + "│" + l )
 				.forEach( lines::add );
@@ -348,12 +359,10 @@ public class InheritanceHealth {
 							return delta.getSource().getLines().size();
 						case INSERT:
 							return delta.getTarget().getLines().size();
-						case CHANGE:
+						default:
 							return Math.max(
 									delta.getSource().getLines().size(),
 									delta.getTarget().getLines().size() );
-						default:
-							return 0;
 					}
 				} )
 				.sum();

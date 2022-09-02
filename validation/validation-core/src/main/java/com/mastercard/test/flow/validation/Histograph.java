@@ -38,6 +38,9 @@ public class Histograph {
 	public String graph( Map<Integer, Integer> values ) {
 		List<String> lines = new ArrayList<>();
 		int total = values.values().stream().mapToInt( Integer::intValue ).sum();
+		if( total == 0 ) {
+			total = 1; // avoid divide by zero
+		}
 
 		int step = (int) Math.max( 1, Math.ceil( (maximum - minimum) / (float) height ) );
 		{
