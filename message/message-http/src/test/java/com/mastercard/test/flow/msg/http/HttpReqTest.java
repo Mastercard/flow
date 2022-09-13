@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.msg.http;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -26,6 +27,8 @@ class HttpReqTest {
 				+ "  \r\n"
 				+ "\r\n",
 				new HttpReq().assertable() );
+
+		assertEquals( "", new HttpReq().bodyText() );
 
 		HttpReq withBody = new HttpReq()
 				.set( HttpMsg.BODY, new Json().set( "foo", "bar" ) );
@@ -89,6 +92,11 @@ class HttpReqTest {
 				+ "key: value\r\n"
 				+ "\r\n"
 				+ "{\"body\":\"content\"}", new String( msg.content(), UTF_8 ) );
+
+		assertEquals( ""
+				+ "{\n"
+				+ "  \"body\" : \"content\"\n"
+				+ "}", msg.bodyText() );
 	}
 
 	/**
@@ -157,6 +165,7 @@ class HttpReqTest {
 				+ "\r\n";
 
 		HttpReq req = new HttpReq( reqdata.getBytes(), b -> new Json() {
+
 			@Override
 			public Json peer( byte[] content ) {
 				throw new IllegalArgumentException();
