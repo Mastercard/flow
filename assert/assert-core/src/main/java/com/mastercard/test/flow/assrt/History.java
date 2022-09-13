@@ -95,7 +95,7 @@ public class History {
 	 */
 	public Optional<String> skipReason( Flow flow, State statefulness, Set<Actor> system ) {
 
-		if( !Options.SUPPRESS_BASIS_CHECK.isTrue() ) {
+		if( !AssertionOptions.SUPPRESS_BASIS_CHECK.isTrue() ) {
 			Optional<String> basisFailure = Flows.ancestors( flow )
 					.map( this::get )
 					// One of our ancestors failed, so we are likely to fail in the same way. Let's
@@ -109,7 +109,7 @@ public class History {
 			}
 		}
 
-		if( statefulness == State.FUL && !Options.SUPPRESS_DEPENDENCY_CHECK.isTrue() ) {
+		if( statefulness == State.FUL && !AssertionOptions.SUPPRESS_DEPENDENCY_CHECK.isTrue() ) {
 			// the system is stateful and the check has not been suppressed...
 			Optional<String> depFailure = flow.dependencies()
 					.map( d -> d.source().flow() )

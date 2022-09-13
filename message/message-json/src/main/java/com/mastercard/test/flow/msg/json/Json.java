@@ -104,13 +104,11 @@ public class Json extends AbstractMessage<Json> {
 	}
 
 	@Override
-	protected void validateValueType( String field, Object value ) {
+	protected Object validateValueType( String field, Object value ) {
 		if( value == EMPTY_MAP || value == EMPTY_LIST ) {
-			// this is fine
+			return value;
 		}
-		else {
-			super.validateValueType( field, value );
-		}
+		return super.validateValueType( field, value );
 	}
 
 	private Object data() {

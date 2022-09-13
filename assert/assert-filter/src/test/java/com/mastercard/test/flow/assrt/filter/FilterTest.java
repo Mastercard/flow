@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.assrt.filter;
 
 import static java.util.stream.Collectors.joining;
@@ -17,6 +18,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
@@ -274,6 +276,7 @@ class FilterTest {
 	}
 
 	private static class FltrTst {
+
 		private final Filter filter;
 
 		public FltrTst( Model model ) {
@@ -339,5 +342,29 @@ class FilterTest {
 			assertEquals( expect, filter.indices(), description );
 			return this;
 		}
+	}
+
+	/**
+	 * Exercises {@link Filter#parseIndices(String)}
+	 */
+	@Test
+	void parseIndices() {
+		BiConsumer<String, String> test = ( in, out ) -> assertEquals(
+				out, Filter.parseIndices( in ).toString(), "for " + in );
+
+		test.accept( null, "[]" );
+		test.accept( "", "[]" );
+		test.accept( "-1", "[]" );
+		test.accept( "foobar", "[]" );
+		test.accept( "foo1bar", "[]" );
+
+		test.accept( "1", "[1]" );
+		test.accept( "   1\t", "[1]" );
+		test.accept( "1234", "[1234]" );
+		test.accept( "1,2,3", "[1, 2, 3]" );
+		test.accept( " 1 ,\n2,3\t", "[1, 2, 3]" );
+		test.accept( "3,2,1", "[1, 2, 3]" );
+		test.accept( "0-4", "[0, 1, 2, 3, 4]" );
+		test.accept( "0-2,5,blah,8-9", "[0, 1, 2, 5, 8, 9]" );
 	}
 }

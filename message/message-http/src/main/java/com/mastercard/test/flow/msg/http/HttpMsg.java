@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.msg.http;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -273,9 +274,16 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	}
 
 	/**
-	 * @return message body
+	 * @return message body as a {@link Message} object
 	 */
 	public Optional<ExposedMasking> body() {
 		return body;
+	}
+
+	/**
+	 * @return The text of the message body as a string
+	 */
+	public String bodyText() {
+		return body().map( ExposedMasking::assertable ).orElse( "" );
 	}
 }

@@ -1,12 +1,15 @@
+
 package com.mastercard.test.flow.assrt;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -27,7 +30,10 @@ public class Assertion {
 	private final AbstractFlocessor<?> flocessor;
 	private final Actual actual = new Actual();
 
-	private final List<Assertion> children = new ArrayList<>();
+	/**
+	 * Assertion peers for interaction structure
+	 */
+	private final Map<Interaction, Assertion> children = new HashMap<>();
 
 	/**
 	 * @param flow      The context for the {@link Interaction}
@@ -68,7 +74,7 @@ public class Assertion {
 	}
 
 	/**
-	 * Allows assertion on downstream interactions
+	 * Allows assertion on child interactions
 	 *
 	 * @param selector Returns <code>true</code> for the child interaction that you
 	 *                 want to assert on
@@ -77,11 +83,25 @@ public class Assertion {
 	public Stream<Assertion> assertChildren( Predicate<Interaction> selector ) {
 		return expected.children()
 				.filter( selector )
-				.map( i -> {
-					Assertion a = new Assertion( flow, i, flocessor );
-					children.add( a );
-					return a;
-				} );
+				.map( i -> children.computeIfAbsent( i,
+						ntr -> new Assertion( flow, ntr, flocessor ) ) );
+	}
+
+	/**
+	 * Allows assertion on all downstream interactions
+	 *
+	 * @return every downstream interaction as an {@link Assertion}, in
+	 *         breadth-first order and ready for population
+	 */
+	public Stream<Assertion> assertDownstream() {
+		return assertDownstream( new ArrayList<>() ).stream();
+	}
+
+	private Collection<Assertion> assertDownstream( Collection<Assertion> accumulator ) {
+		Set<Assertion> childPeers = assertChildren( i -> true ).collect( Collectors.toSet() );
+		accumulator.addAll( childPeers );
+		childPeers.forEach( c -> c.assertDownstream( accumulator ) );
+		return accumulator;
 	}
 
 	/**
@@ -142,8 +162,7 @@ public class Assertion {
 		return this;
 	}
 
-	private Map<Actor, List<Assertion>>
-			findSystemBoundaries( Map<Actor, List<Assertion>> exits ) {
+	private Map<Actor, List<Assertion>> findSystemBoundaries( Map<Actor, List<Assertion>> exits ) {
 		if( !flocessor.system().contains( expected().responder() ) ) {
 			exits.computeIfAbsent( expected().responder(),
 					a -> new ArrayList<>() ).add( this );
@@ -162,7 +181,7 @@ public class Assertion {
 	 */
 	List<Assertion> collect( List<Assertion> l ) {
 		l.add( this );
-		children.forEach( c -> c.collect( l ) );
+		children.values().forEach( c -> c.collect( l ) );
 		return l;
 	}
 }

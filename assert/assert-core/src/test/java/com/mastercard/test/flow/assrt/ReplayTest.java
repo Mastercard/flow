@@ -45,7 +45,7 @@ class ReplayTest {
 	}
 
 	private static Path generateReport( String title ) {
-		System.setProperty( Options.REPORT_NAME.property(), title );
+		System.setProperty( AssertionOptions.REPORT_NAME.property(), title );
 		List<String> behaviourLog = new ArrayList<>();
 		TestFlocessor tf = build( title, behaviourLog );
 		tf.execute();
@@ -78,8 +78,8 @@ class ReplayTest {
 	 */
 	@AfterEach
 	void clearReplayProperty() {
-		System.clearProperty( Options.REPLAY.property() );
-		System.clearProperty( Options.REPORT_NAME.property() );
+		System.clearProperty( AssertionOptions.REPLAY.property() );
+		System.clearProperty( AssertionOptions.REPORT_NAME.property() );
 	}
 
 	/**
@@ -89,7 +89,7 @@ class ReplayTest {
 	void isActive() {
 		Assertions.assertFalse( Replay.isActive(), "before" );
 
-		System.setProperty( Options.REPLAY.property(), "foo" );
+		System.setProperty( AssertionOptions.REPLAY.property(), "foo" );
 
 		Assertions.assertTrue( Replay.isActive(), "after" );
 	}
@@ -100,19 +100,19 @@ class ReplayTest {
 	 */
 	@Test
 	void noLatest() {
-		QuietFiles.recursiveDelete( Paths.get( Options.ARTIFACT_DIR.value() ) );
-		System.setProperty( Options.REPLAY.property(), Replay.LATEST );
+		QuietFiles.recursiveDelete( Paths.get( AssertionOptions.ARTIFACT_DIR.value() ) );
+		System.setProperty( AssertionOptions.REPLAY.property(), Replay.LATEST );
 
 		IllegalStateException ise = assertThrows( IllegalStateException.class,
 				() -> build( "bar", null ) );
-		assertEquals( "Failed to find execution report in " + Options.ARTIFACT_DIR.value(),
+		assertEquals( "Failed to find execution report in " + AssertionOptions.ARTIFACT_DIR.value(),
 				ise.getMessage() );
 
-		QuietFiles.createDirectories( Paths.get( Options.ARTIFACT_DIR.value() ) );
+		QuietFiles.createDirectories( Paths.get( AssertionOptions.ARTIFACT_DIR.value() ) );
 
 		ise = assertThrows( IllegalStateException.class,
 				() -> build( "bar", null ) );
-		assertEquals( "Failed to find execution report in " + Options.ARTIFACT_DIR.value(),
+		assertEquals( "Failed to find execution report in " + AssertionOptions.ARTIFACT_DIR.value(),
 				ise.getMessage() );
 		assertEquals( null, ise.getCause() );
 	}
@@ -143,7 +143,7 @@ class ReplayTest {
 		QuietFiles.recursiveDelete( noIndex.resolve( "index.html" ) );
 
 		// activate replay mode
-		System.setProperty( Options.REPLAY.property(), Replay.LATEST );
+		System.setProperty( AssertionOptions.REPLAY.property(), Replay.LATEST );
 
 		// run again
 		TestFlocessor tf = build( "bar", new ArrayList<>() );
@@ -175,7 +175,7 @@ class ReplayTest {
 		Path p = generateReport( "happy" );
 
 		// activate replay mode
-		System.setProperty( Options.REPLAY.property(), p.toString() );
+		System.setProperty( AssertionOptions.REPLAY.property(), p.toString() );
 
 		// run again
 		List<String> behaviourLog = new ArrayList<>();
@@ -223,7 +223,7 @@ class ReplayTest {
 				"\"tags\" : \\[ \\],", "\"tags\" : [ \"disguise\" ]," );
 		Files.write( detailPage, content.getBytes( UTF_8 ) );
 
-		System.setProperty( Options.REPLAY.property(), p.toString() );
+		System.setProperty( AssertionOptions.REPLAY.property(), p.toString() );
 
 		// run again
 		List<String> behaviourLog = new ArrayList<>();
@@ -265,7 +265,7 @@ class ReplayTest {
 				"      \"tags\" : \\[ \\],", "      \"tags\" : [ \"disguise\" ]," );
 		Files.write( detailPage, content.getBytes( UTF_8 ) );
 
-		System.setProperty( Options.REPLAY.property(), p.toString() );
+		System.setProperty( AssertionOptions.REPLAY.property(), p.toString() );
 
 		// run again
 		List<String> behaviourLog = new ArrayList<>();
@@ -303,7 +303,7 @@ class ReplayTest {
 				.resolve( "56B672A62688DE11DE0F318C151A98B6.html" );
 		Files.delete( detailPage );
 
-		System.setProperty( Options.REPLAY.property(), p.toString() );
+		System.setProperty( AssertionOptions.REPLAY.property(), p.toString() );
 
 		// run again
 		List<String> behaviourLog = new ArrayList<>();
@@ -342,7 +342,7 @@ class ReplayTest {
 				"\"description\" : \"abc\"", "\"description\" : \"hidden\"" );
 		Files.write( indexPage, content.getBytes( UTF_8 ) );
 
-		System.setProperty( Options.REPLAY.property(), p.toString() );
+		System.setProperty( AssertionOptions.REPLAY.property(), p.toString() );
 
 		// run again
 		List<String> behaviourLog = new ArrayList<>();
@@ -376,12 +376,13 @@ class ReplayTest {
 		// delete the report index
 		Files.delete( p.resolve( "index.html" ) );
 
-		System.setProperty( Options.REPLAY.property(), p.toString() );
+		System.setProperty( AssertionOptions.REPLAY.property(), p.toString() );
 
 		// try to run again
 		IllegalStateException ise = assertThrows( IllegalStateException.class,
 				() -> build( "blah", null ) );
-		assertEquals( "No index data found in " + Options.ARTIFACT_DIR.value() + "/missingIndexEntry",
+		assertEquals(
+				"No index data found in " + AssertionOptions.ARTIFACT_DIR.value() + "/missingIndexEntry",
 				ise.getMessage().replace( '\\', '/' ) );
 	}
 }

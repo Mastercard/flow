@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.assrt;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -9,17 +10,18 @@ import org.junit.jupiter.api.Test;
  * Ensures that the table of system properties in the readme is accurate
  */
 @SuppressWarnings("static-method")
-class OptionsTest {
+class AssertionOptionsTest {
+
 	/**
 	 * Exercises property access
 	 */
 	@Test
 	void access() {
-		assertEquals( "mctf.report.name",
-				Options.REPORT_NAME.property() );
+		assertEquals( "mctf.report.dir",
+				AssertionOptions.REPORT_NAME.property() );
 		assertEquals( "The path from the artifact directory to the report destination",
-				Options.REPORT_NAME.description() );
-		assertEquals( null, Options.REPORT_NAME.defaultValue() );
+				AssertionOptions.REPORT_NAME.description() );
+		assertEquals( null, AssertionOptions.REPORT_NAME.defaultValue() );
 	}
 
 	/**
@@ -27,7 +29,7 @@ class OptionsTest {
 	 */
 	@Test
 	void prefix() {
-		for( Options op : Options.values() ) {
+		for( AssertionOptions op : AssertionOptions.values() ) {
 			assertTrue( op.property().startsWith( "mctf." ), "bad prefix on " + op );
 		}
 	}
@@ -37,6 +39,6 @@ class OptionsTest {
 	 */
 	@Test
 	void artifactDir() {
-		assertEquals( "target/mctf", Options.ARTIFACT_DIR.value() );
+		assertEquals( "target/mctf", AssertionOptions.ARTIFACT_DIR.value() );
 	}
 }

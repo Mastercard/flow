@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.assrt;
 
 import java.nio.file.Path;
@@ -31,8 +32,8 @@ public class Replay {
 	public static final String REPLAYED_SUFFIX = "_replay";
 
 	/**
-	 * The value to supply to {@link Options#REPLAY} to replay from the latest local
-	 * execution report
+	 * The value to supply to {@link AssertionOptions#REPLAY} to replay from the
+	 * latest local execution report
 	 */
 	public static final String LATEST = "latest";
 
@@ -44,7 +45,7 @@ public class Replay {
 	 * @return <code>true</code> if the test will be replaying historical data
 	 */
 	public static boolean isActive() {
-		return Options.REPLAY.value() != null;
+		return AssertionOptions.REPLAY.value() != null;
 	}
 
 	/**
@@ -54,7 +55,7 @@ public class Replay {
 	 *         <code>null</code> if there is no such report
 	 */
 	public static String source() {
-		String src = Options.REPLAY.value();
+		String src = AssertionOptions.REPLAY.value();
 		if( LATEST.equals( src ) ) {
 			src = mostRecent();
 		}
@@ -113,8 +114,8 @@ public class Replay {
 		// Check the interactions match
 		if( !matches( t.expected(), fd.root ) ) {
 			return String.format( "No data for interaction %s -> %s %s",
-					t.expected().requester(),
-					t.expected().responder(),
+					t.expected().requester().name(),
+					t.expected().responder().name(),
 					t.expected().tags() );
 		}
 
@@ -130,12 +131,12 @@ public class Replay {
 	 * @return The most recent execution report
 	 */
 	private static final String mostRecent() {
-		Path report = Reader.mostRecent( Options.ARTIFACT_DIR.value(),
+		Path report = Reader.mostRecent( AssertionOptions.ARTIFACT_DIR.value(),
 				// let's stick to primary sources of data
 				p -> !p.getFileName().toString().endsWith( REPLAYED_SUFFIX ) );
 		if( report == null ) {
 			throw new IllegalStateException(
-					"Failed to find execution report in " + Options.ARTIFACT_DIR.value() );
+					"Failed to find execution report in " + AssertionOptions.ARTIFACT_DIR.value() );
 		}
 		return report.toString();
 	}
@@ -147,8 +148,8 @@ public class Replay {
 	 */
 	private static boolean matches( Interaction ntr, InteractionData id ) {
 		return id != null
-				&& ntr.requester().toString().equals( id.requester )
-				&& ntr.responder().toString().equals( id.responder )
+				&& ntr.requester().name().equals( id.requester )
+				&& ntr.responder().name().equals( id.responder )
 				&& ntr.tags().equals( id.tags );
 	}
 

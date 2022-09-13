@@ -215,8 +215,9 @@ class QueryTest {
 	void badContent() {
 		Query query = new Query( "SELECT 1" ) {
 			@Override
-			protected void validateValueType( String field, Object value ) {
+			protected Object validateValueType( String field, Object value ) {
 				// allow everything
+				return value;
 			}
 		};
 		query.set( "1", new Object() );

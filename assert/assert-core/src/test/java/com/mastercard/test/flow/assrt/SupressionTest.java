@@ -11,7 +11,8 @@ import org.junit.jupiter.api.Test;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 
 /**
- * Demonstrates the effects of the various behaviour suppression {@link Options}
+ * Demonstrates the effects of the various behaviour suppression
+ * {@link AssertionOptions}
  */
 @SuppressWarnings("static-method")
 class SupressionTest {
@@ -32,11 +33,11 @@ class SupressionTest {
 				} );
 
 		try {
-			Options.SUPPRESS_ASSERTION_FAILURE.set( "true" );
+			AssertionOptions.SUPPRESS_ASSERTION_FAILURE.set( "true" );
 			tf.execute();
 		}
 		finally {
-			Options.SUPPRESS_ASSERTION_FAILURE.clear();
+			AssertionOptions.SUPPRESS_ASSERTION_FAILURE.clear();
 		}
 
 		assertEquals( copypasta(
@@ -65,11 +66,11 @@ class SupressionTest {
 				} );
 
 		try {
-			Options.SUPPRESS_SYSTEM_CHECK.set( "true" );
+			AssertionOptions.SUPPRESS_SYSTEM_CHECK.set( "true" );
 			tf.execute();
 		}
 		finally {
-			Options.SUPPRESS_SYSTEM_CHECK.clear();
+			AssertionOptions.SUPPRESS_SYSTEM_CHECK.clear();
 		}
 
 		assertEquals( copypasta(
@@ -94,11 +95,11 @@ class SupressionTest {
 				} );
 
 		try {
-			Options.SUPPRESS_BASIS_CHECK.set( "true" );
+			AssertionOptions.SUPPRESS_BASIS_CHECK.set( "true" );
 			tf.execute();
 		}
 		finally {
-			Options.SUPPRESS_BASIS_CHECK.clear();
+			AssertionOptions.SUPPRESS_BASIS_CHECK.clear();
 		}
 
 		assertEquals( copypasta(
@@ -127,11 +128,11 @@ class SupressionTest {
 				} );
 
 		try {
-			Options.SUPPRESS_DEPENDENCY_CHECK.set( "true" );
+			AssertionOptions.SUPPRESS_DEPENDENCY_CHECK.set( "true" );
 			tf.execute();
 		}
 		finally {
-			Options.SUPPRESS_DEPENDENCY_CHECK.clear();
+			AssertionOptions.SUPPRESS_DEPENDENCY_CHECK.clear();
 		}
 
 		assertEquals( copypasta(

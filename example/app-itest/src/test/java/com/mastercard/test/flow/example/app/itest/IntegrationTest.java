@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.example.app.itest;
 
 import static com.mastercard.test.flow.assrt.Reporting.FAILURES;
@@ -30,7 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import com.mastercard.test.flow.Actor;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
-import com.mastercard.test.flow.assrt.Options;
+import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.Replay;
 import com.mastercard.test.flow.assrt.junit5.Flocessor;
 import com.mastercard.test.flow.example.app.assrt.Browser;
@@ -53,13 +54,14 @@ import spark.Service;
 @SuppressWarnings("static-method")
 @ExtendWith(Browser.class)
 class IntegrationTest {
+
 	private static final Logger LOG = LoggerFactory.getLogger( IntegrationTest.class );
 
 	private static final ClusterManager clusterManager = new ClusterManager();
 
 	static {
-		if( Options.REPORT_NAME.value() == null ) {
-			Options.REPORT_NAME.set( "latest" );
+		if( AssertionOptions.REPORT_NAME.value() == null ) {
+			AssertionOptions.REPORT_NAME.set( "latest" );
 		}
 	}
 

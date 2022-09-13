@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.assrt.filter;
 
 import static java.util.stream.Collectors.toCollection;
@@ -14,7 +15,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -47,11 +51,38 @@ public class Filter {
 	private final Set<String> excludeTags = FilterOptions.EXCLUDE_TAGS.asList()
 			.map( String::trim )
 			.collect( toCollection( TreeSet::new ) );
-	private final Set<Integer> indices = FilterOptions.INDICES.asList()
-			.map( String::trim )
-			.filter( s -> s.matches( "\\d+" ) )
-			.map( Integer::valueOf )
-			.collect( toCollection( TreeSet::new ) );
+	private static final Pattern INDEX_PTRN = Pattern.compile( "(\\d+)" );
+	private static final Pattern RANGE_PTRN = Pattern.compile( "(\\d+)-(\\d+)" );
+	private final Set<Integer> indices = parseIndices( FilterOptions.INDICES.value() );
+
+	/**
+	 * Extracts numeric indices from a string
+	 *
+	 * @param property The string, containing index lists and ranges
+	 * @return The index values
+	 */
+	static final Set<Integer> parseIndices( String property ) {
+		Set<Integer> indices = new TreeSet<>();
+		if( property != null ) {
+			for( String s : property.split( "," ) ) {
+				s = s.trim();
+				Matcher im = INDEX_PTRN.matcher( s );
+				if( im.matches() ) {
+					indices.add( Integer.parseInt( im.group( 1 ) ) );
+				}
+				else {
+					Matcher rm = RANGE_PTRN.matcher( s );
+					if( rm.matches() ) {
+						IntStream.rangeClosed(
+								Integer.parseInt( rm.group( 1 ) ),
+								Integer.parseInt( rm.group( 2 ) ) )
+								.forEach( indices::add );
+					}
+				}
+			}
+		}
+		return indices;
+	}
 
 	/**
 	 * The set of flows that pass the tag filters. This gets used a lot so we cache
@@ -391,6 +422,7 @@ public class Filter {
 	}
 
 	private static class Persistence {
+
 		private static final Path persistencePath = Paths.get(
 				FilterOptions.ARTIFACT_DIR.value(), "filters.json" );
 

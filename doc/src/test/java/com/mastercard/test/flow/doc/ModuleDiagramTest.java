@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.doc;
 
 import static java.util.stream.Collectors.toSet;
@@ -130,6 +131,7 @@ class ModuleDiagramTest {
 	}
 
 	private static class Link {
+
 		private final String fromGroup;
 		private final String fromArtifact;
 		private final String type;

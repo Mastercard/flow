@@ -40,11 +40,11 @@ Some aspects of assertion behaviour can be controlled by system properties:
 | `mctf.filter.exclude` | A comma-separated list of tags values that flows must not have |
 | `mctf.filter.fails` | Configures filters to repeat flows that did not pass assertion in a previous run. Supply the location of a report from which to extract results, or `latest` to extract from the most recent local report |
 | `mctf.filter.include` | A comma-separated list of tags values that flows must have |
-| `mctf.filter.indices` | A comma-separated list of indices for flows to process |
+| `mctf.filter.indices` | A comma-separated list of indices and index ranges for flows to process |
 | `mctf.filter.repeat` | Supply `true` to use the previous filters again |
 | `mctf.filter.update` | Supply `true` to update filter values at runtime in the most appropriate interface.Supply `cli` to force use of the command-line interface or `gui` to force use of the graphical interface |
 | `mctf.replay` | The location of a report to replay, or `latest` to replay the most recent local report |
-| `mctf.report.name` | The path from the artifact directory to the report destination |
+| `mctf.report.dir` | The path from the artifact directory to the report destination |
 | `mctf.suppress.assertion` | Set to `true` to continue processing a flow in the face of assertion failure |
 | `mctf.suppress.basis` | Set to `true` to process flows whose basis flows have suffered assertion failure |
 | `mctf.suppress.dependency` | Set to `true` to process flows whose dependency flows have suffered errors |

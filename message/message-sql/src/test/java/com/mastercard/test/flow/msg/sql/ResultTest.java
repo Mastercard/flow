@@ -223,8 +223,9 @@ class ResultTest {
 	void badContent() {
 		Result res = new Result( "abc" ) {
 			@Override
-			protected void validateValueType( String field, Object value ) {
+			protected Object validateValueType( String field, Object value ) {
 				// allow everything
+				return value;
 			}
 		};
 

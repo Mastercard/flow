@@ -9,13 +9,13 @@ import com.mastercard.test.flow.util.Option;
 /**
  * Options for {@link Flow} assertion behaviour
  */
-public enum Options implements Option {
+public enum AssertionOptions implements Option {
 
 	/**
-	 * Controls where the name under which the execution report is saved
+	 * Controls where the directory name under which the execution report is saved
 	 */
 	REPORT_NAME(b -> b
-			.property( "mctf.report.name" )
+			.property( "mctf.report.dir" )
 			.description( "The path from the artifact directory to the report destination" )),
 
 	/**
@@ -71,13 +71,13 @@ public enum Options implements Option {
 
 	private final Option delegate;
 
-	Options( Consumer<Builder> def ) {
+	AssertionOptions( Consumer<Builder> def ) {
 		Builder b = new Builder();
 		def.accept( b );
 		delegate = b;
 	}
 
-	Options( Option delegate ) {
+	AssertionOptions( Option delegate ) {
 		this.delegate = delegate;
 	}
 

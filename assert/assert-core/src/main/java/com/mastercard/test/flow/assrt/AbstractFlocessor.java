@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.assrt;
 
 import static java.time.Instant.now;
@@ -143,6 +144,13 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	private LogCapture logCapture = LogCapture.NO_OP;
 
 	/**
+	 * How processing progress is reported
+	 */
+	private Progress progress = new Progress() {
+		// default to no-op behaviour
+	};
+
+	/**
 	 * @param title The title of this test
 	 * @param model The model to process
 	 */
@@ -230,6 +238,17 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	/**
+	 * Configures progress listening behaviour
+	 *
+	 * @param prg An object that will be informed as processing proceeds
+	 * @return <code>this</code>
+	 */
+	public T listening( Progress prg ) {
+		progress = prg;
+		return self();
+	}
+
+	/**
 	 * Defines subset of the system that is under test
 	 *
 	 * @return The set of actors being exercised
@@ -253,6 +272,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return The {@link Flow}s to process, in order
 	 */
 	protected Stream<Flow> flows() {
+		progress.filtering();
 		// per system properties, find out which flows we want to exercise and save
 		// those settings for future runs
 		Filter fltr = new Filter( model )
@@ -270,6 +290,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		}
 		toRun.addAll( deps );
 
+		progress.ordering();
 		// find the execution order
 		Order order = new Order( toRun.stream(), applicators.values() );
 		return order.order();
@@ -284,6 +305,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		if( reporting.writing() ) {
 			logCapture.start( flow );
 		}
+		progress.flow( flow );
 
 		Collection<Interaction> toExercise = Flows.interactions( flow )
 				// exercise interactions that *enter* the system, not intra-system
@@ -331,6 +353,8 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		finaliseReport( flow, reportUpdates,
 				comparisonFailures, executionFailures, assertionCount.get() );
 
+		progress.flowComplete( flow );
+
 		// throw any deferred failures
 		if( !executionFailures.isEmpty() ) {
 			throw executionFailures.get( 0 );
@@ -346,12 +370,14 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 			// but this will make things more obvious to whatever is driving the test
 			skip( "No assertions made" );
 		}
+
 	}
 
 	private int processInteraction( Flow flow, Interaction ntr, List<Assertion> actualMessages,
 			List<Consumer<FlowData>> reportUpdates, List<String> skipReasons,
 			List<AssertionError> comparisonFailures, List<RuntimeException> executionFailures )
 			throws AssertionError {
+		progress.interaction( ntr );
 		// provoke the system with input data and capture the outputs
 		Assertion assrt = new Assertion( flow, ntr, this );
 
@@ -427,7 +453,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 								} ) ) );
 			}
 			catch( AssertionError e ) {
-				if( !reporting.writing() && !Options.SUPPRESS_ASSERTION_FAILURE.isTrue() ) {
+				if( !reporting.writing() && !AssertionOptions.SUPPRESS_ASSERTION_FAILURE.isTrue() ) {
 					// we're not generating a report or suppressing failures, so fail immediately
 					throw e;
 				}
@@ -436,7 +462,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 				comparisonFailures.add( e );
 			}
 			catch( RuntimeException e ) {
-				if( !reporting.writing() && !Options.SUPPRESS_ASSERTION_FAILURE.isTrue() ) {
+				if( !reporting.writing() && !AssertionOptions.SUPPRESS_ASSERTION_FAILURE.isTrue() ) {
 					// we're not generating a report, so fail immediately
 					throw e;
 				}
@@ -479,7 +505,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @see #skip(String)
 	 */
 	private void checkPreconditions( Flow flow ) {
-		if( !Options.SUPPRESS_SYSTEM_CHECK.isTrue() ) {
+		if( !AssertionOptions.SUPPRESS_SYSTEM_CHECK.isTrue() ) {
 			// If there are implied system dependencies that the system cannot satisfy...
 			flow.implicit()
 					.filter( a -> !systemUnderTest.contains( a ) )
@@ -537,6 +563,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 
 	@SuppressWarnings("unchecked")
 	private <C extends Context> void updateContext( C ctx ) {
+		progress.context( ctx );
 		Class<? extends Context> ctxt = ctx.getClass();
 		Applicator<C> apl = (Applicator<C>) applicator( ctxt );
 		C current = (C) currentContext.get( ctxt );
@@ -548,6 +575,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	private <C extends Context> void removeContext( Class<C> ctxt ) {
 		Applicator<C> apl = applicator( ctxt );
 		C current = (C) currentContext.remove( ctxt );
+		progress.context( current );
 		apl.transition( current, null );
 	}
 
@@ -564,7 +592,10 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		Map<Residue, Message> expected = new HashMap<>();
 		flow.residue()
 				.filter( r -> checkers.containsKey( r.getClass() ) )
-				.forEach( r -> expected.put( r, checker( r ).expected( r ) ) );
+				.forEach( r -> {
+					progress.before( r );
+					expected.put( r, checker( r ).expected( r ) );
+				} );
 		return expected;
 	}
 
@@ -580,6 +611,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		AtomicInteger assertionCount = new AtomicInteger();
 
 		expectedResidue.forEach( ( residue, expected ) -> {
+			progress.after( residue );
 			byte[] harvested = null;
 			try {
 				harvested = checker( residue ).actual( residue, actualMessages );
@@ -686,6 +718,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	private enum MessageAssertion {
+
 		REQUEST(
 				a -> a.actual().request(),
 				a -> a.expected().request(),
@@ -744,6 +777,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	private static class CheckMessages {
+
 		public final String fullActual;
 		public final String maskedExpect;
 		public final String maskedActual;
@@ -775,7 +809,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 				String testTitle = title;
 
 				// work out what the report directory should be called
-				String name = Options.REPORT_NAME.value();
+				String name = AssertionOptions.REPORT_NAME.value();
 				if( name == null ) {
 					name = RUN_DATETIME.get();
 				}
@@ -791,7 +825,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 				}
 
 				report = new Writer( model.title(), testTitle,
-						Paths.get( Options.ARTIFACT_DIR.value() ).resolve( name ) );
+						Paths.get( AssertionOptions.ARTIFACT_DIR.value() ).resolve( name ) );
 				alreadyBrowsing = false;
 			}
 			data.accept( report );

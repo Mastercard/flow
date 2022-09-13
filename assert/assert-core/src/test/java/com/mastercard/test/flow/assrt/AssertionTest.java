@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.assrt;
 
 import static com.mastercard.test.flow.assrt.AbstractFlocessorTest.copypasta;
@@ -84,6 +85,45 @@ class AssertionTest {
 				" | B request to C | expected |",
 				" |                |    ----- |",
 				" |                |    extra |" ),
+				copypasta( tf.events() ) );
+	}
+
+	/**
+	 * Adding assertions on the grandchild of the entrypoint
+	 */
+	@Test
+	void assertGrandchild() {
+		TestFlocessor tf = new TestFlocessor( "assertGrandchild", TestModel.abc() )
+				.system( State.LESS, B, C )
+				.behaviour( asrt -> {
+					// everything goes well at the entrypoint
+					asrt.actual()
+							.request( asrt.expected().request().content() )
+							.response( asrt.expected().response().content() );
+
+					// and we've got a window into the system internals, so we can add intra-system
+					// assertions
+					// too
+					asrt.assertDownstream()
+							.peek( a -> System.out.println( "HEY! " + a ) )
+							.filter( a -> a.expected().responder() == C )
+							.forEach( a -> a.actual().request( a.expected().request().content() ) );
+				} );
+
+		tf.execute();
+
+		assertEquals( copypasta(
+				"COMPARE abc []",
+				"com.mastercard.test.flow.assrt.TestModel.abc(TestModel.java:_) A->B [] request",
+				" | A request to B | A request to B |",
+				"",
+				"COMPARE abc []",
+				"com.mastercard.test.flow.assrt.TestModel.abc(TestModel.java:_) B->C [] request",
+				" | B request to C | B request to C |",
+				"",
+				"COMPARE abc []",
+				"com.mastercard.test.flow.assrt.TestModel.abc(TestModel.java:_) A->B [] response",
+				" | B response to A | B response to A |" ),
 				copypasta( tf.events() ) );
 	}
 }
