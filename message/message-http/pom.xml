@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>message</artifactId>
-		<version>0.0.2-SNAPSHOT</version>
+		<version>0.0.5-SNAPSHOT</version>
 	</parent>
 	<artifactId>message-http</artifactId>
 	<packaging>jar</packaging>

@@ -5,6 +5,7 @@
 [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=Mastercard_flow&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=Mastercard_flow)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Mastercard_flow&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Mastercard_flow)
 [![](https://img.shields.io/github/license/Mastercard/flow)](LICENCE)
+[![Maven Central](https://img.shields.io/maven-central/v/com.mastercard.test.flow/parent)](https://search.maven.org/search?q=com.mastercard.test.flow)
 
 <!-- title start -->
 
@@ -51,7 +52,6 @@ graph LR
     api --> builder
     api --> model
     api --> validation-core
-    api --> coppice
     api --> report-core
     assert-core --> assert-junit4
     assert-core --> assert-junit5
@@ -66,6 +66,7 @@ graph LR
     report-ng --> report-core
     validation-core --> validation-junit4
     validation-core --> validation-junit5
+    validation-core --> coppice
   end
 ```
 

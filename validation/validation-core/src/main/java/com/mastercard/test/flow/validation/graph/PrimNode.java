@@ -2,7 +2,9 @@
  * Copyright (c) 2021 Mastercard. All rights reserved.
  */
 
-package com.mastercard.test.flow.validation.coppice.graph;
+package com.mastercard.test.flow.validation.graph;
+
+import static java.util.Comparator.comparing;
 
 import java.util.Comparator;
 import java.util.function.BiFunction;
@@ -40,22 +42,7 @@ class PrimNode<S> {
 	 * A comparator that will sort into ascending order of distance from the Minimum
 	 * Spanning Tree
 	 */
-	public static final Comparator<PrimNode<?>> CLOSEST = ( a, b ) -> {
-		if( a.connected() ) {
-			if( b.connected() ) {
-				// both are connected
-				return a.distance() - b.distance();
-			}
-			// only a is connected
-			return -1;
-		}
-		if( b.connected() ) {
-			// only b is connected
-			return 1;
-		}
-		// neither connected
-		return 0;
-	};
+	public static final Comparator<PrimNode<?>> CLOSEST = comparing( PrimNode::distance );
 
 	/**
 	 * @param closest The closest node minimum spanning tree
@@ -82,22 +69,13 @@ class PrimNode<S> {
 	 * Updates this node's distance to the MST
 	 *
 	 * @param dag The newest node in the MST
-	 * @return The closest node in the DAG
 	 */
-	public DAG<S> update( DAG<S> dag ) {
+	public void update( DAG<S> dag ) {
 		int d = diff.apply( dag.value(), value );
-		if( d >= 0 && d < distance ) {
+		if( d < distance ) {
 			distance = d;
 			closest = dag;
 		}
-		return closest;
-	}
-
-	/**
-	 * @return node value
-	 */
-	public S value() {
-		return value;
 	}
 
 	/**
@@ -107,10 +85,4 @@ class PrimNode<S> {
 		return distance;
 	}
 
-	/**
-	 * @return whether this node can be connected to the MST
-	 */
-	public boolean connected() {
-		return distance >= 0;
-	}
 }

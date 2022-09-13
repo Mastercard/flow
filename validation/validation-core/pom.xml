@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>validation</artifactId>
-		<version>0.0.2-SNAPSHOT</version>
+		<version>0.0.5-SNAPSHOT</version>
 	</parent>
 	<artifactId>validation-core</artifactId>
 	<packaging>jar</packaging>
@@ -16,6 +16,18 @@
 			<groupId>${project.groupId}</groupId>
 			<artifactId>api</artifactId>
 			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<!-- Context/residue serialisation -->
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+		</dependency>
+
+		<dependency>
+			<!-- text diffs -->
+			<groupId>io.github.java-diff-utils</groupId>
+			<artifactId>java-diff-utils</artifactId>
 		</dependency>
 
 		<dependency>

@@ -31,4 +31,4 @@ jobs:
     - name: Create release
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      run: mvn -B -Dnode=system -Darguments="-Dmaven.deploy.skip=true" release:prepare release:perform
+      run: mvn -B -Dnode=system release:prepare

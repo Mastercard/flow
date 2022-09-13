@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>validation</artifactId>
-		<version>0.0.2-SNAPSHOT</version>
+		<version>0.0.5-SNAPSHOT</version>
 	</parent>
 	<artifactId>coppice</artifactId>
 	<packaging>jar</packaging>
@@ -13,22 +13,10 @@
 	<dependencies>
 
 		<dependency>
-			<!-- flow types -->
+			<!-- flow api, validation utils -->
 			<groupId>${project.groupId}</groupId>
-			<artifactId>api</artifactId>
+			<artifactId>validation-core</artifactId>
 			<version>${project.version}</version>
-		</dependency>
-
-		<dependency>
-			<!-- text diffs -->
-			<groupId>io.github.java-diff-utils</groupId>
-			<artifactId>java-diff-utils</artifactId>
-		</dependency>
-
-		<dependency>
-			<!-- Context serialisation -->
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-databind</artifactId>
 		</dependency>
 
 		<dependency>
