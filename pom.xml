@@ -4,7 +4,7 @@
 
 	<groupId>com.mastercard.test.flow</groupId>
 	<artifactId>parent</artifactId>
-	<version>0.0.5</version>
+	<version>0.0.6-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>flow</name>
 	<description>Testing framework</description>
@@ -40,7 +40,7 @@
 	<scm>
 		<connection>scm:git:https://github.com/Mastercard/flow.git</connection>
 		<developerConnection>scm:git:https://github.com/Mastercard/flow.git</developerConnection>
-		<tag>v0.0.5</tag>
+		<tag>HEAD</tag>
 		<url>https://github.com/Mastercard/flow</url>
 	</scm>
 
