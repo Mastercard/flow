@@ -11,7 +11,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
-import com.mastercard.test.flow.assrt.Options;
+import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.filter.FilterOptions;
 import com.mastercard.test.flow.util.Option;
 
@@ -37,7 +37,7 @@ class AssertOptionsTest {
 		// overlaps, collate them together before regenerating the documentation
 		Map<String, Option> aggregated = new TreeMap<>();
 		Stream.of(
-				Options.values(),
+				AssertionOptions.values(),
 				FilterOptions.values() )
 				.flatMap( Stream::of )
 				.forEach( o -> aggregated.put( o.property(), o ) );

@@ -32,7 +32,7 @@ public enum FilterOptions implements Option {
 	 */
 	INDICES(b -> b
 			.property( "mctf.filter.indices" )
-			.description( "A comma-separated list of indices for flows to process" )),
+			.description( "A comma-separated list of indices and index ranges for flows to process" )),
 
 	/**
 	 * Determines if the flow {@link Filter} CLI is shown

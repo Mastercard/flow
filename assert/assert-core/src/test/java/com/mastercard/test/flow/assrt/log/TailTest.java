@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.assrt.log;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -64,20 +65,20 @@ class TailTest {
 		log( "ERROR 007 bazsrc No-one sees this one" );
 
 		Assertions.assertEquals( ""
-				+ "INFO/foosrc/002/   This line is after the tail started\n"
-				+ "WARN/barsrc/003/   there's about to be some multline content!\n"
+				+ "INFO/foosrc/002/This line is after the tail started\n"
+				+ "WARN/barsrc/003/there's about to be some multline content!\n"
 				+ "    Here is content from the previous line's event!\n"
 				+ "    and there's more!\n"
-				+ "INFO/foosrc/004/   here's another event\n"
+				+ "INFO/foosrc/004/here's another event\n"
 				+ "    here is more content from the previous event!\n"
-				+ "TRACE/bazsrc/005/   This event will be shared by both flows",
+				+ "TRACE/bazsrc/005/This event will be shared by both flows",
 				ae.map( e -> String.format( "%s/%s/%s/%s", e.level, e.source, e.time, e.message ) )
 						.collect( Collectors.joining( "\n" ) ) );
 
 		Assertions.assertEquals( ""
 				+ "?/?/?/    here is more content from the previous event!\n"
-				+ "TRACE/bazsrc/005/   This event will be shared by both flows\n"
-				+ "TRACE/bazsrc/006/   This event is just for b",
+				+ "TRACE/bazsrc/005/This event will be shared by both flows\n"
+				+ "TRACE/bazsrc/006/This event is just for b",
 				be.map( e -> String.format( "%s/%s/%s/%s", e.level, e.source, e.time, e.message ) )
 						.collect( Collectors.joining( "\n" ) ) );
 	}

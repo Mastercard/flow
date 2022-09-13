@@ -20,7 +20,7 @@ import com.mastercard.test.flow.util.Bytes;
 public class HttpRes extends HttpMsg<HttpRes> {
 
 	private static final Pattern RES_PATTERN = Pattern
-			.compile( "^(?<version>\\S+?) (?<status>\\S+?) (?<text>.*?)\r\n"
+			.compile( "^(?<version>\\S+?) (?<status>\\S+) ?(?<text>.*?)\r\n"
 					+ "(?<headers>.*?)\r\n"
 					+ "\r\n"
 					+ "(?<body>.*)$", Pattern.DOTALL );
@@ -64,7 +64,10 @@ public class HttpRes extends HttpMsg<HttpRes> {
 		}
 	}
 
-	private HttpRes( HttpRes parent ) {
+	/**
+	 * @param parent content basis
+	 */
+	protected HttpRes( HttpRes parent ) {
 		super( parent );
 	}
 
@@ -120,11 +123,11 @@ public class HttpRes extends HttpMsg<HttpRes> {
 	@Override
 	protected String serialise( String bodyContent, boolean wireFormat ) {
 		return String.format( ""
-				+ "%s %s %s\r\n" // response line
+				+ "%s %s%s%s\r\n" // response line
 				+ "%s" // headers (will supply their own line endings)
 				+ "\r\n" // empty line
 				+ "%s", // body,
-				version(), status(), statusText(),
+				version(), status(), statusText().isEmpty() ? "" : " ", statusText(),
 				headers().entrySet().stream()
 						.map( e -> String.format( "%s: %s\r\n",
 								e.getKey(),

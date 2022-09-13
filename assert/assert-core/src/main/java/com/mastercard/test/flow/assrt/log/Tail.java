@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.assrt.log;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -163,6 +164,6 @@ public class Tail implements LogCapture {
 		// everything after the last group
 		unmatched.append( line.substring( ranges[ranges.length - 1] ) );
 
-		return unmatched.toString();
+		return unmatched.toString().trim();
 	}
 }

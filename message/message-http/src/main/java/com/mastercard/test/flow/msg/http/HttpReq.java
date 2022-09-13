@@ -75,7 +75,10 @@ public class HttpReq extends HttpMsg<HttpReq> {
 		}
 	}
 
-	private HttpReq( HttpReq parent ) {
+	/**
+	 * @param parent content basis
+	 */
+	protected HttpReq( HttpReq parent ) {
 		super( parent );
 	}
 

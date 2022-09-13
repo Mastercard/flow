@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.example.app.store;
 
 import static com.mastercard.test.flow.assrt.Reporting.FAILURES;
@@ -38,8 +39,8 @@ import org.slf4j.LoggerFactory;
 
 import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
+import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.Consequests;
-import com.mastercard.test.flow.assrt.Options;
 import com.mastercard.test.flow.assrt.Replay;
 import com.mastercard.test.flow.assrt.junit5.Flocessor;
 import com.mastercard.test.flow.example.app.Store;
@@ -60,6 +61,7 @@ import com.mastercard.test.flow.msg.sql.Result;
  */
 @SuppressWarnings("static-method")
 class QueryTest {
+
 	private static final Logger LOG = LoggerFactory.getLogger( QueryTest.class );
 
 	private static final DataSource db = Mockito.mock( DataSource.class );
@@ -67,8 +69,8 @@ class QueryTest {
 	private static final Instance service = new Main( db ).build();
 
 	static {
-		if( Options.REPORT_NAME.value() == null ) {
-			Options.REPORT_NAME.set( "query_latest" );
+		if( AssertionOptions.REPORT_NAME.value() == null ) {
+			AssertionOptions.REPORT_NAME.set( "query_latest" );
 		}
 	}
 

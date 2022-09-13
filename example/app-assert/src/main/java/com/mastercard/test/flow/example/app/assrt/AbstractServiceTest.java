@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.example.app.assrt;
 
 import static com.mastercard.test.flow.assrt.Reporting.FAILURES;
@@ -21,7 +22,7 @@ import org.slf4j.Logger;
 
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.Assertion;
-import com.mastercard.test.flow.assrt.Options;
+import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.Replay;
 import com.mastercard.test.flow.assrt.junit5.Flocessor;
 import com.mastercard.test.flow.example.app.assrt.ctx.UpnessApplicator;
@@ -45,8 +46,8 @@ public abstract class AbstractServiceTest {
 	private final Logger logger;
 
 	static {
-		if( Options.REPORT_NAME.value() == null ) {
-			Options.REPORT_NAME.set( "latest" );
+		if( AssertionOptions.REPORT_NAME.value() == null ) {
+			AssertionOptions.REPORT_NAME.set( "latest" );
 		}
 	}
 

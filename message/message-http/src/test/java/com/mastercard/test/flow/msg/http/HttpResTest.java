@@ -23,7 +23,7 @@ class HttpResTest {
 	@Test
 	void empty() {
 		assertEquals( ""
-				+ "  \r\n"
+				+ " \r\n"
 				+ "\r\n",
 				new HttpRes().assertable() );
 	}
@@ -91,6 +91,29 @@ class HttpResTest {
 
 		assertEquals( ""
 				+ "HTTP/1.1 418 I'm a teapot\r\n"
+				+ "key: value\r\n"
+				+ "\r\n"
+				+ "{\n"
+				+ "  \"body\" : \"content\"\n"
+				+ "}",
+				new HttpRes( bytes, Json::new ).assertable() );
+	}
+
+	/**
+	 * Shows that we can cope with responses that lack the status text
+	 */
+	@Test
+	void missingStatusText() {
+		byte[] bytes = (""
+				+ "HTTP/1.1 418\r\n"
+				+ "key: value\r\n"
+				+ "\r\n"
+				+ "{\n"
+				+ "  \"body\" : \"content\"\n"
+				+ "}").getBytes( UTF_8 );
+
+		assertEquals( ""
+				+ "HTTP/1.1 418\r\n"
 				+ "key: value\r\n"
 				+ "\r\n"
 				+ "{\n"

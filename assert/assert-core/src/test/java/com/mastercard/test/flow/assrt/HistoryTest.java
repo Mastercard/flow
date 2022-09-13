@@ -67,13 +67,13 @@ class HistoryTest {
 				"basis failure" );
 
 		try {
-			Options.SUPPRESS_BASIS_CHECK.set( "true" );
+			AssertionOptions.SUPPRESS_BASIS_CHECK.set( "true" );
 			assertEquals( null, hst.skipReason( child, State.FUL, Collections.emptySet() )
 					.orElse( null ),
 					"supressed basis failure" );
 		}
 		finally {
-			Options.SUPPRESS_BASIS_CHECK.clear();
+			AssertionOptions.SUPPRESS_BASIS_CHECK.clear();
 		}
 	}
 
@@ -115,14 +115,14 @@ class HistoryTest {
 				.orElse( null ) );
 
 		try {
-			Options.SUPPRESS_DEPENDENCY_CHECK.set( "true" );
+			AssertionOptions.SUPPRESS_DEPENDENCY_CHECK.set( "true" );
 			assertEquals( null, hst.skipReason(
 					dependent, State.FUL, Collections.singleton( Actors.BEN ) )
 					.orElse( null ),
 					"suppressed dependency failure" );
 		}
 		finally {
-			Options.SUPPRESS_DEPENDENCY_CHECK.clear();
+			AssertionOptions.SUPPRESS_DEPENDENCY_CHECK.clear();
 		}
 	}
 

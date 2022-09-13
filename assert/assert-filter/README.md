@@ -27,7 +27,7 @@ Some aspects of filtering behaviour can be controlled by system properties:
 | -------- | ----------- |
 | `mctf.filter.exclude` | A comma-separated list of tags values that flows must not have |
 | `mctf.filter.include` | A comma-separated list of tags values that flows must have |
-| `mctf.filter.indices` | A comma-separated list of indices for flows to process |
+| `mctf.filter.indices` | A comma-separated list of indices and index ranges for flows to process |
 | `mctf.filter.update` | Supply `true` to update filter values at runtime in the most appropriate interface.Supply `cli` to force use of the command-line interface or `gui` to force use of the graphical interface |
 | `mctf.filter.repeat` | Supply `true` to use the previous filters again |
 | `mctf.filter.fails` | Configures filters to repeat flows that did not pass assertion in a previous run. Supply the location of a report from which to extract results, or `latest` to extract from the most recent local report |
@@ -42,7 +42,7 @@ Calling [`blockForUpdates()`][Filter!.blockForUpdates()] on a `Filter` instance 
 
 <!-- code_link_start -->
 
-[Filter!.blockForUpdates()]: src/main/java/com/mastercard/test/flow/assrt/filter/Filter.java#L107-L120,107-120
+[Filter!.blockForUpdates()]: src/main/java/com/mastercard/test/flow/assrt/filter/Filter.java#L131-L144,131-144
 
 <!-- code_link_end -->
 
@@ -57,7 +57,7 @@ Calling [`load()`][Filter!.load()] on a filter (when system property `mctf.filte
 
 <!-- code_link_start -->
 
-[Filter!.save()]: src/main/java/com/mastercard/test/flow/assrt/filter/Filter.java#L131-L137,131-137
-[Filter!.load()]: src/main/java/com/mastercard/test/flow/assrt/filter/Filter.java#L77-L91,77-91
+[Filter!.save()]: src/main/java/com/mastercard/test/flow/assrt/filter/Filter.java#L155-L161,155-161
+[Filter!.load()]: src/main/java/com/mastercard/test/flow/assrt/filter/Filter.java#L101-L115,101-115
 
 <!-- code_link_end -->
