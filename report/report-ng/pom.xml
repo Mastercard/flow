@@ -16,6 +16,15 @@
 		<dst.res.dir>${basedir}/target/classes/com/mastercard/test/flow/report</dst.res.dir>
 	</properties>
 
+	<dependencies>
+		<dependency>
+			<!-- there are no tests, but this keeps builds happy
+			     when you run the reactor with, e.g. -DexcludedGroups=gui -->
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+		</dependency>
+	</dependencies>
+
 	<build>
 		<plugins>
 

@@ -469,7 +469,7 @@
 							     from the terminal -->
 							<forkCount>0</forkCount>
 							<systemPropertyVariables>
-								<!-- Triggers the filter CLI -->
+								<!-- Triggers the filter interface -->
 								<mctf.filter.update>true</mctf.filter.update>
 								<!-- Default to the same filters as last time -->
 								<mctf.filter.repeat>true</mctf.filter.repeat>
@@ -504,6 +504,31 @@
 				</plugins>
 			</build>
 		</profile>
+
+		<profile>
+			<!-- Skips the slow-running tests that are probably exercising stuff you didn't change -->
+			<!-- Invoke with `mvn -Push test` -->
+			<id>ush</id>
+			<properties>
+				<!-- skip the filter gui tests -->
+				<excludedGroups>gui</excludedGroups>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<systemPropertyVariables>
+								<!-- Skips the browser tests -->
+								<browser.skip>true</browser.skip>
+							</systemPropertyVariables>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
 	</profiles>
 
 </project>
