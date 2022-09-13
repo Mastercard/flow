@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.assrt.filter;
 
 import static java.util.stream.Collectors.toCollection;
@@ -54,7 +55,13 @@ public class Filter {
 	private static final Pattern RANGE_PTRN = Pattern.compile( "(\\d+)-(\\d+)" );
 	private final Set<Integer> indices = parseIndices( FilterOptions.INDICES.value() );
 
-	private static final Set<Integer> parseIndices( String property ) {
+	/**
+	 * Extracts numeric indices from a string
+	 *
+	 * @param property The string, containing index lists and ranges
+	 * @return The index values
+	 */
+	static final Set<Integer> parseIndices( String property ) {
 		Set<Integer> indices = new TreeSet<>();
 		if( property != null ) {
 			for( String s : property.split( "," ) ) {
@@ -415,6 +422,7 @@ public class Filter {
 	}
 
 	private static class Persistence {
+
 		private static final Path persistencePath = Paths.get(
 				FilterOptions.ARTIFACT_DIR.value(), "filters.json" );
 
