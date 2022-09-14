@@ -1,7 +1,7 @@
 package com.mastercard.test.flow;
 
 /**
- * Represents a part of the system under test - something capable of initiating
+ * Represents a part of the system under test - something capable of making
  * requests to, and responding to requests from, other {@link Actor}s in the
  * system.
  */

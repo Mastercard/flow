@@ -105,6 +105,7 @@ class ReadmeInterlinkTest {
 				+ "# %s\n" // name
 				+ "\n"
 				+ "%s\n" // description
+				+ "---\n" // line
 				+ "%s\n" // javadoc badge
 				+ "%s\n" // parent link
 				+ "%s", // child links
