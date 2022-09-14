@@ -5,7 +5,6 @@
 
 Checking model consistency
 
----
 
 
  * [../flow](https://github.com/Mastercard/flow) Testing framework

@@ -5,7 +5,6 @@
 
 Flow selection components
 
----
 [![javadoc](https://javadoc.io/badge2/com.mastercard.test.flow/assert-filter/javadoc.svg)](https://javadoc.io/doc/com.mastercard.test.flow/assert-filter)
 
  * [../assert](..) Comparing models against systems

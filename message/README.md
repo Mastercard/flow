@@ -5,7 +5,6 @@
 
 Implementations of the Message interface
 
----
 
 
  * [../flow](https://github.com/Mastercard/flow) Testing framework

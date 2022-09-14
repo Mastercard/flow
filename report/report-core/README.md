@@ -5,7 +5,6 @@
 
 Report input/output
 
----
 [![javadoc](https://javadoc.io/badge2/com.mastercard.test.flow/report-core/javadoc.svg)](https://javadoc.io/doc/com.mastercard.test.flow/report-core)
 
  * [../report](..) Visualising assertion results

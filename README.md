@@ -13,7 +13,6 @@
 
 Testing framework
 
----
 
 
  * [api](api) Core type declarations

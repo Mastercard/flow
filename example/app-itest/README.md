@@ -5,7 +5,6 @@
 
 System integration test suite for exercising app instances
 
----
 
 
  * [../example](..) Service constellation to exercise the flow framework

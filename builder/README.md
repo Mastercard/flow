@@ -5,7 +5,6 @@
 
 Implementations of the Flow and Interaction interfaces
 
----
 [![javadoc](https://javadoc.io/badge2/com.mastercard.test.flow/builder/javadoc.svg)](https://javadoc.io/doc/com.mastercard.test.flow/builder)
 
  * [../flow](https://github.com/Mastercard/flow) Testing framework

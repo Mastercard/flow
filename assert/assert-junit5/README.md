@@ -5,7 +5,6 @@
 
 JUnit5 comparison components
 
----
 [![javadoc](https://javadoc.io/badge2/com.mastercard.test.flow/assert-junit5/javadoc.svg)](https://javadoc.io/doc/com.mastercard.test.flow/assert-junit5)
 
  * [../assert](..) Comparing models against systems

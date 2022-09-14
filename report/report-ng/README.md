@@ -4,7 +4,6 @@
 
 Report webapp
 
----
 
 
  * [../report](..) Visualising assertion results

@@ -5,7 +5,6 @@
 
 Core comparison components
 
----
 [![javadoc](https://javadoc.io/badge2/com.mastercard.test.flow/assert-core/javadoc.svg)](https://javadoc.io/doc/com.mastercard.test.flow/assert-core)
 
  * [../assert](..) Comparing models against systems

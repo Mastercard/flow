@@ -5,7 +5,6 @@
 
 Comparing models against systems
 
----
 
 
  * [../flow](https://github.com/Mastercard/flow) Testing framework
