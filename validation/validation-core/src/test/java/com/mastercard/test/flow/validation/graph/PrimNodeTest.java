@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Exercises {@link PrimNode}
  */
+@SuppressWarnings("static-method")
 class PrimNodeTest {
 
 	/**
@@ -16,7 +17,7 @@ class PrimNodeTest {
 	@Test
 	void update() {
 		DAG<Item> low = new DAG<>( new Item( 1 ) );
-		DAG<Item> high = new DAG( new Item( 3 ) );
+		DAG<Item> high = new DAG<>( new Item( 3 ) );
 		DAG<Item> far = new DAG<>( new Item( 5 ) );
 
 		PrimNode<Item> pn = new PrimNode<>( far, new Item( 2 ), Item::distance );
