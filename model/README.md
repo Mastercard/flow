@@ -5,6 +5,8 @@
 
 Implementations of the Model interface
 
+[![javadoc](https://javadoc.io/badge2/com.mastercard.test.flow/model/javadoc.svg)](https://javadoc.io/doc/com.mastercard.test.flow/model)
+
  * [../flow](https://github.com/Mastercard/flow) Testing framework
 
 <!-- title end -->

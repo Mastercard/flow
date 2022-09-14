@@ -5,6 +5,8 @@
 
 Model optimisation tool
 
+[![javadoc](https://javadoc.io/badge2/com.mastercard.test.flow/coppice/javadoc.svg)](https://javadoc.io/doc/com.mastercard.test.flow/coppice)
+
  * [../validation](..) Checking model consistency
 
 <!-- title end -->

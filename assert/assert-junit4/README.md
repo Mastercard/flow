@@ -5,6 +5,8 @@
 
 JUnit4 comparison components
 
+[![javadoc](https://javadoc.io/badge2/com.mastercard.test.flow/assert-junit4/javadoc.svg)](https://javadoc.io/doc/com.mastercard.test.flow/assert-junit4)
+
  * [../assert](..) Comparing models against systems
 
 <!-- title end -->

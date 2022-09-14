@@ -1,10 +1,12 @@
 package com.mastercard.test.flow.doc;
 
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.DynamicContainer.dynamicContainer;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 import java.nio.file.Paths;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DynamicContainer;
@@ -49,6 +51,7 @@ class ReadmeInterlinkTest {
 		return section.contains( pom.name() )
 				&& section.contains( pom.description() )
 				&& section.contains( parentLink( pom ) )
+				&& section.contains( javadocBadge( pom ) )
 				&& childLinks( pom )
 						.map( String::trim )
 						.allMatch( section::contains );
@@ -70,6 +73,25 @@ class ReadmeInterlinkTest {
 				pom.parent().name(), pom.parent().description() );
 	}
 
+	private static final Set<String> NO_JAVADOC = Stream.of(
+			"report-ng", "doc", "aggregator",
+			"app", "app-framework", "app-api", "app-web-ui", "app-ui", "app-core", "app-histogram",
+			"app-queue", "app-store", "app-model", "app-assert", "app-itest" )
+			.collect( toSet() );
+
+	private static String javadocBadge( PomData pom ) {
+		if( "jar".equals( pom.getPackaging() ) && !NO_JAVADOC.contains( pom.artifactId() ) ) {
+			return String.format( ""
+					+ "["
+					+ "![javadoc](https://javadoc.io/badge2/%s/%s/javadoc.svg)"
+					+ "]"
+					+ "(https://javadoc.io/doc/%s/%s)",
+					pom.groupId(), pom.artifactId(), pom.groupId(), pom.artifactId() );
+		}
+
+		return "";
+	}
+
 	private static Stream<String> childLinks( PomData pom ) {
 		return pom.modules()
 				.map( child -> String.format( " * [%s](%s) %s\n",
@@ -83,10 +105,13 @@ class ReadmeInterlinkTest {
 				+ "# %s\n" // name
 				+ "\n"
 				+ "%s\n" // description
+				+ "\n"
+				+ "%s\n" // javadoc badge
 				+ "%s\n" // parent link
 				+ "%s", // child links
 				pom.name(),
 				pom.description(),
+				javadocBadge( pom ),
 				parentLink( pom ),
 				childLinks( pom ).collect( joining() ) )
 				.trim();
