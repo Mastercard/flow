@@ -4,6 +4,7 @@
 # app-histogram
 
 Service that counts characters in a given set of text
+
 ---
 
 

@@ -104,7 +104,7 @@ class ReadmeInterlinkTest {
 		return String.format( ""
 				+ "# %s\n" // name
 				+ "\n"
-				+ "%s\n" // description
+				+ "%s\n\n" // description
 				+ "---\n" // line
 				+ "%s\n" // javadoc badge
 				+ "%s\n" // parent link

@@ -4,6 +4,7 @@
 # app-core
 
 Service that orchestrates functionality between services in the example application
+
 ---
 
 
