@@ -4,6 +4,7 @@
 # api
 
 Core type declarations
+[![javadoc](https://javadoc.io/badge2/com.mastercard.test.flow/api/javadoc.svg)](https://javadoc.io/doc/com.mastercard.test.flow/api)
 
  * [../flow](https://github.com/Mastercard/flow) Testing framework
 

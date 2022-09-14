@@ -30,6 +30,7 @@ class PomData {
 	private final Path dirPath;
 	private final String groupId;
 	private final String artifactId;
+	private final String packaging;
 	private final String name;
 	private final String description;
 	private final List<PomData> modules;
@@ -53,6 +54,7 @@ class PomData {
 			groupId = Optional.ofNullable( xpath.evaluate( "/project/groupId", doc ) )
 					.filter( s -> !s.isEmpty() )
 					.orElseGet( () -> parent.groupId() );
+			packaging = xpath.evaluate( "/project/packaging", doc );
 			name = xpath.evaluate( "/project/name", doc );
 			description = xpath.evaluate( "/project/description", doc );
 			modules = new ArrayList<>();
@@ -108,6 +110,13 @@ class PomData {
 	 */
 	public String groupId() {
 		return groupId;
+	}
+
+	/**
+	 * @return The project's packaging value
+	 */
+	public String getPackaging() {
+		return packaging;
 	}
 
 	/**
