@@ -115,7 +115,7 @@
 			<!-- reflective access to source line numbers -->
 			<groupId>org.javassist</groupId>
 			<artifactId>javassist</artifactId>
-			<version>3.29.1-GA</version>
+			<version>3.29.2-GA</version>
 			<scope>test</scope>
 		</dependency>
 
