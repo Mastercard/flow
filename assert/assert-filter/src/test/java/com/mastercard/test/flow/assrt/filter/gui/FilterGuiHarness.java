@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.assrt.filter.gui;
 
 import static com.mastercard.test.flow.assrt.filter.Util.copypasta;
@@ -13,8 +14,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import org.assertj.swing.core.BasicRobot;
 import org.assertj.swing.edt.FailOnThreadViolationRepaintManager;
-import org.assertj.swing.edt.GuiActionRunner;
+import org.assertj.swing.finder.WindowFinder;
 import org.assertj.swing.fixture.FrameFixture;
 import org.assertj.swing.fixture.JListFixture;
 import org.assertj.swing.fixture.JTextComponentFixture;
@@ -42,6 +44,7 @@ public class FilterGuiHarness {
 	 * The tag list widgets in the interface
 	 */
 	public enum TagList {
+
 		/***/
 		AVAILABLE,
 		/***/
@@ -153,6 +156,7 @@ public class FilterGuiHarness {
 	 * The flow list widgets in the interface
 	 */
 	public enum FlowList {
+
 		/***/
 		DISABLED,
 		/***/
@@ -265,8 +269,7 @@ public class FilterGuiHarness {
 	 */
 	public FilterGuiHarness on( Mdl model ) {
 		Filter filter = new Filter( model );
-		FilterGui gui = GuiActionRunner.execute( () -> new FilterGui( filter ) );
-		FrameFixture ff = new FrameFixture( gui );
+		FilterGui gui = new FilterGui( filter );
 
 		// it is suprisingly disruptive to have the mouse pointer left somewhere
 		// unexpected, so let's make an effort to put it back where we found it
@@ -279,21 +282,29 @@ public class FilterGuiHarness {
 		guith.setDaemon( true );
 		guith.start();
 
-		while( !interactions.isEmpty() ) {
-			interactions.poll().accept( ff, model );
-		}
+		FrameFixture ff = WindowFinder
+				.findFrame( "flow_filter_frame" )
+				.withTimeout( 3000 )
+				.using( BasicRobot.robotWithCurrentAwtHierarchy() );
 
 		try {
-			guith.join( 5000 );
-		}
-		catch( InterruptedException e ) {
-			e.printStackTrace();
-		}
+			while( !interactions.isEmpty() ) {
+				interactions.poll().accept( ff, model );
+			}
 
-		Assertions.assertFalse( guith.isAlive(), "cli thread should have stopped!" );
+			try {
+				guith.join( 5000 );
+			}
+			catch( InterruptedException e ) {
+				e.printStackTrace();
+			}
 
-		ff.robot().moveMouse( initialMousePosition );
-		ff.cleanUp();
+			Assertions.assertFalse( guith.isAlive(), "cli thread should have stopped!" );
+		}
+		finally {
+			ff.robot().moveMouse( initialMousePosition );
+			ff.cleanUp();
+		}
 
 		results = copypasta( filter.flows()
 				.map( f -> f.meta().id() ) );

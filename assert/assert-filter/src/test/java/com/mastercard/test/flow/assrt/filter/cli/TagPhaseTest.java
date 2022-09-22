@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.assrt.filter.cli;
 
 import static java.util.stream.Collectors.joining;
@@ -55,7 +56,7 @@ class TagPhaseTest extends AbstractFilterTest {
 		test.accept( "+f", "a" );
 		test.accept( "+g", "a b" );
 		test.accept( "-h", "d e" );
-		test.accept( "+f +l", "a e" );
+		test.accept( "+f +l", "" );
 		test.accept( "+i -k", "b c" );
 
 		test.accept( "+f -f", "a b c d e" );

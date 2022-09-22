@@ -1,7 +1,7 @@
+
 package com.mastercard.test.flow.assrt.filter.gui;
 
 import static java.awt.GridBagConstraints.BOTH;
-import static java.awt.event.WindowEvent.WINDOW_CLOSING;
 
 import java.awt.BorderLayout;
 import java.awt.GraphicsEnvironment;
@@ -33,7 +33,7 @@ import com.mastercard.test.flow.assrt.filter.FilterOptions;
  * - this can improve performance by avoiding building flows that will not be
  * exercised.
  */
-public class FilterGui extends JFrame {
+public class FilterGui {
 
 	private static final long serialVersionUID = 1L;
 
@@ -54,7 +54,6 @@ public class FilterGui extends JFrame {
 	 * @param filter The filter to control
 	 */
 	public FilterGui( Filter filter ) {
-		super( "Flow filters" );
 		this.filter = filter;
 	}
 
@@ -67,8 +66,11 @@ public class FilterGui extends JFrame {
 		final Object monitor = new Object();
 
 		SwingUtilities.invokeLater( () -> {
-			setDefaultCloseOperation( WindowConstants.DISPOSE_ON_CLOSE );
-			addWindowListener( new WindowAdapter() {
+			JFrame frame = new JFrame( "Flow filters" );
+			frame.setName( "flow_filter_frame" );
+			frame.setDefaultCloseOperation( WindowConstants.DISPOSE_ON_CLOSE );
+			frame.addWindowListener( new WindowAdapter() {
+
 				@Override
 				public void windowClosed( WindowEvent e ) {
 					updatesCompleted.set( true );
@@ -77,16 +79,11 @@ public class FilterGui extends JFrame {
 					}
 				}
 			} );
-			JButton build = new JButton( "Build" );
-			build.setName( "build_button" );
-			JButton run = new JButton( "Run" );
-			run.setName( "run_button" );
-			run.addActionListener( ac -> dispatchEvent( new WindowEvent( this, WINDOW_CLOSING ) ) );
-			getContentPane().add( buildGUI( build, run ) );
-			pack();
-			setLocationRelativeTo( null );
-			getRootPane().setDefaultButton( build );
-			setVisible( true );
+			frame.getContentPane().add( buildGUI( frame ) );
+			frame.setAlwaysOnTop( true );
+			frame.pack();
+			frame.setLocationRelativeTo( null );
+			frame.setVisible( true );
 		} );
 
 		synchronized( monitor ) {
@@ -102,8 +99,29 @@ public class FilterGui extends JFrame {
 		}
 	}
 
-	private JPanel buildGUI( JButton build, JButton run ) {
+	/**
+	 * Builds the filter controls. The supplied frame will be updated to:
+	 * <ul>
+	 * <li>Control the default button - starting out as "build", but moving to "run"
+	 * after that</li>
+	 * <li>Provoke frame closure when "run" is clicked</li>
+	 * </ul>
+	 *
+	 * @param frame The frame that will hold the controls
+	 * @return The controls component
+	 */
+	public JPanel buildGUI( JFrame frame ) {
+
+		JButton build = new JButton( "Build" );
+		build.setName( "build_button" );
+		frame.getRootPane().setDefaultButton( build );
+
+		JButton run = new JButton( "Run" );
+		run.setName( "run_button" );
 		run.setEnabled( false );
+		run.addActionListener( ac -> frame.dispatchEvent(
+				new WindowEvent( frame, WindowEvent.WINDOW_CLOSING ) ) );
+
 		JTextField filterField = new JTextField();
 		filterField.setName( "filter_textfield" );
 		filterField.setHorizontalAlignment( SwingConstants.CENTER );
@@ -151,7 +169,7 @@ public class FilterGui extends JFrame {
 			flowBuilding.set( true );
 			flowPanel.withListener( tagPanel::refreshAndLimitTags );
 			run.setEnabled( true );
-			SwingUtilities.getRootPane( run ).setDefaultButton( run );
+			frame.getRootPane().setDefaultButton( run );
 
 			panel.remove( buildPanel );
 			panel.add( flowPanel,
