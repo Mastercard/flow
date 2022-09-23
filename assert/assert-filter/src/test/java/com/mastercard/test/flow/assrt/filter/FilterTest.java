@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
@@ -42,11 +43,173 @@ class FilterTest {
 	 */
 	@BeforeEach
 	@AfterEach
-	public void clearProperties() {
+	void clearProperties() {
 		FilterOptions.INCLUDE_TAGS.clear();
 		FilterOptions.EXCLUDE_TAGS.clear();
 		FilterOptions.INDICES.clear();
 		FilterOptions.FILTER_REPEAT.clear();
+	}
+
+	/**
+	 * Tag inclusion filtering behaviour - flows must have all of the included tags
+	 */
+	@Test
+	void tagInclude() {
+		Model mdl = new Mdl().withFlows(
+				"abc [a, b, c]",
+				"bcd [b, c, d]",
+				"cde [c, d, e]",
+				"def [d, e, f]",
+				"efg [e, f, g]" );
+		BiConsumer<String, String> test = ( in, out ) -> assertEquals( out,
+				new Filter( mdl )
+						.includedTags( Stream.of( in.split( "," ) )
+								.filter( s -> !s.isEmpty() )
+								.collect( toSet() ) )
+						.flows()
+						.map( f -> f.meta().description() )
+						.collect( joining( "," ) ),
+				"for " + in );
+
+		test.accept( "", "abc,bcd,cde,def,efg" );
+		test.accept( "a", "abc" );
+		test.accept( "b", "abc,bcd" );
+		test.accept( "c", "abc,bcd,cde" );
+		test.accept( "d", "bcd,cde,def" );
+
+		test.accept( "a,b", "abc" );
+	}
+
+	/**
+	 * Tag exclusion behaviour - flows must have none of the excluded tags
+	 */
+	@Test
+	void tagExclude() {
+		Model mdl = new Mdl().withFlows(
+				"abc [a, b, c]",
+				"bcd [b, c, d]",
+				"cde [c, d, e]",
+				"def [d, e, f]",
+				"efg [e, f, g]" );
+		BiConsumer<String, String> test = ( in, out ) -> assertEquals( out,
+				new Filter( mdl )
+						.excludedTags( Stream.of( in.split( "," ) )
+								.filter( s -> !s.isEmpty() )
+								.collect( toSet() ) )
+						.flows()
+						.map( f -> f.meta().description() )
+						.collect( joining( "," ) ),
+				"for " + in );
+
+		test.accept( "", "abc,bcd,cde,def,efg" );
+		test.accept( "a", "bcd,cde,def,efg" );
+		test.accept( "b", "cde,def,efg" );
+		test.accept( "c", "def,efg" );
+		test.accept( "d", "abc,efg" );
+
+		test.accept( "a,g", "bcd,cde,def" );
+	}
+
+	/**
+	 * Combining include and exclude filters
+	 */
+	@Test
+	void tagFilter() {
+		Model mdl = new Mdl().withFlows(
+				"abc [a, b, c]",
+				"bcd [b, c, d]",
+				"cde [c, d, e]",
+				"def [d, e, f]",
+				"efg [e, f, g]" );
+		BiConsumer<String, String> test = ( in, out ) -> assertEquals( out,
+				new Filter( mdl )
+						.includedTags( Stream.of( in.split( "," ) )
+								.filter( s -> !s.isEmpty() && s.startsWith( "+" ) )
+								.map( s -> s.substring( 1 ) )
+								.collect( toSet() ) )
+						.excludedTags( Stream.of( in.split( "," ) )
+								.filter( s -> !s.isEmpty() && s.startsWith( "-" ) )
+								.map( s -> s.substring( 1 ) )
+								.collect( toSet() ) )
+						.flows()
+						.map( f -> f.meta().description() )
+						.collect( joining( "," ) ),
+				"for " + in );
+
+		test.accept( "", "abc,bcd,cde,def,efg" );
+		test.accept( "+a", "abc" );
+		test.accept( "+b", "abc,bcd" );
+		test.accept( "-a", "bcd,cde,def,efg" );
+		test.accept( "-b", "cde,def,efg" );
+		test.accept( "+a,-b", "" );
+		test.accept( "-a,+b", "bcd" );
+		test.accept( "+d,-b", "cde,def" );
+	}
+
+	/**
+	 * Index filtering
+	 */
+	@Test
+	void indexFilter() {
+		Model mdl = new Mdl().withFlows(
+				"abc [a, b, c]",
+				"bcd [b, c, d]",
+				"cde [c, d, e]",
+				"def [d, e, f]",
+				"efg [e, f, g]" );
+		BiConsumer<String, String> test = ( in, out ) -> assertEquals( out,
+				new Filter( mdl )
+						.indices( Stream.of( in.split( "," ) )
+								.filter( s -> !s.isEmpty() )
+								.map( Integer::valueOf )
+								.collect( toSet() ) )
+						.flows()
+						.map( f -> f.meta().description() )
+						.collect( joining( "," ) ),
+				"for " + in );
+
+		test.accept( "", "abc,bcd,cde,def,efg" );
+		test.accept( "0", "abc" );
+		test.accept( "1", "bcd" );
+		test.accept( "4", "efg" );
+		test.accept( "2,3", "cde,def" );
+	}
+
+	/**
+	 * Combining tag and index filtering
+	 */
+	@Test
+	void filter() {
+		Model mdl = new Mdl().withFlows(
+				"abc [a, b, c]",
+				"bcd [b, c, d]",
+				"cde [c, d, e]",
+				"def [d, e, f]",
+				"efg [e, f, g]" );
+		BiConsumer<String, String> test = ( in, out ) -> assertEquals( out,
+				new Filter( mdl )
+						.includedTags( Stream.of( in.split( "," ) )
+								.filter( s -> !s.isEmpty() && s.startsWith( "+" ) )
+								.map( s -> s.substring( 1 ) )
+								.collect( toSet() ) )
+						.excludedTags( Stream.of( in.split( "," ) )
+								.filter( s -> !s.isEmpty() && s.startsWith( "-" ) )
+								.map( s -> s.substring( 1 ) )
+								.collect( toSet() ) )
+						.indices( Stream.of( in.split( "," ) )
+								.filter( s -> s.matches( "\\d+" ) )
+								.map( Integer::valueOf )
+								.collect( toSet() ) )
+						.flows()
+						.map( f -> f.meta().description() )
+						.collect( joining( "," ) ),
+				"for " + in );
+
+		test.accept( "", "abc,bcd,cde,def,efg" );
+		test.accept( "+c", "abc,bcd,cde" );
+		test.accept( "+c,-a", "bcd,cde" );
+		test.accept( "+c,-a,0", "bcd" );
+		test.accept( "+c,-a,1", "cde" );
 	}
 
 	/**
@@ -117,11 +280,11 @@ class FilterTest {
 	@Test
 	void failures() {
 		Model mdl = new Mdl().withFlows(
-				new Flw( "abc [a, b, c]" ),
-				new Flw( "bcd [b, c, d]" ),
-				new Flw( "cde [c, d, e]" ),
-				new Flw( "def [d, e, f]" ),
-				new Flw( "efg [e, f, g]" ) );
+				"abc [a, b, c]",
+				"bcd [b, c, d]",
+				"cde [c, d, e]",
+				"def [d, e, f]",
+				"efg [e, f, g]" );
 
 		// ensure there are no reports
 		Path reportDir = Paths.get( "target", "mctf", "FilterTest", "failures" );
@@ -235,7 +398,8 @@ class FilterTest {
 						"abc", "bcd" )
 				.expectIndices(
 						"But the tag filter is just as effective as "
-								+ "the index filter, so the indices are cleared" );
+								+ "the index filter, so the indices are cleared" )
+				.expectListenerEvents( 2 );
 
 		new FltrTst( mdl )
 				.includeIndex( 0, 1 )
@@ -248,7 +412,8 @@ class FilterTest {
 						"abc", "bcd" )
 				.expectIndices(
 						"But the tag filter is just as effective as "
-								+ "the index filter, so the indices are cleared" );
+								+ "the index filter, so the indices are cleared" )
+				.expectListenerEvents( 2 );
 
 		new FltrTst( mdl )
 				.includeIndex( 2 )
@@ -260,7 +425,8 @@ class FilterTest {
 				.expectIndices( "Index has changed to account for the tag filter",
 						1 )
 				.expectFlows( "Still get the same flow",
-						"cde" );
+						"cde" )
+				.expectListenerEvents( 2 );
 
 		new FltrTst( mdl )
 				.includeIndex( 2 )
@@ -272,15 +438,22 @@ class FilterTest {
 				.expectIndices( "Index has changed to account for the tag filter",
 						1 )
 				.expectFlows( "Still get the same flow",
-						"cde" );
+						"cde" )
+				.expectListenerEvents( 2 );
 	}
 
 	private static class FltrTst {
 
 		private final Filter filter;
+		private AtomicInteger listenerEvents = new AtomicInteger( 0 );
 
 		public FltrTst( Model model ) {
 			filter = new Filter( model );
+			assertSame( filter,
+					filter.listener( f -> {
+						assertSame( filter, f );
+						listenerEvents.incrementAndGet();
+					} ) );
 		}
 
 		public FltrTst includeTag( String tag ) {
@@ -342,6 +515,11 @@ class FilterTest {
 			assertEquals( expect, filter.indices(), description );
 			return this;
 		}
+
+		public FltrTst expectListenerEvents( int count ) {
+			assertEquals( count, listenerEvents.get() );
+			return this;
+		}
 	}
 
 	/**
@@ -366,5 +544,50 @@ class FilterTest {
 		test.accept( "3,2,1", "[1, 2, 3]" );
 		test.accept( "0-4", "[0, 1, 2, 3, 4]" );
 		test.accept( "0-2,5,blah,8-9", "[0, 1, 2, 5, 8, 9]" );
+	}
+
+	/**
+	 * Tests index property access
+	 */
+	@Test
+	void indexProperty() {
+		BiConsumer<String, String> test = ( in, out ) -> {
+			Mdl mdl = new Mdl();
+			Stream.of( "abcdefghijklmnopqrstuvwxyz".split( "" ) )
+					.forEach( a -> mdl.withFlows( a + " []" ) );
+			Filter f = new Filter( mdl );
+			f.indices( Stream.of( in.split( "," ) )
+					.filter( s -> !s.isEmpty() )
+					.map( Integer::valueOf )
+					.collect( toSet() ) );
+			assertEquals(
+					out,
+					f.property( FilterOptions.INDICES ),
+					"for " + in );
+		};
+
+		test.accept( "", "" );
+		test.accept( "1", "1" );
+		test.accept( "1,2", "1,2" );
+		test.accept( "1,3", "1,3" );
+		test.accept( "1,2,3", "1-3" );
+		test.accept( "1,2,3,4,7,8,9", "1-4,7-9" );
+		test.accept( "1,2,3,4,6,8,9,10,11,12", "1-4,6,8-12" );
+	}
+
+	/**
+	 * Tests tag property access
+	 */
+	@Test
+	void tagProperty() {
+		Filter f = new Filter( new Mdl() );
+		assertEquals( null, f.property( FilterOptions.INCLUDE_TAGS ) );
+		assertEquals( null, f.property( FilterOptions.EXCLUDE_TAGS ) );
+
+		f.includedTags( Stream.of( "abc", "def" ).collect( toSet() ) );
+		f.excludedTags( Stream.of( "ghi", "jkl" ).collect( toSet() ) );
+
+		assertEquals( "abc,def", f.property( FilterOptions.INCLUDE_TAGS ) );
+		assertEquals( "ghi,jkl", f.property( FilterOptions.EXCLUDE_TAGS ) );
 	}
 }

@@ -1,6 +1,7 @@
 
 package com.mastercard.test.flow.assrt.filter;
 
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -8,13 +9,17 @@ import static java.util.stream.Collectors.toSet;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -54,6 +59,10 @@ public class Filter {
 	private static final Pattern INDEX_PTRN = Pattern.compile( "(\\d+)" );
 	private static final Pattern RANGE_PTRN = Pattern.compile( "(\\d+)-(\\d+)" );
 	private final Set<Integer> indices = parseIndices( FilterOptions.INDICES.value() );
+
+	private Consumer<Filter> listener = f -> {
+		// default to nothing
+	};
 
 	/**
 	 * Extracts numeric indices from a string
@@ -103,6 +112,17 @@ public class Filter {
 	 */
 	public Filter( Model model ) {
 		this.model = model;
+	}
+
+	/**
+	 * Sets the listener on this {@link Filter}
+	 *
+	 * @param l The object that will be notified when this filter is updated
+	 * @return <code>this</code>
+	 */
+	public Filter listener( Consumer<Filter> l ) {
+		listener = l;
+		return this;
 	}
 
 	/**
@@ -196,6 +216,7 @@ public class Filter {
 			includeTags.clear();
 			includeTags.addAll( tags );
 			matchIndexSelection( current );
+			listener.accept( this );
 		}
 		return this;
 	}
@@ -252,6 +273,7 @@ public class Filter {
 			excludeTags.clear();
 			excludeTags.addAll( tags );
 			matchIndexSelection( current );
+			listener.accept( this );
 		}
 		return this;
 	}
@@ -284,6 +306,7 @@ public class Filter {
 
 		indices.clear();
 		indices.addAll( valid );
+		listener.accept( this );
 		return this;
 	}
 
@@ -387,12 +410,14 @@ public class Filter {
 		if( !includeTags.isEmpty() ) {
 			Set<String> includeIntersection = new HashSet<>( flow.meta().tags() );
 			includeIntersection.retainAll( includeTags );
-			included &= !includeIntersection.isEmpty();
+			// the flow bears *all* of the included tags
+			included &= includeIntersection.size() == includeTags.size();
 		}
 
 		if( !excludeTags.isEmpty() ) {
 			Set<String> excludeIntersection = new HashSet<>( flow.meta().tags() );
 			excludeIntersection.retainAll( excludeTags );
+			// the flow bears *none* of the excluded tags
 			included &= excludeIntersection.isEmpty();
 		}
 
@@ -419,6 +444,63 @@ public class Filter {
 		}
 
 		return filtered.stream();
+	}
+
+	/**
+	 * Computes the property values that recreate the settings of this
+	 * {@link Filter}
+	 *
+	 * @param option The option
+	 * @return The value for that option that would recreate the current filter
+	 *         configuration, or <code>null</code> if the supplied option is not
+	 *         relevant for filter configuration
+	 */
+	public String property( FilterOptions option ) {
+		if( option == FilterOptions.INCLUDE_TAGS && !includedTags().isEmpty() ) {
+			return includedTags().stream().collect( Collectors.joining( "," ) );
+		}
+		if( option == FilterOptions.EXCLUDE_TAGS && !excludedTags().isEmpty() ) {
+			return excludedTags().stream().collect( Collectors.joining( "," ) );
+		}
+		if( option == FilterOptions.INDICES ) {
+			return ranges( indices() );
+		}
+		return null;
+	}
+
+	/**
+	 * Compresses integer values into ranges
+	 *
+	 * @param values The values, e.g.: [1,2,3,5]
+	 * @return A string representing those values, e.g.: 1-3,5
+	 */
+	private static String ranges( Set<Integer> values ) {
+		Deque<Integer> dq = values.stream()
+				.filter( Objects::nonNull )
+				.sorted()
+				.collect( toCollection( ArrayDeque::new ) );
+
+		List<String> ranges = new ArrayList<>();
+
+		while( !dq.isEmpty() ) {
+			int low = dq.removeFirst().intValue();
+			int high = low;
+			while( !dq.isEmpty() && dq.peek().intValue() == high + 1 ) {
+				high = dq.removeFirst().intValue();
+			}
+			if( low == high ) {
+				ranges.add( String.valueOf( low ) );
+			}
+			else if( high - low == 1 ) {
+				ranges.add( String.valueOf( low ) );
+				ranges.add( String.valueOf( high ) );
+			}
+			else {
+				ranges.add( low + "-" + high );
+			}
+		}
+
+		return ranges.stream().collect( joining( "," ) );
 	}
 
 	private static class Persistence {
