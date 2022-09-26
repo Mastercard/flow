@@ -102,10 +102,8 @@ class AssertionTest {
 							.response( asrt.expected().response().content() );
 
 					// and we've got a window into the system internals, so we can add intra-system
-					// assertions
-					// too
+					// assertions too
 					asrt.assertDownstream()
-							.peek( a -> System.out.println( "HEY! " + a ) )
 							.filter( a -> a.expected().responder() == C )
 							.forEach( a -> a.actual().request( a.expected().request().content() ) );
 				} );

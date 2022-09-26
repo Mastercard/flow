@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.assrt;
 
 import static com.mastercard.test.flow.builder.Sets.set;
@@ -122,6 +123,7 @@ public class TestModel {
 	}
 
 	private static class FailText extends Text {
+
 		private final String content;
 
 		public FailText( String s ) {
@@ -131,7 +133,6 @@ public class TestModel {
 
 		@Override
 		public Text peer( byte[] bytes ) {
-			System.out.println( "TestModel.FailText.peer()" );
 			throw new IllegalArgumentException( "kaboom!" );
 		}
 
