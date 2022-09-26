@@ -314,7 +314,10 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 				.collect( toList() );
 
 		if( toExercise.isEmpty() ) {
-			reportAndSkip( flow, "No interactions with system " + systemUnderTest );
+			reportAndSkip( flow, "No interactions with system "
+					+ systemUnderTest.stream()
+							.map( Actor::name )
+							.collect( Collectors.joining( "," ) ) );
 		}
 
 		List<Consumer<FlowData>> reportUpdates = new ArrayList<>();
