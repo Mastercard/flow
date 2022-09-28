@@ -262,7 +262,9 @@ class FlowPanel extends JPanel {
 					flow.meta().tags().stream()
 							.filter( t -> !includedTags.contains( t ) )
 							.collect( joining( " " ) ) )
-					// We want our items to only take one line, so...
+					// We're using swing's html support to render tags in gray, but the renderer
+					// will also try
+					// to wrap lines. We want our items to only take one line, so...
 					.replace( " ", "&nbsp;" );
 			listedFlows.put( rendered, new IndexedFlow( index, flow ) );
 
