@@ -6,6 +6,7 @@ package com.mastercard.test.flow.validation.coppice;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntBiFunction;
 import java.util.stream.Collectors;
 
 import javax.swing.Timer;
@@ -15,7 +16,6 @@ import com.mastercard.test.flow.validation.coppice.ui.Animation;
 import com.mastercard.test.flow.validation.coppice.ui.GraphTree;
 import com.mastercard.test.flow.validation.coppice.ui.GraphView;
 import com.mastercard.test.flow.validation.coppice.ui.Progress;
-import com.mastercard.test.flow.validation.graph.CachingDiffDistance;
 import com.mastercard.test.flow.validation.graph.DiffGraph;
 
 /**
@@ -32,7 +32,7 @@ class OptimiseChildren implements Runnable {
 
 	private final List<Flow> corpus;
 	private final Flow txn;
-	private final CachingDiffDistance<Flow> diffDistance;
+	private final ToIntBiFunction<Flow, Flow> diffDistance;
 	private final GraphTree display;
 	private final Progress progress;
 
@@ -44,7 +44,7 @@ class OptimiseChildren implements Runnable {
 	 * @param progress     How to show processing progress
 	 */
 	public OptimiseChildren( List<Flow> corpus, Flow txn,
-			CachingDiffDistance<Flow> diffDistance, GraphTree display,
+			ToIntBiFunction<Flow, Flow> diffDistance, GraphTree display,
 			Progress progress ) {
 		this.corpus = corpus;
 		this.txn = txn;

@@ -9,7 +9,7 @@ import static java.util.stream.Collectors.toCollection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
+import java.util.function.ToIntBiFunction;
 
 /**
  * Represents a graph of items that can be compared against each other and the
@@ -20,7 +20,7 @@ import java.util.function.BiFunction;
 public class DiffGraph<S> {
 
 	private final Set<S> nodes = new HashSet<>();
-	private final BiFunction<S, S, Integer> diff;
+	private final ToIntBiFunction<S, S> diff;
 
 	private BiConsumer<S, S> mstListener = ( parent, child ) -> {
 		// default no-op
@@ -35,7 +35,7 @@ public class DiffGraph<S> {
 	 *             between the items</li>
 	 *             </ul>
 	 */
-	public DiffGraph( BiFunction<S, S, Integer> diff ) {
+	public DiffGraph( ToIntBiFunction<S, S> diff ) {
 		this.diff = diff;
 	}
 

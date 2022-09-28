@@ -18,6 +18,7 @@ import javax.swing.JTextPane;
 import javax.swing.border.TitledBorder;
 
 import com.mastercard.test.flow.Flow;
+import com.mastercard.test.flow.validation.InheritanceHealth;
 import com.mastercard.test.flow.validation.coppice.Coppice;
 import com.mastercard.test.flow.validation.coppice.Diff;
 
@@ -44,7 +45,7 @@ public class DiffView {
 	 */
 	public DiffView( Coppice coppice, SelectionManager selection, Flow src ) {
 		source = src;
-		flatten = coppice.diffDistance()::stringify;
+		flatten = InheritanceHealth::flatten;
 
 		sourceName.addActionListener( e -> {
 			if( source != null ) {

@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.validation;
 
 import static java.util.stream.Collectors.joining;
@@ -17,6 +18,8 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
+import java.util.function.ToIntBiFunction;
+import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -61,7 +64,8 @@ import com.mastercard.test.flow.validation.graph.DiffGraph;
  */
 public class InheritanceHealth {
 
-	private final CachingDiffDistance<Flow> diffDistance = new CachingDiffDistance<>(
+	private ToIntFunction<Flow> weight = f -> flatten( f ).split( "\n" ).length;
+	private ToIntBiFunction<Flow, Flow> diffDistance = new CachingDiffDistance<>(
 			InheritanceHealth::flatten,
 			InheritanceHealth::diffDistance );
 
@@ -126,6 +130,30 @@ public class InheritanceHealth {
 	}
 
 	/**
+	 * Controls how the creation cost of a {@link Flow} is calculated
+	 *
+	 * @param w When supplied with a {@link Flow}, calculates the cost of creating
+	 *          that {@link Flow} from nothing
+	 * @return <code>this</code>
+	 */
+	public InheritanceHealth creationCost( ToIntFunction<Flow> w ) {
+		weight = w;
+		return this;
+	}
+
+	/**
+	 * Controls how the derivation cost of a {@link Flow} is calculated
+	 *
+	 * @param d When supplied with a parent and child {@link Flow}s, calculates the
+	 *          cost of deriving the child from the parent
+	 * @return <code>this</code>
+	 */
+	public InheritanceHealth derivationCost( ToIntBiFunction<Flow, Flow> d ) {
+		diffDistance = d;
+		return this;
+	}
+
+	/**
 	 * Computes inheritance health and compares against expected value
 	 *
 	 * @param model    The model to measure
@@ -173,11 +201,11 @@ public class InheritanceHealth {
 		model.flows()
 				.forEach( flow -> {
 					if( flow.basis() == null ) {
-						rootWeight.addAndGet( diffDistance.stringify( flow ).split( "\n" ).length );
+						rootWeight.addAndGet( weight.applyAsInt( flow ) );
 					}
 					else {
 						edgeCosts.compute(
-								diffDistance.apply( flow.basis(), flow ),
+								diffDistance.applyAsInt( flow.basis(), flow ),
 								( k, v ) -> v == null ? 1 : v + 1 );
 					}
 					progress( Phase.ACTUAL_COST, flow, count.incrementAndGet(), total );
@@ -209,11 +237,11 @@ public class InheritanceHealth {
 		TreeMap<Integer, Integer> edgeCosts = new TreeMap<>();
 		optimal.traverse( dag -> {
 			if( dag.parent() == null ) {
-				rootWeight.addAndGet( diffDistance.stringify( dag.value() ).split( "\n" ).length );
+				rootWeight.addAndGet( weight.applyAsInt( dag.value() ) );
 			}
 			else {
 				edgeCosts.compute(
-						diffDistance.apply( dag.parent().value(), dag.value() ),
+						diffDistance.applyAsInt( dag.parent().value(), dag.value() ),
 						( k, v ) -> v == null ? 1 : v + 1 );
 			}
 			progress( Phase.OPTIMAL_COST, dag.value(), count.incrementAndGet(), total );
@@ -228,6 +256,7 @@ public class InheritanceHealth {
 	}
 
 	private static class StructureCost {
+
 		final int rootWeight;
 		final TreeMap<Integer, Integer> edgeCosts;
 
@@ -241,14 +270,14 @@ public class InheritanceHealth {
 			if( !edgeCosts.isEmpty() && edgeCosts.firstKey() < hstg.getMinimum() ) {
 				throw new IllegalArgumentException(
 						String.format( ""
-								+ "Minimum edge weight %s lower than plot range minimum %s\n."
+								+ "Minimum edge weight %s lower than plot range minimum %s.\n"
 								+ "Decrease the plot range minimum to at most %s and try again.",
 								edgeCosts.firstKey(), hstg.getMinimum(), edgeCosts.firstKey() ) );
 			}
 			if( !edgeCosts.isEmpty() && edgeCosts.lastKey() > hstg.getMaximum() ) {
 				throw new IllegalArgumentException(
 						String.format( ""
-								+ "Maximum edge weight %s higher than plot range maximum %s\n."
+								+ "Maximum edge weight %s higher than plot range maximum %s.\n"
 								+ "Increase the plot range maximum to at least %s and try again.",
 								edgeCosts.lastKey(), hstg.getMaximum(), edgeCosts.lastKey() ) );
 			}

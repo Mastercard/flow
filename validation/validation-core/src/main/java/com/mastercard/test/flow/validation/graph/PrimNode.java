@@ -7,7 +7,7 @@ package com.mastercard.test.flow.validation.graph;
 import static java.util.Comparator.comparing;
 
 import java.util.Comparator;
-import java.util.function.BiFunction;
+import java.util.function.ToIntBiFunction;
 
 /**
  * A node in graph over which we're running Prim's algorithm to find the Minimum
@@ -26,7 +26,7 @@ class PrimNode<S> {
 	/**
 	 * How to calculate the distance between values
 	 */
-	private final BiFunction<S, S, Integer> diff;
+	private final ToIntBiFunction<S, S> diff;
 
 	/**
 	 * The closest node in the MST
@@ -49,11 +49,11 @@ class PrimNode<S> {
 	 * @param value   Node value
 	 * @param diff    How to compute distances between node values
 	 */
-	public PrimNode( DAG<S> closest, S value, BiFunction<S, S, Integer> diff ) {
+	public PrimNode( DAG<S> closest, S value, ToIntBiFunction<S, S> diff ) {
 		this.value = value;
 		this.closest = closest;
 		this.diff = diff;
-		distance = diff.apply( closest.value(), value );
+		distance = diff.applyAsInt( closest.value(), value );
 	}
 
 	/**
@@ -71,7 +71,7 @@ class PrimNode<S> {
 	 * @param dag The newest node in the MST
 	 */
 	public void update( DAG<S> dag ) {
-		int d = diff.apply( dag.value(), value );
+		int d = diff.applyAsInt( dag.value(), value );
 		if( d < distance ) {
 			distance = d;
 			closest = dag;
