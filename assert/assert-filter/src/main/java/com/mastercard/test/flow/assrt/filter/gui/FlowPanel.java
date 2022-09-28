@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.assrt.filter.gui;
 
 import static com.mastercard.test.flow.assrt.filter.gui.FilterGui.titled;
@@ -26,6 +27,7 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.border.TitledBorder;
 
 import com.mastercard.test.flow.Flow;
@@ -183,7 +185,7 @@ class FlowPanel extends JPanel {
 			refresh();
 		} );
 
-		add( titled( "Disabled", disabledFlows ),
+		add( titled( "Disabled", new JScrollPane( disabledFlows ) ),
 				new GBCB()
 						.fill( BOTH )
 						.gridx( 0 ).gridy( 0 )
@@ -207,7 +209,7 @@ class FlowPanel extends JPanel {
 						.weightx( 0 ).weighty( 1 )
 						.get() );
 
-		add( titled( "Enabled", enabledFlows ),
+		add( titled( "Enabled", new JScrollPane( enabledFlows ) ),
 				new GBCB()
 						.fill( BOTH )
 						.gridx( 2 ).gridy( 0 )
@@ -259,7 +261,9 @@ class FlowPanel extends JPanel {
 					flow.meta().description(),
 					flow.meta().tags().stream()
 							.filter( t -> !includedTags.contains( t ) )
-							.collect( joining( " " ) ) );
+							.collect( joining( " " ) ) )
+					// We want our items to only take one line, so...
+					.replace( " ", "&nbsp;" );
 			listedFlows.put( rendered, new IndexedFlow( index, flow ) );
 
 			if( indices.isEmpty() || indices.contains( new IndexedFlow( index, flow ).index ) ) {
@@ -300,6 +304,7 @@ class FlowPanel extends JPanel {
 	}
 
 	private class IndexedFlow {
+
 		public final int index;
 		public final Flow flow;
 
