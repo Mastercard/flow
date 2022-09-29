@@ -29,7 +29,7 @@ class OptimiseParent implements Runnable {
 
 	private final List<Flow> corpus;
 	private final Flow txn;
-	private final ToIntBiFunction<Flow, Flow> diffDistance;
+	private final ToIntBiFunction<Flow, Flow> derivationCost;
 	private final GraphTree display;
 	private final Progress progress;
 
@@ -38,18 +38,18 @@ class OptimiseParent implements Runnable {
 	private int testIndex = 0;
 
 	/**
-	 * @param corpus       The list of flows
-	 * @param txn          The flow to find a parent for
-	 * @param diffDistance How to calculate inter-flow distance
-	 * @param display      How to show the results
-	 * @param progress     How to signal task progress
+	 * @param corpus         The list of flows
+	 * @param txn            The flow to find a parent for
+	 * @param derivationCost How to calculate inter-flow distance
+	 * @param display        How to show the results
+	 * @param progress       How to signal task progress
 	 */
 	public OptimiseParent( List<Flow> corpus, Flow txn,
-			ToIntBiFunction<Flow, Flow> diffDistance, GraphTree display,
+			ToIntBiFunction<Flow, Flow> derivationCost, GraphTree display,
 			Progress progress ) {
 		this.corpus = corpus;
 		this.txn = txn;
-		this.diffDistance = diffDistance;
+		this.derivationCost = derivationCost;
 		this.display = display;
 		this.progress = progress;
 	}
@@ -77,7 +77,7 @@ class OptimiseParent implements Runnable {
 						testIndex++, corpus.size() );
 				Node tn = display.getNode( t );
 
-				int distance = diffDistance.applyAsInt( txn, t );
+				int distance = derivationCost.applyAsInt( txn, t );
 
 				Edge testEdge = display.graph().graph().addEdge( "test", tn, gn );
 

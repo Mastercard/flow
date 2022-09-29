@@ -32,23 +32,23 @@ class OptimiseChildren implements Runnable {
 
 	private final List<Flow> corpus;
 	private final Flow txn;
-	private final ToIntBiFunction<Flow, Flow> diffDistance;
+	private final ToIntBiFunction<Flow, Flow> derivationCost;
 	private final GraphTree display;
 	private final Progress progress;
 
 	/**
-	 * @param corpus       The list of flows
-	 * @param txn          The flow to find start our MST at
-	 * @param diffDistance How to calculate inter-flow distance
-	 * @param display      Where to display the results
-	 * @param progress     How to show processing progress
+	 * @param corpus         The list of flows
+	 * @param txn            The flow to find start our MST at
+	 * @param derivationCost How to calculate inter-flow distance
+	 * @param display        Where to display the results
+	 * @param progress       How to show processing progress
 	 */
 	public OptimiseChildren( List<Flow> corpus, Flow txn,
-			ToIntBiFunction<Flow, Flow> diffDistance, GraphTree display,
+			ToIntBiFunction<Flow, Flow> derivationCost, GraphTree display,
 			Progress progress ) {
 		this.corpus = corpus;
 		this.txn = txn;
-		this.diffDistance = diffDistance;
+		this.derivationCost = derivationCost;
 		this.display = display;
 		this.progress = progress;
 	}
@@ -73,7 +73,7 @@ class OptimiseChildren implements Runnable {
 		progress.update( "Dissolving", "complete", 1, 1 );
 
 		// build diffgraph
-		DiffGraph<Flow> diffGraph = new DiffGraph<>( diffDistance );
+		DiffGraph<Flow> diffGraph = new DiffGraph<>( derivationCost );
 		compat.forEach( diffGraph::add );
 		i.set( 0 );
 		diffGraph.withMSTListener( ( parent, child ) -> {

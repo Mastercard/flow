@@ -81,16 +81,19 @@ public class GraphTree implements SelectionManager.Client {
 
 	/**
 	 * @param name              The name of the view
-	 * @param weight            How to calculate the construction cost of a flow
-	 * @param diffDistance      How to calculate the derivation cost of a flow
+	 * @param creationCost      How to calculate the construction cost of a flow
+	 * @param derivationCost    How to calculate the derivation cost of a flow
 	 * @param selectionListener How items are selected
 	 * @param popupMenu         What to display when an item is clicked
 	 * @param diffWeightFilter  Which diffs to display
 	 */
-	public GraphTree( String name, ToIntFunction<Flow> weight,
-			ToIntBiFunction<Flow, Flow> diffDistance,
-			Consumer<Flow> selectionListener, JPopupMenu popupMenu, Range diffWeightFilter ) {
-		this.diffDistance = diffDistance;
+	public GraphTree( String name,
+			ToIntFunction<Flow> creationCost,
+			ToIntBiFunction<Flow, Flow> derivationCost,
+			Consumer<Flow> selectionListener,
+			JPopupMenu popupMenu,
+			Range diffWeightFilter ) {
+		diffDistance = derivationCost;
 		this.selectionListener = selectionListener;
 		this.diffWeightFilter = diffWeightFilter;
 
@@ -169,7 +172,7 @@ public class GraphTree implements SelectionManager.Client {
 									( k, v ) -> v != null ? v + 1 : 1 );
 						}
 						else {
-							rootWeight += weight.applyAsInt( flow );
+							rootWeight += creationCost.applyAsInt( flow );
 						}
 					}
 
