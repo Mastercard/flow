@@ -59,8 +59,9 @@ import com.mastercard.test.flow.validation.graph.CachingDiffDistance;
  */
 public class Coppice {
 
-	private ToIntFunction<Flow> weight = f -> InheritanceHealth.flatten( f ).split( "\n" ).length;
-	private ToIntBiFunction<Flow, Flow> diffDistance = new CachingDiffDistance<>(
+	private ToIntFunction<
+			Flow> creationCost = f -> InheritanceHealth.flatten( f ).split( "\n" ).length;
+	private ToIntBiFunction<Flow, Flow> derivationCost = new CachingDiffDistance<>(
 			InheritanceHealth::flatten,
 			InheritanceHealth::diffDistance );
 
@@ -128,7 +129,7 @@ public class Coppice {
 	final FlowList flowList = new FlowList( selectionManager::update );
 	private final Range dfc = new Range( "Diff distance filter" );
 	private final GraphTree actualHierarchy = new GraphTree( "Actual Hierarchy",
-			weight, diffDistance, selectionManager::update, popupMenu, dfc );
+			creationCost, derivationCost, selectionManager::update, popupMenu, dfc );
 
 	/**
 	 * Flow detail views
@@ -233,24 +234,24 @@ public class Coppice {
 	/**
 	 * Controls how the creation cost of a {@link Flow} is calculated
 	 *
-	 * @param w When supplied with a {@link Flow}, calculates the cost of creating
-	 *          that {@link Flow} from nothing
+	 * @param cc When supplied with a {@link Flow}, calculates the cost of creating
+	 *           that {@link Flow} from nothing
 	 * @return <code>this</code>
 	 */
-	public Coppice creationCost( ToIntFunction<Flow> w ) {
-		weight = w;
+	public Coppice creationCost( ToIntFunction<Flow> cc ) {
+		creationCost = cc;
 		return this;
 	}
 
 	/**
 	 * Controls how the derivation cost of a {@link Flow} is calculated
 	 *
-	 * @param d When supplied with a parent and child {@link Flow}s, calculates the
-	 *          cost of deriving the child from the parent
+	 * @param dc When supplied with a parent and child {@link Flow}s, calculates the
+	 *           cost of deriving the child from the parent
 	 * @return <code>this</code>
 	 */
-	public Coppice derivationCost( ToIntBiFunction<Flow, Flow> d ) {
-		diffDistance = d;
+	public Coppice derivationCost( ToIntBiFunction<Flow, Flow> dc ) {
+		derivationCost = dc;
 		return this;
 	}
 
@@ -297,7 +298,7 @@ public class Coppice {
 	 * @return The diffing function
 	 */
 	public ToIntBiFunction<Flow, Flow> diffDistance() {
-		return diffDistance;
+		return derivationCost;
 	}
 
 	/**
@@ -346,8 +347,8 @@ public class Coppice {
 		Flow txn = selectionManager.getSelected();
 		if( txn != null ) {
 			GraphTree gt = new GraphTree( "Optimal parent for " + txn.meta().id(),
-					weight, diffDistance, selectionManager::update, popupMenu, dfc );
-			Runnable task = new OptimiseParent( flows, txn, diffDistance, gt, progress );
+					creationCost, derivationCost, selectionManager::update, popupMenu, dfc );
+			Runnable task = new OptimiseParent( flows, txn, derivationCost, gt, progress );
 			runTask( gt, task );
 		}
 	}
@@ -359,8 +360,8 @@ public class Coppice {
 		Flow txn = selectionManager.getSelected();
 		if( txn != null ) {
 			GraphTree gt = new GraphTree( "Optimal hierarchy from " + txn.meta().id(),
-					weight, diffDistance, selectionManager::update, popupMenu, dfc );
-			Runnable task = new OptimiseChildren( flows, txn, diffDistance, gt, progress );
+					creationCost, derivationCost, selectionManager::update, popupMenu, dfc );
+			Runnable task = new OptimiseChildren( flows, txn, derivationCost, gt, progress );
 			runTask( gt, task );
 		}
 	}

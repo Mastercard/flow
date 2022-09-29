@@ -64,8 +64,8 @@ import com.mastercard.test.flow.validation.graph.DiffGraph;
  */
 public class InheritanceHealth {
 
-	private ToIntFunction<Flow> weight = f -> flatten( f ).split( "\n" ).length;
-	private ToIntBiFunction<Flow, Flow> diffDistance = new CachingDiffDistance<>(
+	private ToIntFunction<Flow> creationCost = f -> flatten( f ).split( "\n" ).length;
+	private ToIntBiFunction<Flow, Flow> derivationCost = new CachingDiffDistance<>(
 			InheritanceHealth::flatten,
 			InheritanceHealth::diffDistance );
 
@@ -132,24 +132,24 @@ public class InheritanceHealth {
 	/**
 	 * Controls how the creation cost of a {@link Flow} is calculated
 	 *
-	 * @param w When supplied with a {@link Flow}, calculates the cost of creating
-	 *          that {@link Flow} from nothing
+	 * @param cc When supplied with a {@link Flow}, calculates the cost of creating
+	 *           that {@link Flow} from nothing
 	 * @return <code>this</code>
 	 */
-	public InheritanceHealth creationCost( ToIntFunction<Flow> w ) {
-		weight = w;
+	public InheritanceHealth creationCost( ToIntFunction<Flow> cc ) {
+		creationCost = cc;
 		return this;
 	}
 
 	/**
 	 * Controls how the derivation cost of a {@link Flow} is calculated
 	 *
-	 * @param d When supplied with a parent and child {@link Flow}s, calculates the
-	 *          cost of deriving the child from the parent
+	 * @param dc When supplied with a parent and child {@link Flow}s, calculates the
+	 *           cost of deriving the child from the parent
 	 * @return <code>this</code>
 	 */
-	public InheritanceHealth derivationCost( ToIntBiFunction<Flow, Flow> d ) {
-		diffDistance = d;
+	public InheritanceHealth derivationCost( ToIntBiFunction<Flow, Flow> dc ) {
+		derivationCost = dc;
 		return this;
 	}
 
@@ -201,11 +201,11 @@ public class InheritanceHealth {
 		model.flows()
 				.forEach( flow -> {
 					if( flow.basis() == null ) {
-						rootWeight.addAndGet( weight.applyAsInt( flow ) );
+						rootWeight.addAndGet( creationCost.applyAsInt( flow ) );
 					}
 					else {
 						edgeCosts.compute(
-								diffDistance.applyAsInt( flow.basis(), flow ),
+								derivationCost.applyAsInt( flow.basis(), flow ),
 								( k, v ) -> v == null ? 1 : v + 1 );
 					}
 					progress( Phase.ACTUAL_COST, flow, count.incrementAndGet(), total );
@@ -215,7 +215,7 @@ public class InheritanceHealth {
 	}
 
 	private StructureCost optimalCost( Model model, int total ) {
-		DiffGraph<Flow> dg = new DiffGraph<>( diffDistance );
+		DiffGraph<Flow> dg = new DiffGraph<>( derivationCost );
 		model.flows().forEach( dg::add );
 
 		// The root of the MST only affects the final root weight - edge cost will be
@@ -237,11 +237,11 @@ public class InheritanceHealth {
 		TreeMap<Integer, Integer> edgeCosts = new TreeMap<>();
 		optimal.traverse( dag -> {
 			if( dag.parent() == null ) {
-				rootWeight.addAndGet( weight.applyAsInt( dag.value() ) );
+				rootWeight.addAndGet( creationCost.applyAsInt( dag.value() ) );
 			}
 			else {
 				edgeCosts.compute(
-						diffDistance.applyAsInt( dag.parent().value(), dag.value() ),
+						derivationCost.applyAsInt( dag.parent().value(), dag.value() ),
 						( k, v ) -> v == null ? 1 : v + 1 );
 			}
 			progress( Phase.OPTIMAL_COST, dag.value(), count.incrementAndGet(), total );
