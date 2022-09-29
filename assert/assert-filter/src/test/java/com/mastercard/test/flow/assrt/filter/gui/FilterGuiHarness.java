@@ -196,7 +196,8 @@ public class FilterGuiHarness {
 		if( m.find() ) {
 			return String.format(
 					"<html>%s <span style=\"color:gray\">%s</span></html>",
-					m.group( 1 ), m.group( 2 ) );
+					m.group( 1 ), m.group( 2 ) )
+					.replaceAll( " ", "&nbsp;" );
 		}
 		return flow;
 	}

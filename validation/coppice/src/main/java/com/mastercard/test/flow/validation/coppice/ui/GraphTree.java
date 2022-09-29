@@ -22,6 +22,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.ToIntBiFunction;
+import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 
 import javax.swing.JComponent;
@@ -42,14 +44,13 @@ import org.graphstream.graph.implementations.AbstractElement;
 import org.graphstream.ui.graphicGraph.GraphicElement;
 
 import com.mastercard.test.flow.Flow;
-import com.mastercard.test.flow.validation.graph.CachingDiffDistance;
 
 /**
  * Provides a linked tree and graph view of a flow hierarchy
  */
 public class GraphTree implements SelectionManager.Client {
 
-	private final CachingDiffDistance<Flow> diffDistance;
+	private final ToIntBiFunction<Flow, Flow> diffDistance;
 	private final JSplitPane component;
 
 	/**
@@ -80,14 +81,19 @@ public class GraphTree implements SelectionManager.Client {
 
 	/**
 	 * @param name              The name of the view
-	 * @param diffDistance      How to calculate the distance between items
+	 * @param creationCost      How to calculate the construction cost of a flow
+	 * @param derivationCost    How to calculate the derivation cost of a flow
 	 * @param selectionListener How items are selected
 	 * @param popupMenu         What to display when an item is clicked
 	 * @param diffWeightFilter  Which diffs to display
 	 */
-	public GraphTree( String name, CachingDiffDistance<Flow> diffDistance,
-			Consumer<Flow> selectionListener, JPopupMenu popupMenu, Range diffWeightFilter ) {
-		this.diffDistance = diffDistance;
+	public GraphTree( String name,
+			ToIntFunction<Flow> creationCost,
+			ToIntBiFunction<Flow, Flow> derivationCost,
+			Consumer<Flow> selectionListener,
+			JPopupMenu popupMenu,
+			Range diffWeightFilter ) {
+		diffDistance = derivationCost;
 		this.selectionListener = selectionListener;
 		this.diffWeightFilter = diffWeightFilter;
 
@@ -166,7 +172,7 @@ public class GraphTree implements SelectionManager.Client {
 									( k, v ) -> v != null ? v + 1 : 1 );
 						}
 						else {
-							rootWeight += diffDistance.stringify( flow ).split( "\n" ).length;
+							rootWeight += creationCost.applyAsInt( flow );
 						}
 					}
 
@@ -402,7 +408,7 @@ public class GraphTree implements SelectionManager.Client {
 					n.removeFromParent();
 					p.add( n );
 
-					Integer dd = diffDistance.apply( from, to );
+					Integer dd = diffDistance.applyAsInt( from, to );
 					basisDistance.put( to, dd );
 					minDistance = Math.min( minDistance, dd );
 					maxDistance = Math.max( maxDistance, dd );

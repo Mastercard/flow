@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.validation;
 
 import static java.util.stream.Collectors.joining;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.BiConsumer;
+import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -284,8 +286,8 @@ class InheritanceHealthTest {
 			IllegalArgumentException iae = assertThrows( IllegalArgumentException.class,
 					() -> low.expect( mdl, "" ) );
 			assertEquals( ""
-					+ "Maximum edge weight 4 higher than plot range maximum 3\n"
-					+ ".Increase the plot range maximum to at least 4 and try again.",
+					+ "Maximum edge weight 4 higher than plot range maximum 3.\n"
+					+ "Increase the plot range maximum to at least 4 and try again.",
 					iae.getMessage() );
 		}
 		{
@@ -293,10 +295,68 @@ class InheritanceHealthTest {
 			IllegalArgumentException iae = assertThrows( IllegalArgumentException.class,
 					() -> high.expect( mdl, "" ) );
 			assertEquals( ""
-					+ "Minimum edge weight 4 lower than plot range minimum 5\n"
-					+ ".Decrease the plot range minimum to at most 4 and try again.",
+					+ "Minimum edge weight 4 lower than plot range minimum 5.\n"
+					+ "Decrease the plot range minimum to at most 4 and try again.",
 					iae.getMessage() );
 		}
+	}
+
+	/**
+	 * Shows that the cost-estimation behaviour can be altered. Here the creation
+	 * cost is just the numeric value of the flow description, and the derivation
+	 * cost is the numeric difference. Optimisation takes us from:
+	 *
+	 * <pre>
+	* 1
+	* └16     15
+	*  └2     14
+	*   └8     6
+	*    └4    4
+	 * </pre>
+	 *
+	 * to:
+	 *
+	 * <pre>
+	 * 1
+	 * └2      1
+	 *  └4     2
+	 *   └8    4
+	 *    └16  8
+	 * </pre>
+	 */
+	@Test
+	void customCost() {
+		Model mdl = mdl( "1", "1>16", "16>2", "2>8", "8>4" );
+
+		ToIntFunction<Flow> value = f -> Integer
+				.parseInt( f.meta().description().replaceAll( "\\D", "" ) );
+
+		InheritanceHealth ih = new InheritanceHealth( 0, 15, 16, Assertions::assertEquals );
+		assertSame( ih, ih.creationCost( value ) );
+		assertSame( ih, ih.derivationCost( ( p, c ) -> Math.abs(
+				value.applyAsInt( p ) - value.applyAsInt( c ) ) ) );
+
+		ih.expect( mdl,
+				"Actual            | Optimal          ",
+				"roots           1 | roots           1",
+				"edges          39 | edges          15",
+				"total          40 | total          16",
+				"        0   0.00% |         0   0.00%",
+				"        0   0.00% |         1  25.00%",
+				"        0   0.00% |         1  25.00%",
+				"        0   0.00% |         0   0.00%",
+				"        1  25.00% |         1  25.00%",
+				"        0   0.00% |         0   0.00%",
+				"        1  25.00% |         0   0.00%",
+				"        0   0.00% |         0   0.00%",
+				"        0   0.00% |         1  25.00%",
+				"        0   0.00% |         0   0.00%",
+				"        0   0.00% |         0   0.00%",
+				"        0   0.00% |         0   0.00%",
+				"        0   0.00% |         0   0.00%",
+				"        0   0.00% |         0   0.00%",
+				"        1  25.00% |         0   0.00%",
+				"        1  25.00% |         0   0.00%" );
 	}
 
 	private static final Pattern CHILD = Pattern.compile( "(.*)>(.*)" );

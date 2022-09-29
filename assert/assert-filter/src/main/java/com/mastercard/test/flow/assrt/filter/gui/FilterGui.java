@@ -35,8 +35,6 @@ import com.mastercard.test.flow.assrt.filter.FilterOptions;
  */
 public class FilterGui {
 
-	private static final long serialVersionUID = 1L;
-
 	/**
 	 * @return <code>true</code> if the gui should be invoked
 	 */

@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.ToIntBiFunction;
 
 /**
  * A function that computes the distance between two item, caching intermediate
@@ -17,7 +18,7 @@ import java.util.function.Function;
  *
  * @param <S> item type
  */
-public class CachingDiffDistance<S> implements BiFunction<S, S, Integer> {
+public class CachingDiffDistance<S> implements ToIntBiFunction<S, S> {
 
 	/**
 	 * How to turn an item into a string to be diffed
@@ -51,7 +52,7 @@ public class CachingDiffDistance<S> implements BiFunction<S, S, Integer> {
 	}
 
 	@Override
-	public Integer apply( S a, S b ) {
+	public int applyAsInt( S a, S b ) {
 		if( !diffCache.containsKey( a ) || !diffCache.get( a ).containsKey( b ) ) {
 			String as = stringify( a );
 			String bs = stringify( b );

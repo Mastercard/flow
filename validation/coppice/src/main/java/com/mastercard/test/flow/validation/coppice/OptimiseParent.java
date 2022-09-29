@@ -5,6 +5,7 @@
 package com.mastercard.test.flow.validation.coppice;
 
 import java.util.List;
+import java.util.function.ToIntBiFunction;
 
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
@@ -17,7 +18,6 @@ import com.mastercard.test.flow.validation.coppice.ui.Animation;
 import com.mastercard.test.flow.validation.coppice.ui.GraphTree;
 import com.mastercard.test.flow.validation.coppice.ui.GraphView;
 import com.mastercard.test.flow.validation.coppice.ui.Progress;
-import com.mastercard.test.flow.validation.graph.CachingDiffDistance;
 
 /**
  * This task will, for a single flow, find the most similar flow in the corpus.
@@ -29,7 +29,7 @@ class OptimiseParent implements Runnable {
 
 	private final List<Flow> corpus;
 	private final Flow txn;
-	private final CachingDiffDistance<Flow> diffDistance;
+	private final ToIntBiFunction<Flow, Flow> derivationCost;
 	private final GraphTree display;
 	private final Progress progress;
 
@@ -38,18 +38,18 @@ class OptimiseParent implements Runnable {
 	private int testIndex = 0;
 
 	/**
-	 * @param corpus       The list of flows
-	 * @param txn          The flow to find a parent for
-	 * @param diffDistance How to calculate inter-flow distance
-	 * @param display      How to show the results
-	 * @param progress     How to signal task progress
+	 * @param corpus         The list of flows
+	 * @param txn            The flow to find a parent for
+	 * @param derivationCost How to calculate inter-flow distance
+	 * @param display        How to show the results
+	 * @param progress       How to signal task progress
 	 */
 	public OptimiseParent( List<Flow> corpus, Flow txn,
-			CachingDiffDistance<Flow> diffDistance, GraphTree display,
+			ToIntBiFunction<Flow, Flow> derivationCost, GraphTree display,
 			Progress progress ) {
 		this.corpus = corpus;
 		this.txn = txn;
-		this.diffDistance = diffDistance;
+		this.derivationCost = derivationCost;
 		this.display = display;
 		this.progress = progress;
 	}
@@ -77,7 +77,7 @@ class OptimiseParent implements Runnable {
 						testIndex++, corpus.size() );
 				Node tn = display.getNode( t );
 
-				int distance = diffDistance.apply( txn, t );
+				int distance = derivationCost.applyAsInt( txn, t );
 
 				Edge testEdge = display.graph().graph().addEdge( "test", tn, gn );
 

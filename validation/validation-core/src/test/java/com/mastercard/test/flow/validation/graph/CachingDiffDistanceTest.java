@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.validation.graph;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -52,11 +53,11 @@ class CachingDiffDistanceTest {
 		Item i = new Item( 3 );
 		Item j = new Item( 5 );
 
-		assertEquals( 2, cdd.apply( i, j ), "results as expected" );
+		assertEquals( 2, cdd.applyAsInt( i, j ), "results as expected" );
 		assertEquals( 2, toStringCount.get(), "stringifed each item once" );
 		assertEquals( 1, distanceCount.get(), "distance computed once" );
 
-		assertEquals( 2, cdd.apply( i, j ), "results as expected again" );
+		assertEquals( 2, cdd.applyAsInt( i, j ), "results as expected again" );
 		assertEquals( 2, toStringCount.get(), "still only stringifed each item once" );
 		assertEquals( 1, distanceCount.get(), "distance computed still only once" );
 	}

@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.assrt.filter.gui;
 
 import static java.util.stream.Collectors.joining;
@@ -33,6 +34,7 @@ import com.mastercard.test.flow.assrt.filter.gui.FilterGuiHarness.TagList;
  * Utility for extracting the state of the gui as character art
  */
 class GuiRender {
+
 	private GuiRender() {
 		// no instances
 	}
@@ -185,7 +187,7 @@ class GuiRender {
 			"<html>(.*) <span style=\"color:gray\">(.*)</span></html>" );
 
 	private static final String fromRendered( String flow ) {
-		Matcher m = FROM_RENDERED.matcher( flow );
+		Matcher m = FROM_RENDERED.matcher( flow.replaceAll( "&nbsp;", " " ) );
 		if( m.find() ) {
 			return String.format( "%s | %s", m.group( 1 ), m.group( 2 ) );
 		}
