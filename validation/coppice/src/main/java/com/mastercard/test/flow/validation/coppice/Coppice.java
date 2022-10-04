@@ -390,6 +390,12 @@ public class Coppice {
 		desk.add( taskView );
 		taskView.pack();
 		taskView.setVisible( true );
+		try {
+			taskView.setMaximum( true );
+		}
+		catch( @SuppressWarnings("unused") PropertyVetoException e ) {
+			// meh
+		}
 
 		// set the thing running
 		Thread t = new Thread( task, taskView.getTitle() );
