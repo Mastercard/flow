@@ -91,6 +91,7 @@ class OptimiseParent implements Runnable {
 
 					candidateEdge = display.graph().graph().addEdge( "candidate", gn, tn );
 					candidateEdge.setAttribute( "ui.class", "candidate" );
+					candidateEdge.setAttribute( "ui.label", closestDistance );
 				}
 
 				Animation.SEARCH.event();
