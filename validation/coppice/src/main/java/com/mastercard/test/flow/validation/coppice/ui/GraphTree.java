@@ -50,7 +50,7 @@ import com.mastercard.test.flow.Flow;
  */
 public class GraphTree implements SelectionManager.Client {
 
-	private final ToIntBiFunction<Flow, Flow> diffDistance;
+	private final ToIntBiFunction<Flow, Flow> derivationCost;
 	private final JSplitPane component;
 
 	/**
@@ -93,7 +93,7 @@ public class GraphTree implements SelectionManager.Client {
 			Consumer<Flow> selectionListener,
 			JPopupMenu popupMenu,
 			Range diffWeightFilter ) {
-		diffDistance = derivationCost;
+		this.derivationCost = derivationCost;
 		this.selectionListener = selectionListener;
 		this.diffWeightFilter = diffWeightFilter;
 
@@ -408,7 +408,7 @@ public class GraphTree implements SelectionManager.Client {
 					n.removeFromParent();
 					p.add( n );
 
-					Integer dd = diffDistance.applyAsInt( from, to );
+					Integer dd = derivationCost.applyAsInt( from, to );
 					basisDistance.put( to, dd );
 					minDistance = Math.min( minDistance, dd );
 					maxDistance = Math.max( maxDistance, dd );

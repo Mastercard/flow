@@ -18,7 +18,7 @@ public class Animation {
 	public static Animation ADDITION = new Animation( 20 );
 
 	/**
-	 * How many quickly potential parents are evaluated
+	 * How quickly potential parents are evaluated
 	 */
 	public static Animation SEARCH = new Animation( 50 );
 

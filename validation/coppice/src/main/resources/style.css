@@ -39,6 +39,7 @@ edge.basis {
   arrow-shape: none;
   fill-color: rgb(90,90,90);
 	text-visibility-mode: hidden;
+	text-background-mode: plain;
 }
 
 edge.selected {
@@ -66,4 +67,8 @@ edge.optimal {
   size: 5px;
   arrow-shape: none;
   fill-color: red;
+	text-visibility-mode: normal;
+	text-style: bold;
+	text-background-mode: rounded-box;
+	text-size: 15;
 }
