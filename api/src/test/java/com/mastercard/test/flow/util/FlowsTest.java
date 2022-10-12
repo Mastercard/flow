@@ -289,23 +289,22 @@ class FlowsTest {
 	}
 
 	/**
-	 * Exercises {@link Flows#intersects(Flow, java.util.Set)}
+	 * Exercises {@link Flows#intersects(Flow, Actor...)}, and hence
+	 * {@link Flows#intersects(Flow, Set)}
 	 */
 	@Test
 	void intersects() {
 		Flow flow = flow( "flow", "", null );
 
 		Stream.of( "AVA", "BEN", "CHE" )
-				.map( a -> Stream.of( actor( a ) ).collect( toSet() ) )
-				.forEach( s -> Assertions.assertTrue(
-						Flows.intersects( flow, s ),
-						"for " + s ) );
+				.forEach( a -> Assertions.assertTrue(
+						Flows.intersects( flow, actor( a ) ),
+						"for " + a ) );
 
 		Stream.of( "DAN" )
-				.map( a -> Stream.of( actor( a ) ).collect( toSet() ) )
-				.forEach( s -> Assertions.assertFalse(
-						Flows.intersects( flow, s ),
-						"for " + s ) );
+				.forEach( a -> Assertions.assertFalse(
+						Flows.intersects( flow, actor( a ) ),
+						"for " + a ) );
 	}
 
 	/**

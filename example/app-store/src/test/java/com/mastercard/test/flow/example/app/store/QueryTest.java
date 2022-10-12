@@ -52,6 +52,7 @@ import com.mastercard.test.flow.example.framework.Instance;
 import com.mastercard.test.flow.msg.http.HttpReq;
 import com.mastercard.test.flow.msg.sql.Query;
 import com.mastercard.test.flow.msg.sql.Result;
+import com.mastercard.test.flow.util.Flows;
 
 /**
  * Test that exercises the {@link Store} service in isolation by standing up an
@@ -101,6 +102,7 @@ class QueryTest {
 	Stream<DynamicNode> flows() {
 		Flocessor flocessor = new Flocessor( "Query test", ExampleSystem.MODEL )
 				.reporting( FAILURES )
+				.exercising( flow -> Flows.intersects( flow, Actors.STORE ), LOG::info )
 				.system( State.LESS, Actors.STORE )
 				.masking( BORING, HOST, CLOCK, RNG )
 				.logs( Util.LOG_CAPTURE )

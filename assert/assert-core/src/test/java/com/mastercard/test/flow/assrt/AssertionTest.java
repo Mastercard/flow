@@ -8,6 +8,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
@@ -123,5 +126,35 @@ class AssertionTest {
 				"com.mastercard.test.flow.assrt.TestModel.abc(TestModel.java:_) A->B [] response",
 				" | B response to A | B response to A |" ),
 				copypasta( tf.events() ) );
+	}
+
+	/**
+	 * We can add a programmatically-defined filter to control which flows are
+	 * exercised, and rejection by that filter isn't necessarily silent
+	 */
+	@Test
+	void exercising() {
+		List<String> rejectionLog = new ArrayList<>();
+
+		TestFlocessor tf = new TestFlocessor( "exercising", TestModel.abcWithDependency() )
+				.system( State.LESS, B )
+				.exercising( f -> "dependency".equals( f.meta().description() ), rejectionLog::add )
+				.behaviour( asrt -> {
+					asrt.actual().request( asrt.expected().request().content() );
+				} );
+
+		tf.execute();
+
+		assertEquals( copypasta(
+				"COMPARE dependency []",
+				"com.mastercard.test.flow.assrt.TestModel.abcWithDependency(TestModel.java:_) A->B [] request",
+				" | A request to B | A request to B |" ),
+				copypasta( tf.events() ),
+				"The flow passed by the filter is exercised as normal" );
+
+		assertEquals(
+				"[Flow 'dependent []' rejected by .exercising() filter]",
+				rejectionLog.toString(),
+				"The rejected flow is logged" );
 	}
 }

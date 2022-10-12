@@ -17,11 +17,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -35,6 +37,7 @@ import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.Residue;
 import com.mastercard.test.flow.Unpredictable;
 import com.mastercard.test.flow.assrt.filter.Filter;
+import com.mastercard.test.flow.assrt.filter.FilterOptions;
 import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.AssertedData;
 import com.mastercard.test.flow.report.data.FlowData;
@@ -150,6 +153,11 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		// default to no-op behaviour
 	};
 
+	private Predicate<Flow> flowFilter = f -> true;
+	private Consumer<String> filterRejectionLog = l -> {
+		// no-op
+	};
+
 	/**
 	 * @param title The title of this test
 	 * @param model The model to process
@@ -258,6 +266,37 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	/**
+	 * Limits which flows will be exercised by the test. Note that:
+	 * <ul>
+	 * <li>This filter operates independently of that controlled by
+	 * {@link FilterOptions}.</li>
+	 * <li>
+	 * <li>This filter will not block dependency {@link Flow}s being included in the
+	 * execution order.</li>
+	 * </ul>
+	 * <p>
+	 * Think carefully before using this method - standard assertion behaviour will
+	 * produce a nice visible skip result in testing harness output and the
+	 * execution report for {@link Flow}s that are not appropriate for the system
+	 * under test. {@link Flow}s that are rejected by the filter defined by this
+	 * method will only appear in the <code>rejectionLog</code> argument, which will
+	 * probably be much less visible. This is the exact reason why you'd use this
+	 * method, but bear in mind that it will complicate any "why isn't my flow being
+	 * exercised?" debugging efforts that you find yourself in.
+	 *
+	 * @param filter       Returns true for flows that should be exercised in this
+	 *                     test
+	 * @param rejectionLog Will be supplied with human-readable messages detailing
+	 *                     the rejection of {@link Flow}s by the filter
+	 * @return <code>this</code>
+	 */
+	public T exercising( Predicate<Flow> filter, Consumer<String> rejectionLog ) {
+		this.flowFilter = filter;
+		this.filterRejectionLog = rejectionLog;
+		return self();
+	}
+
+	/**
 	 * How to evaluate the model's expected behaviour against the system
 	 *
 	 * @param t Captures system behaviour
@@ -280,8 +319,22 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 				.blockForUpdates()
 				.save();
 
-		// find the flows that pass the filter
+		// find the flows that pass the user-controlled filter
 		Set<Flow> toRun = fltr.flows().collect( Collectors.toCollection( HashSet::new ) );
+
+		// refine by the programmatic filter
+		toRun = toRun.stream()
+				.map( f -> {
+					if( flowFilter.test( f ) ) {
+						return f;
+					}
+					filterRejectionLog.accept( String.format(
+							"Flow '%s' rejected by .exercising() filter",
+							f.meta().id() ) );
+					return null;
+				} )
+				.filter( Objects::nonNull )
+				.collect( Collectors.toCollection( HashSet::new ) );
 
 		// collect dependencies of those flows
 		Set<Flow> deps = new HashSet<>();
