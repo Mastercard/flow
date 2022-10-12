@@ -41,13 +41,9 @@ public class MutableInteraction implements Interaction {
 	 */
 	public MutableInteraction( MutableInteraction parent, Interaction src ) {
 		this.parent = parent;
-		request( Optional.ofNullable( src )
-				.map( Interaction::request )
-				.orElse( null ) );
+		request( src.request() );
 		responder = src.responder();
-		response( Optional.ofNullable( src )
-				.map( Interaction::response )
-				.orElse( null ) );
+		response( src.response() );
 		tags.addAll( src.tags() );
 		src.children().forEach( c -> children.add( new MutableInteraction( this, c ) ) );
 	}
