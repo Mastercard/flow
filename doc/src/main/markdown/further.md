@@ -35,7 +35,7 @@ You can use [`Replay.isActive()`][Replay.isActive()] in your assertion component
 
 <!-- code_link_start -->
 
-[Replay.isActive()]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Replay.java#L40-L47,40-47
+[Replay.isActive()]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Replay.java#L41-L48,41-48
 
 <!-- code_link_end -->
 

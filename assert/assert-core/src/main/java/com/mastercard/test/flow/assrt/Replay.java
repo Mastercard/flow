@@ -3,6 +3,7 @@ package com.mastercard.test.flow.assrt;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Optional;
 
 import com.mastercard.test.flow.Interaction;
@@ -185,9 +186,12 @@ public class Replay {
 		// interactions (e.g.: you might be able to capture the data that comes out of
 		// the system). Hence we need to recurse down the interaction structure and
 		// populate the whole tree underneath
-		for( InteractionData child : id.children ) {
-			asrt.assertChildren( i -> matches( i, child ) )
-					.forEach( ca -> populate( ca, child ) );
-		}
+		Optional.ofNullable( id )
+				.map( f -> f.children )
+				.map( List::stream )
+				.ifPresent( s -> s
+						.forEach( child -> asrt
+								.assertChildren( i -> matches( i, child ) )
+								.forEach( ca -> populate( ca, child ) ) ) );
 	}
 }
