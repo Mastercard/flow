@@ -228,6 +228,29 @@ public class TestModel {
 	}
 
 	/**
+	 * @return A model with a single flow, calling from A to B to C, and with a
+	 *         context and a residue
+	 */
+	public static Model withBoth() {
+		Flow abc = Creator.build( flow -> flow
+				.meta( data -> data
+						.description( "abc" ) )
+				.context( new TestContext().value( "ctx" ) )
+				.residue( new TestResidue().value( "1st residue" ) )
+				.call( a -> a
+						.from( Actors.A )
+						.to( Actors.B )
+						.request( new Text( "A request to B" ) )
+						.call( b -> b
+								.to( Actors.C )
+								.request( new Text( "B request to C" ) )
+								.response( new Text( "C response to B" ) ) )
+						.response( new Text( "B response to A" ) ) ) );
+
+		return new Mdl().withFlows( abc );
+	}
+
+	/**
 	 * @return A model with three flows, calling from A to B to C
 	 */
 	public static Model triple() {

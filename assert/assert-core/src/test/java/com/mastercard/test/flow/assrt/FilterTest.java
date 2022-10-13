@@ -3,6 +3,7 @@ package com.mastercard.test.flow.assrt;
 import static com.mastercard.test.flow.assrt.AbstractFlocessorTest.copypasta;
 import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,17 @@ import com.mastercard.test.flow.util.Tags;
  */
 @SuppressWarnings("static-method")
 class FilterTest {
+
+	/**
+	 * Asserts fluent API
+	 */
+	@Test
+	void fluency() {
+		TestFlocessor tf = new TestFlocessor( "fluency", TestModel.triple() );
+
+		assertSame( tf, tf.filtering( null ) );
+		assertSame( tf, tf.exercising( null, null ) );
+	}
 
 	/**
 	 * Test driver

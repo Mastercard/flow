@@ -9,7 +9,7 @@ import com.mastercard.test.flow.Residue;
 /**
  * Implementations will be informed as {@link Flow} are processed
  */
-public interface Progress {
+public interface Listener {
 
 	/**
 	 * Called when {@link Flow} filtering is being applied

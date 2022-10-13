@@ -151,7 +151,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	/**
 	 * How processing progress is reported
 	 */
-	private Progress progress = new Progress() {
+	private Listener progress = new Listener() {
 		// default to no-op behaviour
 	};
 
@@ -263,7 +263,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @param prg An object that will be informed as processing proceeds
 	 * @return <code>this</code>
 	 */
-	public T listening( Progress prg ) {
+	public T listening( Listener prg ) {
 		progress = prg;
 		return self();
 	}
@@ -664,7 +664,6 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	private <C extends Context> void removeContext( Class<C> ctxt ) {
 		Applicator<C> apl = applicator( ctxt );
 		C current = (C) currentContext.remove( ctxt );
-		progress.context( current );
 		apl.transition( current, null );
 	}
 
