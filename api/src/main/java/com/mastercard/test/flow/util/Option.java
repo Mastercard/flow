@@ -76,6 +76,9 @@ public interface Option {
 	 * @return The previously-set value
 	 */
 	default String set( String value ) {
+		if( value == null ) {
+			return System.clearProperty( property() );
+		}
 		return System.setProperty( property(), value );
 	}
 
@@ -123,6 +126,26 @@ public interface Option {
 	 */
 	default Stream<String> asList() {
 		return asList( "," );
+	}
+
+	/**
+	 * Use in try-with-resources blocks where you want an {@link Option} to have a
+	 * specific value and then revert to the previous value when the block ends
+	 *
+	 * @param value The value inside the try block
+	 * @return The resource to declare in the try block
+	 */
+	default Temporary temporarily( String value ) {
+		String prior = set( value );
+		return () -> set( prior );
+	}
+
+	/**
+	 * Controls the value of an {@link Option} within a try-with-resources block
+	 */
+	public interface Temporary extends AutoCloseable {
+		@Override
+		void close();
 	}
 
 	/**

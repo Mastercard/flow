@@ -270,18 +270,17 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * <ul>
 	 * <li>This filter operates independently of that controlled by
 	 * {@link FilterOptions}.</li>
-	 * <li>
-	 * <li>This filter will not block dependency {@link Flow}s being included in the
-	 * execution order.</li>
+	 * <li>This filter will <i>not</i> block dependency {@link Flow}s being included
+	 * in the execution order.</li>
 	 * </ul>
 	 * <p>
 	 * Think carefully before using this method - standard assertion behaviour will
-	 * produce a nice visible skip result in testing harness output and the
-	 * execution report for {@link Flow}s that are not appropriate for the system
-	 * under test. {@link Flow}s that are rejected by the filter defined by this
-	 * method will only appear in the <code>rejectionLog</code> argument, which will
-	 * probably be much less visible. This is the exact reason why you'd use this
-	 * method, but bear in mind that it will complicate any "why isn't my flow being
+	 * produce a visible skip result in testing harness output and the execution
+	 * report for {@link Flow}s that are not appropriate for the system under test.
+	 * {@link Flow}s that are rejected by the filter defined by this method will
+	 * only appear in the <code>rejectionLog</code> argument, which will probably be
+	 * much <i>less</i> visible. This is the exact reason why you'd use this method,
+	 * but bear in mind that it will complicate any "why isn't my flow being
 	 * exercised?" debugging efforts that you find yourself in.
 	 *
 	 * @param filter       Returns true for flows that should be exercised in this
@@ -289,6 +288,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @param rejectionLog Will be supplied with human-readable messages detailing
 	 *                     the rejection of {@link Flow}s by the filter
 	 * @return <code>this</code>
+	 * @see AssertionOptions#SUPPRESS_FILTER
 	 */
 	public T exercising( Predicate<Flow> filter, Consumer<String> rejectionLog ) {
 		this.flowFilter = filter;
@@ -326,6 +326,15 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		toRun = toRun.stream()
 				.map( f -> {
 					if( flowFilter.test( f ) ) {
+						return f;
+					}
+					if( AssertionOptions.SUPPRESS_FILTER.isTrue() ) {
+						filterRejectionLog.accept( String.format(
+								"Rejection of flow '%s' by .exercising() filter "
+										+ "suppressed by system property %s=%s",
+								f.meta().id(),
+								AssertionOptions.SUPPRESS_FILTER.property(),
+								AssertionOptions.SUPPRESS_FILTER.value() ) );
 						return f;
 					}
 					filterRejectionLog.accept( String.format(

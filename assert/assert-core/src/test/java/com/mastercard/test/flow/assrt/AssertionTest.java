@@ -14,9 +14,11 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
+import com.mastercard.test.flow.util.Option.Temporary;
 
 /**
- * Exercises {@link Assertion}
+ * Exercises {@link Assertion} functions that aren't complicated enough to get
+ * their own dedicated test
  */
 @SuppressWarnings("static-method")
 class AssertionTest {
@@ -156,5 +158,41 @@ class AssertionTest {
 				"[Flow 'dependent []' rejected by .exercising() filter]",
 				rejectionLog.toString(),
 				"The rejected flow is logged" );
+	}
+
+	/**
+	 * The programmatically-defined filter can be suppressed by system properties
+	 */
+	@Test
+	void exercisingSupression() {
+
+		try( Temporary suppression = AssertionOptions.SUPPRESS_FILTER.temporarily( "true" ) ) {
+			List<String> rejectionLog = new ArrayList<>();
+
+			TestFlocessor tf = new TestFlocessor( "exercisingSupression", TestModel.abcWithDependency() )
+					.system( State.LESS, B )
+					.exercising( f -> "dependency".equals( f.meta().description() ), rejectionLog::add )
+					.behaviour( asrt -> {
+						asrt.actual().request( asrt.expected().request().content() );
+					} );
+
+			tf.execute();
+
+			assertEquals( copypasta(
+					"COMPARE dependency []",
+					"com.mastercard.test.flow.assrt.TestModel.abcWithDependency(TestModel.java:_) A->B [] request",
+					" | A request to B | A request to B |",
+					"",
+					"COMPARE dependent []",
+					"com.mastercard.test.flow.assrt.TestModel.abcWithDependency(TestModel.java:_) A->B [] request",
+					" | A request to B | A request to B |" ),
+					copypasta( tf.events() ),
+					"Both flows exercised" );
+
+			assertEquals(
+					"[Rejection of flow 'dependent []' by .exercising() filter suppressed by system property mctf.suppress.filter=true]",
+					rejectionLog.toString(),
+					"The rejection suppression is logged" );
+		}
 	}
 }

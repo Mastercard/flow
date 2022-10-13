@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.mastercard.test.flow.util.Option.Builder;
+import com.mastercard.test.flow.util.Option.Temporary;
 
 /**
  * Exercises {@link Option}
@@ -70,11 +71,17 @@ class OptionTest {
 	 */
 	@Test
 	void set() {
-		TSTOPT.set( "foobar" );
-		String old = TSTOPT.set( "raboof" );
+		String old = TSTOPT.set( "foobar" );
+		Assertions.assertEquals( null, old, "pre-existing value" );
+		Assertions.assertEquals( "foobar", TSTOPT.value(), "after first set" );
 
-		Assertions.assertEquals( "foobar", old );
-		Assertions.assertEquals( "raboof", TSTOPT.value() );
+		old = TSTOPT.set( "raboof" );
+		Assertions.assertEquals( "foobar", old, "first value" );
+		Assertions.assertEquals( "raboof", TSTOPT.value(), "after second set" );
+
+		old = TSTOPT.set( null );
+		Assertions.assertEquals( "raboof", old, "second value" );
+		Assertions.assertEquals( null, TSTOPT.value(), "after third set" );
 	}
 
 	/**
@@ -149,11 +156,31 @@ class OptionTest {
 						.getMessage() );
 
 		// invalid value, invalid default
-		Option badDefault = new Builder().property( "tstopt" ).defaultValue( "no an int either" );
+		Option badDefault = new Builder().property( "tstopt" ).defaultValue( "not an int either" );
 		badDefault.set( "not an int" );
-		assertEquals( "For input string: \"no an int either\"",
+		assertEquals( "For input string: \"not an int either\"",
 				assertThrows( NumberFormatException.class, () -> badDefault.asInt() )
 						.getMessage() );
+	}
+
+	/**
+	 * Exercises {@link Option#temporarily(String)}
+	 */
+	@Test
+	void temporarily() {
+		assertEquals( null, TSTOPT.value(), "initial" );
+
+		try( Temporary outer = TSTOPT.temporarily( "abc" ) ) {
+			assertEquals( "abc", TSTOPT.value(), "before inner" );
+
+			try( Temporary inner = TSTOPT.temporarily( "def" ) ) {
+				assertEquals( "def", TSTOPT.value(), "inner" );
+			}
+
+			assertEquals( "abc", TSTOPT.value(), "after inner" );
+		}
+
+		assertEquals( null, TSTOPT.value(), "final" );
 	}
 
 	/**
