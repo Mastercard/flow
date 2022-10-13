@@ -54,6 +54,18 @@ public class Tags {
 	}
 
 	/**
+	 * Determines if a tagged item passes an include/exclude tag filter
+	 *
+	 * @param item    The set of tags on an item
+	 * @param include The set of tags that items must have
+	 * @param exclude The set of tags that items must not have
+	 * @return <code>true</code> if the item passes the filter
+	 */
+	public static boolean filter( Set<String> item, Set<String> include, Set<String> exclude ) {
+		return !Tags.intersects( item, exclude ) && item.containsAll( include );
+	}
+
+	/**
 	 * Extracts portions of tags in a set
 	 *
 	 * @param tags   Some tags

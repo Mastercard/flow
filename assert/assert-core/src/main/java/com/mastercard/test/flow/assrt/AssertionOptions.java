@@ -34,6 +34,13 @@ public enum AssertionOptions implements Option {
 							+ "` to replay the most recent local report" )),
 
 	/**
+	 * Controls whether we apply flow filtering behaviour
+	 */
+	SUPPRESS_FILTER(b -> b
+			.property( "mctf.suppress.filter" )
+			.description( "Set to `true` to process all flows regardless of filter configuration" )),
+
+	/**
 	 * Controls whether we abandon a flow on the first assertion failure or soldier
 	 * on to the end
 	 */

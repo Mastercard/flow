@@ -2,6 +2,9 @@
 package com.mastercard.test.flow.assrt;
 
 import static com.mastercard.test.flow.builder.Sets.set;
+import static com.mastercard.test.flow.util.Tags.add;
+import static com.mastercard.test.flow.util.Tags.remove;
+import static com.mastercard.test.flow.util.Tags.set;
 
 import com.mastercard.test.flow.Actor;
 import com.mastercard.test.flow.Flow;
@@ -224,4 +227,57 @@ public class TestModel {
 		return new Mdl().withFlows( abc, def );
 	}
 
+	/**
+	 * @return A model with a single flow, calling from A to B to C, and with a
+	 *         context and a residue
+	 */
+	public static Model withBoth() {
+		Flow abc = Creator.build( flow -> flow
+				.meta( data -> data
+						.description( "abc" ) )
+				.context( new TestContext().value( "ctx" ) )
+				.residue( new TestResidue().value( "1st residue" ) )
+				.call( a -> a
+						.from( Actors.A )
+						.to( Actors.B )
+						.request( new Text( "A request to B" ) )
+						.call( b -> b
+								.to( Actors.C )
+								.request( new Text( "B request to C" ) )
+								.response( new Text( "C response to B" ) ) )
+						.response( new Text( "B response to A" ) ) ) );
+
+		return new Mdl().withFlows( abc );
+	}
+
+	/**
+	 * @return A model with three flows, calling from A to B to C
+	 */
+	public static Model triple() {
+		Flow first = Creator.build( flow -> flow
+				.meta( data -> data
+						.description( "first" )
+						.tags( set( "a", "b", "c" ) ) )
+				.call( a -> a
+						.from( Actors.A )
+						.to( Actors.B )
+						.request( new Text( "A request to B" ) )
+						.call( b -> b
+								.to( Actors.C )
+								.request( new Text( "B request to C" ) )
+								.response( new Text( "C response to B" ) ) )
+						.response( new Text( "B response to A" ) ) ) );
+
+		Flow second = Deriver.build( first, flow -> flow
+				.meta( data -> data
+						.description( "second" )
+						.tags( remove( "a" ), add( "d" ) ) ) );
+
+		Flow third = Deriver.build( second, flow -> flow
+				.meta( data -> data
+						.description( "third" )
+						.tags( remove( "b" ), add( "e" ) ) ) );
+
+		return new Mdl().withFlows( first, second, third );
+	}
 }

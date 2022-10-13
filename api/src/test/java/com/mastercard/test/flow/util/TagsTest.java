@@ -7,9 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
+import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -75,6 +80,45 @@ class TagsTest {
 
 		assertFalse( Tags.intersects( abc, def ) );
 		assertFalse( Tags.intersects( def, abc ) );
+	}
+
+	/**
+	 * Tests tag filtering test
+	 */
+	@Test
+	void filter() {
+		BiConsumer<String, Boolean> test = ( in, out ) -> {
+			Matcher m = Pattern.compile( "(.*)\\|(.*)\\|(.*)" ).matcher( in );
+			assertTrue( m.matches(), "bad data " + in );
+
+			List<Set<String>> tags = IntStream.of( 1, 2, 3 )
+					.mapToObj( i -> m.group( i ).chars()
+							.mapToObj( c -> String.valueOf( (char) c ) )
+							.collect( Collectors.toSet() ) )
+					.collect( Collectors.toList() );
+
+			assertEquals( out, Tags.filter( tags.get( 0 ), tags.get( 1 ), tags.get( 2 ) ),
+					String.format( "\nitem    %s\ninclude %s\nexclude %s",
+							tags.get( 0 ), tags.get( 1 ), tags.get( 2 ) ) );
+		};
+
+		// input data in "item|include|exclude" format
+		test.accept( "||", true );
+		test.accept( "abc||", true );
+
+		test.accept( "abc|a|", true );
+		test.accept( "abc|b|", true );
+		test.accept( "abc|c|", true );
+		test.accept( "abc|abc|", true );
+		test.accept( "abc|d|", false );
+
+		test.accept( "abc||a", false );
+		test.accept( "abc||b", false );
+		test.accept( "abc||c", false );
+		test.accept( "abc||abc", false );
+		test.accept( "abc||d", true );
+
+		test.accept( "abc|abc|def", true );
 	}
 
 	/**

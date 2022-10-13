@@ -186,11 +186,11 @@ class CheckerTest {
 								} ) ) );
 	}
 
-	private enum Nprdct implements Unpredictable {
+	enum Nprdct implements Unpredictable {
 		DIGITS, DIGITS_AND_SUFFIX,
 	}
 
-	private static class TestChecker extends Checker<TestResidue> {
+	static class TestChecker extends Checker<TestResidue> {
 		public TestChecker() {
 			super( TestResidue.class );
 		}

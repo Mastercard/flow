@@ -9,6 +9,7 @@ import java.util.stream.Stream;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.util.TaggedGroup;
+import com.mastercard.test.flow.util.Tags;
 
 /**
  * A hardcoded model that useful for testing
@@ -70,7 +71,8 @@ public class Mdl implements Model {
 
 	@Override
 	public Stream<Flow> flows( Set<String> include, Set<String> exclude ) {
-		return flows.stream();
+		return flows.stream()
+				.filter( f -> Tags.filter( f.meta().tags(), include, exclude ) );
 	}
 
 	@Override

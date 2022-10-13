@@ -3,6 +3,7 @@ package com.mastercard.test.flow.assrt;
 
 import static java.time.Instant.now;
 import static java.time.ZoneId.systemDefault;
+import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 
 import java.nio.file.Path;
@@ -17,11 +18,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -35,6 +38,8 @@ import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.Residue;
 import com.mastercard.test.flow.Unpredictable;
 import com.mastercard.test.flow.assrt.filter.Filter;
+import com.mastercard.test.flow.assrt.filter.FilterConfiguration;
+import com.mastercard.test.flow.assrt.filter.FilterOptions;
 import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.AssertedData;
 import com.mastercard.test.flow.report.data.FlowData;
@@ -146,8 +151,23 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	/**
 	 * How processing progress is reported
 	 */
-	private Progress progress = new Progress() {
+	private Listener progress = new Listener() {
 		// default to no-op behaviour
+	};
+
+	/**
+	 * How to configure the filter that controls flow construction
+	 */
+	private Consumer<FilterConfiguration> filterCfg = f -> {
+		// no-op
+	};
+
+	/**
+	 * How to filter constructed flows before assertion
+	 */
+	private Predicate<Flow> flowFilter = f -> true;
+	private Consumer<String> filterRejectionLog = l -> {
+		// no-op
 	};
 
 	/**
@@ -243,7 +263,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @param prg An object that will be informed as processing proceeds
 	 * @return <code>this</code>
 	 */
-	public T listening( Progress prg ) {
+	public T listening( Listener prg ) {
 		progress = prg;
 		return self();
 	}
@@ -255,6 +275,50 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 */
 	Set<Actor> system() {
 		return systemUnderTest;
+	}
+
+	/**
+	 * Defines the default behaviour of the {@link Filter} controlling which
+	 * {@link Flow}s are constructed for the test run. This configuration is applied
+	 * prior to the behaviour controlled by {@link FilterOptions}
+	 *
+	 * @param cfg How to configure the {@link Filter}
+	 * @return <code>this</code>
+	 */
+	public T filtering( Consumer<FilterConfiguration> cfg ) {
+		filterCfg = cfg;
+		return self();
+	}
+
+	/**
+	 * Limits which flows will be exercised by the test. Note that:
+	 * <ul>
+	 * <li>This filter operates independently of, and after, that controlled by
+	 * {@link FilterOptions} and {@link #filtering(Consumer)}.</li>
+	 * <li>This filter will <i>not</i> block dependency {@link Flow}s being included
+	 * in the execution order.</li>
+	 * </ul>
+	 * <p>
+	 * Think carefully before using this method - standard assertion behaviour will
+	 * produce a visible skip result in testing harness output and the execution
+	 * report for {@link Flow}s that are not appropriate for the system under test.
+	 * {@link Flow}s that are rejected by the filter defined by this method will
+	 * only appear in the <code>rejectionLog</code> argument, which will probably be
+	 * much <i>less</i> visible. This is the exact reason why you'd use this method,
+	 * but bear in mind that it will complicate any "why isn't my flow being
+	 * exercised?" debugging efforts that you find yourself in.
+	 *
+	 * @param filter       Returns true for flows that should be exercised in this
+	 *                     test
+	 * @param rejectionLog Will be supplied with human-readable messages detailing
+	 *                     the rejection of {@link Flow}s by the filter
+	 * @return <code>this</code>
+	 * @see AssertionOptions#SUPPRESS_FILTER
+	 */
+	public T exercising( Predicate<Flow> filter, Consumer<String> rejectionLog ) {
+		this.flowFilter = filter;
+		this.filterRejectionLog = rejectionLog;
+		return self();
 	}
 
 	/**
@@ -275,13 +339,34 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		progress.filtering();
 		// per system properties, find out which flows we want to exercise and save
 		// those settings for future runs
-		Filter fltr = new Filter( model )
-				.load()
-				.blockForUpdates()
-				.save();
+		Set<Flow> toRun;
+		if( AssertionOptions.SUPPRESS_FILTER.isTrue() ) {
+			toRun = model.flows().collect( toCollection( HashSet::new ) );
+		}
+		else {
+			Filter fltr = new Filter( model );
+			filterCfg.accept( fltr );
+			fltr.load()
+					.blockForUpdates()
+					.save();
 
-		// find the flows that pass the filter
-		Set<Flow> toRun = fltr.flows().collect( Collectors.toCollection( HashSet::new ) );
+			// find the flows that pass the user-controlled filter
+			toRun = fltr.flows().collect( toCollection( HashSet::new ) );
+
+			// refine by the programmatic filter
+			toRun = toRun.stream()
+					.map( f -> {
+						if( flowFilter.test( f ) ) {
+							return f;
+						}
+						filterRejectionLog.accept( String.format(
+								"Flow '%s' rejected by .exercising() filter",
+								f.meta().id() ) );
+						return null;
+					} )
+					.filter( Objects::nonNull )
+					.collect( Collectors.toCollection( HashSet::new ) );
+		}
 
 		// collect dependencies of those flows
 		Set<Flow> deps = new HashSet<>();
@@ -579,7 +664,6 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	private <C extends Context> void removeContext( Class<C> ctxt ) {
 		Applicator<C> apl = applicator( ctxt );
 		C current = (C) currentContext.remove( ctxt );
-		progress.context( current );
 		apl.transition( current, null );
 	}
 

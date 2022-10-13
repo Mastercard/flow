@@ -9,11 +9,13 @@ import org.slf4j.LoggerFactory;
 
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.Replay;
+import com.mastercard.test.flow.assrt.Reporting;
 import com.mastercard.test.flow.assrt.junit5.Flocessor;
 import com.mastercard.test.flow.example.app.Store;
 import com.mastercard.test.flow.example.app.assrt.AbstractServiceTest;
 import com.mastercard.test.flow.example.app.model.ExampleSystem.Actors;
 import com.mastercard.test.flow.example.framework.Instance;
+import com.mastercard.test.flow.util.Flows;
 
 /**
  * Test that exercises the {@link Store} service in isolation by standing up an
@@ -52,9 +54,13 @@ class StoreTest extends AbstractServiceTest {
 
 	@Override
 	protected Consumer<Flocessor> custom() {
-		return f -> f
+		return flocessor -> flocessor
+				.reporting( Reporting.ALWAYS )
 				// stateless data stores are rarely useful. Note that we're also including the
 				// DB in the system under test
-				.system( State.FUL, Actors.STORE, Actors.DB );
+				.system( State.FUL, Actors.STORE, Actors.DB )
+				// there are only a few flows that actually hit the store, so let's avoid having
+				// to ignore the skip results for the others
+				.exercising( flow -> Flows.intersects( flow, Actors.STORE ), LOG::info );
 	}
 }

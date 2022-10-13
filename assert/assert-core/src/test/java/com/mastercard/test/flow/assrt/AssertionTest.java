@@ -13,7 +13,8 @@ import org.junit.jupiter.api.Test;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 
 /**
- * Exercises {@link Assertion}
+ * Exercises {@link Assertion} functions that aren't complicated enough to get
+ * their own dedicated test
  */
 @SuppressWarnings("static-method")
 class AssertionTest {
@@ -124,4 +125,5 @@ class AssertionTest {
 				" | B response to A | B response to A |" ),
 				copypasta( tf.events() ) );
 	}
+
 }

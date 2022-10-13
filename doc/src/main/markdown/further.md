@@ -13,7 +13,7 @@ By default the report will be saved to a timestamped directory under `target/mct
 
 <!-- code_link_start -->
 
-[AbstractFlocessor.reporting(Reporting)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L163-L170,163-170
+[AbstractFlocessor.reporting(Reporting)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L183-L190,183-190
 [Reporting]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Reporting.java
 
 <!-- code_link_end -->
@@ -48,9 +48,9 @@ In some circumstances that is not appropriate, for example:
  * IDE interface doesn't allow selection of the desired flow subset
  * You want to avoid building flows that you're not going to exercise
 
-The assertion components offer two mechanisms to run a subset of flows:
+The assertion components offer three mechanisms to run a subset of flows:
 
-### Filter properties
+### System properties
 
 The following system properties will control which flows are built and processed:
 
@@ -67,6 +67,21 @@ Setting system property `mctf.filter.update=true` will cause an environment-appr
 Setting system property `mctf.filter.repeat=true` will cause the `include`, `exclude` and `indices` filters that were in effect in the previous test execution to be repeated. Supplying it along with `update` is a convenient way to iterate on a given set of flows: you configure the filters in the first iteration and then in subsequent runs you can just hit enter twice to use the same values again.
 
 The [assert-filter documentation](../../../../assert/assert-filter) contains more detail on the selection interfaces.
+
+### API filtering
+
+The `Flocessor` API offers two methods to control which flows are exercised:
+ * [`.filtering()`][AbstractFlocessor.filtering(Consumer)]: offers control of the same tag and index-based filtering as the system property and selection interfaces.
+ * [`.exercising()`][AbstractFlocessor.exercising(Predicate,Consumer)]: offers finer-grained control - all of a flow's data is available to make a decision on whether or not to exercise that flow.
+
+Note that only the tag/index-based filtering can be used to avoid flow construction costs.
+
+<!-- code_link_start -->
+
+[AbstractFlocessor.filtering(Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L280-L288,280-288
+[AbstractFlocessor.exercising(Predicate,Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L293-L318,293-318
+
+<!-- code_link_end -->
 
 ## Model structure
 
@@ -230,7 +245,7 @@ Consider the following worked example:
 
 [flow.Unpredictable]: ../../../../api/src/main/java/com/mastercard/test/flow/Unpredictable.java
 [AbstractMessage.masking(Unpredictable,UnaryOperator)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/AbstractMessage.java#L46-L53,46-53
-[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L175-L182,175-182
+[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L195-L202,195-202
 [mask.BenSys]: ../../test/java/com/mastercard/test/flow/doc/mask/BenSys.java
 [mask.DieSys]: ../../test/java/com/mastercard/test/flow/doc/mask/DieSys.java
 [mask.Unpredictables]: ../../test/java/com/mastercard/test/flow/doc/mask/Unpredictables.java
@@ -240,7 +255,7 @@ Consider the following worked example:
 [msg.Mask.andThen(Consumer)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java#L290-L292,290-292
 [BenDiceTest?masking]: ../../test/java/com/mastercard/test/flow/doc/mask/BenDiceTest.java#L31,31
 [BenTest]: ../../test/java/com/mastercard/test/flow/doc/mask/BenTest.java
-[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L175-L182,175-182
+[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L195-L202,195-202
 
 <!-- code_link_end -->
 
@@ -260,7 +275,7 @@ You can see usage of these types in the example system:
 [flow.Context]: ../../../../api/src/main/java/com/mastercard/test/flow/Context.java
 [Builder.context(Context)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#L225-L232,225-232
 [assrt.Applicator]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Applicator.java
-[AbstractFlocessor.applicators(Applicator...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L202-L208,202-208
+[AbstractFlocessor.applicators(Applicator...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L222-L228,222-228
 [model.ctx.QueueProcessing]: ../../../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/ctx/QueueProcessing.java
 [QueueProcessingApplicator]: ../../../../example/app-assert/src/main/java/com/mastercard/test/flow/example/app/assrt/ctx/QueueProcessingApplicator.java
 
@@ -283,7 +298,7 @@ You can see usage of these types in the example system:
 
 [flow.Residue]: ../../../../api/src/main/java/com/mastercard/test/flow/Residue.java
 [assrt.Checker]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Checker.java
-[AbstractFlocessor.checkers(Checker...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L215-L221,215-221
+[AbstractFlocessor.checkers(Checker...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L235-L241,235-241
 [model.rsd.DBItems]: ../../../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/rsd/DBItems.java
 [DBItemsChecker]: ../../../../example/app-assert/src/main/java/com/mastercard/test/flow/example/app/assrt/rsd/DBItemsChecker.java
 

@@ -50,6 +50,7 @@ Some aspects of assertion behaviour can be controlled by system properties:
 | `mctf.suppress.assertion` | Set to `true` to continue processing a flow in the face of assertion failure |
 | `mctf.suppress.basis` | Set to `true` to process flows whose basis flows have suffered assertion failure |
 | `mctf.suppress.dependency` | Set to `true` to process flows whose dependency flows have suffered errors |
+| `mctf.suppress.filter` | Set to `true` to process all flows regardless of filter configuration |
 | `mctf.suppress.system` | Set to `true` to process when the system under test lacks declared dependencies |
 
 <!-- end_property_table -->

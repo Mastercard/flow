@@ -78,8 +78,7 @@ public abstract class EagerModel extends TitledModel {
 					getClass() ) );
 		}
 		return members.stream()
-				.filter( f -> !Tags.intersects( f.meta().tags(), exclude ) )
-				.filter( f -> f.meta().tags().containsAll( include ) );
+				.filter( f -> Tags.filter( f.meta().tags(), include, exclude ) );
 	}
 
 	/**

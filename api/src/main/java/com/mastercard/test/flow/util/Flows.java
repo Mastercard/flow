@@ -161,6 +161,18 @@ public class Flows {
 	}
 
 	/**
+	 * Determines if a {@link Flow} intersects with a system
+	 *
+	 * @param flow   A {@link Flow}
+	 * @param system The set of {@link Actor}s in a system
+	 * @return <code>true</code> if the {@link Flow}'s {@link Interaction}s hit any
+	 *         of the {@link Actor}s in the system
+	 */
+	public static boolean intersects( Flow flow, Actor... system ) {
+		return intersects( flow, Stream.of( system ).collect( Collectors.toSet() ) );
+	}
+
+	/**
 	 * Produces a human-readable representation of a {@link Flow}'s
 	 * {@link Interaction} structure
 	 *
