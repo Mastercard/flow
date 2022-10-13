@@ -63,7 +63,8 @@ public class TaggedGroup {
 	}
 
 	/**
-	 * Group compatibility query
+	 * Group compatibility query. Note that it's perfectly possible for a group to
+	 * pass the filter while none of the members do.
 	 *
 	 * @param include The set of tags that items must have
 	 * @param exclude The set of tags that items must not have

@@ -3,6 +3,7 @@ package com.mastercard.test.flow.assrt;
 
 import static java.time.Instant.now;
 import static java.time.ZoneId.systemDefault;
+import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 
 import java.nio.file.Path;
@@ -37,6 +38,7 @@ import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.Residue;
 import com.mastercard.test.flow.Unpredictable;
 import com.mastercard.test.flow.assrt.filter.Filter;
+import com.mastercard.test.flow.assrt.filter.FilterConfiguration;
 import com.mastercard.test.flow.assrt.filter.FilterOptions;
 import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.AssertedData;
@@ -153,6 +155,16 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		// default to no-op behaviour
 	};
 
+	/**
+	 * How to configure the filter that controls flow construction
+	 */
+	private Consumer<FilterConfiguration> filterCfg = f -> {
+		// no-op
+	};
+
+	/**
+	 * How to filter constructed flows before assertion
+	 */
 	private Predicate<Flow> flowFilter = f -> true;
 	private Consumer<String> filterRejectionLog = l -> {
 		// no-op
@@ -266,10 +278,23 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	/**
+	 * Defines the default behaviour of the {@link Filter} controlling which
+	 * {@link Flow}s are constructed for the test run. This configuration is applied
+	 * prior to the behaviour controlled by {@link FilterOptions}
+	 *
+	 * @param cfg How to configure the {@link Filter}
+	 * @return <code>this</code>
+	 */
+	public T filtering( Consumer<FilterConfiguration> cfg ) {
+		filterCfg = cfg;
+		return self();
+	}
+
+	/**
 	 * Limits which flows will be exercised by the test. Note that:
 	 * <ul>
-	 * <li>This filter operates independently of that controlled by
-	 * {@link FilterOptions}.</li>
+	 * <li>This filter operates independently of, and after, that controlled by
+	 * {@link FilterOptions} and {@link #filtering(Consumer)}.</li>
 	 * <li>This filter will <i>not</i> block dependency {@link Flow}s being included
 	 * in the execution order.</li>
 	 * </ul>
@@ -314,36 +339,34 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		progress.filtering();
 		// per system properties, find out which flows we want to exercise and save
 		// those settings for future runs
-		Filter fltr = new Filter( model )
-				.load()
-				.blockForUpdates()
-				.save();
+		Set<Flow> toRun;
+		if( AssertionOptions.SUPPRESS_FILTER.isTrue() ) {
+			toRun = model.flows().collect( toCollection( HashSet::new ) );
+		}
+		else {
+			Filter fltr = new Filter( model );
+			filterCfg.accept( fltr );
+			fltr.load()
+					.blockForUpdates()
+					.save();
 
-		// find the flows that pass the user-controlled filter
-		Set<Flow> toRun = fltr.flows().collect( Collectors.toCollection( HashSet::new ) );
+			// find the flows that pass the user-controlled filter
+			toRun = fltr.flows().collect( toCollection( HashSet::new ) );
 
-		// refine by the programmatic filter
-		toRun = toRun.stream()
-				.map( f -> {
-					if( flowFilter.test( f ) ) {
-						return f;
-					}
-					if( AssertionOptions.SUPPRESS_FILTER.isTrue() ) {
+			// refine by the programmatic filter
+			toRun = toRun.stream()
+					.map( f -> {
+						if( flowFilter.test( f ) ) {
+							return f;
+						}
 						filterRejectionLog.accept( String.format(
-								"Rejection of flow '%s' by .exercising() filter "
-										+ "suppressed by system property %s=%s",
-								f.meta().id(),
-								AssertionOptions.SUPPRESS_FILTER.property(),
-								AssertionOptions.SUPPRESS_FILTER.value() ) );
-						return f;
-					}
-					filterRejectionLog.accept( String.format(
-							"Flow '%s' rejected by .exercising() filter",
-							f.meta().id() ) );
-					return null;
-				} )
-				.filter( Objects::nonNull )
-				.collect( Collectors.toCollection( HashSet::new ) );
+								"Flow '%s' rejected by .exercising() filter",
+								f.meta().id() ) );
+						return null;
+					} )
+					.filter( Objects::nonNull )
+					.collect( Collectors.toCollection( HashSet::new ) );
+		}
 
 		// collect dependencies of those flows
 		Set<Flow> deps = new HashSet<>();

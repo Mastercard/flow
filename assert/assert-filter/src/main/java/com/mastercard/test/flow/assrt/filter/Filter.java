@@ -41,7 +41,7 @@ import com.mastercard.test.flow.report.data.Index;
 /**
  * Allows the user to select which {@link Flow}s to exercise.
  */
-public class Filter {
+public class Filter implements FilterConfiguration {
 
 	/**
 	 * The value for {@link FilterOptions#FILTER_FAILS} that provokes a search for
@@ -190,22 +190,12 @@ public class Filter {
 		return this;
 	}
 
-	/**
-	 * Gets the tags that flows must have to pass the filter.
-	 *
-	 * @return The current set of included tags
-	 */
+	@Override
 	public Set<String> includedTags() {
 		return new TreeSet<>( includeTags );
 	}
 
-	/**
-	 * Sets the tags that flows must have to pass the filter. Materially changing
-	 * the tag filters may change selected index values.
-	 *
-	 * @param tags The new included tag values
-	 * @return <code>this</code>
-	 */
+	@Override
 	public Filter includedTags( Set<String> tags ) {
 		if( !tags.equals( includeTags ) ) {
 			Set<Flow> current = new HashSet<>();
@@ -247,22 +237,12 @@ public class Filter {
 		}
 	}
 
-	/**
-	 * Gets the tags that flows must not have to pass the filter.
-	 *
-	 * @return The current set of excluded tags
-	 */
+	@Override
 	public Set<String> excludedTags() {
 		return new TreeSet<>( excludeTags );
 	}
 
-	/**
-	 * Sets the tags that flows must not have to pass the filter. Materially
-	 * changing the tag filters may change selected index values.
-	 *
-	 * @param tags The new excluded tag values
-	 * @return <code>this</code>
-	 */
+	@Override
 	public Filter excludedTags( Set<String> tags ) {
 		if( !tags.equals( excludeTags ) ) {
 			Set<Flow> current = new HashSet<>();
@@ -278,21 +258,12 @@ public class Filter {
 		return this;
 	}
 
-	/**
-	 * Gets the indices in the tag-filtered list of flows that pass the filter
-	 *
-	 * @return The current set of chosen {@link Flow} indices
-	 */
+	@Override
 	public Set<Integer> indices() {
 		return new TreeSet<>( indices );
 	}
 
-	/**
-	 * Sets the indices in the tag-filtered list of flows that pass the filter
-	 *
-	 * @param idx The new selected {@link Flow} indices
-	 * @return <code>this</code>
-	 */
+	@Override
 	public Filter indices( Set<Integer> idx ) {
 		int flowCount = taggedFlows().size();
 
@@ -379,11 +350,7 @@ public class Filter {
 		return this;
 	}
 
-	/**
-	 * Gets all tags in the model
-	 *
-	 * @return All tags available in the model
-	 */
+	@Override
 	public Set<String> allTags() {
 		return model.tags().union().collect( toCollection( TreeSet::new ) );
 	}

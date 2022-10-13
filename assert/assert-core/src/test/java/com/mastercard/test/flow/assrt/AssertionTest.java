@@ -8,13 +8,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.junit.jupiter.api.Test;
 
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
-import com.mastercard.test.flow.util.Option.Temporary;
 
 /**
  * Exercises {@link Assertion} functions that aren't complicated enough to get
@@ -130,69 +126,4 @@ class AssertionTest {
 				copypasta( tf.events() ) );
 	}
 
-	/**
-	 * We can add a programmatically-defined filter to control which flows are
-	 * exercised, and rejection by that filter isn't necessarily silent
-	 */
-	@Test
-	void exercising() {
-		List<String> rejectionLog = new ArrayList<>();
-
-		TestFlocessor tf = new TestFlocessor( "exercising", TestModel.abcWithDependency() )
-				.system( State.LESS, B )
-				.exercising( f -> "dependency".equals( f.meta().description() ), rejectionLog::add )
-				.behaviour( asrt -> {
-					asrt.actual().request( asrt.expected().request().content() );
-				} );
-
-		tf.execute();
-
-		assertEquals( copypasta(
-				"COMPARE dependency []",
-				"com.mastercard.test.flow.assrt.TestModel.abcWithDependency(TestModel.java:_) A->B [] request",
-				" | A request to B | A request to B |" ),
-				copypasta( tf.events() ),
-				"The flow passed by the filter is exercised as normal" );
-
-		assertEquals(
-				"[Flow 'dependent []' rejected by .exercising() filter]",
-				rejectionLog.toString(),
-				"The rejected flow is logged" );
-	}
-
-	/**
-	 * The programmatically-defined filter can be suppressed by system properties
-	 */
-	@Test
-	void exercisingSupression() {
-
-		try( Temporary suppression = AssertionOptions.SUPPRESS_FILTER.temporarily( "true" ) ) {
-			List<String> rejectionLog = new ArrayList<>();
-
-			TestFlocessor tf = new TestFlocessor( "exercisingSupression", TestModel.abcWithDependency() )
-					.system( State.LESS, B )
-					.exercising( f -> "dependency".equals( f.meta().description() ), rejectionLog::add )
-					.behaviour( asrt -> {
-						asrt.actual().request( asrt.expected().request().content() );
-					} );
-
-			tf.execute();
-
-			assertEquals( copypasta(
-					"COMPARE dependency []",
-					"com.mastercard.test.flow.assrt.TestModel.abcWithDependency(TestModel.java:_) A->B [] request",
-					" | A request to B | A request to B |",
-					"",
-					"COMPARE dependent []",
-					"com.mastercard.test.flow.assrt.TestModel.abcWithDependency(TestModel.java:_) A->B [] request",
-					" | A request to B | A request to B |" ),
-					copypasta( tf.events() ),
-					"Both flows exercised" );
-
-			assertEquals(
-					"[Rejection of flow 'dependent []' by .exercising() filter suppressed by system property mctf.suppress.filter=true]",
-					rejectionLog.toString(),
-					"The rejection suppression is logged" );
-		}
-	}
 }
