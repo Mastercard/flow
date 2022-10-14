@@ -33,7 +33,7 @@ class SysOutTest {
 				"System.err.println( \"Shutting down Chrome\" );" );
 		accept( "../report/report-core/src/test/java/com/mastercard/test/flow/report/seq/"
 				+ "Browser.java",
-				"System.err.println( \"Shutting down Chrome\" );" );
+				"System.err.println( \"Shutting down browser\" );" );
 		accept( "../report/report-core/src/test/java/com/mastercard/test/flow/report/seq/"
 				+ "AbstractSequence.java",
 				"System.out.println( operation + \" \" + Arrays.toString( args ) );",

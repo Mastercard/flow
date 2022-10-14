@@ -1,5 +1,9 @@
 package com.mastercard.test.flow.example.app.webui;
 
+import static com.mastercard.test.flow.util.Tags.tags;
+
+import java.util.function.Consumer;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import com.mastercard.test.flow.assrt.Assertion;
 import com.mastercard.test.flow.assrt.Replay;
+import com.mastercard.test.flow.assrt.junit5.Flocessor;
 import com.mastercard.test.flow.example.app.WebUi;
 import com.mastercard.test.flow.example.app.assrt.AbstractServiceTest;
 import com.mastercard.test.flow.example.app.assrt.Browser;
@@ -51,6 +56,15 @@ class WebUiTest extends AbstractServiceTest {
 	/***/
 	public WebUiTest() {
 		super( service, Actors.WEB_UI, LOG );
+	}
+
+	@Override
+	protected Consumer<Flocessor> custom() {
+		// The flows that hit the web UI are tagged as such, so we can avoid having to
+		// build all the other flows that will never be exercised by this test
+		return flocessor -> flocessor
+				.filtering( config -> config
+						.includedTags( tags( "web" ) ) );
 	}
 
 	@Override

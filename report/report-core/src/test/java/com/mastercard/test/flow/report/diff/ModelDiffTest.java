@@ -2,6 +2,8 @@ package com.mastercard.test.flow.report.diff;
 
 import static com.mastercard.test.flow.report.Mdl.Actrs.AVA;
 import static com.mastercard.test.flow.report.Mdl.Actrs.BEN;
+import static com.mastercard.test.flow.util.Tags.add;
+import static com.mastercard.test.flow.util.Tags.remove;
 import static com.mastercard.test.flow.util.Tags.set;
 
 import org.junit.jupiter.api.AfterAll;
@@ -56,9 +58,11 @@ class ModelDiffTest {
 		Flow before = Deriver.build( removed, flow -> flow
 				.meta( data -> data
 						.description( "updated" )
-						.tags( set( "c", "d", "e" ) ) ) );
+						.tags( set( "c", "d", "e", "PASS", "FAIL" ) ) ) );
 
 		Flow after = Deriver.build( before, flow -> flow
+				.meta( data -> data
+						.tags( remove( "PASS", "FAIL" ), add( "SKIP", "ERROR" ) ) )
 				.update( i -> true, i -> {
 					i.request().set( "i", "iii" );
 					i.request().set( "e", "eee" );
@@ -120,7 +124,7 @@ class ModelDiffTest {
 				.hasFlows(
 						"removed    [a, b, c]",
 						"unchanged  [b, c, d]",
-						"updated    [c, d, e]" );
+						"updated    [FAIL, PASS, c, d, e]" );
 	}
 
 	/**
@@ -139,7 +143,7 @@ class ModelDiffTest {
 				.hasHeader( "after change", "Test title", "13/02/2009, 23:31:30" )
 				.hasFlows(
 						"unchanged  [b, c, d]",
-						"updated    [c, d, e]",
+						"updated    [ERROR, SKIP, c, d, e]",
 						"added      [d, e, f]" );
 	}
 

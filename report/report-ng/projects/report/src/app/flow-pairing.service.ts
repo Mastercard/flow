@@ -1,13 +1,12 @@
 import { Injectable } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ModelDiffDataService } from './model-diff-data.service';
-import { Entry } from './types';
+import { Entry, isResultTag, removeResultTagsFrom } from './types';
 
 @Injectable({
   providedIn: 'root'
 })
 export class FlowPairingService {
-  private readonly resultTags: Set<string> = new Set(["PASS", "FAIL", "SKIP", "ERROR"]);
 
   /**
    * The pairs of flows that we can match automatically - they have the same metadata
@@ -117,7 +116,7 @@ export class FlowPairingService {
     if (match) {
       let lt: Set<string> = new Set(left.tags);
       let rt: Set<string> = new Set(right.tags);
-      this.resultTags.forEach(t => { lt.delete(t); rt.delete(t); });
+      removeResultTagsFrom(lt, rt);
       match = setEq(lt, rt);
     }
     return match;
@@ -241,8 +240,8 @@ export class FlowPairingService {
   private sortEntry(a: Entry, b: Entry): number {
     let d = 0;
     // tags form most of the identity, so sort on that first, ignoring result tags
-    let at = a.tags.filter(t => !this.resultTags.has(t));
-    let bt = b.tags.filter(t => !this.resultTags.has(t));
+    let at = a.tags.filter(t => !isResultTag(t));
+    let bt = b.tags.filter(t => !isResultTag(t));
     let idx = 0;
     while (d === 0 && idx < at.length && idx < bt.length) {
       d = at[idx].localeCompare(bt[idx]);
