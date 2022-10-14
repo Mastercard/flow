@@ -2,6 +2,8 @@ package com.mastercard.test.flow.report.diff;
 
 import static com.mastercard.test.flow.report.Mdl.Actrs.AVA;
 import static com.mastercard.test.flow.report.Mdl.Actrs.BEN;
+import static com.mastercard.test.flow.util.Tags.add;
+import static com.mastercard.test.flow.util.Tags.remove;
 import static com.mastercard.test.flow.util.Tags.set;
 
 import org.junit.jupiter.api.AfterAll;
@@ -56,9 +58,11 @@ class ModelDiffTest {
 		Flow before = Deriver.build( removed, flow -> flow
 				.meta( data -> data
 						.description( "updated" )
-						.tags( set( "c", "d", "e" ) ) ) );
+						.tags( set( "c", "d", "e", "PASS", "FAIL" ) ) ) );
 
 		Flow after = Deriver.build( before, flow -> flow
+				.meta( data -> data
+						.tags( remove( "PASS", "FAIL" ), add( "SKIP", "ERROR" ) ) )
 				.update( i -> true, i -> {
 					i.request().set( "i", "iii" );
 					i.request().set( "e", "eee" );

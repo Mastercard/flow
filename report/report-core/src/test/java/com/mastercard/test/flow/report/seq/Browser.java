@@ -14,6 +14,10 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.firefox.FirefoxBinary;
+import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.firefox.FirefoxOptions;
+import org.openqa.selenium.firefox.FirefoxProfile;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
 
@@ -50,6 +54,11 @@ public class Browser implements
 	private static final String SKIP_PRP = "browser.skip";
 
 	/**
+	 * The system property that controls which driver we use
+	 */
+	private static final String DRIVER_PRP = "browser.driver";
+
+	/**
 	 * Causes all tests that use the browser to be skipped
 	 */
 	private static final boolean SKIP = Boolean.getBoolean( SKIP_PRP );
@@ -67,26 +76,16 @@ public class Browser implements
 						+ "You've asked for the browser before the shutdown hook has been set.\n"
 						+ "Only call Browser.get() in test classes with @ExtendWith(Browser.class) annotation" );
 			}
+			Driver type = Driver.CHROME;
 
-			WebDriverManager.chromedriver().setup();
-			ChromeOptions options = new ChromeOptions();
-			if( !SHOW ) {
-				options.addArguments( "--headless" );
+			for( Driver d : Driver.values() ) {
+				if( d.name().equalsIgnoreCase( System.getProperty( DRIVER_PRP ) ) ) {
+					type = d;
+					break;
+				}
 			}
-			// some oddness around browser locale changing with headful/less mode, possibly
-			// related to https://bugs.chromium.org/p/chromium/issues/detail?id=755338
-			// I'm seeing the opposite effect: headless mode used the correct locale,
-			// headful mode did not. In any case, let's set it explicitly
-			options.addArguments( "--lang=en_GB" );
-			options.addArguments( "--disable-gpu" );
-			options.addArguments( "--window-size=1400,800" );
 
-			// suppress most stdout noise. We still get a "ChromeDriver was started
-			// successfully." line for some reason
-			System.setProperty( CHROME_DRIVER_SILENT_OUTPUT_PROPERTY, "true" );
-			Logger.getLogger( "org.openqa.selenium" ).setLevel( Level.OFF );
-
-			driver = new ChromeDriver( options );
+			driver = type.get();
 		}
 		return driver;
 	}
@@ -138,5 +137,56 @@ public class Browser implements
 			driver.quit();
 			driver = null;
 		}
+	}
+
+	private enum Driver {
+		CHROME {
+			@Override
+			public WebDriver get() {
+				WebDriverManager.chromedriver().setup();
+				ChromeOptions options = new ChromeOptions();
+				if( !SHOW ) {
+					options.addArguments( "--headless" );
+				}
+				// some oddness around browser locale changing with headful/less mode, possibly
+				// related to https://bugs.chromium.org/p/chromium/issues/detail?id=755338
+				// I'm seeing the opposite effect: headless mode used the correct locale,
+				// headful mode did not. In any case, let's set it explicitly
+				options.addArguments( "--lang=en_GB" );
+				options.addArguments( "--disable-gpu" );
+				options.addArguments( "--window-size=1400,800" );
+
+				// suppress most stdout noise. We still get a "ChromeDriver was started
+				// successfully." line for some reason
+				System.setProperty( CHROME_DRIVER_SILENT_OUTPUT_PROPERTY, "true" );
+				Logger.getLogger( "org.openqa.selenium" ).setLevel( Level.OFF );
+
+				return new ChromeDriver( options );
+			}
+		},
+		FIREFOX {
+			@Override
+			public WebDriver get() {
+				WebDriverManager.firefoxdriver().setup();
+
+				FirefoxOptions options = new FirefoxOptions();
+
+				if( !SHOW ) {
+					FirefoxBinary binary = new FirefoxBinary();
+					binary.addCommandLineOptions( "--headless" );
+					options.setBinary( binary );
+				}
+
+				FirefoxProfile profile = new FirefoxProfile();
+				profile.setPreference( "intl.accept_languages", "en-GB" );
+				options.setProfile( profile );
+
+				options.addArguments( "--width=1400", "--height=800" );
+
+				return new FirefoxDriver( options );
+			}
+		};
+
+		public abstract WebDriver get();
 	}
 }
