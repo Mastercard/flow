@@ -4,7 +4,7 @@ import { CollatedChange, DiffPair, FlowDiffService } from '../flow-diff.service'
 import { FlowFilterService } from '../flow-filter.service';
 import { FlowPairingService } from '../flow-pairing.service';
 import { ModelDiffDataService } from '../model-diff-data.service';
-import { Entry } from '../types';
+import { Entry, removeResultTagsFrom } from '../types';
 
 @Component({
   selector: 'app-change-analysis',
@@ -12,7 +12,6 @@ import { Entry } from '../types';
   styleUrls: ['./change-analysis.component.css']
 })
 export class ChangeAnalysisComponent implements OnInit {
-  private readonly resultTags: Set<string> = new Set(["PASS", "FAIL", "SKIP", "ERROR"]);
 
   changes: CollatedChange[] = [];
 
@@ -102,12 +101,14 @@ export class ChangeAnalysisComponent implements OnInit {
         }
       }
     });
-    this.resultTags.forEach(t => addedTagSet.delete(t));
-    this.resultTags.forEach(t => removedTagSet.delete(t));
-    this.resultTags.forEach(t => changedTagSet.delete(t));
-    this.resultTags.forEach(t => unchangedTagSet.delete(t));
-    this.resultTags.forEach(t => leftTags.delete(t));
-    this.resultTags.forEach(t => rightTags.delete(t));
+    removeResultTagsFrom(
+      addedTagSet,
+      removedTagSet,
+      changedTagSet,
+      unchangedTagSet,
+      leftTags,
+      rightTags
+    );
 
     let intersection = Array.from(leftTags).filter(t => rightTags.has(t));
     intersection.forEach(t => {
@@ -203,7 +204,7 @@ export class ChangeAnalysisComponent implements OnInit {
         p.right.entry.tags.forEach(t => tagSet.add(t));
       }
     });
-    this.resultTags.forEach(t => tagSet.delete(t));
+    removeResultTagsFrom(tagSet);
     let tags = Array.from(tagSet);
     tags.sort();
     return tags;

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Diff, DIFF_EQUAL, diff_match_patch } from 'diff-match-patch';
 import { FlowPairingService } from './flow-pairing.service';
 import { ModelDiffDataService } from './model-diff-data.service';
-import { Entry, Flow, Interaction } from './types';
+import { Entry, Flow, Interaction, isResultTag } from './types';
 
 /**
  * The source of diff data: a pair of flow datas
@@ -183,7 +183,9 @@ export class FlowDiffService {
     let lines: string[] = [];
     lines.push("Identity:");
     lines.push("  " + flow.description);
-    flow.tags.forEach(t => lines.push("  " + t));
+    flow.tags
+      .filter(t => !isResultTag(t))
+      .forEach(t => lines.push("  " + t));
     lines.push("Motivation:");
     lines.push("  " + flow.motivation);
     lines.push("Context:");

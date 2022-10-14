@@ -1,5 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { DiffPair } from '../flow-diff.service';
+import { removeResultTagsFrom } from '../types';
 
 export interface ListPair { index: number, pair: DiffPair };
 
@@ -39,10 +40,7 @@ export class PairSelectItemComponent implements OnInit {
     }
 
     if (!this.showResult) {
-      dt.delete("PASS");
-      dt.delete("FAIL");
-      dt.delete("SKIP");
-      dt.delete("ERROR");
+      removeResultTagsFrom(dt);
     }
     this.tags = Array.from(dt.values());
     this.tags.sort();

@@ -1,3 +1,25 @@
+/**
+ * The tag values that are used to denote assertion result, and so
+ * should not be considered part of the flow's identity
+ */
+const resultTags: Set<string> = new Set(["PASS", "FAIL", "SKIP", "ERROR"]);
+/**
+ * 
+ * @param tag a tag value
+ * @returns true if that value is a result tag
+ */
+export function isResultTag(tag: string) {
+  return resultTags.has(tag);
+}
+
+/**
+ * Remove result tags form the supplied sets
+ * @param tagSets Some sets of tags
+ */
+export function removeResultTagsFrom(...tagSets: Set<string>[]) {
+  tagSets.forEach(tagSet =>
+    resultTags.forEach(t => tagSet.delete(t)));
+}
 
 /**
  * Mirrors com.mastercard.test.flow.report.data.Index
