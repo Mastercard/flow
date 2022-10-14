@@ -133,7 +133,7 @@ public class Browser implements
 		if( driver != null ) {
 			// chromedriver seems to have an impossible-to-suppress stderr line on startup,
 			// so it's only fair that we mirror that on shutdown
-			System.err.println( "Shutting down Chrome" );
+			System.err.println( "Shutting down browser" );
 			driver.quit();
 			driver = null;
 		}
