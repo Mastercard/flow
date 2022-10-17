@@ -1,0 +1,2 @@
+<pre><ng-container *ngFor="let word of result"><mark *ngIf="(word === toHighlight); else nomatch">{{word}}</mark><ng-template #nomatch>{{word}}</ng-template></ng-container>
+</pre>

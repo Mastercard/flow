@@ -4,6 +4,7 @@
       [ngStyle]="columnStyle( i, sequence.entity.length )">
       {{entity}}
     </div>
+    <app-msg-search-input></app-msg-search-input>
   </div>
   <div class="body">
     <div class="line" *ngFor="let entity of sequence.entity; index as i;"
@@ -14,5 +15,6 @@
       <app-seq-note *ngIf="isNote(item)" [entity]="sequence.entity" [note]="item"></app-seq-note>
       <app-seq-section *ngIf="isSection(item)" [entity]="sequence.entity" [section]="item"></app-seq-section>
     </div>
+
   </div>
 </div>

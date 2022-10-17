@@ -55,6 +55,9 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterModule, Routes } from '@angular/router';
 import { TagSummaryComponent } from './tag-summary/tag-summary.component';
 import { ResidueViewComponent } from './residue-view/residue-view.component';
+import { MsgSearchInputComponent } from './msg-search-input/msg-search-input.component';
+import { MatRipple, MatRippleModule } from '@angular/material/core';
+import { HighlightedTextComponent } from './highlighted-text/highlighted-text.component';
 
 const routes: Routes = [
   { path: "diff", component: ModelDiffComponent },
@@ -94,6 +97,8 @@ const routes: Routes = [
     ChangeAnalysisComponent,
     TagSummaryComponent,
     ResidueViewComponent,
+    MsgSearchInputComponent,
+    HighlightedTextComponent,
   ],
   imports: [
     BrowserAnimationsModule,
@@ -113,6 +118,7 @@ const routes: Routes = [
     MatListModule,
     MatMenuModule,
     MatProgressBarModule,
+    MatRippleModule,
     MatSelectModule,
     MatSidenavModule,
     MatTableModule,

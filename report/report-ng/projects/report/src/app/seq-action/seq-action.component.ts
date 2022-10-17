@@ -1,6 +1,7 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { BasisFetchService } from '../basis-fetch.service';
 import { leftStyle, rightStyle } from '../flow-sequence/flow-sequence.component';
+import { MsgSearchService } from '../msg-search.service';
 import { TxSelectionService } from '../tx-selection.service';
 import { Transmission, isTransmission, empty_transmission } from '../types';
 
@@ -21,12 +22,26 @@ export class SeqActionComponent implements OnInit {
   assertionPassed: boolean = false;
   assertionFailed: boolean = false;
 
+  markExpected: boolean = false;
+  markActual: boolean = false;
+
   constructor(
     private txSelect: TxSelectionService,
-    private basis: BasisFetchService) {
+    private basis: BasisFetchService,
+    private search: MsgSearchService) {
 
     txSelect.onSelected(tx => this.selected = tx === this.action);
     basis.onLoad(() => this.hasBasis = this.basis.message(this.action) != null);
+
+    search.onClear(() => {
+      this.markActual = false;
+      this.markExpected = false;
+    });
+
+    search.onSearch(term => {
+      this.markExpected = this.action.transmission.full.expect.indexOf(term) >= 0;
+      this.markActual = (this.action.transmission.full.actual ?? "").indexOf(term) >= 0;
+    });
   }
 
   ngOnInit(): void {

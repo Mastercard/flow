@@ -1,0 +1,19 @@
+#root {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+#search_toggle {
+    float: right;
+    border-left: 2px solid #888;
+}
+
+mat-icon {
+    padding: 2px;
+    vertical-align: middle;
+}
+
+mat-icon:hover {
+    background-color: lightgrey;
+}

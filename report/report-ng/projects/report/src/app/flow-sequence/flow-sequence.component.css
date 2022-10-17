@@ -12,12 +12,20 @@
 	position: absolute;
 	right: 0;
 	text-align: center;
+	z-index: 1;
+}
+
+app-msg-search-input {
+	float: right;
+	position: relative;
+	z-index: 5;
 }
 
 .body {
 	padding-bottom: 0.5em;
 	padding-top: 0.5em;
 	position: relative;
+	z-index: 1;
 }
 
 .line {
@@ -25,4 +33,5 @@
 	bottom: 0;
 	position: absolute;
 	top: 0;
+	z-index: 1;
 }
