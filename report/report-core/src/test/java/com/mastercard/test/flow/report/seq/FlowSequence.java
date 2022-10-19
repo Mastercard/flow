@@ -136,15 +136,28 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 	 */
 	public FlowSequence hasMessage( String... lines ) {
 		trace( "hasMessage", (Object[]) lines );
+
+		WebElement ate = driver
+				.findElement( By.tagName( "app-transmission" ) );
+		String actual;
+		if( ate.findElements( By.tagName( "mark" ) ).isEmpty() ) {
+			// no search hits, just dump the text
+			actual = ate.getText();
+		}
+		else {
+			// search hits are in there! we need to iterate through the chunks to highlight
+			// them in our extracted text
+			actual = ate
+					.findElements( By.className( "hl_chunk" ) ).stream()
+					.map( c -> String.format(
+							"mark".equals( c.getTagName() ) ? "[%s]" : "%s",
+							c.getText() ) )
+					.collect( joining() );
+		}
+
 		Assertions.assertEquals(
 				copypasta( lines ),
-				copypasta( driver
-						.findElement( By.tagName( "app-transmission" ) )
-						.findElements( By.className( "hl_chunk" ) ).stream()
-						.map( c -> String.format(
-								"mark".equals( c.getTagName() ) ? "[%s]" : "%s",
-								c.getText() ) )
-						.collect( joining() ) ) );
+				copypasta( actual ) );
 		return this;
 	}
 
