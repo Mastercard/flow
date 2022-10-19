@@ -2,12 +2,15 @@ package com.mastercard.test.flow.report.seq;
 
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Assertions;
 import org.openqa.selenium.By;
@@ -75,6 +78,7 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 				.findFirst()
 				.orElseThrow( () -> new IllegalStateException(
 						"Failed to find transmission with label '" + label + "'" ) )
+				.findElement( By.className( "mat-ripple" ) )
 				.click();
 		return this;
 	}
@@ -124,7 +128,8 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 	}
 
 	/**
-	 * Asserts on the displayed message content
+	 * Asserts on the displayed message content. Search hits will be enclosed in
+	 * square brackets.
 	 *
 	 * @param lines Expected content lines
 	 * @return <code>this</code>
@@ -133,7 +138,66 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 		trace( "hasMessage", (Object[]) lines );
 		Assertions.assertEquals(
 				copypasta( lines ),
-				copypasta( driver.findElement( By.tagName( "app-transmission" ) ).getText() ) );
+				copypasta( driver
+						.findElement( By.tagName( "app-transmission" ) )
+						.findElements( By.className( "hl_chunk" ) ).stream()
+						.map( c -> String.format(
+								"mark".equals( c.getTagName() ) ? "[%s]" : "%s",
+								c.getText() ) )
+						.collect( joining() ) ) );
+		return this;
+	}
+
+	/**
+	 * Clicks on the search toggle button
+	 *
+	 * @return <code>this</code>
+	 */
+	public FlowSequence toggleSearch() {
+		trace( "toggleSearch" );
+		driver.findElement( By.id( "search_toggle" ) )
+				.findElement( By.className( "mat-icon" ) )
+				.click();
+		return this;
+	}
+
+	/**
+	 * Enters a search term
+	 *
+	 * @param term The term to search for
+	 * @return <code>this</code>
+	 */
+	public FlowSequence search( String term ) {
+		trace( "search", term );
+		WebElement input = driver.findElement( By.id( "search_input" ) );
+		input.click();
+		input.sendKeys( term );
+		return this;
+	}
+
+	/**
+	 * Asserts on which messages are showing search hits
+	 *
+	 * @param expected The expected search hits
+	 * @return <code>this</code>
+	 */
+	public FlowSequence expectSearchHits( String... expected ) {
+		trace( "expectSearchHits", (Object[]) expected );
+		List<String> actual = driver
+				.findElements( By.tagName( "app-seq-action" ) )
+				.stream()
+				.filter( e -> !e.findElements( By.tagName( "mark" ) ).isEmpty() )
+				.map( e -> String.format( "%s : %s",
+						e.findElement( By.className( "label" ) ).getText(),
+						e.findElements( By.tagName( "mark" ) ).stream()
+								.map( AbstractSequence::iconSemantic )
+								.collect( joining( " " ) ) ) )
+				.collect( Collectors.toList() );
+
+		assertEquals(
+				copypasta( expected ),
+				copypasta( actual ),
+				"Message content search hits" );
 		return this;
 	}
 

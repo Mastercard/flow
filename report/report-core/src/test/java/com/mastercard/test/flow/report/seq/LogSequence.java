@@ -47,8 +47,7 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 			args = "?" + Stream.of( arguments ).collect( Collectors.joining( "&" ) );
 		}
 
-		driver.get( url + args );
-		return this;
+		return get( url + args );
 	}
 
 	/**

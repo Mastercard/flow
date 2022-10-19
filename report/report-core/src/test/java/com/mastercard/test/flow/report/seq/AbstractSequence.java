@@ -6,7 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -41,6 +46,17 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 	private boolean stepping = false;
 
 	/**
+	 * Maps from the name of the icon to what we mean by it
+	 */
+	private static final Map<String, String> ICON_SEMANTICS;
+	static {
+		Map<String, String> m = new TreeMap<>();
+		m.put( "psychology", "expected" );
+		m.put( "visibility", "actual" );
+		ICON_SEMANTICS = Collections.unmodifiableMap( m );
+	}
+
+	/**
 	 * @param driver The browser
 	 * @param url    The base URL
 	 */
@@ -71,6 +87,34 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 	 * @return <code>this</code>
 	 */
 	protected abstract S self();
+
+	/**
+	 * Navigates the browser
+	 *
+	 * @param url The destination
+	 * @return <code>this</code>
+	 */
+	protected S get( String url ) {
+
+		// I really hate having to do this, but something seems to have changed on my
+		// system such that it's necessary - a single get call usually just leaves you
+		// on the `data:` url
+
+		long start = System.currentTimeMillis();
+		long limit = start + TimeUnit.SECONDS.toMillis( 20 );
+		int attempts = 0;
+		do {
+			attempts++;
+			driver.get( url );
+		}
+		while( limit > System.currentTimeMillis() && "data:,".equals( driver.getCurrentUrl() ) );
+
+		Assertions.assertNotEquals( "data:,", driver.getCurrentUrl(),
+				String.format( "Failed to achieve destination '%s' after %.2fs and %d attempts",
+						url, (System.currentTimeMillis() - start) / 1000.0, attempts ) );
+
+		return self();
+	}
 
 	/**
 	 * Hits the back button on the browser
@@ -262,11 +306,30 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 	}
 
 	/**
+	 * Extracts a meanigful name from an icon element
+	 *
+	 * @param icon The icon element
+	 * @return What that icon means
+	 */
+	protected static String iconSemantic( WebElement icon ) {
+		String name = icon.getText();
+		return ICON_SEMANTICS.getOrDefault( name, name );
+	}
+
+	/**
 	 * @param content Some strings
 	 * @return A string that can be trivially copy/pasted into java source
 	 */
 	protected static String copypasta( String... content ) {
 		return copypasta( Stream.of( content ) );
+	}
+
+	/**
+	 * @param content Some strings
+	 * @return A string that can be trivially copy/pasted into java source
+	 */
+	protected static String copypasta( Collection<String> content ) {
+		return copypasta( content.stream() );
 	}
 
 	/**

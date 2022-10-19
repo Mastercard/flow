@@ -49,7 +49,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 		// fragment doesn't count). Hence we're inserting a bogus url parameter to force
 		// a page load
 		String freshUrl = url.replaceAll( "/(#.*)", "/?refresh=" + refreshCounter++ + "$1" );
-		driver.get( freshUrl + args );
+		get( freshUrl + args );
 		awaitLoad();
 
 		return this;

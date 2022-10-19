@@ -124,6 +124,7 @@ public class ReportTestUtil {
 		server.staticFiles.header( "Access-Control-Allow-Origin", "*" );
 		server.init();
 		server.awaitInitialization();
+
 		return new Served( server, dir );
 	}
 

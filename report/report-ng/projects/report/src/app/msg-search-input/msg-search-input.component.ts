@@ -1,5 +1,5 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
-import { MatInput } from '@angular/material/input';
+
 import { MsgSearchService } from '../msg-search.service';
 
 @Component({
