@@ -31,7 +31,7 @@ jobs:
         cache-dependency-path: report/report-ng/yarn.lock
 
     - name: Run mutation testing
-      run: mvn -Paggregate -Dnode=system test org.pitest:pitest-maven:mutationCoverage package
+      run: mvn -B -Paggregate -Dnode=system test org.pitest:pitest-maven:mutationCoverage package
 
     - name: Save aggregated mutation report
       uses: actions/upload-artifact@v3
