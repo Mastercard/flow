@@ -186,11 +186,21 @@ class CheckerTest {
 								} ) ) );
 	}
 
+	/**
+	 * Sources of unpredictability
+	 */
 	enum Nprdct implements Unpredictable {
-		DIGITS, DIGITS_AND_SUFFIX,
+		/***/
+		DIGITS,
+		/***/
+		DIGITS_AND_SUFFIX,
 	}
 
+	/**
+	 * A {@link Checker} for {@link TestResidue}s
+	 */
 	static class TestChecker extends Checker<TestResidue> {
+		/***/
 		public TestChecker() {
 			super( TestResidue.class );
 		}

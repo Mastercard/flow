@@ -162,13 +162,13 @@ public class Writer {
 					flow.meta().motivation(),
 					flow.meta().trace(),
 					Optional.ofNullable( flow.basis() )
-							.map( b -> detailFilename( b.meta().description(), b.meta().tags() ) )
+							.map( Writer::detailFilename )
 							.orElse( null ),
 					flow.dependencies()
 							.map( d -> d.source().flow() )
 							.filter( d -> d != flow )
 							.collect( toMap(
-									k -> detailFilename( k.meta().description(), k.meta().tags() ),
+									Writer::detailFilename,
 									v -> new DependencyData(
 											v.meta().description(),
 											v.meta().tags() ),
@@ -189,7 +189,7 @@ public class Writer {
 				e.accept( detail );
 			}
 			indexEntry = new Entry( detail.description, detail.tags,
-					detailFilename( detail.description, detail.tags ) );
+					detailFilename( detail ) );
 		}
 
 		Entry indexEntry() {
@@ -200,11 +200,31 @@ public class Writer {
 	/**
 	 * Computes the filename for a flow identity
 	 *
+	 * @param flow The {@link Flow}
+	 * @return The file name under which the flow's details should be saved
+	 */
+	public static String detailFilename( Flow flow ) {
+		return detailFilename( flow.meta().description(), flow.meta().tags() );
+	}
+
+	/**
+	 * Computes the filename for a flow identity
+	 *
+	 * @param flow The {@link Flow}
+	 * @return The file name under which the flow's details should be saved
+	 */
+	public static String detailFilename( FlowData flow ) {
+		return detailFilename( flow.description, flow.tags );
+	}
+
+	/**
+	 * Computes the filename for a flow identity
+	 *
 	 * @param description {@link Metadata#description()}
 	 * @param tags        {@link Metadata#tags()}
 	 * @return The file name under which the flow's details should be saved
 	 */
-	public static String detailFilename( String description, Set<String> tags ) {
+	private static String detailFilename( String description, Set<String> tags ) {
 		try {
 			Set<String> toHash = new TreeSet<>( tags );
 			toHash.removeAll( RESULT_TAGS );
