@@ -39,10 +39,9 @@ public class DetailSequence extends AbstractSequence<DetailSequence> {
 			args = "?" + Stream.of( arguments ).collect( Collectors.joining( "&" ) );
 		}
 
-		driver.get( url.replaceAll( "^(.*\\.html).*$", "$1" )
+		return get( url.replaceAll( "^(.*\\.html).*$", "$1" )
 				+ "?refresh=" + refreshCounter++
 				+ "#" + args );
-		return this;
 	}
 
 	/**

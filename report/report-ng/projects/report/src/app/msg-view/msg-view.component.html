@@ -2,5 +2,5 @@
   <mat-icon>visibility_off</mat-icon>
   No {{options.dataDisplay}} data available!
 </div>
-<pre *ngIf="showContent">{{content}}</pre>
+<app-highlighted-text *ngIf="showContent" [content]="content"></app-highlighted-text>
 <app-hexdump *ngIf="showHex" [bytes]="bytes"></app-hexdump>

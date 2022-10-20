@@ -1,9 +1,21 @@
-<div [ngStyle]="style" class="action" (click)="displayTransmission()" [ngClass]="class()">
-  <mat-icon>psychology</mat-icon>
+<div [ngStyle]="style" class="action" (click)="displayTransmission()" [ngClass]="class()" matRipple>
+  <mark *ngIf="markExpected; else miss_expected">
+    <mat-icon>psychology</mat-icon>
+  </mark>
+  <ng-template #miss_expected>
+    <mat-icon>psychology</mat-icon>
+  </ng-template>
   <mat-icon *ngIf="hasBasis">foundation</mat-icon>
   <span class="label">{{action.label}}</span>
   <span class="tag" *ngFor="let tag of action.tags">{{tag}}</span>
-  <mat-icon *ngIf="hasActual">visibility</mat-icon>
+  <span *ngIf="hasActual">
+    <mark *ngIf="markActual; else miss_actual">
+      <mat-icon>visibility</mat-icon>
+    </mark>
+    <ng-template #miss_actual>
+      <mat-icon>visibility</mat-icon>
+    </ng-template>
+  </span>
   <mat-icon *ngIf="assertionPassed">check_circle_outline</mat-icon>
   <mat-icon *ngIf="assertionFailed">error_outline</mat-icon>
   <div *ngIf="action.from < action.to" class="arrow" title="{{title}}">

@@ -52,10 +52,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 		if( arguments.length > 0 ) {
 			args = "#?" + Stream.of( arguments ).collect( Collectors.joining( "&" ) );
 		}
-
-		driver.get( url + args );
-
-		return this;
+		return get( url + args );
 	}
 
 	/**

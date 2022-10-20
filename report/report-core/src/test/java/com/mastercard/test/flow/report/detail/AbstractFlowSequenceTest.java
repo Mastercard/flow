@@ -21,7 +21,9 @@ abstract class AbstractFlowSequenceTest extends AbstractDetailTest {
 	 */
 	@Test
 	void messages() {
-		FlowSequence fseq = dseq.flow().onTransmission( "BEN response" );
+		FlowSequence fseq = dseq
+				.flow()
+				.onTransmission( "BEN response" );
 
 		fseq.onExpected()
 				.hasUrlArgs( "display=Expected", "msg=3" )
@@ -45,5 +47,56 @@ abstract class AbstractFlowSequenceTest extends AbstractDetailTest {
 				.hasMessage(
 						"1 1 No, I'm worried about her dairy consumption.",
 						"2 2 I'm cutting you both off" );
+	}
+
+	/**
+	 * Exercises the message-content search facility
+	 */
+	@Test
+	void search() {
+		FlowSequence fseq = dseq
+				.flow()
+				.hasSearchHits( /* initially no hits */ );
+
+		fseq.toggleSearch()
+				.search( "brie" )
+				.hasUrlArgs(
+						"msg=3",
+						"search=brie" )
+				.hasSearchHits(
+						"BEN request : expected",
+						"CHE request : expected",
+						"BEN response : expected actual" );
+
+		fseq.toggleSearch()
+				.hasSearchHits( /* closing the input clears the search */ );
+
+		fseq.toggleSearch()
+				.search( "or" )
+				.hasUrlArgs(
+						"msg=3",
+						"search=or" )
+				.hasSearchHits(
+						"CHE response : expected actual",
+						"BEN response : expected actual" );
+
+		fseq.onTransmission( "CHE response" )
+				.onExpected()
+				.hasMessage(
+						"No, I'm w[or]ried about her dairy consumption.",
+						"I'm cutting you both off" );
+
+		fseq.onTransmission( "BEN response" )
+				.onActual()
+				.hasMessage(
+						"S[or]ry Ava, no brie today, [or] ever." );
+
+		// we can deep-link to a search
+		dseq.detail( "search=ever" ).flow()
+				.hasSearch( "ever" )
+				.hasSearchHits( "BEN response : actual" )
+				.onTransmission( "BEN response" )
+				.onActual()
+				.hasMessage( "Sorry Ava, no brie today, or [ever]." );
 	}
 }

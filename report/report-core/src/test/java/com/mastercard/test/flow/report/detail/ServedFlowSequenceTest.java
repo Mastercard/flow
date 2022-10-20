@@ -14,7 +14,7 @@ class ServedFlowSequenceTest extends AbstractFlowSequenceTest {
 	}
 
 	/**
-	 * Checks the structure of the flow sequence diagram. As we're able to betch the
+	 * Checks the structure of the flow sequence diagram. As we're able to fetch the
 	 * basis flow, the sequence diagram marks those interactions that have a
 	 * counterpart in the basis
 	 */
