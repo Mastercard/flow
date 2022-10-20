@@ -120,9 +120,7 @@ public class Writer {
 		}
 
 		// write the new detail
-		app.write( idf.detail, root
-				.resolve( DETAIL_DIR_NAME )
-				.resolve( idf.indexEntry().detail + ".html" ) );
+		idf.writeTo( root, app );
 
 		// refresh the index
 		app.write( new Index(
@@ -148,9 +146,7 @@ public class Writer {
 					pi.remove();
 					IndexedFlowData toUpdate = data.get( unhappy );
 					toUpdate.detail = toUpdate.detail.withBasis( detailFilename( flow ) );
-					app.write( toUpdate.detail, root
-							.resolve( DETAIL_DIR_NAME )
-							.resolve( toUpdate.indexEntry().detail + ".html" ) );
+					toUpdate.writeTo( root, app );
 				}
 			}
 		} );
@@ -257,6 +253,18 @@ public class Writer {
 
 		Entry indexEntry() {
 			return indexEntry;
+		}
+
+		/**
+		 * Writes the detail data
+		 *
+		 * @param root The report root directory
+		 * @param app  The application
+		 */
+		void writeTo( Path root, JsApp app ) {
+			app.write( detail, root
+					.resolve( DETAIL_DIR_NAME )
+					.resolve( indexEntry().detail + ".html" ) );
 		}
 	}
 
