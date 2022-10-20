@@ -1,16 +1,24 @@
 package com.mastercard.test.flow.report;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+
+import com.mastercard.test.flow.Flow;
+import com.mastercard.test.flow.builder.Creator;
+import com.mastercard.test.flow.builder.Deriver;
+import com.mastercard.test.flow.msg.txt.Text;
+import com.mastercard.test.flow.report.Mdl.Actrs;
 
 /**
  * Exercises {@link Writer}
@@ -153,5 +161,97 @@ class WriterTest {
 						detail.indexOf( "// START_JSON_DATA" ),
 						detail.indexOf( "// END_JSON_DATA" ) + "// END_JSON_DATA".length() )
 						.replaceAll( ":\\d+", ":##" ) );
+	}
+
+	/**
+	 * Demonstrates that the report will cope with a missing basis - we'll hoist to
+	 * the nearest ancestor that <i>is</i> available.
+	 */
+	@Test
+	void basisChaining() {
+		Flow gramps = Creator.build( flow -> flow
+				.meta( data -> data
+						.description( "gramps" ) )
+				.call( a -> a.from( Actrs.AVA ).to( Actrs.BEN )
+						.request( new Text( "hi ben!" ) )
+						.response( new Text( "hi ava!" ) ) ) );
+
+		Flow pops = Deriver.build( gramps, flow -> flow
+				.meta( data -> data
+						.description( "pops" ) ) );
+
+		Flow junior = Deriver.build( pops, flow -> flow
+				.meta( data -> data
+						.description( "junior" ) ) );
+
+		Flow zygote = Deriver.build( junior, flow -> flow
+				.meta( data -> data
+						.description( "zygote" ) ) );
+
+		Path dir = Paths.get( "target", "WriterTest", "basisChaining" );
+
+		Writer writer = new Writer( "model", "test", dir );
+		Reader reader = new Reader( dir );
+
+		writer.with( zygote );
+		assertHierarchy( reader, ""
+				+ "zygote's basis is unknown basis:null",
+				"zygote has an ancestry, but none of them are in the report" );
+		assertWriterMissingBases( writer, ""
+				+ "zygote : [ junior, pops, gramps ]" );
+
+		writer.with( pops );
+		assertHierarchy( reader, ""
+				+ "zygote's basis is pops\n"
+				+ "  pops's basis is unknown basis:null",
+				"An ancestor has been added, zygote is updated" );
+		assertWriterMissingBases( writer, ""
+				+ "  pops : [ gramps ]\n"
+				+ "zygote : [ junior ]" );
+
+		writer.with( gramps );
+		assertHierarchy( reader, ""
+				+ "zygote's basis is pops\n"
+				+ "  pops's basis is gramps\n"
+				+ "gramps's basis is unknown basis:null",
+				"A more distant ancestor has been added, no update" );
+		assertWriterMissingBases( writer, ""
+				+ "zygote : [ junior ]" );
+
+		writer.with( junior );
+		assertHierarchy( reader, ""
+				+ "zygote's basis is junior\n"
+				+ "  pops's basis is gramps\n"
+				+ "gramps's basis is unknown basis:null\n"
+				+ "junior's basis is pops",
+				"The direct basis is added, zygote is updated again" );
+		assertWriterMissingBases( writer, "" );
+	}
+
+	private void assertHierarchy( Reader reader, String expected, String comment ) {
+		Map<String, String> idx = reader.read().entries.stream()
+				.collect( Collectors.toMap( e -> e.detail, e -> e.description ) );
+
+		assertEquals( expected,
+				reader.read().entries.stream()
+						.map( reader::detail )
+						.map( d -> String.format(
+								"%6s's basis is %s",
+								d.description,
+								idx.getOrDefault( d.basis, "unknown basis:" + d.basis ) ) )
+						.collect( joining( "\n" ) ),
+				comment );
+	}
+
+	private void assertWriterMissingBases( Writer writer, String expected ) {
+		assertEquals( expected,
+				writer.missingBases().entrySet().stream()
+						.map( e -> String.format(
+								"%6s : [ %s ]",
+								e.getKey().meta().description(),
+								e.getValue().stream().map( f -> f.meta().description() )
+										.collect( joining( ", " ) ) ) )
+						.sorted()
+						.collect( joining( "\n" ) ) );
 	}
 }
