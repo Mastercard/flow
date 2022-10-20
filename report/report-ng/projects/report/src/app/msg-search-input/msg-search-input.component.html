@@ -5,7 +5,7 @@
     <div *ngIf="showInput">
         <mat-form-field class="example-full-width" appearance="fill">
             <mat-label>Message search</mat-label>
-            <input id="search_input" matInput #input [ngModel]="value" (ngModelChange)="onSearchChange($event)"
+            <input type="search" id="search_input" matInput #input [ngModel]="value" (ngModelChange)="onSearchChange($event)"
                 name="search_term" autocomplete="new-search_term">
         </mat-form-field>
     </div>

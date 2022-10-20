@@ -13,7 +13,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -80,6 +83,8 @@ public class Writer {
 	private final Map<Flow, IndexedFlowData> data = new LinkedHashMap<>();
 	private final JsApp app;
 
+	private final Map<Flow, List<Flow>> missingBases = new HashMap<>();
+
 	/**
 	 * @param modelTitle A human-readable title for the model that supplied the test
 	 *                   data
@@ -105,7 +110,8 @@ public class Writer {
 	 */
 	@SafeVarargs
 	public final Writer with( Flow flow, Consumer<FlowData>... extra ) {
-		IndexedFlowData idf = data.computeIfAbsent( flow, IndexedFlowData::new );
+		IndexedFlowData idf = data.computeIfAbsent( flow,
+				f -> new IndexedFlowData( flow, data.keySet(), missingBases ) );
 		String oldname = idf.indexEntry().detail;
 		idf.update( extra );
 
@@ -113,9 +119,10 @@ public class Writer {
 			QuietFiles.recursiveDelete( root.resolve( "detail/" + oldname + ".html" ) );
 		}
 
-		Path detailPath = root.resolve( DETAIL_DIR_NAME )
-				.resolve( idf.indexEntry().detail + ".html" );
-		app.write( idf.detail, detailPath );
+		// write the new detail
+		idf.writeTo( root, app );
+
+		// refresh the index
 		app.write( new Index(
 				new Meta( modelTitle, testTitle,
 						System.currentTimeMillis() ),
@@ -123,6 +130,32 @@ public class Writer {
 						.map( IndexedFlowData::indexEntry )
 						.collect( toList() ) ),
 				root.resolve( INDEX_FILE_NAME ) );
+
+		// refresh the details of those who were waiting for that flow as a better basis
+		// candidate
+		missingBases.forEach( ( unhappy, preferred ) -> {
+			Iterator<Flow> pi = preferred.iterator();
+			boolean found = false;
+			while( pi.hasNext() ) {
+				Flow betterBase = pi.next();
+				if( found ) {
+					pi.remove();
+				}
+				else if( betterBase == flow ) {
+					found = true;
+					pi.remove();
+					IndexedFlowData toUpdate = data.get( unhappy );
+					toUpdate.detail = toUpdate.detail.withBasis( detailFilename( flow ) );
+					toUpdate.writeTo( root, app );
+				}
+			}
+		} );
+
+		// prune satisfied flows
+		missingBases.entrySet().removeAll(
+				missingBases.entrySet().stream()
+						.filter( e -> e.getValue().isEmpty() )
+						.collect( toSet() ) );
 
 		return this;
 	}
@@ -151,24 +184,50 @@ public class Writer {
 		}
 	}
 
-	private class IndexedFlowData {
-		private Entry indexEntry;
-		public final FlowData detail;
+	/**
+	 * @return A map from {@link Flow}s that are missing their ideal bases to list
+	 *         of those bases in preference order
+	 */
+	public Map<Flow, List<Flow>> missingBases() {
+		return missingBases;
+	}
 
-		public IndexedFlowData( Flow flow ) {
+	private static class IndexedFlowData {
+		private Entry indexEntry;
+		FlowData detail;
+
+		public IndexedFlowData( Flow flow,
+				Set<Flow> flowsInReport,
+				Map<Flow, List<Flow>> missingBases ) {
+
+			// walk up the basis chain until we find one that exists in the report
+			Flow closesBasis = flow.basis();
+			List<Flow> desiredBases = new ArrayList<>();
+			while( closesBasis != null
+					&& !flowsInReport.contains( closesBasis ) ) {
+				desiredBases.add( closesBasis );
+				closesBasis = closesBasis.basis();
+			}
+
+			if( !desiredBases.isEmpty() ) {
+				// keep track of the missing ones. If those get added to the rpeort later we'll
+				// want to update this flow to point at them
+				missingBases.put( flow, desiredBases );
+			}
+
 			detail = new FlowData(
 					flow.meta().description(),
 					new TreeSet<>( flow.meta().tags() ),
 					flow.meta().motivation(),
 					flow.meta().trace(),
-					Optional.ofNullable( flow.basis() )
-							.map( b -> detailFilename( b.meta().description(), b.meta().tags() ) )
+					Optional.ofNullable( closesBasis )
+							.map( Writer::detailFilename )
 							.orElse( null ),
 					flow.dependencies()
 							.map( d -> d.source().flow() )
 							.filter( d -> d != flow )
 							.collect( toMap(
-									k -> detailFilename( k.meta().description(), k.meta().tags() ),
+									Writer::detailFilename,
 									v -> new DependencyData(
 											v.meta().description(),
 											v.meta().tags() ),
@@ -189,12 +248,44 @@ public class Writer {
 				e.accept( detail );
 			}
 			indexEntry = new Entry( detail.description, detail.tags,
-					detailFilename( detail.description, detail.tags ) );
+					detailFilename( detail ) );
 		}
 
 		Entry indexEntry() {
 			return indexEntry;
 		}
+
+		/**
+		 * Writes the detail data
+		 *
+		 * @param root The report root directory
+		 * @param app  The application
+		 */
+		void writeTo( Path root, JsApp app ) {
+			app.write( detail, root
+					.resolve( DETAIL_DIR_NAME )
+					.resolve( indexEntry().detail + ".html" ) );
+		}
+	}
+
+	/**
+	 * Computes the filename for a flow identity
+	 *
+	 * @param flow The {@link Flow}
+	 * @return The file name under which the flow's details should be saved
+	 */
+	public static String detailFilename( Flow flow ) {
+		return detailFilename( flow.meta().description(), flow.meta().tags() );
+	}
+
+	/**
+	 * Computes the filename for a flow identity
+	 *
+	 * @param flow The {@link Flow}
+	 * @return The file name under which the flow's details should be saved
+	 */
+	public static String detailFilename( FlowData flow ) {
+		return detailFilename( flow.description, flow.tags );
 	}
 
 	/**
@@ -204,7 +295,7 @@ public class Writer {
 	 * @param tags        {@link Metadata#tags()}
 	 * @return The file name under which the flow's details should be saved
 	 */
-	public static String detailFilename( String description, Set<String> tags ) {
+	private static String detailFilename( String description, Set<String> tags ) {
 		try {
 			Set<String> toHash = new TreeSet<>( tags );
 			toHash.removeAll( RESULT_TAGS );

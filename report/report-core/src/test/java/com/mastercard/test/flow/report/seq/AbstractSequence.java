@@ -91,10 +91,10 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 	/**
 	 * Navigates the browser
 	 *
-	 * @param url The destination
+	 * @param destination Where we want to browse to
 	 * @return <code>this</code>
 	 */
-	protected S get( String url ) {
+	protected S get( String destination ) {
 
 		// I really hate having to do this, but something seems to have changed on my
 		// system such that it's necessary - a single get call usually just leaves you
@@ -105,13 +105,13 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 		int attempts = 0;
 		do {
 			attempts++;
-			driver.get( url );
+			driver.get( destination );
 		}
 		while( limit > System.currentTimeMillis() && "data:,".equals( driver.getCurrentUrl() ) );
 
 		Assertions.assertNotEquals( "data:,", driver.getCurrentUrl(),
 				String.format( "Failed to achieve destination '%s' after %.2fs and %d attempts",
-						url, (System.currentTimeMillis() - start) / 1000.0, attempts ) );
+						destination, (System.currentTimeMillis() - start) / 1000.0, attempts ) );
 
 		return self();
 	}

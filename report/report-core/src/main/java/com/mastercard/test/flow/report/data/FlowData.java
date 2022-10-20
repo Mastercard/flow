@@ -109,4 +109,17 @@ public class FlowData {
 		this.logs = logs;
 	}
 
+	/**
+	 * Updates the {@link #basis} field
+	 *
+	 * @param b The new basis value
+	 * @return a new {@link FlowData} instance, copying this one in all aspects
+	 *         except the {@link #basis}
+	 */
+	public FlowData withBasis( String b ) {
+		return new FlowData( description, tags, motivation, trace,
+				b,
+				dependencies, root, context,
+				residue, logs );
+	}
 }
