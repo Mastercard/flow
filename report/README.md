@@ -102,6 +102,8 @@ Clicking on the requests and responses will show the message data for that trans
 
 For the expected and actual messages, the data can be displayed in a human-readable format, or the bytes can be interpreted as UTF8 or as raw data in a hexdump.
 
+Clicking the search icon in the top-right of the sequence view allows message content to be searched - messages that contain the search term will be highlighted in the sequence diagram and occurrences of the term will be highlighted in message content.
+
 #### Context
 
 The context tab, if present, displays the data that represents the context in which the flow is valid.
