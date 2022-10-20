@@ -18,16 +18,24 @@ export class MsgSearchService {
       this.clearListeners.forEach(l => l());
     }
     else {
-      this.searchListeners.forEach(l => l(term));
+      this.searchListeners.forEach(l => l(this.term));
     }
   }
 
   onClear(callback: () => void): void {
     this.clearListeners.push(callback);
+
+    if (this.term.length === 0) {
+      callback();
+    }
   }
 
   onSearch(callback: (term: string) => void): void {
     this.searchListeners.push(callback);
+
+    if (this.term.length > 0) {
+      callback(this.term);
+    }
   }
 
   getTerm(): string {

@@ -37,11 +37,6 @@ export class SeqActionComponent implements OnInit {
       this.markActual = false;
       this.markExpected = false;
     });
-
-    search.onSearch(term => {
-      this.markExpected = this.action.transmission.full.expect.indexOf(term) >= 0;
-      this.markActual = (this.action.transmission.full.actual ?? "").indexOf(term) >= 0;
-    });
   }
 
   ngOnInit(): void {
@@ -60,6 +55,11 @@ export class SeqActionComponent implements OnInit {
     this.assertionPassed = this.action.transmission.asserted?.actual !== null
       && this.action.transmission.asserted?.actual === this.action.transmission.asserted?.expect;
     this.assertionFailed = this.hasActual && !this.assertionPassed;
+
+    this.search.onSearch(term => {
+      this.markExpected = this.action.transmission.full.expect.indexOf(term) >= 0;
+      this.markActual = (this.action.transmission.full.actual ?? "").indexOf(term) >= 0;
+    });
   }
 
   displayTransmission() {

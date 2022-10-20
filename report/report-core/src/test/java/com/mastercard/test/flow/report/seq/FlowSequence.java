@@ -189,12 +189,25 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 	}
 
 	/**
+	 * Asserts on the contents of the search box
+	 *
+	 * @param term The expected search term
+	 * @return <code>this</code>
+	 */
+	public FlowSequence hasSearch( String term ) {
+		trace( "hasSearch", term );
+		WebElement input = driver.findElement( By.id( "search_input" ) );
+		assertEquals( term, input.getAttribute( "value" ) );
+		return this;
+	}
+
+	/**
 	 * Asserts on which messages are showing search hits
 	 *
 	 * @param expected The expected search hits
 	 * @return <code>this</code>
 	 */
-	public FlowSequence expectSearchHits( String... expected ) {
+	public FlowSequence hasSearchHits( String... expected ) {
 		trace( "expectSearchHits", (Object[]) expected );
 		List<String> actual = driver
 				.findElements( By.tagName( "app-seq-action" ) )

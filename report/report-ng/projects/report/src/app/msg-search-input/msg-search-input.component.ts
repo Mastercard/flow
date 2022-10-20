@@ -1,6 +1,7 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 
 import { MsgSearchService } from '../msg-search.service';
+import { QueryService } from '../query.service';
 
 @Component({
   selector: 'app-msg-search-input',
@@ -9,17 +10,24 @@ import { MsgSearchService } from '../msg-search.service';
 })
 export class MsgSearchInputComponent implements OnInit {
 
-  value: string = "";
+  value: string;
   showInput: boolean = false;
   @ViewChild('input') input?: ElementRef;
 
-  constructor(private searchService: MsgSearchService) { }
+  constructor(
+    private searchService: MsgSearchService,
+    private query: QueryService) {
+    this.value = query.get("search", "");
+    searchService.search(this.value);
+    this.showInput = this.value.length > 0;
+  }
 
   ngOnInit(): void {
   }
 
   toggle() {
     this.value = "";
+    this.query.set("search", this.value);
     this.searchService.search(this.value);
     this.showInput = !this.showInput;
     if (this.showInput) {
@@ -31,6 +39,7 @@ export class MsgSearchInputComponent implements OnInit {
 
   onSearchChange(newValue: string): void {
     this.value = newValue;
+    this.query.set("search", this.value);
     this.searchService.search(this.value);
   }
 }

@@ -56,21 +56,27 @@ abstract class AbstractFlowSequenceTest extends AbstractDetailTest {
 	void search() {
 		FlowSequence fseq = dseq
 				.flow()
-				.expectSearchHits( /* initially no hits */ );
+				.hasSearchHits( /* initially no hits */ );
 
 		fseq.toggleSearch()
 				.search( "brie" )
-				.expectSearchHits(
+				.hasUrlArgs(
+						"msg=3",
+						"search=brie" )
+				.hasSearchHits(
 						"BEN request : expected",
 						"CHE request : expected",
 						"BEN response : expected actual" );
 
 		fseq.toggleSearch()
-				.expectSearchHits( /* closing the input clears the search */ );
+				.hasSearchHits( /* closing the input clears the search */ );
 
 		fseq.toggleSearch()
 				.search( "or" )
-				.expectSearchHits(
+				.hasUrlArgs(
+						"msg=3",
+						"search=or" )
+				.hasSearchHits(
 						"CHE response : expected actual",
 						"BEN response : expected actual" );
 
@@ -84,5 +90,13 @@ abstract class AbstractFlowSequenceTest extends AbstractDetailTest {
 				.onActual()
 				.hasMessage(
 						"S[or]ry Ava, no brie today, [or] ever." );
+
+		// we can deep-link to a search
+		dseq.detail( "search=ever" ).flow()
+				.hasSearch( "ever" )
+				.hasSearchHits( "BEN response : actual" )
+				.onTransmission( "BEN response" )
+				.onActual()
+				.hasMessage( "Sorry Ava, no brie today, or [ever]." );
 	}
 }
