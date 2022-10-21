@@ -5,7 +5,7 @@ import com.mastercard.test.flow.Model;
 /**
  * Exercises {@link Coppice} with a large synthetic {@link Model}
  */
-class CoppiceTest {
+class CoppiceDemo {
 
 	/**
 	 * @param args ignored

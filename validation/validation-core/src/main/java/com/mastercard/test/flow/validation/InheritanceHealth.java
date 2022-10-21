@@ -12,9 +12,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
@@ -28,6 +30,7 @@ import com.github.difflib.DiffUtils;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.Model;
+import com.mastercard.test.flow.util.Flows;
 import com.mastercard.test.flow.validation.graph.CachingDiffDistance;
 import com.mastercard.test.flow.validation.graph.DAG;
 import com.mastercard.test.flow.validation.graph.DiffGraph;
@@ -174,8 +177,14 @@ public class InheritanceHealth {
 			return;
 		}
 
-		StructureCost actual = actualCost( model, total.get() );
-		StructureCost optimal = optimalCost( model, total.get() );
+		// we want to consider the complete inheritance hierarchy, not just those flows
+		// that are presented for execution by the model.
+		Set<Flow> allFlows = model.flows()
+				.flatMap( f -> Stream.concat( Stream.of( f ), Flows.ancestors( f ) ) )
+				.collect( toCollection( HashSet::new ) );
+
+		StructureCost actual = actualCost( allFlows, total.get() );
+		StructureCost optimal = optimalCost( model, allFlows, total.get() );
 
 		Histograph hstg = new Histograph( min, max, Math.min( max - min + 1, heightLimit ) );
 		Deque<String> actualLines = Stream.of( actual.toString( "Actual", hstg ).split( "\n" ) )
@@ -193,30 +202,29 @@ public class InheritanceHealth {
 				MessageHash.copypasta( stitched.stream() ) );
 	}
 
-	private StructureCost actualCost( Model model, int total ) {
+	private StructureCost actualCost( Set<Flow> model, int total ) {
 		AtomicInteger count = new AtomicInteger( 0 );
 		AtomicInteger rootWeight = new AtomicInteger( 0 );
 		TreeMap<Integer, Integer> edgeCosts = new TreeMap<>();
 
-		model.flows()
-				.forEach( flow -> {
-					if( flow.basis() == null ) {
-						rootWeight.addAndGet( creationCost.applyAsInt( flow ) );
-					}
-					else {
-						edgeCosts.compute(
-								derivationCost.applyAsInt( flow.basis(), flow ),
-								( k, v ) -> v == null ? 1 : v + 1 );
-					}
-					progress( Phase.ACTUAL_COST, flow, count.incrementAndGet(), total );
-				} );
+		model.forEach( flow -> {
+			if( flow.basis() == null ) {
+				rootWeight.addAndGet( creationCost.applyAsInt( flow ) );
+			}
+			else {
+				edgeCosts.compute(
+						derivationCost.applyAsInt( flow.basis(), flow ),
+						( k, v ) -> v == null ? 1 : v + 1 );
+			}
+			progress( Phase.ACTUAL_COST, flow, count.incrementAndGet(), total );
+		} );
 
 		return new StructureCost( rootWeight.get(), edgeCosts );
 	}
 
-	private StructureCost optimalCost( Model model, int total ) {
+	private StructureCost optimalCost( Model model, Set<Flow> allFlows, int total ) {
 		DiffGraph<Flow> dg = new DiffGraph<>( derivationCost );
-		model.flows().forEach( dg::add );
+		allFlows.forEach( dg::add );
 
 		// The root of the MST only affects the final root weight - edge cost will be
 		// the same regardless of the root flow. Let's assume we've made a reasonable

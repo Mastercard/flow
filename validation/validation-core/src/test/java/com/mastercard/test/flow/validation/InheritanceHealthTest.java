@@ -123,7 +123,7 @@ class InheritanceHealthTest {
 						"roots          24 | roots          12",
 						"edges           0 | edges           1",
 						"total          24 | total          13",
-						"        0   0.00% |         1  100.00%",
+						"        0   0.00% |         1 100.00%",
 						"        0   0.00% |         0   0.00%",
 						"        0   0.00% |         0   0.00%",
 						"        0   0.00% |         0   0.00%",
@@ -185,6 +185,31 @@ class InheritanceHealthTest {
 						"        1  20.00% |         1  20.00%",
 						"        2  40.00% |         0   0.00%",
 						"        1  20.00% |         0   0.00%" );
+	}
+
+	/**
+	 * Shows that flows that are not presented in the model, but that do exist in
+	 * the inheritance hierarchy, are considered
+	 */
+	@Test
+	void occultedFlows() {
+		Model model = mdl( "root", "root>toot!", "toot>tort", "toot>tool" );
+
+		assertEquals( "tool,tort,root", model.flows()
+				.map( f -> f.meta().description().replaceAll( "\\s", "" ) )
+				.collect( joining( "," ) ),
+				"only three flows presented in the model" );
+
+		// but 4 are considered in the inheritance health (1 root and three children)
+		new InheritanceHealth( 0, 2, 3, Assertions::assertEquals )
+				.expect( model,
+						"Actual            | Optimal          ",
+						"roots          12 | roots          12",
+						"edges           3 | edges           3",
+						"total          15 | total          15",
+						"        0   0.00% |         0   0.00%",
+						"        3 100.00% |         3 100.00%",
+						"        0   0.00% |         0   0.00%" );
 	}
 
 	/**
@@ -261,7 +286,7 @@ class InheritanceHealthTest {
 						"total          24 | total          16",
 						"        0   0.00% |         0   0.00%",
 						"        0   0.00% |         0   0.00%",
-						"        0   0.00% |         1  100.00%",
+						"        0   0.00% |         1 100.00%",
 						"        0   0.00% |         0   0.00%",
 						"        0   0.00% |         0   0.00%" );
 	}
@@ -279,7 +304,7 @@ class InheritanceHealthTest {
 					"roots          24 | roots          12",
 					"edges           0 | edges           4",
 					"total          24 | total          16",
-					"        0   0.00% |         1  100.00%" );
+					"        0   0.00% |         1 100.00%" );
 		}
 		{
 			InheritanceHealth low = new InheritanceHealth( 3, 3, 5, Assertions::assertEquals );
@@ -375,6 +400,8 @@ class InheritanceHealthTest {
 						.orElseThrow( () -> new IllegalArgumentException( "No basis " + cm.group( 1 ) ) );
 				desc = cm.group( 2 );
 			}
+			boolean occulted = desc.contains( "!" );
+			desc = desc.replaceAll( "[^a-z0-9]", "" );
 			Metadata meta = mock( Metadata.class );
 			when( meta.description() ).thenReturn( desc.replaceAll( "", "\n" ) );
 
@@ -389,7 +416,10 @@ class InheritanceHealthTest {
 			when( flow.toString() ).thenReturn( desc );
 
 			ids.put( desc, flow );
-			flows.add( flow );
+
+			if( !occulted ) {
+				flows.add( flow );
+			}
 		}
 
 		// let's not have a root flow always coming first

@@ -10,12 +10,13 @@ import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyVetoException;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.function.ToIntBiFunction;
 import java.util.function.ToIntFunction;
+import java.util.stream.Stream;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -42,6 +43,7 @@ import org.graphstream.ui.graphicGraph.GraphPosLengthUtils;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
+import com.mastercard.test.flow.util.Flows;
 import com.mastercard.test.flow.validation.InheritanceHealth;
 import com.mastercard.test.flow.validation.coppice.ui.Animation;
 import com.mastercard.test.flow.validation.coppice.ui.DiffView;
@@ -65,7 +67,7 @@ public class Coppice {
 			InheritanceHealth::flatten,
 			InheritanceHealth::diffDistance );
 
-	private List<Flow> flows = new ArrayList<>();
+	private Collection<Flow> flows = new HashSet<>();
 
 	/**
 	 * Enforces flow selection over all component
@@ -271,16 +273,19 @@ public class Coppice {
 		progress.update( "Model", "building", -1, 1 );
 
 		actualHierarchy.graph().forceAnimation( true );
-		model.flows().forEach( flow -> {
-			flows.add( flow );
-			SwingUtilities.invokeLater( () -> {
-				flowList.with( flow );
-				actualHierarchy.with( flow );
-			} );
+		model.flows()
+				.flatMap( f -> Stream.concat( Stream.of( f ), Flows.ancestors( f ) ) )
+				.forEach( flow -> {
+					if( flows.add( flow ) ) {
+						SwingUtilities.invokeLater( () -> {
+							flowList.with( flow );
+							actualHierarchy.with( flow );
+						} );
 
-			progress.update( "Model", flow.meta().description(), -1, 1 );
-			Animation.ADDITION.event();
-		} );
+						progress.update( "Model", flow.meta().description(), -1, 1 );
+						Animation.ADDITION.event();
+					}
+				} );
 		progress.update( "Model", "complete", 1, 1 );
 
 		SwingUtilities.invokeLater( () -> {

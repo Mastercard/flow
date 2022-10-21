@@ -47,7 +47,7 @@ public class Histograph {
 			int underCount = values.entrySet().stream().filter( e -> e.getKey() < minimum )
 					.mapToInt( Entry::getValue ).sum();
 			if( underCount > 0 ) {
-				lines.add( String.format( "<%8d  %5.2f%%", underCount, 100.0 * underCount / total ) );
+				lines.add( String.format( "<%8d %6.2f%%", underCount, 100.0 * underCount / total ) );
 			}
 		}
 
@@ -58,14 +58,14 @@ public class Histograph {
 			for( int j = prev; j < curr; j++ ) {
 				count += values.getOrDefault( j, 0 );
 			}
-			lines.add( String.format( " %8d  %5.2f%%", count, 100.0 * count / total ) );
+			lines.add( String.format( " %8d %6.2f%%", count, 100.0 * count / total ) );
 		}
 
 		{
 			int overCount = values.entrySet().stream().filter( e -> e.getKey() > maximum )
 					.mapToInt( Entry::getValue ).sum();
 			if( overCount > 0 ) {
-				lines.add( String.format( ">%8d  %5.2f%%", overCount, 100.0 * overCount / total ) );
+				lines.add( String.format( ">%8d %6.2f%%", overCount, 100.0 * overCount / total ) );
 			}
 		}
 

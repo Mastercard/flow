@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.Replay;
-import com.mastercard.test.flow.assrt.Reporting;
 import com.mastercard.test.flow.assrt.junit5.Flocessor;
 import com.mastercard.test.flow.example.app.Store;
 import com.mastercard.test.flow.example.app.assrt.AbstractServiceTest;
@@ -55,7 +54,6 @@ class StoreTest extends AbstractServiceTest {
 	@Override
 	protected Consumer<Flocessor> custom() {
 		return flocessor -> flocessor
-				.reporting( Reporting.ALWAYS )
 				// stateless data stores are rarely useful. Note that we're also including the
 				// DB in the system under test
 				.system( State.FUL, Actors.STORE, Actors.DB )
