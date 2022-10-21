@@ -29,11 +29,11 @@ This tool offers a convenient way to combat these issues when working on an syst
 
 ## Implementation
 
-Simply construct a new `Coppice` instance and call examining() to supply the system model to examine, as in [CoppiceTest][CoppiceTest] and [CoppiceMain][CoppiceMain].
+Simply construct a new `Coppice` instance and call examining() to supply the system model to examine, as in [CoppiceDemo][CoppiceDemo] and [CoppiceMain][CoppiceMain].
 
 <!-- code_link_start -->
 
-[CoppiceTest]: src/test/java/com/mastercard/test/flow/validation/coppice/CoppiceTest.java
+[CoppiceDemo]: src/test/java/com/mastercard/test/flow/validation/coppice/CoppiceDemo.java
 [CoppiceMain]: ../../example/app-model/src/test/java/com/mastercard/test/flow/example/app/model/CoppiceMain.java
 
 <!-- code_link_end -->
