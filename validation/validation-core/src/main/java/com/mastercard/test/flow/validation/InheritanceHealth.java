@@ -184,7 +184,7 @@ public class InheritanceHealth {
 				.collect( toCollection( HashSet::new ) );
 
 		StructureCost actual = actualCost( allFlows, total.get() );
-		StructureCost optimal = optimalCost( allFlows, total.get() );
+		StructureCost optimal = optimalCost( model, allFlows, total.get() );
 
 		Histograph hstg = new Histograph( min, max, Math.min( max - min + 1, heightLimit ) );
 		Deque<String> actualLines = Stream.of( actual.toString( "Actual", hstg ).split( "\n" ) )
@@ -222,14 +222,14 @@ public class InheritanceHealth {
 		return new StructureCost( rootWeight.get(), edgeCosts );
 	}
 
-	private StructureCost optimalCost( Set<Flow> model, int total ) {
+	private StructureCost optimalCost( Model model, Set<Flow> allFlows, int total ) {
 		DiffGraph<Flow> dg = new DiffGraph<>( derivationCost );
-		model.forEach( dg::add );
+		allFlows.forEach( dg::add );
 
 		// The root of the MST only affects the final root weight - edge cost will be
 		// the same regardless of the root flow. Let's assume we've made a reasonable
 		// choice in the actual hierarchy
-		Flow root = model.stream()
+		Flow root = model.flows()
 				.filter( f -> f.basis() == null )
 				.findFirst()
 				.orElseThrow( () -> new IllegalArgumentException( "No root flows?" ) );
