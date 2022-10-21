@@ -117,9 +117,9 @@ class ExampleSystemTest {
 		new InheritanceHealth( 0, 150, 20, Assertions::assertEquals )
 				.expect( ExampleSystem.MODEL,
 						"Actual            | Optimal          ",
-						"roots         354 | roots         117",
+						"roots         354 | roots          66",
 						"edges         393 | edges         433",
-						"total         747 | total         550",
+						"total         747 | total         499",
 						"        3  25.00% |         3  21.43%",
 						"        1   8.33% |         2  14.29%",
 						"        1   8.33% |         3  21.43%",
