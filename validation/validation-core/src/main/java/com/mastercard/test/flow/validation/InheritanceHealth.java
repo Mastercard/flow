@@ -183,8 +183,6 @@ public class InheritanceHealth {
 				.flatMap( f -> Stream.concat( Stream.of( f ), Flows.ancestors( f ) ) )
 				.collect( toCollection( HashSet::new ) );
 
-		System.out.println( allFlows.size() );
-
 		StructureCost actual = actualCost( allFlows, total.get() );
 		StructureCost optimal = optimalCost( allFlows, total.get() );
 

@@ -4,7 +4,7 @@
 
 package com.mastercard.test.flow.validation.coppice;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.function.ToIntBiFunction;
 
 import javax.swing.SwingUtilities;
@@ -27,7 +27,7 @@ import com.mastercard.test.flow.validation.coppice.ui.Progress;
  */
 class OptimiseParent implements Runnable {
 
-	private final List<Flow> corpus;
+	private final Collection<Flow> corpus;
 	private final Flow txn;
 	private final ToIntBiFunction<Flow, Flow> derivationCost;
 	private final GraphTree display;
@@ -44,7 +44,7 @@ class OptimiseParent implements Runnable {
 	 * @param display        How to show the results
 	 * @param progress       How to signal task progress
 	 */
-	public OptimiseParent( List<Flow> corpus, Flow txn,
+	public OptimiseParent( Collection<Flow> corpus, Flow txn,
 			ToIntBiFunction<Flow, Flow> derivationCost, GraphTree display,
 			Progress progress ) {
 		this.corpus = corpus;

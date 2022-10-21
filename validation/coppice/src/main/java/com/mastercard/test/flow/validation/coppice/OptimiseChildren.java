@@ -4,6 +4,7 @@
 
 package com.mastercard.test.flow.validation.coppice;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.ToIntBiFunction;
@@ -30,7 +31,7 @@ import com.mastercard.test.flow.validation.graph.DiffGraph;
  */
 class OptimiseChildren implements Runnable {
 
-	private final List<Flow> corpus;
+	private final Collection<Flow> corpus;
 	private final Flow txn;
 	private final ToIntBiFunction<Flow, Flow> derivationCost;
 	private final GraphTree display;
@@ -43,7 +44,7 @@ class OptimiseChildren implements Runnable {
 	 * @param display        Where to display the results
 	 * @param progress       How to show processing progress
 	 */
-	public OptimiseChildren( List<Flow> corpus, Flow txn,
+	public OptimiseChildren( Collection<Flow> corpus, Flow txn,
 			ToIntBiFunction<Flow, Flow> derivationCost, GraphTree display,
 			Progress progress ) {
 		this.corpus = corpus;
