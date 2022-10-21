@@ -57,7 +57,7 @@ class HistographTest {
 				+ "        0   0.00%\n"
 				+ "        0   0.00%\n"
 				+ "        0   0.00%\n"
-				+ "        1  100.00%",
+				+ "        1 100.00%",
 				new Histograph( 0, 4, 5 )
 						.graph( Collections.singletonMap( 4, 1 ) ) );
 	}
@@ -68,7 +68,7 @@ class HistographTest {
 	@Test
 	void height() {
 		assertEquals( ""
-				+ "       45  100.00%",
+				+ "       45 100.00%",
 				new Histograph( 0, 10, 1 ).graph( LINEAR ) );
 
 		assertEquals( ""

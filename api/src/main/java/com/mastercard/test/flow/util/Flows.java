@@ -6,6 +6,7 @@ import static com.mastercard.test.flow.util.Transmission.Type.RESPONSE;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -43,17 +44,19 @@ public class Flows {
 	 *         proximity, i.e.: the basis, the basis' basis, etc
 	 */
 	public static Stream<Flow> ancestors( Flow flow ) {
+		Set<Flow> visited = new HashSet<>();
 		Iterable<Flow> iterable = () -> new Iterator<Flow>() {
 			Flow current = flow;
 
 			@Override
 			public boolean hasNext() {
-				return current.basis() != null;
+				return current.basis() != null && !visited.contains( current.basis() );
 			}
 
 			@Override
 			public Flow next() {
 				current = current.basis();
+				visited.add( current );
 				return current;
 			}
 		};

@@ -178,6 +178,29 @@ class FlowsTest {
 	}
 
 	/**
+	 * Exercises {@link Flows#ancestors(Flow)} in the degenerate case where the
+	 * inheritance chain contains a loop
+	 */
+	@Test
+	void ancestorLoop() {
+		Flow root = flow( "root", "", null );
+		Flow grandparent = flow( "grandparent", "", root );
+		Flow parent = flow( "parent", "", grandparent );
+		Flow child = flow( "child", "", parent );
+
+		Mockito.when( root.basis() ).thenReturn( child );
+
+		Assertions.assertEquals( ""
+				+ "parent\n"
+				+ "grandparent\n"
+				+ "root\n"
+				+ "child",
+				Flows.ancestors( child )
+						.map( f -> f.meta().description() )
+						.collect( joining( "\n" ) ) );
+	}
+
+	/**
 	 * Exercises {@link Flows#interactions(Flow)}
 	 */
 	@Test
