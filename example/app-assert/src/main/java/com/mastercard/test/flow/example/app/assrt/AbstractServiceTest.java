@@ -30,6 +30,7 @@ import com.mastercard.test.flow.example.app.model.ExampleSystem;
 import com.mastercard.test.flow.example.app.model.ExampleSystem.Actors;
 import com.mastercard.test.flow.example.framework.Instance;
 import com.mastercard.test.flow.msg.http.HttpReq;
+import com.mastercard.test.flow.util.Option.Temporary;
 
 /**
  * Each of the applications services can be tested in the same way, so we've
@@ -40,16 +41,11 @@ public abstract class AbstractServiceTest {
 
 	private static MockInstance dependencyInstance = new MockInstance();
 	private static MockService dependencies = new MockService();
+	private static Temporary reportName;
 
 	private final Instance service;
 	private final Actors actor;
 	private final Logger logger;
-
-	static {
-		if( AssertionOptions.REPORT_NAME.value() == null ) {
-			AssertionOptions.REPORT_NAME.set( "latest" );
-		}
-	}
 
 	/**
 	 * @param service The {@link Instance} to exercise
@@ -70,6 +66,7 @@ public abstract class AbstractServiceTest {
 		if( !Replay.isActive() ) {
 			dependencyInstance.start( dependencies );
 		}
+		reportName = AssertionOptions.REPORT_NAME.temporarily( "latest" );
 	}
 
 	/**
@@ -78,6 +75,7 @@ public abstract class AbstractServiceTest {
 	@AfterAll
 	public static void stopDependencies() {
 		dependencyInstance.stop();
+		reportName.close();
 	}
 
 	/**
