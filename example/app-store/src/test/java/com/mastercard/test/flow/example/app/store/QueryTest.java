@@ -53,6 +53,7 @@ import com.mastercard.test.flow.msg.http.HttpReq;
 import com.mastercard.test.flow.msg.sql.Query;
 import com.mastercard.test.flow.msg.sql.Result;
 import com.mastercard.test.flow.util.Flows;
+import com.mastercard.test.flow.util.Option.Temporary;
 
 /**
  * Test that exercises the {@link Store} service in isolation by standing up an
@@ -68,12 +69,7 @@ class QueryTest {
 	private static final DataSource db = Mockito.mock( DataSource.class );
 	private static final Consequests queries = new Consequests();
 	private static final Instance service = new Main( db ).build();
-
-	static {
-		if( AssertionOptions.REPORT_NAME.value() == null ) {
-			AssertionOptions.REPORT_NAME.set( "query_latest" );
-		}
-	}
+	private static Temporary reportName;
 
 	/**
 	 * Starts the service
@@ -83,6 +79,7 @@ class QueryTest {
 		if( !Replay.isActive() ) {
 			service.start();
 		}
+		reportName = AssertionOptions.REPORT_NAME.temporarily( "query_latest" );
 	}
 
 	/**
@@ -93,6 +90,7 @@ class QueryTest {
 		if( !Replay.isActive() ) {
 			service.stop();
 		}
+		reportName.close();
 	}
 
 	/**
