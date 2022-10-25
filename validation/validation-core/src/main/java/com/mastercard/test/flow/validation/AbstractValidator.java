@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.validation.check.ChainOverlapCheck;
 import com.mastercard.test.flow.validation.check.DependencyChronologyCheck;
+import com.mastercard.test.flow.validation.check.DependencyInclusionCheck;
 import com.mastercard.test.flow.validation.check.DependencyLoopCheck;
 import com.mastercard.test.flow.validation.check.FlowIdentityCheck;
 import com.mastercard.test.flow.validation.check.InteractionIdentityCheck;
@@ -38,6 +39,7 @@ public abstract class AbstractValidator<T extends AbstractValidator<T>> {
 				new ChainOverlapCheck(),
 				new DependencyChronologyCheck(),
 				new DependencyLoopCheck(),
+				new DependencyInclusionCheck(),
 				new FlowIdentityCheck(),
 				new InteractionIdentityCheck(),
 				new MessageSharingCheck(),
