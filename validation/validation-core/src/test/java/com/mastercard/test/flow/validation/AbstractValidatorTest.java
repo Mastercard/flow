@@ -31,6 +31,7 @@ class AbstractValidatorTest {
 		Assertions.assertEquals( ""
 				+ "Chain overlap\n"
 				+ "Dependency chronology\n"
+				+ "Dependency inclusion\n"
 				+ "Dependency loop\n"
 				+ "Flow Identity\n"
 				+ "Interaction Identity\n"
@@ -62,9 +63,9 @@ class AbstractValidatorTest {
 				.accepting( v -> v.details().contains( "minor" ) );
 
 		Assertions.assertFalse( tv.accepted(
-				new Violation( null, "gadzooks! this is a major problem!", null, null ) ) );
+				new Violation( null, "gadzooks! this is a major problem!" ) ) );
 		Assertions.assertTrue( tv.accepted(
-				new Violation( null, "meh, this is a minor problem", null, null ) ) );
+				new Violation( null, "meh, this is a minor problem" ) ) );
 
 	}
 }

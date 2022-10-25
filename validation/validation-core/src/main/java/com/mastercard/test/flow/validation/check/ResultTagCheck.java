@@ -54,7 +54,7 @@ public class ResultTagCheck implements Validation {
 							.collect( Collectors.joining( ", " ) );
 
 					if( !misused.isEmpty() ) {
-						return new Violation( this, "Use of reserved tags: " + misused, null, null )
+						return new Violation( this, "Use of reserved tags: " + misused )
 								.offender( flow );
 					}
 

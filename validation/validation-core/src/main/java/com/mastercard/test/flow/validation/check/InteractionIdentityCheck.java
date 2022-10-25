@@ -38,7 +38,7 @@ public class InteractionIdentityCheck implements Validation {
 								String id = String.format( "%s->%s %s",
 										ntr.requester().name(), ntr.responder().name(), ntr.tags() );
 								if( ids.containsKey( id ) ) {
-									return new Violation( this, "Shared interaction ID", null, null )
+									return new Violation( this, "Shared interaction ID" )
 											.offender( flow, ids.get( id ), ntr );
 								}
 								ids.put( id, ntr );

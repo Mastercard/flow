@@ -26,12 +26,22 @@ public class Violation {
 	private final String actual;
 
 	/**
+	 * Constructs a new {@link Violation} that signals a general failure
+	 *
 	 * @param validation The {@link Validation} that has been violated
 	 * @param details    A human-readable description of the violation
-	 * @param expected   Expected half of a comparison test, or <code>null</code> to
-	 *                   just signal a general test failure
-	 * @param actual     Actual half of a comparison test, or <code>null</code>to
-	 *                   just signal a general test failure
+	 */
+	public Violation( Validation validation, String details ) {
+		this( validation, details, null, null );
+	}
+
+	/**
+	 * Constructs a new {@link Violation} that signals an expected-equality mismatch
+	 *
+	 * @param validation The {@link Validation} that has been violated
+	 * @param details    A human-readable description of the violation
+	 * @param expected   Expected half of an equality test
+	 * @param actual     Actual half of an equality test
 	 */
 	public Violation( Validation validation, String details, String expected, String actual ) {
 		this.validation = validation;

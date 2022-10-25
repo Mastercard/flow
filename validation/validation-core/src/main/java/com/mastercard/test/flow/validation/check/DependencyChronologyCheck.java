@@ -48,11 +48,10 @@ public class DependencyChronologyCheck implements Validation {
 										+ "\nto\n"
 										+ "%s",
 										delorean.source().getMessage().map( Message::assertable ).orElse( "???" ),
-										delorean.sink().getMessage().map( Message::assertable ).orElse( "???" ) ),
-								null, null )
-										.offender( flow,
-												delorean.source().getInteraction().orElse( null ),
-												delorean.sink().getInteraction().orElse( null ) );
+										delorean.sink().getMessage().map( Message::assertable ).orElse( "???" ) ) )
+												.offender( flow,
+														delorean.source().getInteraction().orElse( null ),
+														delorean.sink().getInteraction().orElse( null ) );
 					}
 					return null;
 				} ) );

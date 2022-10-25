@@ -175,7 +175,7 @@ class DependencyLoopCheckTest extends AbstractValidationTest {
 	}
 
 	/**
-	 * @param flows A set of string, each specifying one flow. The strings are
+	 * @param flows A set of strings, each specifying one flow. The strings are
 	 *              space-separated lists. The first element is the flow name, the
 	 *              following elements are the names of dependency flows
 	 * @return A model, with the specified flows and dependency structure
