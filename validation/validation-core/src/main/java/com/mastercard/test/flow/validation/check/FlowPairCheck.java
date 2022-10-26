@@ -51,7 +51,7 @@ public abstract class FlowPairCheck implements Validation {
 				checks.add( new Check( this,
 						left.meta().id() + " x " + right.meta().id(),
 						() -> violation( left, right )
-								.map( v -> new Violation( this, v, null, null )
+								.map( v -> new Violation( this, v )
 										.offender( left )
 										.offender( right ) )
 								.orElse( null ) ) );

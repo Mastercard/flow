@@ -116,7 +116,7 @@ class ExampleTest {
 			public Stream<Check> checks( Model model ) {
 				return Stream.of(
 						new Check( this, "fail",
-								() -> new Violation( this, "fail", null, null ) ),
+								() -> new Violation( this, "fail" ) ),
 						new Check( this, "cmp fail",
 								() -> new Violation( this, "fail", "expect", "actual" ) ) );
 			}
@@ -140,7 +140,7 @@ class ExampleTest {
 			public Stream<Check> checks( Model model ) {
 				return Stream.of(
 						new Check( this, "accept",
-								() -> new Violation( this, "accept", null, null ) ) );
+								() -> new Violation( this, "accept" ) ) );
 			}
 		};
 	}

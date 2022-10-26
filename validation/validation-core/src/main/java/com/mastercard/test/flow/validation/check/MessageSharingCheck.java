@@ -50,10 +50,9 @@ public class MessageSharingCheck implements Validation {
 							MessageOwner current = new MessageOwner( flow, tx.source() );
 							MessageOwner previous = messageIdentities.get( objectId );
 							if( previous != null ) {
-								return new Violation( this, "Shared message:\n" + tx.message().assertable(),
-										null, null )
-												.offender( previous.flow, previous.interaction )
-												.offender( current.flow, current.interaction );
+								return new Violation( this, "Shared message:\n" + tx.message().assertable() )
+										.offender( previous.flow, previous.interaction )
+										.offender( current.flow, current.interaction );
 							}
 							messageIdentities.put( objectId, current );
 						}

@@ -40,7 +40,7 @@ public class ChainOverlapCheck implements Validation {
 							.collect( Collectors.toCollection( TreeSet::new ) );
 
 					if( chains.size() > 1 ) {
-						return new Violation( this, "Overlapping chains " + chains, null, null )
+						return new Violation( this, "Overlapping chains " + chains )
 								.offender( flow );
 					}
 
