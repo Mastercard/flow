@@ -14,6 +14,7 @@ Each of the artifacts you consume should have the same version number, so it's b
   <flow.version>x.y.z</flow.version>
 </properties>
 ```
+The latest release version is [![Maven Central](https://img.shields.io/maven-central/v/com.mastercard.test.flow/parent)](https://search.maven.org/search?q=com.mastercard.test.flow).
 
 Bear in mind that the artifacts provided by this project are intended for usage in testing only.
 Take care to scope the dependencies appropriately for your project structure.

@@ -111,7 +111,7 @@ You can see this behaviour in action in the example system model:
 
 ## Log capture
 
-Diagnosing unexpected system behaviour is made vastly easier if system logs are available. It's possible to include log content in the test execution report by providing an implementation of the [`LogCapture`][LogCapture] interface when you build the `Flocessor` object, via the `logs()` method.
+Diagnosing unexpected system behaviour is made vastly easier if system logs are available. It's possible to include log content in the test execution report by providing an implementation of the [`LogCapture`][LogCapture] interface when you build the `Flocessor` object, via the [`logs()`][AbstractFlocessor.logs(LogCapture)] method.
 
 Note that the assertion components will not make any assumptions about the format of the `LogEvent.time` field - it is up to the `LogCapture` implementation to put events in chronological order. It is recommended that the `time` values are compatible with [Date.parse](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse) - the html report is then able to enhance the log view with an elapsed time display.
 
@@ -123,6 +123,7 @@ Note that the assertion components will not make any assumptions about the forma
 [LogCapture]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/LogCapture.java
 [Tail]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/log/Tail.java
 [Merge]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/log/Merge.java
+[AbstractFlocessor.logs(LogCapture)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L248-L255,248-255
 
 <!-- code_link_end -->
 
