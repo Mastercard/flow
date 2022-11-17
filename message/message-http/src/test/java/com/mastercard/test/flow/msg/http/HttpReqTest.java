@@ -4,8 +4,14 @@ package com.mastercard.test.flow.msg.http;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
+import java.util.TreeSet;
+import java.util.stream.Stream;
+
+import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
 
 import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.Unpredictable;
@@ -294,5 +300,38 @@ class HttpReqTest {
 				+ "{\n"
 				+ "  \"body\" : \"masked\"\n"
 				+ "}", msg.assertable( RNG ) );
+	}
+
+	/**
+	 * Asserting that we can parse messages with missing fields
+	 *
+	 * @return test instances
+	 */
+	@TestFactory
+	Stream<DynamicNode> missing() {
+		HttpReq full = new HttpReq()
+				.set( HttpReq.METHOD, "GET" )
+				.set( HttpReq.PATH, "/path/to?q=uery" )
+				.set( HttpMsg.VERSION, "HTTP/1.1" )
+				.set( HttpMsg.header( "header" ), "value" )
+				.set( HttpMsg.BODY, new Json() );
+
+		Stream<TreeSet<String>> fieldSets = new Combinator<>( TreeSet::new,
+				HttpReq.METHOD,
+				HttpReq.PATH,
+				HttpMsg.VERSION,
+				HttpMsg.header( "header" ),
+				HttpMsg.BODY )
+						.stream();
+
+		return fieldSets.map( fields -> dynamicTest(
+				"missing " + fields.toString(), () -> {
+					HttpReq partial = full.child();
+					fields.forEach( f -> partial.set( f, AbstractMessage.DELETE ) );
+
+					HttpReq parsed = partial.peer( partial.content() );
+					assertEquals( partial.assertable(), parsed.assertable(),
+							"serialisation/parsing round-trip divergence" );
+				} ) );
 	}
 }

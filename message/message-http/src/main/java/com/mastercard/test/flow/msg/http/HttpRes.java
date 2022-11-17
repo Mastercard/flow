@@ -4,11 +4,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Deque;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.util.Bytes;
@@ -19,11 +22,6 @@ import com.mastercard.test.flow.util.Bytes;
  */
 public class HttpRes extends HttpMsg<HttpRes> {
 
-	private static final Pattern RES_PATTERN = Pattern
-			.compile( "^(?<version>\\S+?) (?<status>\\S+) ?(?<text>.*?)\r\n"
-					+ "(?<headers>.*?)\r\n"
-					+ "\r\n"
-					+ "(?<body>.*)$", Pattern.DOTALL );
 	/**
 	 * Use this as the field path to set the HTTP status code
 	 */
@@ -46,22 +44,36 @@ public class HttpRes extends HttpMsg<HttpRes> {
 	public HttpRes( byte[] content, Function<byte[], Message> bodyParse ) {
 		this();
 
-		Matcher m = RES_PATTERN.matcher( new String( content, UTF_8 ) );
-		if( m.matches() ) {
-			set( VERSION, m.group( "version" ).trim() );
-			set( HttpRes.STATUS, m.group( "status" ).trim() );
-			set( HttpRes.STATUS_TEXT, m.group( "text" ).trim() );
+		Deque<String> lines = new ArrayDeque<>(
+				Arrays.asList( new String( content, UTF_8 ).split( "\r\n" ) ) );
 
-			for( String line : m.group( "headers" ).split( "\r\n" ) ) {
-				Matcher h = HEADER_PATTERN.matcher( line );
-				if( h.matches() ) {
-					set( HEADER_PRESUFIX + h.group( "name" ).trim() + HEADER_PRESUFIX,
-							h.group( "value" ).trim() );
-				}
-			}
+		// status line
+		Deque<String> statusFields = new ArrayDeque<>(
+				Arrays.asList( lines.removeFirst().split( " " ) ) );
 
-			set( BODY, bodyParse.apply( dechunken( m.group( "body" ) ).getBytes( UTF_8 ) ) );
+		if( !statusFields.isEmpty() ) {
+			set( VERSION, statusFields.removeFirst() );
 		}
+		if( !statusFields.isEmpty() ) {
+			set( STATUS, statusFields.removeFirst() );
+		}
+		if( !statusFields.isEmpty() ) {
+			set( STATUS_TEXT, statusFields.stream().collect( joining( " " ) ) );
+		}
+
+		// zero or more headers
+		String headerLine;
+		while( !lines.isEmpty() && !(headerLine = lines.removeFirst()).isEmpty() ) {
+			Matcher h = HEADER_LINE_PATTERN.matcher( headerLine );
+			if( h.matches() ) {
+				set( HEADER_PRESUFIX + h.group( "name" ).trim() + HEADER_PRESUFIX,
+						h.group( "value" ).trim() );
+			}
+		}
+
+		// body
+		String body = lines.stream().collect( joining( "\r\n" ) );
+		set( BODY, bodyParse.apply( dechunken( body ).getBytes( UTF_8 ) ) );
 	}
 
 	/**
@@ -122,18 +134,26 @@ public class HttpRes extends HttpMsg<HttpRes> {
 
 	@Override
 	protected String serialise( String bodyContent, boolean wireFormat ) {
-		return String.format( ""
-				+ "%s %s%s%s\r\n" // response line
-				+ "%s" // headers (will supply their own line endings)
-				+ "\r\n" // empty line
-				+ "%s", // body,
-				version(), status(), statusText().isEmpty() ? "" : " ", statusText(),
-				headers().entrySet().stream()
-						.map( e -> String.format( "%s: %s\r\n",
-								e.getKey(),
-								e.getValue() ) )
-						.collect( joining() ),
-				enchunken( bodyContent, wireFormat ) );
+		StringBuilder sb = new StringBuilder();
+		// status
+		sb.append( Stream.of(
+				version(), status(), statusText() )
+				.collect( joining( " " ) ) )
+				.append( "\r\n" );
+
+		// headers
+		headers().entrySet().stream()
+				.map( e -> String.format( "%s: %s\r\n",
+						e.getKey(),
+						e.getValue() ) )
+				.forEach( sb::append );
+
+		sb.append( "\r\n" );
+
+		// body
+		sb.append( enchunken( bodyContent, wireFormat ) );
+
+		return sb.toString();
 	}
 
 	private String status() {
