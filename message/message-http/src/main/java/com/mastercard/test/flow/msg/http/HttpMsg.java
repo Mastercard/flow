@@ -46,7 +46,7 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	/**
 	 * Matches header lines
 	 */
-	protected static final Pattern HEADER_PATTERN = Pattern
+	protected static final Pattern HEADER_LINE_PATTERN = Pattern
 			.compile( "(?<name>[^:]*?):(?<value>.*)" );
 
 	private final Supplier<Map<String, Object>> basis;
@@ -172,7 +172,7 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	 * @param wire    <code>true</code> if we should try to create an accurate
 	 *                representation of the bytes that go on the wire,
 	 *                <code>false</code> for a more human-friendly output
-	 * @return The conplete formatted body
+	 * @return The complete formatted body
 	 */
 	protected String enchunken( String content, boolean wire ) {
 		if( wire && "chunked".equals( get( header( "Transfer-Encoding" ) ) ) ) {

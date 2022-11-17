@@ -3,11 +3,18 @@ package com.mastercard.test.flow.msg.http;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
+import java.util.TreeSet;
+import java.util.stream.Stream;
+
+import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
 
 import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.Unpredictable;
+import com.mastercard.test.flow.msg.AbstractMessage;
 import com.mastercard.test.flow.msg.json.Json;
 import com.mastercard.test.flow.msg.txt.Text;
 
@@ -23,7 +30,7 @@ class HttpResTest {
 	@Test
 	void empty() {
 		assertEquals( ""
-				+ " \r\n"
+				+ "  \r\n"
 				+ "\r\n",
 				new HttpRes().assertable() );
 	}
@@ -91,29 +98,6 @@ class HttpResTest {
 
 		assertEquals( ""
 				+ "HTTP/1.1 418 I'm a teapot\r\n"
-				+ "key: value\r\n"
-				+ "\r\n"
-				+ "{\n"
-				+ "  \"body\" : \"content\"\n"
-				+ "}",
-				new HttpRes( bytes, Json::new ).assertable() );
-	}
-
-	/**
-	 * Shows that we can cope with responses that lack the status text
-	 */
-	@Test
-	void missingStatusText() {
-		byte[] bytes = (""
-				+ "HTTP/1.1 418\r\n"
-				+ "key: value\r\n"
-				+ "\r\n"
-				+ "{\n"
-				+ "  \"body\" : \"content\"\n"
-				+ "}").getBytes( UTF_8 );
-
-		assertEquals( ""
-				+ "HTTP/1.1 418\r\n"
 				+ "key: value\r\n"
 				+ "\r\n"
 				+ "{\n"
@@ -280,5 +264,38 @@ class HttpResTest {
 				+ "  \"body\" : \"content\"\n"
 				+ "}",
 				parsed.body().get().assertable() );
+	}
+
+	/**
+	 * Asserting that we can parse messages with missing fields
+	 *
+	 * @return test instances
+	 */
+	@TestFactory
+	Stream<DynamicNode> missing() {
+		Message full = new HttpRes()
+				.set( HttpMsg.VERSION, "HTTP/1.1" )
+				.set( HttpRes.STATUS, "200" )
+				.set( HttpRes.STATUS_TEXT, "OK" )
+				.set( HttpMsg.header( "header" ), "value" )
+				.set( HttpMsg.BODY, new Json() );
+
+		Stream<TreeSet<String>> fieldSets = new Combinator<>( TreeSet::new,
+				HttpMsg.VERSION,
+				HttpRes.STATUS,
+				HttpRes.STATUS_TEXT,
+				HttpMsg.header( "header" ),
+				HttpMsg.BODY )
+						.stream();
+
+		return fieldSets.map( fields -> dynamicTest(
+				"missing " + fields.toString(), () -> {
+					Message partial = full.child();
+					fields.forEach( f -> partial.set( f, AbstractMessage.DELETE ) );
+
+					Message parsed = partial.peer( partial.content() );
+					assertEquals( partial.assertable(), parsed.assertable(),
+							"serialisation/parsing round-trip divergence" );
+				} ) );
 	}
 }

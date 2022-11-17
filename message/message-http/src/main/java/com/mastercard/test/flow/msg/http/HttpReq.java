@@ -5,6 +5,9 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Deque;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -38,12 +41,6 @@ public class HttpReq extends HttpMsg<HttpReq> {
 	 */
 	public static final String PATH_VAR_PRESUFIX = "%";
 
-	private static final Pattern REQ_PATTERN = Pattern
-			.compile( "^(?<method>\\w+?) (?<path>\\S+?) (?<version>\\S+?)\r\n"
-					+ "(?<headers>.*?)\r\n"
-					+ "\r\n"
-					+ "(?<body>.*)$", Pattern.DOTALL );
-
 	/**
 	 * An empty request
 	 */
@@ -56,23 +53,36 @@ public class HttpReq extends HttpMsg<HttpReq> {
 	 */
 	public HttpReq( byte[] content, Function<byte[], Message> bodyParse ) {
 
-		Matcher m = REQ_PATTERN.matcher( new String( content, UTF_8 ) );
-		if( m.matches() ) {
+		Deque<String> lines = new ArrayDeque<>(
+				Arrays.asList( new String( content, UTF_8 ).split( "\r\n" ) ) );
 
-			set( HttpReq.METHOD, m.group( "method" ).trim() );
-			set( HttpReq.PATH, m.group( "path" ).trim() );
-			set( VERSION, m.group( "version" ).trim() );
+		// start line
+		Deque<String> startFields = new ArrayDeque<>(
+				Arrays.asList( lines.removeFirst().split( " " ) ) );
 
-			for( String line : m.group( "headers" ).split( "\r\n" ) ) {
-				Matcher h = HEADER_PATTERN.matcher( line );
-				if( h.matches() ) {
-					set( HEADER_PRESUFIX + h.group( "name" ).trim() + HEADER_PRESUFIX,
-							h.group( "value" ).trim() );
-				}
-			}
-
-			set( BODY, bodyParse.apply( dechunken( m.group( "body" ) ).getBytes( UTF_8 ) ) );
+		if( !startFields.isEmpty() ) {
+			set( METHOD, startFields.removeFirst() );
 		}
+		if( !startFields.isEmpty() ) {
+			set( PATH, startFields.removeFirst() );
+		}
+		if( !startFields.isEmpty() ) {
+			set( VERSION, startFields.stream().collect( joining( " " ) ) );
+		}
+
+		// zero or more headers
+		String headerLine;
+		while( !lines.isEmpty() && !(headerLine = lines.removeFirst()).isEmpty() ) {
+			Matcher h = HEADER_LINE_PATTERN.matcher( headerLine );
+			if( h.matches() ) {
+				set( HEADER_PRESUFIX + h.group( "name" ).trim() + HEADER_PRESUFIX,
+						h.group( "value" ).trim() );
+			}
+		}
+
+		// body
+		String body = lines.stream().collect( joining( "\r\n" ) );
+		set( BODY, bodyParse.apply( dechunken( body ).getBytes( UTF_8 ) ) );
 	}
 
 	/**
