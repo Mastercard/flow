@@ -23,7 +23,7 @@ class CombinatorTest {
 	}
 
 	/**
-	 * Demonstrates the combinations of zero items
+	 * Demonstrates the combinations of one item
 	 */
 	@Test
 	void single() {
@@ -33,7 +33,7 @@ class CombinatorTest {
 	}
 
 	/**
-	 * Demonstrates the combinations of zero items
+	 * Demonstrates the combinations of two items
 	 */
 	@Test
 	void pair() {
