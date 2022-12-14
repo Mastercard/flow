@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.toMap;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -235,11 +236,24 @@ public class Result extends AbstractMessage<Result> {
 				sb.append( "\n " )
 						.append( String.format( colfmt, column ) )
 						.append( " : " )
-						.append( value );
+						.append( formatValue( value ) );
 			}
 			rowIdx++;
 		}
 		return sb.toString();
+	}
+
+	/**
+	 * Formats a result column value for display in the assertable message content
+	 *
+	 * @param value The value
+	 * @return The human-useful value to display
+	 */
+	protected String formatValue( Object value ) {
+		if( value instanceof byte[] ) {
+			return "bytes: " + Base64.getEncoder().encodeToString( (byte[]) value );
+		}
+		return String.valueOf( value );
 	}
 
 	private static class ResultSetStructure {

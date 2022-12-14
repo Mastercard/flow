@@ -224,4 +224,23 @@ class QueryTest {
 
 		assertThrows( IllegalStateException.class, () -> query.content() );
 	}
+
+	/**
+	 * Demonstrates custom encoding of byte array bind variables
+	 */
+	@Test
+	void bytes() {
+		Query query = new Query( "UPDATE table SET byte_column = ?" )
+				.set( "1", "value".getBytes( UTF_8 ) );
+
+		assertEquals( ""
+				+ "Query:\n"
+				+ "UPDATE\n"
+				+ "  table\n"
+				+ "SET\n"
+				+ "  byte_column = ?\n"
+				+ "Bind variables:\n"
+				+ "  1 : bytes: dmFsdWU=",
+				query.assertable() );
+	}
 }

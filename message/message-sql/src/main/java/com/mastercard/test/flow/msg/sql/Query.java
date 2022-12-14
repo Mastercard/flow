@@ -4,6 +4,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -129,9 +130,22 @@ public class Query extends AbstractMessage<Query> {
 				.sorted( Comparator.comparing( e -> Integer.parseInt( e.getKey() ) ) )
 				.forEach( e -> sb.append( String.format(
 						"\n %2d : %s",
-						Integer.parseInt( e.getKey() ), e.getValue() ) ) );
+						Integer.parseInt( e.getKey() ), formatValue( e.getValue() ) ) ) );
 
 		return sb.toString();
+	}
+
+	/**
+	 * Formats a bind variable for display in the assertable message content
+	 *
+	 * @param value The bind variable
+	 * @return The human-useful value to display
+	 */
+	protected String formatValue( Object value ) {
+		if( value instanceof byte[] ) {
+			return "bytes: " + Base64.getEncoder().encodeToString( (byte[]) value );
+		}
+		return String.valueOf( value );
 	}
 
 	@Override
