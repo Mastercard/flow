@@ -233,4 +233,18 @@ class ResultTest {
 
 		assertThrows( IllegalStateException.class, () -> res.content() );
 	}
+
+	/**
+	 * Demonstrates encoding of byte array result values
+	 */
+	@Test
+	void bytes() {
+		Result res = new Result( "byte_column" )
+				.set( "0:0", "value".getBytes( UTF_8 ) );
+
+		assertEquals( ""
+				+ " --- Row 0 ---\n"
+				+ " byte_column : bytes: dmFsdWU=",
+				res.assertable() );
+	}
 }
