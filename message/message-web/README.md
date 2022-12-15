@@ -46,7 +46,7 @@ public static WebSequence directHistogram() {
 					.replace( "web_ui_url", "not asserted" ) );
 }
 ```
-[Snippet context](../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Messages.java#L321-L345,321-345)
+[Snippet context](../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Messages.java#L348-L372,348-372)
 
 <!-- snippet end -->
 
@@ -79,7 +79,7 @@ public static WebSequence results() {
 					.replace( "page_source", "not asserted" ) );
 }
 ```
-[Snippet context](../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Messages.java#L349-L369,349-369)
+[Snippet context](../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Messages.java#L376-L396,376-396)
 
 <!-- snippet end -->
 

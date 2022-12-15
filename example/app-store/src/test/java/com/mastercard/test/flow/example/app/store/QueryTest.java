@@ -173,7 +173,8 @@ class QueryTest {
 								current.set( rows.removeFirst() );
 								return available;
 							} );
-							when( rs.getString( anyString() ) )
+
+							when( rs.getObject( anyString() ) )
 									.then( i -> current.get().get( i.getArgument( 0 ) ) );
 						}
 
