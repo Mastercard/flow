@@ -13,7 +13,6 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.vertical_blank.sqlformatter.SqlFormatter;
 import com.mastercard.test.flow.msg.AbstractMessage;
@@ -52,10 +51,8 @@ public class Query extends AbstractMessage<Query> {
 	private Query( byte[] bytes ) {
 		this( () -> {
 			try {
-				Map<String, Object> m = WIRE.readValue( bytes,
-						new TypeReference<Map<String, Object>>() {
-							// type hint only
-						} );
+				Map<String, Object> m = WIRE.readValue( bytes, TypedMap.class )
+						.get( new HashMap<>() );
 				m.remove( WARNING_KEY );
 				return m;
 			}
@@ -86,7 +83,7 @@ public class Query extends AbstractMessage<Query> {
 		Map<String, Object> data = data();
 		data.put( WARNING_KEY, "This is not representative of an actual wire protocol" );
 		try {
-			return WIRE.writeValueAsBytes( data );
+			return WIRE.writeValueAsBytes( new TypedMap( data ) );
 		}
 		catch( JsonProcessingException e ) {
 			throw new IllegalStateException( "Failed to encode " + data, e );

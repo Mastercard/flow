@@ -246,5 +246,12 @@ class ResultTest {
 				+ " --- Row 0 ---\n"
 				+ " byte_column : bytes: dmFsdWU=",
 				res.assertable() );
+
+		Result roundTrip = res.peer( res.content() );
+
+		assertEquals( ""
+				+ " --- Row 0 ---\n"
+				+ " byte_column : bytes: dmFsdWU=",
+				roundTrip.assertable() );
 	}
 }
