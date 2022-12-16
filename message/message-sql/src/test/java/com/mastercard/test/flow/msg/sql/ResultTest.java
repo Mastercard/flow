@@ -247,11 +247,16 @@ class ResultTest {
 				+ " byte_column : bytes: dmFsdWU=",
 				res.assertable() );
 
+		int originalByteCount = res.content().length;
+
 		Result roundTrip = res.peer( res.content() );
 
 		assertEquals( ""
 				+ " --- Row 0 ---\n"
 				+ " byte_column : bytes: dmFsdWU=",
 				roundTrip.assertable() );
+
+		assertEquals( originalByteCount, roundTrip.content().length,
+				"serialisation does not affect wire format" );
 	}
 }

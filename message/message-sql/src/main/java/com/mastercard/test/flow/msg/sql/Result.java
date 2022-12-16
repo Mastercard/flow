@@ -277,11 +277,9 @@ public class Result extends AbstractMessage<Result> {
 
 			maps = new ArrayList<>();
 			rows.forEach( row -> {
-				maps.add( row.stream().collect( Collectors.toMap(
-						TypedKVP::key,
-						TypedKVP::value,
-						( a, b ) -> b,
-						TreeMap::new ) ) );
+				Map<Integer, Object> m = new TreeMap<>();
+				row.forEach( kvp -> m.put( kvp.key(), kvp.value() ) );
+				maps.add( m );
 			} );
 		}
 
