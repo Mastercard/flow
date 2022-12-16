@@ -242,5 +242,17 @@ class QueryTest {
 				+ "Bind variables:\n"
 				+ "  1 : bytes: dmFsdWU=",
 				query.assertable() );
+
+		Query roundTrip = query.peer( query.content() );
+
+		assertEquals( ""
+				+ "Query:\n"
+				+ "UPDATE\n"
+				+ "  table\n"
+				+ "SET\n"
+				+ "  byte_column = ?\n"
+				+ "Bind variables:\n"
+				+ "  1 : bytes: dmFsdWU=",
+				roundTrip.assertable() );
 	}
 }

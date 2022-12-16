@@ -3,6 +3,7 @@ package com.mastercard.test.flow.msg.sql;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
@@ -12,8 +13,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.vertical_blank.sqlformatter.SqlFormatter;
 import com.mastercard.test.flow.msg.AbstractMessage;
@@ -52,10 +53,8 @@ public class Query extends AbstractMessage<Query> {
 	private Query( byte[] bytes ) {
 		this( () -> {
 			try {
-				Map<String, Object> m = WIRE.readValue( bytes,
-						new TypeReference<Map<String, Object>>() {
-							// type hint only
-						} );
+				Map<String, Object> m = WIRE.readValue( bytes, TypedMap.class )
+						.get( new HashMap<>() );
 				m.remove( WARNING_KEY );
 				return m;
 			}
@@ -86,7 +85,7 @@ public class Query extends AbstractMessage<Query> {
 		Map<String, Object> data = data();
 		data.put( WARNING_KEY, "This is not representative of an actual wire protocol" );
 		try {
-			return WIRE.writeValueAsBytes( data );
+			return WIRE.writeValueAsBytes( new TypedMap( data ) );
 		}
 		catch( JsonProcessingException e ) {
 			throw new IllegalStateException( "Failed to encode " + data, e );
@@ -141,7 +140,7 @@ public class Query extends AbstractMessage<Query> {
 	 * @param value The bind variable
 	 * @return The human-useful value to display
 	 */
-	protected String formatValue( Object value ) {
+	private static String formatValue( Object value ) {
 		if( value instanceof byte[] ) {
 			return "bytes: " + Base64.getEncoder().encodeToString( (byte[]) value );
 		}
@@ -158,4 +157,38 @@ public class Query extends AbstractMessage<Query> {
 		return copyMasksTo( new Query( content ) );
 	}
 
+	/**
+	 * Used for jackson serialisation
+	 */
+	static class TypedMap {
+
+		@JsonProperty("pairs")
+		private final List<TypedKVP<String>> pairs = new ArrayList<>();
+
+		/**
+		 * @param m The values for sewrialisation
+		 */
+		TypedMap( Map<String, Object> m ) {
+			m.forEach( ( k, v ) -> pairs.add( new TypedKVP<>( k, v ) ) );
+		}
+
+		/**
+		 * For jackson's benefit
+		 *
+		 * @param pairs the parsed data
+		 */
+		TypedMap(
+				@JsonProperty("pairs") List<TypedKVP<String>> pairs ) {
+			this.pairs.addAll( pairs );
+		}
+
+		/**
+		 * @param m to populate
+		 * @return the parsed data
+		 */
+		Map<String, Object> get( Map<String, Object> m ) {
+			pairs.forEach( p -> m.put( p.key(), p.value() ) );
+			return m;
+		}
+	}
 }

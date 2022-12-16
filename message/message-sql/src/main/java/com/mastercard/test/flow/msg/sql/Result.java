@@ -16,6 +16,7 @@ import java.util.TreeSet;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -91,19 +92,19 @@ public class Result extends AbstractMessage<Result> {
 				// whole-row operations
 				int row = Integer.parseInt( update.field() );
 				if( update.value() == DELETE ) {
-					if( data.rows.size() > row ) {
-						data.rows.remove( row );
+					if( data.maps.size() > row ) {
+						data.maps.remove( row );
 					}
 				}
 				else {
-					while( data.rows.size() <= row ) {
-						data.rows.add( new TreeMap<>() );
+					while( data.maps.size() <= row ) {
+						data.maps.add( new TreeMap<>() );
 					}
-					data.rows.get( row ).clear();
+					data.maps.get( row ).clear();
 					@SuppressWarnings("unchecked")
 					List<Object> values = (List<Object>) update.value();
 					for( int i = 0; i < values.size(); i++ ) {
-						data.rows.get( row ).put( i, values.get( i ) );
+						data.maps.get( row ).put( i, values.get( i ) );
 					}
 				}
 			}
@@ -115,15 +116,15 @@ public class Result extends AbstractMessage<Result> {
 					int column = Integer.parseInt( m.group( 2 ) );
 
 					if( update.value() == DELETE ) {
-						if( data.rows.size() > row ) {
-							data.rows.get( row ).remove( column );
+						if( data.maps.size() > row ) {
+							data.maps.get( row ).remove( column );
 						}
 					}
 					else {
-						while( data.rows.size() <= row ) {
-							data.rows.add( new TreeMap<>() );
+						while( data.maps.size() <= row ) {
+							data.maps.add( new TreeMap<>() );
 						}
-						data.rows.get( row ).put( column, update.value() );
+						data.maps.get( row ).put( column, update.value() );
 					}
 				}
 			}
@@ -151,7 +152,7 @@ public class Result extends AbstractMessage<Result> {
 	@Override
 	public byte[] content() {
 		try {
-			return WIRE.writeValueAsBytes( data() );
+			return WIRE.writeValueAsBytes( data().prepForSerialisation() );
 		}
 		catch( JsonProcessingException e ) {
 			throw new IllegalStateException( "Failed to encode", e );
@@ -162,7 +163,7 @@ public class Result extends AbstractMessage<Result> {
 	public Set<String> fields() {
 		Set<String> fields = new TreeSet<>();
 		fields.add( COLUMNS );
-		List<Map<Integer, Object>> rows = data().rows;
+		List<Map<Integer, Object>> rows = data().maps;
 		for( int i = 0; i < rows.size(); i++ ) {
 			for( Integer k : rows.get( i ).keySet() ) {
 				fields.add( i + ":" + k );
@@ -180,10 +181,10 @@ public class Result extends AbstractMessage<Result> {
 
 		if( field.matches( "\\d+" ) ) {
 			int row = Integer.parseInt( field );
-			if( data.rows.size() > row ) {
+			if( data.maps.size() > row ) {
 				List<Object> values = new ArrayList<>();
 				for( int i = 0; i < data.columns.size(); i++ ) {
-					values.add( data.rows.get( row ).get( i ) );
+					values.add( data.maps.get( row ).get( i ) );
 				}
 				return values;
 			}
@@ -194,8 +195,8 @@ public class Result extends AbstractMessage<Result> {
 		if( m.matches() ) {
 			int row = Integer.parseInt( m.group( 1 ) );
 			int column = Integer.parseInt( m.group( 2 ) );
-			if( data.rows.size() > row ) {
-				return data.rows.get( row ).get( column );
+			if( data.maps.size() > row ) {
+				return data.maps.get( row ).get( column );
 			}
 		}
 
@@ -207,7 +208,7 @@ public class Result extends AbstractMessage<Result> {
 	 */
 	public List<Map<String, Object>> get() {
 		ResultSetStructure data = data();
-		return data.rows.stream()
+		return data.maps.stream()
 				.map( row -> row.entrySet().stream()
 						.collect( toMap(
 								e -> data.columns.get( e.getKey() ),
@@ -223,7 +224,7 @@ public class Result extends AbstractMessage<Result> {
 				.mapToInt( String::length )
 				.max().orElse( 0 ) + "s";
 		int rowIdx = 0;
-		for( Map<Integer, Object> row : data.rows ) {
+		for( Map<Integer, Object> row : data.maps ) {
 			if( rowIdx != 0 ) {
 				sb.append( "\n" );
 			}
@@ -249,7 +250,7 @@ public class Result extends AbstractMessage<Result> {
 	 * @param value The value
 	 * @return The human-useful value to display
 	 */
-	protected String formatValue( Object value ) {
+	private static String formatValue( Object value ) {
 		if( value instanceof byte[] ) {
 			return "bytes: " + Base64.getEncoder().encodeToString( (byte[]) value );
 		}
@@ -262,14 +263,34 @@ public class Result extends AbstractMessage<Result> {
 
 		@JsonProperty("columns")
 		final List<String> columns;
+
+		final List<Map<Integer, Object>> maps;
+
 		@JsonProperty("rows")
-		final List<Map<Integer, Object>> rows;
+		private final List<List<TypedKVP<Integer>>> rows;
 
 		public ResultSetStructure(
 				@JsonProperty("columns") List<String> columns,
-				@JsonProperty("rows") List<Map<Integer, Object>> rows ) {
+				@JsonProperty("rows") List<List<TypedKVP<Integer>>> rows ) {
 			this.columns = columns;
 			this.rows = rows;
+
+			maps = new ArrayList<>();
+			rows.forEach( row -> {
+				Map<Integer, Object> m = new TreeMap<>();
+				row.forEach( kvp -> m.put( kvp.key(), kvp.value() ) );
+				maps.add( m );
+			} );
+		}
+
+		ResultSetStructure prepForSerialisation() {
+			rows.clear();
+			maps.stream()
+					.map( row -> row.entrySet().stream()
+							.map( e -> new TypedKVP<>( e.getKey(), e.getValue() ) )
+							.collect( Collectors.toList() ) )
+					.forEach( rows::add );
+			return this;
 		}
 	}
 

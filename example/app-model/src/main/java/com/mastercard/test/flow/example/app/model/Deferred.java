@@ -13,6 +13,7 @@ import static com.mastercard.test.flow.example.app.model.Messages.dbSelect;
 import static com.mastercard.test.flow.example.app.model.Messages.httpReq;
 import static com.mastercard.test.flow.example.app.model.Messages.httpRes;
 import static com.mastercard.test.flow.example.app.model.Messages.jsonRes;
+import static com.mastercard.test.flow.example.app.model.Messages.md5;
 import static com.mastercard.test.flow.example.app.model.Messages.pathUpdate;
 import static com.mastercard.test.flow.example.app.model.Messages.rq;
 import static com.mastercard.test.flow.example.app.model.Messages.rs;
@@ -173,8 +174,9 @@ public class Deferred extends EagerModel {
 										.to( Actors.DB )
 										.tags( add( "get" ) )
 										.request( dbSelect( deferredId ) )
-										.response( new Result( "data" )
-												.set( "0:0", "I'll be back!" ) ) )
+										.response( new Result( "data", "hash" )
+												.set( "0:0", "I'll be back!" )
+												.set( "0:1", md5( "I'll be back!" ) ) ) )
 								.response( textRes( "I'll be back!" ) ) )
 						.call( b -> b
 								.to( Actors.CORE )
@@ -225,8 +227,9 @@ public class Deferred extends EagerModel {
 						.call( b -> b.to( Actors.DB )
 								.tags( add( "get" ) )
 								.request( dbSelect( deferredId ) )
-								.response( new Result( "data" )
-										.set( "0:0", countText ) ) )
+								.response( new Result( "data", "hash" )
+										.set( "0:0", countText )
+										.set( "0:1", md5( countText ) ) ) )
 						.call( b -> b.to( Actors.DB )
 								.tags( add( "delete" ) )
 								.request( dbDelete( deferredId ) )

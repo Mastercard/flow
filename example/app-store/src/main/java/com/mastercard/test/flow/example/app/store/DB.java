@@ -8,10 +8,13 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.sql.DataSource;
 
@@ -124,7 +127,10 @@ public class DB {
 	public static <T> T doSQL( DataSource db, Executor<T> executor, String sql,
 			Object... bindVariables ) {
 		if( log.isInfoEnabled() ) {
-			log.info( "Executing '{}' : {}", sql, Arrays.toString( bindVariables ) );
+			log.info( "Executing '{}' : {}", sql,
+					Stream.of( bindVariables )
+							.map( DB::bytesToText )
+							.collect( Collectors.toList() ) );
 		}
 
 		try( Connection c = db.getConnection();
@@ -139,6 +145,27 @@ public class DB {
 		catch( SQLException sqle ) {
 			throw new IllegalStateException( sqle );
 		}
+	}
+
+	/**
+	 * @param v An object
+	 * @return The same object, or a useful string representation if the object was
+	 *         a byte array
+	 */
+	public static Object bytesToText( Object v ) {
+		if( v instanceof byte[] ) {
+			return Base64.getEncoder().encodeToString( (byte[]) v );
+		}
+		return v;
+	}
+
+	/**
+	 * @param m a map
+	 * @return A string of the map contents, but with byte arrays in a useful format
+	 */
+	public static String bytesToText( Map<String, Object> m ) {
+		return m.entrySet().stream().map( e -> e.getKey() + "=" + bytesToText( e.getValue() ) )
+				.collect( Collectors.joining( ", ", "{", "}" ) );
 	}
 
 	/**
@@ -233,6 +260,25 @@ public class DB {
 			@Override
 			public String mapRow( ResultSet rs, int rowNum ) throws SQLException {
 				return rs.getString( name );
+			}
+		};
+	}
+
+	/**
+	 * @param columns column names
+	 * @return A {@link RowMapper} that will extract those columns into a name/value
+	 *         map
+	 */
+	public static RowMapper<Map<String, Object>> mapFrom( String... columns ) {
+		return new RowMapper<Map<String, Object>>() {
+
+			@Override
+			public Map<String, Object> mapRow( ResultSet rs, int rowNum ) throws SQLException {
+				Map<String, Object> m = new TreeMap<>();
+				for( String column : columns ) {
+					m.put( column, rs.getObject( column ) );
+				}
+				return m;
 			}
 		};
 	}

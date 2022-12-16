@@ -16,7 +16,8 @@ public class StoreDatabase {
 	private static final String TABLE_SCHEMA = ""
 			+ "CREATE TABLE IF NOT EXISTS item ("
 			+ " id VARCHAR(255) PRIMARY KEY,"
-			+ " data TEXT"
+			+ " data TEXT,"
+			+ " hash BINARY VARYING"
 			+ ");";
 
 	/**

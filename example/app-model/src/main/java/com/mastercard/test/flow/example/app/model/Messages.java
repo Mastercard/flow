@@ -4,7 +4,10 @@ import static com.mastercard.test.flow.example.app.model.ExampleSystem.Unpredict
 import static com.mastercard.test.flow.example.app.model.ExampleSystem.Unpredictables.RNG;
 import static com.mastercard.test.flow.msg.http.HttpMsg.header;
 import static com.mastercard.test.flow.msg.http.HttpReq.path;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -210,12 +213,21 @@ public class Messages {
 	 * @return The insert query message
 	 */
 	public static Query dbInsert( String key, String value ) {
+		byte[] hash;
+		try {
+			hash = MessageDigest.getInstance( "MD5" ).digest( value.getBytes( UTF_8 ) );
+		}
+		catch( NoSuchAlgorithmException e ) {
+			throw new IllegalStateException( e );
+		}
 		return new Query(
-				"INSERT INTO item (id, data) VALUES (?, ?)"
-						+ " ON DUPLICATE KEY UPDATE  data = ?" )
+				"INSERT INTO item (id, data, hash) VALUES (?, ?, ?)"
+						+ " ON DUPLICATE KEY UPDATE  data = ?, hash = ?" )
 								.set( "1", key )
 								.set( "2", value )
-								.set( "3", value );
+								.set( "3", hash )
+								.set( "4", value )
+								.set( "5", hash );
 	}
 
 	/**
@@ -225,8 +237,23 @@ public class Messages {
 	 * @return The select query message
 	 */
 	public static Query dbSelect( String key ) {
-		return new Query( "SELECT data FROM item WHERE id = ?" )
+		return new Query( "SELECT data, hash FROM item WHERE id = ?" )
 				.set( "1", key );
+	}
+
+	/**
+	 * Computes the md5 of some text
+	 *
+	 * @param text The text
+	 * @return The md5 hash
+	 */
+	public static byte[] md5( String text ) {
+		try {
+			return MessageDigest.getInstance( "MD5" ).digest( text.getBytes( UTF_8 ) );
+		}
+		catch( NoSuchAlgorithmException e ) {
+			throw new IllegalStateException( e );
+		}
 	}
 
 	/**
