@@ -27,14 +27,14 @@ jobs:
           java-version: 11
 
       - name: Cache SonarCloud packages
-        uses: actions/cache@70655ec8323daeeaa7ef06d7c56e1b9191396cbe # v1.1.2
+        uses: actions/cache@4723a57e26efda3a62cbde1812113b730952852d # v3.2.2
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
       - name: Cache Maven packages
-        uses: actions/cache@70655ec8323daeeaa7ef06d7c56e1b9191396cbe # v1.1.2
+        uses: actions/cache@4723a57e26efda3a62cbde1812113b730952852d # v3.2.2
         with:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
