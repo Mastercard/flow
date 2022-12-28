@@ -18,6 +18,17 @@ jobs:
       uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5 # v2.0.0
       with:
         egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+      with:
+        disable-sudo: true
+        egress-policy: block
+        allowed-endpoints: >
+          chromedriver.storage.googleapis.com:443
+          fonts.googleapis.com:443
+          fonts.gstatic.com:443
+          github.com:443
+          i.imgur.com:443
+          raw.githubusercontent.com:443
+          registry.yarnpkg.com:443
 
     - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
 
