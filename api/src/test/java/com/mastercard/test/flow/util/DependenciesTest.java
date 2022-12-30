@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.util;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -20,7 +21,6 @@ import com.mastercard.test.flow.FieldAddress;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.Message;
-import com.mastercard.test.flow.Model;
 
 /**
  * Exercises the dependency fulfilment behaviour
@@ -40,12 +40,8 @@ class DependenciesTest {
 		Message peer = Mockito.mock( Message.class );
 		Message snkMsg = Mockito.mock( Message.class );
 		Message srcMsg = Mockito.mock( Message.class );
-		Model model = Mockito.mock( Model.class );
 
 		Mocks() {
-			Mockito.when( model.flows() ).thenCallRealMethod();
-			Mockito.when( model.flows( Tags.empty(), Tags.empty() ) )
-					.thenReturn( Stream.of( src, snk ) );
 
 			Mockito.when( snk.dependencies() ).thenReturn( Stream.of( dep ) );
 
@@ -72,6 +68,10 @@ class DependenciesTest {
 
 			Mockito.when( peer.get( "source field" ) ).thenReturn( "source value" );
 		}
+
+		Stream<Flow> flows() {
+			return Stream.of( src, snk );
+		}
 	}
 
 	/**
@@ -84,7 +84,7 @@ class DependenciesTest {
 		Mocks mocks = new Mocks();
 
 		// WHEN dependencies are processed
-		Message msg = new Dependencies( mocks.model )
+		Message msg = new Dependencies( mocks.flows() )
 				.publish( mocks.src, mocks.srcNtr, mocks.srcMsg, mocks.actual );
 
 		// THEN the returned message is the parsed peer
@@ -104,7 +104,7 @@ class DependenciesTest {
 		Mockito.when( mocks.srcMsg.peer( ArgumentMatchers.any() ) )
 				.thenThrow( npe );
 
-		Dependencies d = new Dependencies( mocks.model );
+		Dependencies d = new Dependencies( mocks.flows() );
 		IllegalArgumentException iae = assertThrows( IllegalArgumentException.class,
 				() -> d.publish( mocks.src, mocks.srcNtr, mocks.srcMsg, mocks.actual ) );
 
@@ -126,14 +126,14 @@ class DependenciesTest {
 		{
 			Mocks mocks = new Mocks();
 			Mockito.when( mocks.srcAdr.isComplete() ).thenReturn( false );
-			new Dependencies( mocks.model )
+			new Dependencies( mocks.flows() )
 					.publish( mocks.src, mocks.srcNtr, mocks.srcMsg, mocks.actual );
 			Mockito.verifyNoInteractions( mocks.snkMsg );
 		}
 		{
 			Mocks mocks = new Mocks();
 			Mockito.when( mocks.snkAdr.isComplete() ).thenReturn( false );
-			new Dependencies( mocks.model )
+			new Dependencies( mocks.flows() )
 					.publish( mocks.src, mocks.srcNtr, mocks.srcMsg, mocks.actual );
 			Mockito.verifyNoInteractions( mocks.snkMsg );
 		}
@@ -147,23 +147,37 @@ class DependenciesTest {
 		{
 			Mocks mocks = new Mocks();
 			Flow wrong = Mockito.mock( Flow.class );
-			new Dependencies( mocks.model )
+			new Dependencies( mocks.flows() )
 					.publish( wrong, mocks.srcNtr, mocks.srcMsg, mocks.actual );
 			Mockito.verifyNoInteractions( mocks.snkMsg );
 		}
 		{
 			Mocks mocks = new Mocks();
 			Interaction wrong = Mockito.mock( Interaction.class );
-			new Dependencies( mocks.model )
+			new Dependencies( mocks.flows() )
 					.publish( mocks.src, wrong, mocks.srcMsg, mocks.actual );
 			Mockito.verifyNoInteractions( mocks.snkMsg );
 		}
 		{
 			Mocks mocks = new Mocks();
 			Message wrong = Mockito.mock( Message.class );
-			new Dependencies( mocks.model )
+			new Dependencies( mocks.flows() )
 					.publish( mocks.src, mocks.srcNtr, wrong, mocks.actual );
 			Mockito.verifyNoInteractions( mocks.snkMsg );
 		}
+	}
+
+	/**
+	 * Demonstrates the operation of
+	 * {@link Dependencies#propagateStaticData(Stream)}
+	 */
+	@Test
+	void propagateStaticData() {
+		Mocks mocks = new Mocks();
+		Mockito.when( mocks.srcMsg.content() ).thenReturn( mocks.actual );
+
+		Dependencies.propagateStaticData( mocks.flows() );
+
+		verify( mocks.snkMsg ).set( "sink field", "SOURCE VALUE" );
 	}
 }
