@@ -1,9 +1,13 @@
+
 package com.mastercard.test.flow.model;
+
+import static java.util.stream.Collectors.toList;
 
 import java.lang.reflect.Constructor;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -68,7 +72,11 @@ public class LazyModel extends TitledModel {
 			types.put( type, EagerModel.typeTags( type ) );
 		}
 
-		Iterator<TaggedGroup> ti = types.values().iterator();
+		Iterator<TaggedGroup> ti = types.values()
+				.stream()
+				.filter( Objects::nonNull )
+				.collect( toList() )
+				.iterator();
 		if( ti.hasNext() ) {
 			tags = new TaggedGroup( ti.next() );
 			while( ti.hasNext() ) {
@@ -116,6 +124,7 @@ public class LazyModel extends TitledModel {
 	@Override
 	public Stream<Flow> flows( Set<String> include, Set<String> exclude ) {
 		return types.entrySet().stream()
+				.filter( e -> e.getValue() != null )
 				.filter( e -> e.getValue().matches( include, exclude ) )
 				.flatMap( e -> instantiate( e.getKey() )
 						.flows( include, exclude ) );
