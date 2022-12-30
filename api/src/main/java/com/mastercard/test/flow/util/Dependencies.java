@@ -86,11 +86,10 @@ public class Dependencies {
 	public static void propagateStaticData( Stream<Flow> flows ) {
 		Dependencies deps = new Dependencies( flows );
 		deps.publishers.values().stream().flatMap( List::stream )
-				.forEach( dep -> {
-					deps.publish( dep.source().flow(),
-							dep.source().getInteraction().get(),
-							dep.source().getMessage().get(),
-							dep.source().getMessage().get().content() );
-				} );
+				.forEach( dep -> deps.publish(
+						dep.source().flow(),
+						dep.source().getInteraction().get(),
+						dep.source().getMessage().get(),
+						dep.source().getMessage().get().content() ) );
 	}
 }
