@@ -25,6 +25,7 @@ import java.util.function.BiConsumer;
 import java.util.function.ObjIntConsumer;
 import java.util.function.Supplier;
 
+import javax.xml.XMLConstants;
 import javax.xml.stream.FactoryConfigurationError;
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
@@ -95,8 +96,17 @@ public class XML extends AbstractMessage<XML> {
 				return new TreeMap<>();
 			}
 			XMLInputFactory xif = XMLInputFactory.newFactory();
-			// avoid XXE attacks
+			// avoid XXE attacks per
+			// https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html#xmlinputfactory-a-stax-parser
+			// This disables DTDs entirely for that factory
+			xif.setProperty( XMLInputFactory.SUPPORT_DTD, false );
+			// This causes XMLStreamException to be thrown if external DTDs are accessed.
+			xif.setProperty( XMLConstants.ACCESS_EXTERNAL_DTD, "" );
+			// disable external entities
 			xif.setProperty( XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false );
+			// these latter two calls are suggested by owasp but are difficult to exercise
+			// for the purposes of mutation testing. We're prioritising safety over a
+			// perfect pitest score by leaving them in.
 
 			try( ByteArrayInputStream bais = new ByteArrayInputStream( bytes ) ) {
 				XMLEventReader xer = xif.createXMLEventReader( bais );

@@ -33,7 +33,7 @@
 				<configuration>
 					<!-- I'm not saying these *have* to stay where they are, just that 
 				     we shouldn't let them slip down by accident -->
-					<mutationThreshold>100</mutationThreshold>
+					<mutationThreshold>97</mutationThreshold>
 					<coverageThreshold>97</coverageThreshold>
 				</configuration>
 			</plugin>

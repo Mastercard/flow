@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.msg.xml;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -379,7 +380,7 @@ class XMLTest {
 	 */
 	@Test
 	void xxeAvoidance() {
-		// parsing this without setting IS_SUPPORTING_EXTERNAL_ENTITIES to false will
+		// parsing this without setting XXE protection properties will
 		// populate the document with a listing of your system's root directory
 		String attack = ""
 				+ "<?xml version=\"1.0\"?>\n"
@@ -390,10 +391,18 @@ class XMLTest {
 				+ ">\n"
 				+ "<root_file_list>&list;</root_file_list>";
 
+		// content is parsed only when required, so we can construct a message with the
+		// evil bytes
 		XML xml = new XML( attack.getBytes( UTF_8 ) );
-		test( xml,
-				"<?xml version='1.0' encoding='UTF-8'?>",
-				"<root_file_list></root_file_list>" );
+
+		// but it'll explode when we try to do anything with it
+		IllegalStateException ise = assertThrows( IllegalStateException.class,
+				() -> xml.content() );
+
+		assertEquals( ""
+				+ "ParseError at [row,col]:[7,23]\n"
+				+ "Message: The entity \"list\" was referenced, but not declared.",
+				ise.getCause().getMessage() );
 	}
 
 	private static String copypasta( String... content ) {
