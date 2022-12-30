@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.model;
 
 import static com.mastercard.test.flow.util.Tags.empty;
@@ -32,6 +33,7 @@ class EagerModelTest {
 	 * Well-formed model with tags
 	 */
 	static class TaggedModel extends EagerModel {
+
 		/** Accessed reflectively */
 		public static final TaggedGroup MODEL_TAGS = new TaggedGroup( "c" )
 				.union( "a", "b", "d", "e" );
@@ -116,6 +118,7 @@ class EagerModelTest {
 	 * Well-formed model with no tags
 	 */
 	static class LumpyModel extends EagerModel {
+
 		private static final Flow a = new Flw( "a" );
 		private static final Flow b = new Flw( "b" );
 		private static final Flow c = new Flw( "b" );
@@ -143,6 +146,7 @@ class EagerModelTest {
 	 * A model that call members twice. This is forbidden
 	 */
 	private static class DoubleMemberModel extends EagerModel {
+
 		/** used reflectively */
 		public static final TaggedGroup MODEL_TAGS = null;
 
@@ -166,6 +170,7 @@ class EagerModelTest {
 	}
 
 	private static class EmptyModel extends EagerModel {
+
 		EmptyModel() {
 			super( "title", new TaggedGroup() );
 		}
@@ -208,8 +213,5 @@ class EagerModelTest {
 
 		assertThrows( IllegalArgumentException.class,
 				() -> EagerModel.typeTags( LumpyModel.class ) );
-
-		assertThrows( IllegalArgumentException.class,
-				() -> EagerModel.typeTags( DoubleMemberModel.class ) );
 	}
 }
