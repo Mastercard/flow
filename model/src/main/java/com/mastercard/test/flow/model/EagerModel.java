@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.model;
 
 import java.lang.reflect.Field;
@@ -58,11 +59,7 @@ public abstract class EagerModel extends TitledModel {
 	public static TaggedGroup typeTags( Class<? extends EagerModel> type ) {
 		try {
 			Field f = type.getDeclaredField( "MODEL_TAGS" );
-			TaggedGroup tg = (TaggedGroup) f.get( null );
-			if( tg == null ) {
-				throw new IllegalArgumentException( "Null tags for " + type );
-			}
-			return tg;
+			return (TaggedGroup) f.get( null );
 		}
 		catch( NoSuchFieldException | IllegalAccessException e ) {
 			throw new IllegalArgumentException(

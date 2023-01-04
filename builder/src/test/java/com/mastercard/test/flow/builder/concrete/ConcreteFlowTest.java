@@ -69,8 +69,8 @@ class ConcreteFlowTest {
 								.to( i -> i.responder() == BEN, Type.REQUEST, "field" ) ) ) );
 
 		Assertions.assertEquals( ""
-				+ "Failed to find dependency source value in:\n"
-				+ "flow: []\n"
+				+ "Failed to find dependency source field 'field' in:\n"
+				+ "  flow: []\n"
 				+ "com.mastercard.test.flow.builder.concrete.ConcreteFlowTest.missingSourceField(ConcreteFlowTest.java:##)\n"
 				+ "AVA 🠖 BEN [] Empty\n"
 				+ "AVA 🠔 BEN [] Empty\n"

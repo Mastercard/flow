@@ -19,6 +19,13 @@ public interface Listener {
 	}
 
 	/**
+	 * Called when {@link Flow} dependencies are being gathered
+	 */
+	default void dependencies() {
+		// no-op
+	}
+
+	/**
 	 * Called when a processing order is being computed
 	 */
 	default void ordering() {

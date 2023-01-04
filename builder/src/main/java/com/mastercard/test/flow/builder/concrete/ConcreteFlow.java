@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.builder.concrete;
 
 import static java.util.Comparator.comparing;
@@ -103,9 +104,10 @@ public class ConcreteFlow implements Flow {
 			// helpful failures
 			Object value = dependency.source().getValue()
 					.orElseThrow( () -> new IllegalStateException( String.format(
-							"Failed to find dependency source value in:\n"
-									+ "flow:%s\n"
+							"Failed to find dependency source field '%s' in:\n"
+									+ "  flow:%s\n"
 									+ "   msg:%s",
+							dependency.source().field(),
 							Flows.structure( dependency.source().flow() ),
 							dependency.source().getMessage()
 									.map( Message::assertable )

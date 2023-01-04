@@ -1,9 +1,11 @@
+
 package com.mastercard.test.flow.validation.check;
 
 import static java.util.stream.Collectors.joining;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -52,8 +54,10 @@ public class ModelTaggingCheck implements Validation {
 			Set<String> flowUnionTags = new TreeSet<>();
 			Set<String> flowIntersectionTags = new TreeSet<>();
 			AtomicBoolean intersectionInitiated = new AtomicBoolean( false );
+			AtomicBoolean flowsFound = new AtomicBoolean( false );
 
 			model.flows().forEach( flow -> {
+				flowsFound.set( true );
 				flowUnionTags.addAll( flow.meta().tags() );
 				if( intersectionInitiated.get() ) {
 					flowIntersectionTags.retainAll( flow.meta().tags() );
@@ -65,14 +69,19 @@ public class ModelTaggingCheck implements Validation {
 			} );
 			flowUnionTags.removeAll( flowIntersectionTags );
 
-			Set<String> modelUnionTags = model.tags().union()
-					.collect( Collectors.toCollection( TreeSet::new ) );
-			Set<String> modelIntersectionTags = model.tags().intersection()
-					.collect( Collectors.toCollection( TreeSet::new ) );
-			modelUnionTags.removeAll( modelIntersectionTags );
-
-			String expected = formatCopypasta( flowUnionTags, flowIntersectionTags );
-			String actual = formatCopypasta( modelUnionTags, modelIntersectionTags );
+			String expected = flowsFound.get()
+					? formatCopypasta( flowUnionTags, flowIntersectionTags )
+					: "null;";
+			String actual = Optional.ofNullable( model.tags() )
+					.map( mt -> {
+						Set<String> modelUnionTags = mt.union()
+								.collect( Collectors.toCollection( TreeSet::new ) );
+						Set<String> modelIntersectionTags = mt.intersection()
+								.collect( Collectors.toCollection( TreeSet::new ) );
+						modelUnionTags.removeAll( modelIntersectionTags );
+						return formatCopypasta( modelUnionTags, modelIntersectionTags );
+					} )
+					.orElse( "null;" );
 
 			if( !expected.equals( actual ) ) {
 				return new Violation( this, "Inaccurate tagging", expected, actual );

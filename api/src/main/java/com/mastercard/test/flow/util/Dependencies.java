@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.util;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -8,12 +9,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.mastercard.test.flow.Dependency;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.Message;
-import com.mastercard.test.flow.Model;
 
 /**
  * Utility for processing dependencies as tests results become available
@@ -26,11 +27,10 @@ public class Dependencies {
 	private final Map<Flow, List<Dependency>> publishers = new HashMap<>();
 
 	/**
-	 * @param model The system model
+	 * @param flows The flows that are to be processed
 	 */
-	public Dependencies( Model model ) {
-		model.flows()
-				.flatMap( Flow::dependencies )
+	public Dependencies( Stream<Flow> flows ) {
+		flows.flatMap( Flow::dependencies )
 				.filter( d -> d.source().isComplete() && d.sink().isComplete() )
 				.forEach( dep -> publishers
 						.computeIfAbsent( dep.source().flow(), f -> new ArrayList<>() )
@@ -76,5 +76,20 @@ public class Dependencies {
 							new String( bytes, UTF_8 ), Bytes.toHex( bytes ) ),
 					e );
 		}
+	}
+
+	/**
+	 * Processes the dependencies using the static data already in the system model
+	 *
+	 * @param flows The flows whose dependencies should be processed
+	 */
+	public static void propagateStaticData( Stream<Flow> flows ) {
+		Dependencies deps = new Dependencies( flows );
+		deps.publishers.values().stream().flatMap( List::stream )
+				.forEach( dep -> deps.publish(
+						dep.source().flow(),
+						dep.source().getInteraction().get(),
+						dep.source().getMessage().get(),
+						dep.source().getMessage().get().content() ) );
 	}
 }

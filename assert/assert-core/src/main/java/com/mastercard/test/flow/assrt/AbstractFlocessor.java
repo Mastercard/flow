@@ -89,7 +89,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 
 	private final Model model;
 	private final String title;
-	private final Dependencies dependencies;
+	private Dependencies dependencies;
 	private Reporting reporting = Reporting.NEVER;
 	private Writer report;
 
@@ -177,7 +177,6 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	protected AbstractFlocessor( String title, Model model ) {
 		this.title = title;
 		this.model = model;
-		dependencies = new Dependencies( model );
 	}
 
 	/**
@@ -336,9 +335,9 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return The {@link Flow}s to process, in order
 	 */
 	protected Stream<Flow> flows() {
-		progress.filtering();
 		// per system properties, find out which flows we want to exercise and save
 		// those settings for future runs
+		progress.filtering();
 		Set<Flow> toRun;
 		if( AssertionOptions.SUPPRESS_FILTER.isTrue() ) {
 			toRun = model.flows().collect( toCollection( HashSet::new ) );
@@ -368,15 +367,19 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 					.collect( Collectors.toCollection( HashSet::new ) );
 		}
 
-		// collect dependencies of those flows
+		// collect dependencies of those flows - we need them in the execution too
+		progress.dependencies();
 		Set<Flow> deps = new HashSet<>();
 		for( Flow flow : toRun ) {
 			deps.addAll( Flows.dependencies( flow, new ArrayList<>() ) );
 		}
 		toRun.addAll( deps );
 
-		progress.ordering();
+		// gather the data dependencies for processing
+		dependencies = new Dependencies( toRun.stream() );
+
 		// find the execution order
+		progress.ordering();
 		Order order = new Order( toRun.stream(), applicators.values() );
 		return order.order();
 	}

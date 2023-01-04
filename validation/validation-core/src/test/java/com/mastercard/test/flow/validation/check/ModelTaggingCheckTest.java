@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.validation.check;
 
 import java.util.List;
@@ -24,11 +25,11 @@ class ModelTaggingCheckTest extends AbstractValidationTest {
 	}
 
 	/**
-	 * Base case
+	 * Base case - models with no flows should have null tags
 	 */
 	@Test
 	void empty() {
-		test( leaf( "empty", new TaggedGroup() ),
+		test( leaf( "empty", null ),
 				"empty : pass" );
 	}
 
@@ -37,9 +38,9 @@ class ModelTaggingCheckTest extends AbstractValidationTest {
 	 */
 	@Test
 	void recursion() {
-		test( branch( "branch", new TaggedGroup(),
-				leaf( "left", new TaggedGroup() ),
-				leaf( "right", new TaggedGroup() ) ),
+		test( branch( "branch", null,
+				leaf( "left", null ),
+				leaf( "right", null ) ),
 				"left : pass",
 				"right : pass",
 				"branch : pass" );
@@ -62,17 +63,17 @@ class ModelTaggingCheckTest extends AbstractValidationTest {
 	@Test
 	void violation() {
 		test( leaf( "empty model tags",
-				new TaggedGroup(),
+				null,
 				"a,b,c" ),
 				"  details: Inaccurate tagging\n"
 						+ " expected: new TaggedGroup(\"a\", \"b\", \"c\");\n"
-						+ "   actual: new TaggedGroup();\n"
+						+ "   actual: null;\n"
 						+ "offenders: " );
 
 		test( leaf( "empty flow tags",
 				new TaggedGroup( "a", "b", "c" ).union( "d" ) ),
 				"  details: Inaccurate tagging\n"
-						+ " expected: new TaggedGroup();\n"
+						+ " expected: null;\n"
 						+ "   actual: new TaggedGroup(\"a\", \"b\", \"c\")\n"
 						+ "         .union(\"d\");\n"
 						+ "offenders: " );
