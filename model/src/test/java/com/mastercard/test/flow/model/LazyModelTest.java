@@ -1,3 +1,4 @@
+
 package com.mastercard.test.flow.model;
 
 import static java.util.stream.Collectors.joining;
@@ -24,10 +25,12 @@ import com.mastercard.test.flow.util.Tags;
  */
 @SuppressWarnings("static-method")
 class LazyModelTest {
+
 	/**
 	 * A model with no dependencies
 	 */
 	public static class NoDeps extends EagerModel {
+
 		/**
 		 * The tags for {@link Flow}s in this model
 		 */
@@ -46,6 +49,7 @@ class LazyModelTest {
 	 * A model with one dependency
 	 */
 	public static class Deps extends EagerModel {
+
 		/**
 		 * The tags for {@link Flow}s in this model
 		 */
@@ -66,6 +70,7 @@ class LazyModelTest {
 	 * A model with a transitive dependency
 	 */
 	public static class Transitive extends EagerModel {
+
 		/**
 		 * The tags for {@link Flow}s in this model
 		 */
@@ -86,6 +91,7 @@ class LazyModelTest {
 	 * A model that fails on construction
 	 */
 	public static class Failure extends EagerModel {
+
 		/**
 		 * No flows, so no tags
 		 */
@@ -103,6 +109,7 @@ class LazyModelTest {
 	 * {@link LazyModel}
 	 */
 	public static class TwoConstructor extends EagerModel {
+
 		/***/
 		public static final TaggedGroup MODEL_TAGS = new TaggedGroup();
 
@@ -133,6 +140,23 @@ class LazyModelTest {
 		 */
 		public BadConstructor( boolean b ) {
 			super( MODEL_TAGS );
+		}
+	}
+
+	/**
+	 * A model that provides no {@link Flow}s
+	 */
+	public static class Empty extends EagerModel {
+
+		/**
+		 * No flows, so null tags
+		 */
+		public static final TaggedGroup MODEL_TAGS = null;
+
+		/***/
+		public Empty() {
+			super( MODEL_TAGS );
+			members( flatten() );
 		}
 	}
 
@@ -312,6 +336,18 @@ class LazyModelTest {
 
 		assertThrows( IllegalArgumentException.class,
 				() -> m.with( BadConstructor.class ) );
+	}
+
+	/**
+	 * Exercises a constituent model that provides no flows
+	 */
+	@Test
+	void empty() {
+		LazyModel m = new LazyModel()
+				.with( Empty.class );
+
+		assertEquals( "∩[]⋃[]", m.tags().toString() );
+		assertEquals( 0, m.flows().count() );
 	}
 
 	private static void assertModel( Model m,

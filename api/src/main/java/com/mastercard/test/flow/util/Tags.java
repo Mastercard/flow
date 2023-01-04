@@ -1,6 +1,6 @@
+
 package com.mastercard.test.flow.util;
 
-import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -105,7 +105,17 @@ public class Tags {
 	 * @return Adds the supplied tags
 	 */
 	public static Consumer<Set<String>> add( String... tags ) {
-		return s -> Collections.addAll( s, tags );
+		return add( Stream.of( tags ) );
+	}
+
+	/**
+	 * Builds an operation to add to a tag set
+	 *
+	 * @param tags The values to add
+	 * @return Adds the supplied tags
+	 */
+	public static Consumer<Set<String>> add( Stream<String> tags ) {
+		return s -> tags.forEach( s::add );
 	}
 
 	/**
@@ -115,7 +125,17 @@ public class Tags {
 	 * @return Removes the supplied tags
 	 */
 	public static Consumer<Set<String>> remove( String... tags ) {
-		return s -> Stream.of( tags ).forEach( s::remove );
+		return remove( Stream.of( tags ) );
+	}
+
+	/**
+	 * Builds an operation to remove from a tag set
+	 *
+	 * @param tags The values to remove
+	 * @return Removes the supplied tags
+	 */
+	public static Consumer<Set<String>> remove( Stream<String> tags ) {
+		return s -> tags.forEach( s::remove );
 	}
 
 	/**
@@ -125,6 +145,16 @@ public class Tags {
 	 * @return Sets the set membership to be exactly the supplied tags
 	 */
 	public static Consumer<Set<String>> set( String... tags ) {
+		return set( Stream.of( tags ) );
+	}
+
+	/**
+	 * Builds an operation to define a tag set
+	 *
+	 * @param tags The values to set
+	 * @return Sets the set membership to be exactly the supplied tags
+	 */
+	public static Consumer<Set<String>> set( Stream<String> tags ) {
 		return clear().andThen( add( tags ) );
 	}
 }
