@@ -142,8 +142,8 @@ Build with
 						<groupId>com.github.eirslett</groupId>
 						<artifactId>frontend-maven-plugin</artifactId>
 						<configuration>
-							<nodeVersion>v16.17.0</nodeVersion>
-							<yarnVersion>v1.22.10</yarnVersion>
+							<nodeVersion>v14.15.1</nodeVersion>
+							<yarnVersion>v1.22.17</yarnVersion>
 							<installDirectory>${user.home}/.node</installDirectory>
 						</configuration>
 						<executions>
