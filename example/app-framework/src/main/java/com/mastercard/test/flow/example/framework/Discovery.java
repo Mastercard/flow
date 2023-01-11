@@ -167,6 +167,9 @@ public class Discovery {
 				// this will turn to true when all of our dependencies have been satisfied
 				boolean satisfied = false;
 				long limit = System.currentTimeMillis() + listenTimeout;
+				if( listenTimeout > 0 ) {
+					socket.setSoTimeout( (int) listenTimeout );
+				}
 				while( !satisfied && !shouldStop ) {
 
 					if( listenTimeout > 0 && System.currentTimeMillis() > limit ) {
