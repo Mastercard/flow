@@ -224,7 +224,7 @@ public class Instance {
 									.sorted()
 									.collect( joining() ) );
 						}
-						required.wait();
+						required.wait( 1000 );
 					}
 				}
 			}
