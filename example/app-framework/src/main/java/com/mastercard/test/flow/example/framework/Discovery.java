@@ -35,6 +35,7 @@ public class Discovery {
 	private MulticastSocket listenSocket;
 	private long listenTimeout = -1;
 	private volatile boolean shouldStop = false;
+	private volatile boolean listening = false;
 
 	/**
 	 * @param group The multicast address on which to advertise and listen for
@@ -53,6 +54,15 @@ public class Discovery {
 		if( listenSocket != null ) {
 			listenSocket.close();
 		}
+	}
+
+	/**
+	 * Checks if we're still listening for dependencies
+	 *
+	 * @return <code>true</code> if there still a chance of finding new dependencies
+	 */
+	public boolean listening() {
+		return listening;
 	}
 
 	/**
@@ -181,14 +191,18 @@ public class Discovery {
 			}
 			catch( SocketException se ) {
 				if( !shouldStop ) {
+					listening = false;
 					throw new UncheckedIOException( se );
 				}
 			}
 			catch( IOException ioe ) {
+				listening = false;
 				throw new UncheckedIOException( ioe );
 			}
+			listening = false;
 		}, "Discovery listen" );
 		listen.setDaemon( true );
+		listening = true;
 		listen.start();
 
 		return this;
