@@ -214,7 +214,7 @@ public class Instance {
 		}
 
 		// now we wait until our dependencies have been satisfied
-		while( !required.isEmpty() ) {
+		while( discovery.listening() ) {
 			try {
 				synchronized( required ) {
 					if( !required.isEmpty() ) {
@@ -235,6 +235,14 @@ public class Instance {
 			}
 		}
 
+		if( !required.isEmpty() ) {
+			String missing = required.stream()
+					.map( c -> "\n  " + c.getName() )
+					.sorted()
+					.collect( joining() );
+			LOG.error( "Instance incomplete! Missing{}", missing );
+			throw new IllegalStateException( "Missing dependencies:" + missing );
+		}
 		LOG.info( "Instance complete" );
 		return this;
 	}
