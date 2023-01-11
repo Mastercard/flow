@@ -1,5 +1,6 @@
 package com.mastercard.test.flow.example.framework;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toCollection;
 
@@ -172,6 +173,7 @@ public class Instance {
 		// the rest will have to come from our cluster peers.
 		// start advertising our own services...
 		Discovery discovery = new Discovery( cluster )
+				.stoppingAfter( 30, SECONDS )
 				.advertise(
 						"http", port(),
 						services.stream()
@@ -181,8 +183,9 @@ public class Instance {
 
 		// ... and listening for those that we require
 		if( !required.isEmpty() ) {
-			discovery.listen(
-					( typeName, rmtUrl ) -> {
+			discovery
+					.abortingAfter( 10, SECONDS )
+					.listen( ( typeName, rmtUrl ) -> {
 						@SuppressWarnings("unchecked")
 						Class<? extends Service> type = Optional.of( typeName )
 								.map( n -> {
