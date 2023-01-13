@@ -22,7 +22,7 @@ It provides the `Flocessor` class, which should be used as a generator for a [dy
 <dependency>
   <!-- system assertion -->
   <groupId>com.mastercard.test.flow</groupId>
-  <artifactId>assert-junit4</artifactId>
+  <artifactId>assert-junit5</artifactId>
   <version>${flow.version}</version>
   <scope>test</scope>
 </dependency>

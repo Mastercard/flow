@@ -11,7 +11,18 @@ Browser interaction messages
 
 <!-- title end -->
 
-## Example usage
+## Usage
+
+```xml
+<dependency>
+  <!-- browser interaction message type -->
+  <groupId>com.mastercard.test.flow</groupId>
+  <artifactId>message-web</artifactId>
+  <version>${flow.version}</version>
+</dependency>
+```
+
+## Example
 
 Defining a form submission sequence:
 

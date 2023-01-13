@@ -10,3 +10,22 @@ JavaScript Object Notation Messages
  * [../message](..) Implementations of the Message interface
 
 <!-- title end -->
+
+## Usage
+
+```xml
+<dependency>
+  <!-- json message type -->
+  <groupId>com.mastercard.test.flow</groupId>
+  <artifactId>message-json</artifactId>
+  <version>${flow.version}</version>
+</dependency>
+```
+
+The unit test [`JsonTest`][JsonTest] contains examples of the usage of the message type supplied by this module.
+
+<!-- code_link_start -->
+
+[JsonTest]: src/test/java/com/mastercard/test/flow/msg/json/JsonTest.java
+
+<!-- code_link_end -->

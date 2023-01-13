@@ -11,6 +11,10 @@ Report input/output
 
 <!-- title end -->
 
+## Usage
+
+It is unlikely that you'll need to depend directly on this module, it will be transitively supplied by [`assert-junit4`](../../assert/assert-junit4) or [`assert-junit5`](../../assert/assert-junit5).
+
 ## Functionality
 
 This module provides an object model for the data in an execution report along with facilities for writing and reading that data to and from storage.
