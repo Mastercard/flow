@@ -34,7 +34,7 @@ public class QuietFiles {
 	 * {@link UncheckedIOException}
 	 *
 	 * @param <T> The return type
-	 * @param op The operation
+	 * @param op  The operation
 	 * @return The return value
 	 */
 	static <T> T wrap( FailureProne<T> op ) {
@@ -77,9 +77,9 @@ public class QuietFiles {
 
 	/**
 	 * @see Files#createDirectories(Path, FileAttribute...)
-	 * @param dir the directory to create
+	 * @param dir  the directory to create
 	 * @param attr an optional list of file attributes to set atomically when
-	 *        creating the directory
+	 *             creating the directory
 	 */
 	public static void createDirectories( Path dir, FileAttribute<?>... attr ) {
 		wrap( () -> Files.createDirectories( dir, attr ) );
@@ -87,12 +87,12 @@ public class QuietFiles {
 
 	/**
 	 * @see Files#createTempFile(String, String, FileAttribute...)
-	 * @param prefix the prefix string to be used in generating the file's name; may
-	 *        be null
-	 * @param suffix the suffix string to be used in generating the file's name; may
-	 *        be null, in which case ".tmp" is used
+	 * @param prefix     the prefix string to be used in generating the file's name;
+	 *                   may be null
+	 * @param suffix     the suffix string to be used in generating the file's name;
+	 *                   may be null, in which case ".tmp" is used
 	 * @param attributes an optional list of file attributes to set atomically when
-	 *        creating the file
+	 *                   creating the file
 	 * @return the path to the newly created file that did not exist before this
 	 *         method was invoked
 	 */
@@ -103,8 +103,8 @@ public class QuietFiles {
 
 	/**
 	 * @see Files#write(Path, byte[], OpenOption...)
-	 * @param path The path to write to
-	 * @param bytes The data to write
+	 * @param path    The path to write to
+	 * @param bytes   The data to write
 	 * @param options options specifying how the file is opened
 	 * @return the path
 	 */
