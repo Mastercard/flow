@@ -22,7 +22,7 @@ Structured Query Language messages
 </dependency>
 ```
 
-The unit tests [`QueryTest`][sql.QueryTest] and [`ResultTest`][ResultTest] contain examples of the usage of the message types supplied by this module.
+The unit tests [`QueryTest`][sql.QueryTest] and [`ResultTest`][ResultTest] contain usage examples for the message types supplied by this module.
 
 <!-- code_link_start -->
 

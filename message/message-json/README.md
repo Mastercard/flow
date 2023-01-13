@@ -22,7 +22,7 @@ JavaScript Object Notation Messages
 </dependency>
 ```
 
-The unit test [`JsonTest`][JsonTest] contains examples of the usage of the message type supplied by this module.
+The unit test [`JsonTest`][JsonTest] contains usage examples for the message type supplied by this module.
 
 <!-- code_link_start -->
 

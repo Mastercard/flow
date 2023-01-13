@@ -22,7 +22,7 @@ HypterText Transfer Protocol messages
 </dependency>
 ```
 
-The unit tests [`HttpReqTest`][HttpReqTest] and [`HttpResTest`][HttpResTest] contain examples of the usage of the message types supplied by this module.
+The unit tests [`HttpReqTest`][HttpReqTest] and [`HttpResTest`][HttpResTest] contain usage examples for the message types supplied by this module.
 
 <!-- code_link_start -->
 

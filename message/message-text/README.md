@@ -22,7 +22,7 @@ Freeform text Message
 </dependency>
 ```
 
-The unit test [`TextTest`][TextTest] contains examples of the usage of the message type supplied by this module.
+The unit test [`TextTest`][TextTest] contains usage examples for the message type supplied by this module.
 
 <!-- code_link_start -->
 
