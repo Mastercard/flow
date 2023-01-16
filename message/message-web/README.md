@@ -11,7 +11,16 @@ Browser interaction messages
 
 <!-- title end -->
 
-## Example usage
+## Usage
+
+```xml
+<dependency>
+  <!-- browser interaction message type -->
+  <groupId>com.mastercard.test.flow</groupId>
+  <artifactId>message-web</artifactId>
+  <version>${flow.version}</version>
+</dependency>
+```
 
 Defining a form submission sequence:
 
@@ -134,4 +143,4 @@ if( assrt.expected().request() instanceof WebSequence
 
 Note how:
  * The actual URL for the page is populated at runtime on a `child()` of the request sequence. This means that the runtime-sourced data will be highlighted in the full diff view of the execution report.
- * We're grabbing the full page source in the extracted results, but we're also masking it as not interesting. This allows users to see the page source in the execution report, but doesn't consign us to slavishly tracking every non-functional change to the HTML in the test suite.
+ * We're grabbing the full page source in the extracted results, but we're also masking it as not interesting. This allows users to see the page source in the execution report, but doesn't condemn us to exhaustively tracking every non-functional change to the HTML in the test suite.

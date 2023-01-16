@@ -129,4 +129,13 @@ public class QuietFiles {
 	public static Stream<Path> list( Path dir ) {
 		return wrap( () -> Files.list( dir ) );
 	}
+
+	/**
+	 * @see Files#readAllBytes(Path)
+	 * @param path The path to read
+	 * @return The bytes of the file at that location
+	 */
+	public static byte[] readAllBytes( Path path ) {
+		return wrap( () -> Files.readAllBytes( path ) );
+	}
 }

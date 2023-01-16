@@ -141,15 +141,18 @@ class QuietFilesTest {
 	}
 
 	/**
-	 * File writing
+	 * File writing and reading
 	 *
 	 * @throws Exception if pre-emptive cleanup fails
 	 */
 	@Test
-	void write() throws Exception {
+	void writeRead() throws Exception {
 		Path f = Paths.get( "target/write" );
 		Files.deleteIfExists( f );
 		Path r = QuietFiles.write( f, "hello!".getBytes( UTF_8 ) );
 		assertEquals( f, r );
+
+		assertEquals( "hello!", new String( QuietFiles.readAllBytes( f ), UTF_8 ) );
 	}
+
 }

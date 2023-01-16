@@ -10,3 +10,16 @@ Message implementation utilities
  * [../message](..) Implementations of the Message interface
 
 <!-- title end -->
+
+## Usage
+
+You'll only need to consume this artifact directly if you're implementing your own `Message` type.
+
+```xml
+<dependency>
+  <!-- message implementation utilities -->
+  <groupId>com.mastercard.test.flow</groupId>
+  <artifactId>message-core</artifactId>
+  <version>${flow.version}</version>
+</dependency>
+```
