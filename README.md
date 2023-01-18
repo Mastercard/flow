@@ -47,7 +47,7 @@ These tests produce a rich execution report, [for example](https://mastercard.gi
 <!-- start_module_diagram:framework -->
 
 ```mermaid
-graph LR
+graph TB
   subgraph com.mastercard.test.flow
     api --> message-core
     api --> builder
