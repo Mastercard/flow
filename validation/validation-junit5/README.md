@@ -16,7 +16,7 @@ Junit5 validation components
 ```xml
 
 <dependency>
-  <!-- message implementation utilities -->
+  <!-- model validation -->
   <groupId>com.mastercard.test.flow</groupId>
   <artifactId>validation-junit5</artifactId>
   <version>${flow.version}</version>
