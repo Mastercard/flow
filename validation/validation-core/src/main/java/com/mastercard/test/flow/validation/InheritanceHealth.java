@@ -186,16 +186,23 @@ public class InheritanceHealth {
 		StructureCost actual = actualCost( allFlows, total.get() );
 		StructureCost optimal = optimalCost( model, allFlows, total.get() );
 
+		int totalDebt = actual.totalCost() - optimal.totalCost();
+
 		Histograph hstg = new Histograph( min, max, Math.min( max - min + 1, heightLimit ) );
-		Deque<String> actualLines = Stream.of( actual.toString( "Actual", hstg ).split( "\n" ) )
+		Deque<String> actualLines = Stream.of( actual.toString( hstg ).split( "\n" ) )
 				.collect( toCollection( ArrayDeque::new ) );
-		Deque<String> optimalLines = Stream.of( optimal.toString( "Optimal", hstg ).split( "\n" ) )
+		Deque<String> optimalLines = Stream.of( optimal.toString( hstg ).split( "\n" ) )
 				.collect( toCollection( ArrayDeque::new ) );
 
 		List<String> stitched = new ArrayList<>();
+		stitched.add( "┌───────────────────────────────────┐" );
+		stitched.add( String.format( "│Total Debt : %22s│", totalDebt ) );
+
+		stitched.add( "├─────Actual──────┬─────Optimal─────┤" );
 		while( !actualLines.isEmpty() && !optimalLines.isEmpty() ) {
-			stitched.add( actualLines.poll() + " | " + optimalLines.poll() );
+			stitched.add( "|" + actualLines.poll() + "│" + optimalLines.poll() + "|" );
 		}
+		stitched.add( "└─────────────────┴─────────────────┘" );
 
 		assertion.accept(
 				MessageHash.copypasta( Stream.of( expected ) ),
@@ -273,7 +280,13 @@ public class InheritanceHealth {
 			this.edgeCosts = edgeCosts;
 		}
 
-		String toString( String name, Histograph hstg ) {
+		int totalCost() {
+			return rootWeight + edgeCosts.entrySet().stream()
+					.mapToInt( e -> e.getKey() * e.getValue() )
+					.sum();
+		}
+
+		String toString( Histograph hstg ) {
 
 			if( !edgeCosts.isEmpty() && edgeCosts.firstKey() < hstg.getMinimum() ) {
 				throw new IllegalArgumentException(
@@ -294,12 +307,12 @@ public class InheritanceHealth {
 					.mapToInt( e -> e.getKey() * e.getValue() )
 					.sum();
 			return String.format( ""
-					+ "%-17s\n"
+
 					+ "roots %11s\n"
 					+ "edges %11s\n"
 					+ "total %11s\n"
 					+ "%s\n",
-					name,
+
 					rootWeight,
 					edgeTotal,
 					edgeTotal + rootWeight,
