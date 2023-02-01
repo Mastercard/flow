@@ -94,20 +94,23 @@ class InheritanceHealthTest {
 		InheritanceHealth ih = new InheritanceHealth( 0, 20, 10, Assertions::assertEquals );
 		Model mdl = mdl( "root" );
 		ih.expect( mdl,
-				"Actual            | Optimal          ",
-				"roots          12 | roots          12",
-				"edges           0 | edges           0",
-				"total          12 | total          12",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         0   0.00%" );
+				"┌───────────────────────────────────┐",
+				"│Total Debt :                      0│",
+				"├─────Actual──────┬─────Optimal─────┤",
+				"|roots          12│roots          12|",
+				"|edges           0│edges           0|",
+				"|total          12│total          12|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"└─────────────────┴─────────────────┘" );
 
 		assertThrows( AssertionError.class, () -> ih.expect( mdl, "wrong!" ) );
 	}
@@ -119,20 +122,23 @@ class InheritanceHealthTest {
 	void pair() {
 		new InheritanceHealth( 0, 20, 10, Assertions::assertEquals )
 				.expect( mdl( "root", "roof" ),
-						"Actual            | Optimal          ",
-						"roots          24 | roots          12",
-						"edges           0 | edges           1",
-						"total          24 | total          13",
-						"        0   0.00% |         1 100.00%",
-						"        0   0.00% |         0   0.00%",
-						"        0   0.00% |         0   0.00%",
-						"        0   0.00% |         0   0.00%",
-						"        0   0.00% |         0   0.00%",
-						"        0   0.00% |         0   0.00%",
-						"        0   0.00% |         0   0.00%",
-						"        0   0.00% |         0   0.00%",
-						"        0   0.00% |         0   0.00%",
-						"        0   0.00% |         0   0.00%" );
+						"┌───────────────────────────────────┐",
+						"│Total Debt :                     11│",
+						"├─────Actual──────┬─────Optimal─────┤",
+						"|roots          24│roots          12|",
+						"|edges           0│edges           1|",
+						"|total          24│total          13|",
+						"|        0   0.00%│        1 100.00%|",
+						"|        0   0.00%│        0   0.00%|",
+						"|        0   0.00%│        0   0.00%|",
+						"|        0   0.00%│        0   0.00%|",
+						"|        0   0.00%│        0   0.00%|",
+						"|        0   0.00%│        0   0.00%|",
+						"|        0   0.00%│        0   0.00%|",
+						"|        0   0.00%│        0   0.00%|",
+						"|        0   0.00%│        0   0.00%|",
+						"|        0   0.00%│        0   0.00%|",
+						"└─────────────────┴─────────────────┘" );
 	}
 
 	/**
@@ -176,15 +182,18 @@ class InheritanceHealthTest {
 	void optimise() {
 		new InheritanceHealth( 0, 4, 5, Assertions::assertEquals )
 				.expect( mdl( "root", "root>slap", "slap>soot", "soot>slat", "slat>slot", "slot>root" ),
-						"Actual            | Optimal          ",
-						"roots          12 | roots          12",
-						"edges          13 | edges           5",
-						"total          25 | total          17",
-						"        0   0.00% |         1  20.00%",
-						"        1  20.00% |         3  60.00%",
-						"        1  20.00% |         1  20.00%",
-						"        2  40.00% |         0   0.00%",
-						"        1  20.00% |         0   0.00%" );
+						"┌───────────────────────────────────┐",
+						"│Total Debt :                      8│",
+						"├─────Actual──────┬─────Optimal─────┤",
+						"|roots          12│roots          12|",
+						"|edges          13│edges           5|",
+						"|total          25│total          17|",
+						"|        0   0.00%│        1  20.00%|",
+						"|        1  20.00%│        3  60.00%|",
+						"|        1  20.00%│        1  20.00%|",
+						"|        2  40.00%│        0   0.00%|",
+						"|        1  20.00%│        0   0.00%|",
+						"└─────────────────┴─────────────────┘" );
 	}
 
 	/**
@@ -203,13 +212,16 @@ class InheritanceHealthTest {
 		// but 4 are considered in the inheritance health (1 root and three children)
 		new InheritanceHealth( 0, 2, 3, Assertions::assertEquals )
 				.expect( model,
-						"Actual            | Optimal          ",
-						"roots          12 | roots          12",
-						"edges           3 | edges           3",
-						"total          15 | total          15",
-						"        0   0.00% |         0   0.00%",
-						"        3 100.00% |         3 100.00%",
-						"        0   0.00% |         0   0.00%" );
+						"┌───────────────────────────────────┐",
+						"│Total Debt :                      0│",
+						"├─────Actual──────┬─────Optimal─────┤",
+						"|roots          12│roots          12|",
+						"|edges           3│edges           3|",
+						"|total          15│total          15|",
+						"|        0   0.00%│        0   0.00%|",
+						"|        3 100.00%│        3 100.00%|",
+						"|        0   0.00%│        0   0.00%|",
+						"└─────────────────┴─────────────────┘" );
 	}
 
 	/**
@@ -230,15 +242,18 @@ class InheritanceHealthTest {
 			assertSame( ih, r );
 		}
 		ih.expect( mdl( "root", "root>slap", "slap>soot", "soot>slat", "slat>slot" ),
-				"Actual            | Optimal          ",
-				"roots          12 | roots          12",
-				"edges          10 | edges           5",
-				"total          22 | total          17",
-				"        0   0.00% |         0   0.00%",
-				"        1  25.00% |         3  75.00%",
-				"        1  25.00% |         1  25.00%",
-				"        1  25.00% |         0   0.00%",
-				"        1  25.00% |         0   0.00%" );
+				"┌───────────────────────────────────┐",
+				"│Total Debt :                      5│",
+				"├─────Actual──────┬─────Optimal─────┤",
+				"|roots          12│roots          12|",
+				"|edges          10│edges           5|",
+				"|total          22│total          17|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        1  25.00%│        3  75.00%|",
+				"|        1  25.00%│        1  25.00%|",
+				"|        1  25.00%│        0   0.00%|",
+				"|        1  25.00%│        0   0.00%|",
+				"└─────────────────┴─────────────────┘" );
 
 		assertEquals( ""
 				+ "BUILD -1.00\n"
@@ -280,15 +295,18 @@ class InheritanceHealthTest {
 	void height() {
 		new InheritanceHealth( 2, 6, 10, Assertions::assertEquals )
 				.expect( mdl( "root", "sppu" ),
-						"Actual            | Optimal          ",
-						"roots          24 | roots          12",
-						"edges           0 | edges           4",
-						"total          24 | total          16",
-						"        0   0.00% |         0   0.00%",
-						"        0   0.00% |         0   0.00%",
-						"        0   0.00% |         1 100.00%",
-						"        0   0.00% |         0   0.00%",
-						"        0   0.00% |         0   0.00%" );
+						"┌───────────────────────────────────┐",
+						"│Total Debt :                      8│",
+						"├─────Actual──────┬─────Optimal─────┤",
+						"|roots          24│roots          12|",
+						"|edges           0│edges           4|",
+						"|total          24│total          16|",
+						"|        0   0.00%│        0   0.00%|",
+						"|        0   0.00%│        0   0.00%|",
+						"|        0   0.00%│        1 100.00%|",
+						"|        0   0.00%│        0   0.00%|",
+						"|        0   0.00%│        0   0.00%|",
+						"└─────────────────┴─────────────────┘" );
 	}
 
 	/**
@@ -300,11 +318,14 @@ class InheritanceHealthTest {
 		{
 			InheritanceHealth fit = new InheritanceHealth( 4, 4, 5, Assertions::assertEquals );
 			fit.expect( mdl,
-					"Actual            | Optimal          ",
-					"roots          24 | roots          12",
-					"edges           0 | edges           4",
-					"total          24 | total          16",
-					"        0   0.00% |         1 100.00%" );
+					"┌───────────────────────────────────┐",
+					"│Total Debt :                      8│",
+					"├─────Actual──────┬─────Optimal─────┤",
+					"|roots          24│roots          12|",
+					"|edges           0│edges           4|",
+					"|total          24│total          16|",
+					"|        0   0.00%│        1 100.00%|",
+					"└─────────────────┴─────────────────┘" );
 		}
 		{
 			InheritanceHealth low = new InheritanceHealth( 3, 3, 5, Assertions::assertEquals );
@@ -362,26 +383,29 @@ class InheritanceHealthTest {
 				value.applyAsInt( p ) - value.applyAsInt( c ) ) ) );
 
 		ih.expect( mdl,
-				"Actual            | Optimal          ",
-				"roots           1 | roots           1",
-				"edges          39 | edges          15",
-				"total          40 | total          16",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         1  25.00%",
-				"        0   0.00% |         1  25.00%",
-				"        0   0.00% |         0   0.00%",
-				"        1  25.00% |         1  25.00%",
-				"        0   0.00% |         0   0.00%",
-				"        1  25.00% |         0   0.00%",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         1  25.00%",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         0   0.00%",
-				"        0   0.00% |         0   0.00%",
-				"        1  25.00% |         0   0.00%",
-				"        1  25.00% |         0   0.00%" );
+				"┌───────────────────────────────────┐",
+				"│Total Debt :                     24│",
+				"├─────Actual──────┬─────Optimal─────┤",
+				"|roots           1│roots           1|",
+				"|edges          39│edges          15|",
+				"|total          40│total          16|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        1  25.00%|",
+				"|        0   0.00%│        1  25.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        1  25.00%│        1  25.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        1  25.00%│        0   0.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        1  25.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        0   0.00%│        0   0.00%|",
+				"|        1  25.00%│        0   0.00%|",
+				"|        1  25.00%│        0   0.00%|",
+				"└─────────────────┴─────────────────┘" );
 	}
 
 	private static final Pattern CHILD = Pattern.compile( "(.*)>(.*)" );
