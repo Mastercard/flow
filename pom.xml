@@ -244,8 +244,7 @@
 					<!-- `mvn javadoc:javadoc` to generate target/site/apidocs in each module -->
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-javadoc-plugin</artifactId>
-					<!-- Downgrade to avoid https://issues.apache.org/jira/browse/MJAVADOC-700 -->
-					<version>3.2.0</version>
+					<version>3.5.0</version>
 				</plugin>
 
 				<plugin>
