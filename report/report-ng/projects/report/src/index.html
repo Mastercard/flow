@@ -8,8 +8,336 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <script type="text/javascript">
     data =
-      // START_JSON_DATA
-      "You'll want to replace this with an actual index or flow data structure"
+    // START_JSON_DATA
+    {
+      "description": "process",
+      "tags": ["PASS", "chain:provoked", "deferred", "histogram", "process"],
+      "motivation": "Provoking the execution of the queued task",
+      "trace": "com.mastercard.test.flow.example.app.model.Deferred.<init>(Deferred.java:158)",
+      "basis": null,
+      "dependencies": {
+        "AEE996A366DE06478D69800343205EFE": {
+          "description": "pre",
+          "tags": ["chain:provoked", "deferred", "histogram", "query"]
+        }
+      },
+      "root": {
+        "requester": "OPS",
+        "responder": "QUEUE",
+        "tags": [],
+        "request": {
+          "full": {
+            "expect": "POST /queue/configure HTTP/1.1\r\nAccept: application/json\r\nConnection: keep-alive\r\nContent-Type: application/json\r\n\r\n{\n  \"process\" : \"1\"\n}",
+            "expectBytes": "UE9TVCAvcXVldWUvY29uZmlndXJlIEhUVFAvMS4xDQpBY2NlcHQ6IGFwcGxpY2F0aW9uL2pzb24NCkNvbm5lY3Rpb246IGtlZXAtYWxpdmUNCkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vanNvbg0KDQp7InByb2Nlc3MiOiIxIn0=",
+            "actual": null,
+            "actualBytes": null
+          },
+          "asserted": {
+            "expect": null,
+            "actual": null
+          }
+        },
+        "response": {
+          "full": {
+            "expect": "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nDate: Sun, 06 Jun 2021 19:50:29 GMT\r\nServer: Jetty(9.4.48.v20220622)\r\nTransfer-Encoding: chunked\r\n\r\n",
+            "expectBytes": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCkRhdGU6IFN1biwgMDYgSnVuIDIwMjEgMTk6NTA6MjkgR01UDQpTZXJ2ZXI6IEpldHR5KDkuNC40OC52MjAyMjA2MjIpDQpUcmFuc2Zlci1FbmNvZGluZzogY2h1bmtlZA0KDQowDQoNCjANCg0K",
+            "actual": "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nDate: Mon, 20 Feb 2023 08:54:48 GMT\r\nServer: Jetty(9.4.48.v20220622)\r\nTransfer-Encoding: chunked\r\n\r\n",
+            "actualBytes": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCkRhdGU6IE1vbiwgMjAgRmViIDIwMjMgMDg6NTQ6NDggR01UDQpTZXJ2ZXI6IEpldHR5KDkuNC40OC52MjAyMjA2MjIpDQpUcmFuc2Zlci1FbmNvZGluZzogY2h1bmtlZA0KDQo0DQpudWxsDQowDQoNCg=="
+          },
+          "asserted": {
+            "expect": "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nServer: Jetty(9.4.48.v20220622)\r\nTransfer-Encoding: chunked\r\n\r\n",
+            "actual": "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nServer: Jetty(9.4.48.v20220622)\r\nTransfer-Encoding: chunked\r\n\r\n"
+          }
+        },
+        "children": [{
+          "requester": "QUEUE",
+          "responder": "STORE",
+          "tags": ["get"],
+          "request": {
+            "full": {
+              "expect": "GET /data/29e2271a-e645-420e-8ef9-238d37ceb4cc HTTP/1.1\r\nAccept: application/json\r\nConnection: keep-alive\r\nContent-Type: application/json\r\n\r\n",
+              "expectBytes": "R0VUIC9kYXRhLzI5ZTIyNzFhLWU2NDUtNDIwZS04ZWY5LTIzOGQzN2NlYjRjYyBIVFRQLzEuMQ0KQWNjZXB0OiBhcHBsaWNhdGlvbi9qc29uDQpDb25uZWN0aW9uOiBrZWVwLWFsaXZlDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCg0K",
+              "actual": null,
+              "actualBytes": null
+            },
+            "asserted": {
+              "expect": null,
+              "actual": null
+            }
+          },
+          "response": {
+            "full": {
+              "expect": "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nDate: Sun, 06 Jun 2021 19:50:29 GMT\r\nServer: Jetty(9.4.48.v20220622)\r\nTransfer-Encoding: chunked\r\n\r\nI'll be back!",
+              "expectBytes": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCkRhdGU6IFN1biwgMDYgSnVuIDIwMjEgMTk6NTA6MjkgR01UDQpTZXJ2ZXI6IEpldHR5KDkuNC40OC52MjAyMjA2MjIpDQpUcmFuc2Zlci1FbmNvZGluZzogY2h1bmtlZA0KDQpkDQpJJ2xsIGJlIGJhY2shDQowDQoNCg==",
+              "actual": null,
+              "actualBytes": null
+            },
+            "asserted": {
+              "expect": null,
+              "actual": null
+            }
+          },
+          "children": [{
+            "requester": "STORE",
+            "responder": "DB",
+            "tags": ["get"],
+            "request": {
+              "full": {
+                "expect": "Query:\nSELECT\n  data,\n  hash\nFROM\n  item\nWHERE\n  id = ?\nBind variables:\n  1 : 29e2271a-e645-420e-8ef9-238d37ceb4cc",
+                "expectBytes": "eyJwYWlycyI6W3siayI6IjEiLCJ2IjoiMjllMjI3MWEtZTY0NS00MjBlLThlZjktMjM4ZDM3Y2ViNGNjIiwiYiI6bnVsbH0seyJrIjoid2FybmluZyIsInYiOiJUaGlzIGlzIG5vdCByZXByZXNlbnRhdGl2ZSBvZiBhbiBhY3R1YWwgd2lyZSBwcm90b2NvbCIsImIiOm51bGx9LHsiayI6InNxbCIsInYiOiJTRUxFQ1QgZGF0YSwgaGFzaCBGUk9NIGl0ZW0gV0hFUkUgaWQgPSA/IiwiYiI6bnVsbH1dfQ==",
+                "actual": null,
+                "actualBytes": null
+              },
+              "asserted": {
+                "expect": null,
+                "actual": null
+              }
+            },
+            "response": {
+              "full": {
+                "expect": " --- Row 0 ---\n data : I'll be back!\n hash : bytes: 0pN35KXFXHDTqxuKk/qlHg==",
+                "expectBytes": "eyJjb2x1bW5zIjpbImRhdGEiLCJoYXNoIl0sInJvd3MiOltbeyJrIjowLCJ2IjoiSSdsbCBiZSBiYWNrISIsImIiOm51bGx9LHsiayI6MSwidiI6bnVsbCwiYiI6IjBwTjM1S1hGWEhEVHF4dUtrL3FsSGc9PSJ9XV0sIndhcm5pbmciOiJUaGlzIGlzIG5vdCByZXByZXNlbnRhdGl2ZSBvZiBhbiBhY3R1YWwgd2lyZSBwcm90b2NvbCJ9",
+                "actual": null,
+                "actualBytes": null
+              },
+              "asserted": {
+                "expect": null,
+                "actual": null
+              }
+            },
+            "children": []
+          }]
+        }, {
+          "requester": "QUEUE",
+          "responder": "CORE",
+          "tags": [],
+          "request": {
+            "full": {
+              "expect": "POST /process HTTP/1.1\r\nAccept: application/json\r\nConnection: keep-alive\r\nContent-Type: application/json\r\n\r\n{\n  \"characters\" : null,\n  \"defer\" : false,\n  \"text\" : \"I'll be back!\"\n}",
+              "expectBytes": "UE9TVCAvcHJvY2VzcyBIVFRQLzEuMQ0KQWNjZXB0OiBhcHBsaWNhdGlvbi9qc29uDQpDb25uZWN0aW9uOiBrZWVwLWFsaXZlDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCg0KeyJjaGFyYWN0ZXJzIjpudWxsLCJkZWZlciI6ZmFsc2UsInRleHQiOiJJJ2xsIGJlIGJhY2shIn0=",
+              "actual": null,
+              "actualBytes": null
+            },
+            "asserted": {
+              "expect": null,
+              "actual": null
+            }
+          },
+          "response": {
+            "full": {
+              "expect": "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nDate: Sun, 06 Jun 2021 19:50:29 GMT\r\nServer: Jetty(9.4.48.v20220622)\r\nTransfer-Encoding: chunked\r\n\r\n{\n  \"deferredID\" : null,\n  \"deferredStatus\" : null,\n  \"result\" : {\n    \" \" : 2,\n    \"!\" : 1,\n    \"'\" : 1,\n    \"I\" : 1,\n    \"a\" : 1,\n    \"b\" : 2,\n    \"c\" : 1,\n    \"e\" : 1,\n    \"k\" : 1,\n    \"l\" : 2\n  }\n}",
+              "expectBytes": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCkRhdGU6IFN1biwgMDYgSnVuIDIwMjEgMTk6NTA6MjkgR01UDQpTZXJ2ZXI6IEpldHR5KDkuNC40OC52MjAyMjA2MjIpDQpUcmFuc2Zlci1FbmNvZGluZzogY2h1bmtlZA0KDQo3MA0KeyJkZWZlcnJlZElEIjpudWxsLCJkZWZlcnJlZFN0YXR1cyI6bnVsbCwicmVzdWx0Ijp7IiAiOjIsIiEiOjEsIiciOjEsIkkiOjEsImEiOjEsImIiOjIsImMiOjEsImUiOjEsImsiOjEsImwiOjJ9fQ0KMA0KDQo=",
+              "actual": null,
+              "actualBytes": null
+            },
+            "asserted": {
+              "expect": null,
+              "actual": null
+            }
+          },
+          "children": [{
+            "requester": "CORE",
+            "responder": "HISTOGRAM",
+            "tags": [],
+            "request": {
+              "full": {
+                "expect": "POST /count/all HTTP/1.1\r\nAccept: application/json\r\nConnection: keep-alive\r\nContent-Type: application/json\r\n\r\nI'll be back!",
+                "expectBytes": "UE9TVCAvY291bnQvYWxsIEhUVFAvMS4xDQpBY2NlcHQ6IGFwcGxpY2F0aW9uL2pzb24NCkNvbm5lY3Rpb246IGtlZXAtYWxpdmUNCkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vanNvbg0KDQpJJ2xsIGJlIGJhY2sh",
+                "actual": null,
+                "actualBytes": null
+              },
+              "asserted": {
+                "expect": null,
+                "actual": null
+              }
+            },
+            "response": {
+              "full": {
+                "expect": "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nDate: Sun, 06 Jun 2021 19:50:29 GMT\r\nServer: Jetty(9.4.48.v20220622)\r\nTransfer-Encoding: chunked\r\n\r\n{\n  \" \" : 2,\n  \"!\" : 1,\n  \"'\" : 1,\n  \"I\" : 1,\n  \"a\" : 1,\n  \"b\" : 2,\n  \"c\" : 1,\n  \"e\" : 1,\n  \"k\" : 1,\n  \"l\" : 2\n}",
+                "expectBytes": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCkRhdGU6IFN1biwgMDYgSnVuIDIwMjEgMTk6NTA6MjkgR01UDQpTZXJ2ZXI6IEpldHR5KDkuNC40OC52MjAyMjA2MjIpDQpUcmFuc2Zlci1FbmNvZGluZzogY2h1bmtlZA0KDQozZA0KeyIgIjoyLCIhIjoxLCInIjoxLCJJIjoxLCJhIjoxLCJiIjoyLCJjIjoxLCJlIjoxLCJrIjoxLCJsIjoyfQ0KMA0KDQo=",
+                "actual": null,
+                "actualBytes": null
+              },
+              "asserted": {
+                "expect": null,
+                "actual": null
+              }
+            },
+            "children": []
+          }]
+        }, {
+          "requester": "QUEUE",
+          "responder": "STORE",
+          "tags": ["put"],
+          "request": {
+            "full": {
+              "expect": "PUT /data/29e2271a-e645-420e-8ef9-238d37ceb4cc HTTP/1.1\r\nAccept: application/json\r\nConnection: keep-alive\r\nContent-Type: application/json\r\n\r\n{\" \":2,\"!\":1,\"'\":1,\"I\":1,\"a\":1,\"b\":2,\"c\":1,\"e\":1,\"k\":1,\"l\":2}",
+              "expectBytes": "UFVUIC9kYXRhLzI5ZTIyNzFhLWU2NDUtNDIwZS04ZWY5LTIzOGQzN2NlYjRjYyBIVFRQLzEuMQ0KQWNjZXB0OiBhcHBsaWNhdGlvbi9qc29uDQpDb25uZWN0aW9uOiBrZWVwLWFsaXZlDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCg0KeyIgIjoyLCIhIjoxLCInIjoxLCJJIjoxLCJhIjoxLCJiIjoyLCJjIjoxLCJlIjoxLCJrIjoxLCJsIjoyfQ==",
+              "actual": null,
+              "actualBytes": null
+            },
+            "asserted": {
+              "expect": null,
+              "actual": null
+            }
+          },
+          "response": {
+            "full": {
+              "expect": "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nDate: Sun, 06 Jun 2021 19:50:29 GMT\r\nServer: Jetty(9.4.48.v20220622)\r\nTransfer-Encoding: chunked\r\n\r\n",
+              "expectBytes": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCkRhdGU6IFN1biwgMDYgSnVuIDIwMjEgMTk6NTA6MjkgR01UDQpTZXJ2ZXI6IEpldHR5KDkuNC40OC52MjAyMjA2MjIpDQpUcmFuc2Zlci1FbmNvZGluZzogY2h1bmtlZA0KDQowDQoNCjANCg0K",
+              "actual": null,
+              "actualBytes": null
+            },
+            "asserted": {
+              "expect": null,
+              "actual": null
+            }
+          },
+          "children": [{
+            "requester": "STORE",
+            "responder": "DB",
+            "tags": ["put"],
+            "request": {
+              "full": {
+                "expect": "Query:\nINSERT INTO\n  item (id, data, hash)\nVALUES\n  (?, ?, ?) ON DUPLICATE KEY\nUPDATE\n  data = ?,\n  hash = ?\nBind variables:\n  1 : 29e2271a-e645-420e-8ef9-238d37ceb4cc\n  2 : {\" \":2,\"!\":1,\"'\":1,\"I\":1,\"a\":1,\"b\":2,\"c\":1,\"e\":1,\"k\":1,\"l\":2}\n  3 : bytes: 9+R5jTb33+KCxxzCgmhCYQ==\n  4 : {\" \":2,\"!\":1,\"'\":1,\"I\":1,\"a\":1,\"b\":2,\"c\":1,\"e\":1,\"k\":1,\"l\":2}\n  5 : bytes: 9+R5jTb33+KCxxzCgmhCYQ==",
+                "expectBytes": "eyJwYWlycyI6W3siayI6IjEiLCJ2IjoiMjllMjI3MWEtZTY0NS00MjBlLThlZjktMjM4ZDM3Y2ViNGNjIiwiYiI6bnVsbH0seyJrIjoiMiIsInYiOiJ7XCIgXCI6MixcIiFcIjoxLFwiJ1wiOjEsXCJJXCI6MSxcImFcIjoxLFwiYlwiOjIsXCJjXCI6MSxcImVcIjoxLFwia1wiOjEsXCJsXCI6Mn0iLCJiIjpudWxsfSx7ImsiOiIzIiwidiI6bnVsbCwiYiI6IjkrUjVqVGIzMytLQ3h4ekNnbWhDWVE9PSJ9LHsiayI6IjQiLCJ2Ijoie1wiIFwiOjIsXCIhXCI6MSxcIidcIjoxLFwiSVwiOjEsXCJhXCI6MSxcImJcIjoyLFwiY1wiOjEsXCJlXCI6MSxcImtcIjoxLFwibFwiOjJ9IiwiYiI6bnVsbH0seyJrIjoiNSIsInYiOm51bGwsImIiOiI5K1I1alRiMzMrS0N4eHpDZ21oQ1lRPT0ifSx7ImsiOiJ3YXJuaW5nIiwidiI6IlRoaXMgaXMgbm90IHJlcHJlc2VudGF0aXZlIG9mIGFuIGFjdHVhbCB3aXJlIHByb3RvY29sIiwiYiI6bnVsbH0seyJrIjoic3FsIiwidiI6IklOU0VSVCBJTlRPIGl0ZW0gKGlkLCBkYXRhLCBoYXNoKSBWQUxVRVMgKD8sID8sID8pIE9OIERVUExJQ0FURSBLRVkgVVBEQVRFICBkYXRhID0gPywgaGFzaCA9ID8iLCJiIjpudWxsfV19",
+                "actual": null,
+                "actualBytes": null
+              },
+              "asserted": {
+                "expect": null,
+                "actual": null
+              }
+            },
+            "response": {
+              "full": {
+                "expect": "",
+                "expectBytes": "eyJjb2x1bW5zIjpbXSwicm93cyI6W10sIndhcm5pbmciOiJUaGlzIGlzIG5vdCByZXByZXNlbnRhdGl2ZSBvZiBhbiBhY3R1YWwgd2lyZSBwcm90b2NvbCJ9",
+                "actual": null,
+                "actualBytes": null
+              },
+              "asserted": {
+                "expect": null,
+                "actual": null
+              }
+            },
+            "children": []
+          }]
+        }]
+      },
+      "context": {
+        "Queue processing": {
+          "active": false,
+          "cleared": false,
+          "exhausted": false
+        }
+      },
+      "residue": [{
+        "name": "DB items",
+        "raw": {
+          "updates": {
+            "29e2271a-e645-420e-8ef9-238d37ceb4cc": {
+              "before": "I'll be back!",
+              "after": "{\" \":2,\"!\":1,\"'\":1,\"I\":1,\"a\":1,\"b\":2,\"c\":1,\"e\":1,\"k\":1,\"l\":2}"
+            }
+          }
+        },
+        "full": {
+          "expect": "29e2271a-e645-420e-8ef9-238d37ceb4cc : I'll be back! -> {\" \":2,\"!\":1,\"'\":1,\"I\":1,\"a\":1,\"b\":2,\"c\":1,\"e\":1,\"k\":1,\"l\":2}",
+          "actual": "5195bbb8-7b57-44ad-9ba9-57277f79ecab : I'll be back! -> {\" \":2,\"!\":1,\"'\":1,\"I\":1,\"a\":1,\"b\":2,\"c\":1,\"e\":1,\"k\":1,\"l\":2}"
+        },
+        "masked": {
+          "expect": "_uuid_ : I'll be back! -> {\" \":2,\"!\":1,\"'\":1,\"I\":1,\"a\":1,\"b\":2,\"c\":1,\"e\":1,\"k\":1,\"l\":2}",
+          "actual": "_uuid_ : I'll be back! -> {\" \":2,\"!\":1,\"'\":1,\"I\":1,\"a\":1,\"b\":2,\"c\":1,\"e\":1,\"k\":1,\"l\":2}"
+        }
+      }],
+      "logs": [{
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "this is a long log message, but it get line-broken at word boundaries to fit the screen. We want the same behaviour for the next line, even though it doesn't have any word boundaries!"
+      }, {
+        "time": "2023-02-20T08:54:48.743+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.assrt.rsd.DBItemsChecker",
+        "message": "blah_blah_blah_boring_stuff_rhubarbrhubarbrhubarbrhubarbrhubarbrhubarbrhubarbrhubarbrhubarbrhubarbrhubarbrhubarb_interesting_content!"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "enough"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "additional"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "log"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "messages"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "that"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "the"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "scrollbar"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "is"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "pushed"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "off"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "the"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "bottom"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "of"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "the"
+      }, {
+        "time": "2023-02-20T08:54:48.779+0000",
+        "level": "INFO",
+        "source": "com.mastercard.test.flow.example.app.store.DB",
+        "message": "screen"
+      }]
+    }
       // END_JSON_DATA
       ;
   </script>
