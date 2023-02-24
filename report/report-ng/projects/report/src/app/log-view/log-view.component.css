@@ -35,4 +35,5 @@
 
 .message {
   white-space: break-spaces;
+  overflow-wrap: break-word;
 }

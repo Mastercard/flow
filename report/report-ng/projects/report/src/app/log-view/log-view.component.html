@@ -27,6 +27,12 @@
   </mat-form-field>
 </div>
 
+<span>The below is a copy of the element in the log table, and you'll note how it displays the wrapping behaviour that
+  we want.</span>
+<pre
+  class="message">blah_blah_blah_boring_stuff_rhubarbrhubarbrhubarbrhubarbrhubarbrhubarbrhubarbrhubarbrhubarbrhubarbrhubarbrhubarb_interesting_content!</pre>
+<span>So it must be something to do with the table rather than the pre itself?</span>
+
 <div class="log_table">
   <table mat-table [dataSource]="dataSource">
     <ng-container matColumnDef="time">
