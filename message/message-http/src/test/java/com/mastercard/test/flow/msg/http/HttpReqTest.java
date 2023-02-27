@@ -241,7 +241,7 @@ class HttpReqTest {
 
 		assertEquals( ""
 				+ "GET /foo/bar HTTP/1.1\r\n"
-				+ "Transfer-Encoding: chunked\r\n"
+				+ "transfer-encoding: chunked\r\n"
 				+ "\r\n"
 				+ "{\n"
 				+ "  \"body\" : \"content\"\n"
@@ -250,7 +250,7 @@ class HttpReqTest {
 
 		assertEquals( ""
 				+ "GET /foo/bar HTTP/1.1\r\n"
-				+ "Transfer-Encoding: chunked\r\n"
+				+ "transfer-encoding: chunked\r\n"
 				+ "\r\n"
 				+ "12\r\n" // remember this is hex
 				+ "{\"body\":\"content\"}\r\n"
@@ -295,7 +295,7 @@ class HttpReqTest {
 
 		assertEquals( ""
 				+ "GET /foo/_mp_/bar?q=_mq_&r=_mr_ HTTP/1.1\r\n"
-				+ "Transfer-Encoding: chunked\r\n"
+				+ "transfer-encoding: chunked\r\n"
 				+ "\r\n"
 				+ "{\n"
 				+ "  \"body\" : \"masked\"\n"

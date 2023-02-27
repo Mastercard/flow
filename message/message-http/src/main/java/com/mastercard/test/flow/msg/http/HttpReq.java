@@ -75,8 +75,7 @@ public class HttpReq extends HttpMsg<HttpReq> {
 		while( !lines.isEmpty() && !(headerLine = lines.removeFirst()).isEmpty() ) {
 			Matcher h = HEADER_LINE_PATTERN.matcher( headerLine );
 			if( h.matches() ) {
-				set( HEADER_PRESUFIX + h.group( "name" ).trim() + HEADER_PRESUFIX,
-						h.group( "value" ).trim() );
+				set( header( h.group( "name" ).trim() ), h.group( "value" ).trim() );
 			}
 		}
 
