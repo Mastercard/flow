@@ -66,7 +66,7 @@ public class HttpRes extends HttpMsg<HttpRes> {
 		while( !lines.isEmpty() && !(headerLine = lines.removeFirst()).isEmpty() ) {
 			Matcher h = HEADER_LINE_PATTERN.matcher( headerLine );
 			if( h.matches() ) {
-				set( HEADER_PRESUFIX + h.group( "name" ).trim() + HEADER_PRESUFIX,
+				set( header( h.group( "name" ).trim() ),
 						h.group( "value" ).trim() );
 			}
 		}

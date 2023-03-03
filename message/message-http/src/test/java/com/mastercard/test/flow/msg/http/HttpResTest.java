@@ -229,7 +229,7 @@ class HttpResTest {
 	}
 
 	/**
-	 * Honouring chunked Transfer-Encoding
+	 * Honouring chunked <code>transfer-encoding</code>
 	 */
 	@Test
 	void chunked() {
@@ -242,7 +242,7 @@ class HttpResTest {
 				.set( "body", "content" );
 
 		assertEquals( "HTTP/1.1 200 OK\r\n"
-				+ "Transfer-Encoding: chunked\r\n"
+				+ "transfer-encoding: chunked\r\n"
 				+ "\r\n"
 				+ "{\n"
 				+ "  \"body\" : \"content\"\n"
@@ -250,7 +250,7 @@ class HttpResTest {
 				msg.assertable() );
 
 		assertEquals( "HTTP/1.1 200 OK\r\n"
-				+ "Transfer-Encoding: chunked\r\n"
+				+ "transfer-encoding: chunked\r\n"
 				+ "\r\n"
 				+ "12\r\n"
 				+ "{\"body\":\"content\"}\r\n"
