@@ -2,6 +2,7 @@ package com.mastercard.test.flow.assrt;
 
 import static com.mastercard.test.flow.assrt.AbstractFlocessorTest.copypasta;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +25,7 @@ class AutonomyTest {
 	 * @param expect Expected test results
 	 */
 	private static void test( State state, Actor auton, String... expect ) {
-		TestFlocessor tf = new TestFlocessor( "baseline", TestModel.asynchronousTransfer() )
+		TestFlocessor tf = new TestFlocessor( "AutonomyTest", TestModel.asynchronousTransfer() )
 				.system( state, Actors.B, Actors.C )
 				.behaviour( assrt -> {
 					assrt.actual().response( assrt.expected().response().content() );
@@ -111,4 +112,18 @@ class AutonomyTest {
 				"third [] SUCCESS" );
 	}
 
+	/**
+	 * Autonomous actors must be part of the system under test
+	 */
+	@Test
+	void validation() {
+		TestFlocessor tf = new TestFlocessor( "validation", TestModel.asynchronousTransfer() )
+				.system( State.FUL, Actors.B, Actors.C );
+
+		IllegalArgumentException iae = assertThrows( IllegalArgumentException.class,
+				() -> tf.autonomous( Actors.D ) );
+
+		assertEquals( "Autonomous actors 'D' must be a subset of system 'B,C'",
+				iae.getMessage() );
+	}
 }
