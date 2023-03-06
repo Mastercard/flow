@@ -1,6 +1,7 @@
 
 package com.mastercard.test.flow.assrt;
 
+import static com.mastercard.test.flow.assrt.History.Result.NOT_OBSERVED;
 import static java.time.Instant.now;
 import static java.time.ZoneId.systemDefault;
 import static java.util.stream.Collectors.toCollection;
@@ -102,6 +103,12 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * The set of actors that are being exercised in this test.
 	 */
 	private final Set<Actor> systemUnderTest = new HashSet<>();
+
+	/**
+	 * The set of actors that are capable of performing interactions independently
+	 * of the test harness
+	 */
+	private final Set<Actor> autonomous = new HashSet<>();
 
 	/**
 	 * Whether the system's subsequent behaviour will be changed by the processing
@@ -215,6 +222,25 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		statefulness = state;
 		systemUnderTest.clear();
 		Collections.addAll( systemUnderTest, actors );
+		return self();
+	}
+
+	/**
+	 * Defines the set of system components that are capable of independent action
+	 * in the system under test
+	 *
+	 * @param actors independent {@link Actor}s
+	 * @return <code>this</code>
+	 */
+	public T autonomous( Actor... actors ) {
+		autonomous.clear();
+		Collections.addAll( autonomous, actors );
+		if( !systemUnderTest.containsAll( autonomous ) ) {
+			throw new IllegalArgumentException( String.format(
+					"Autonomous actors '%s' must be a subset of system '%s'",
+					autonomous.stream().map( Actor::name ).collect( Collectors.joining( "," ) ),
+					systemUnderTest.stream().map( Actor::name ).collect( Collectors.joining( "," ) ) ) );
+		}
 		return self();
 	}
 
@@ -402,11 +428,22 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 				.collect( toList() );
 
 		if( toExercise.isEmpty() ) {
-			reportAndSkip( flow, String.format(
-					"No interactions with system [%s]",
-					systemUnderTest.stream()
-							.map( Actor::name )
-							.collect( Collectors.joining( "," ) ) ) );
+			if( flow.root() != null && autonomous.contains( flow.root().requester() ) ) {
+				history.recordResult( flow, NOT_OBSERVED );
+				reportAndSkip( flow, String.format(
+						"No interactions with system [%s], but autonomous actor '%s' is assumed to be doing something",
+						systemUnderTest.stream()
+								.map( Actor::name )
+								.collect( Collectors.joining( "," ) ),
+						flow.root().requester().name() ) );
+			}
+			else {
+				reportAndSkip( flow, String.format(
+						"No interactions with system [%s]",
+						systemUnderTest.stream()
+								.map( Actor::name )
+								.collect( Collectors.joining( "," ) ) ) );
+			}
 		}
 
 		List<Consumer<FlowData>> reportUpdates = new ArrayList<>();
