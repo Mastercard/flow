@@ -434,6 +434,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 						"No interactions with system [%s], but autonomous actor '%s' is assumed to be doing something",
 						systemUnderTest.stream()
 								.map( Actor::name )
+								.sorted()
 								.collect( Collectors.joining( "," ) ),
 						flow.root().requester().name() ) );
 			}
@@ -442,6 +443,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 						"No interactions with system [%s]",
 						systemUnderTest.stream()
 								.map( Actor::name )
+								.sorted()
 								.collect( Collectors.joining( "," ) ) ) );
 			}
 		}
