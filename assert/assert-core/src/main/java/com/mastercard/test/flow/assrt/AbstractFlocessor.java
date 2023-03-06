@@ -4,6 +4,7 @@ package com.mastercard.test.flow.assrt;
 import static com.mastercard.test.flow.assrt.History.Result.NOT_OBSERVED;
 import static java.time.Instant.now;
 import static java.time.ZoneId.systemDefault;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 
@@ -238,8 +239,8 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		if( !systemUnderTest.containsAll( autonomous ) ) {
 			throw new IllegalArgumentException( String.format(
 					"Autonomous actors '%s' must be a subset of system '%s'",
-					autonomous.stream().map( Actor::name ).collect( Collectors.joining( "," ) ),
-					systemUnderTest.stream().map( Actor::name ).collect( Collectors.joining( "," ) ) ) );
+					autonomous.stream().map( Actor::name ).sorted().collect( joining( "," ) ),
+					systemUnderTest.stream().map( Actor::name ).sorted().collect( joining( "," ) ) ) );
 		}
 		return self();
 	}
