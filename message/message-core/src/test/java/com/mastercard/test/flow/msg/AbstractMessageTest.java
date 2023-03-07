@@ -224,6 +224,7 @@ class AbstractMessageTest {
 		msg.set( "biginteger", new BigInteger( "5678" ) );
 		msg.set( "uuid", new UUID( 12345L, 67890L ) );
 		msg.set( "timestamp", new Timestamp( 1234567890L ) );
+		msg.set( "null", null );
 
 		assertEquals( true, msg.get( "boolean" ) );
 		assertEquals( (byte) 1, msg.get( "byte" ) );
@@ -238,6 +239,8 @@ class AbstractMessageTest {
 		assertEquals( new BigInteger( "5678" ), msg.get( "biginteger" ) );
 		assertEquals( new UUID( 12345L, 67890L ), msg.get( "uuid" ) );
 		assertEquals( new Timestamp( 1234567890L ), msg.get( "timestamp" ) );
+		assertEquals( null, msg.get( "null" ) );
+		assertEquals( null, msg.get( "no such field" ) );
 	}
 
 	/**

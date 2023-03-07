@@ -116,6 +116,9 @@ public abstract class AbstractMessage<T extends AbstractMessage<T>>
 	@Override
 	public final Object get( String field ) {
 		Object value = access( field );
+		if( value == null ) {
+			return null;
+		}
 		return defensiveCopiers.getOrDefault(
 				value.getClass(),
 				o -> o )
