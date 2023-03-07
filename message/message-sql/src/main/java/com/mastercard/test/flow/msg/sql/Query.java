@@ -98,7 +98,7 @@ public class Query extends AbstractMessage<Query> {
 	}
 
 	@Override
-	public Object get( String field ) {
+	protected Object access( String field ) {
 		return data().get( field );
 	}
 

@@ -124,7 +124,7 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	}
 
 	@Override
-	public Object get( String field ) {
+	protected Object access( String field ) {
 		if( BODY.equals( field ) ) {
 			return body.orElse( null );
 		}

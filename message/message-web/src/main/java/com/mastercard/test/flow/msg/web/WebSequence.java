@@ -139,7 +139,7 @@ public class WebSequence extends AbstractMessage<WebSequence> {
 	}
 
 	@Override
-	public Object get( String field ) {
+	protected Object access( String field ) {
 		return parameters().get( field );
 	}
 

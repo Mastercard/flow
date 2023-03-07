@@ -173,7 +173,7 @@ public class Result extends AbstractMessage<Result> {
 	}
 
 	@Override
-	public Object get( String field ) {
+	protected Object access( String field ) {
 		ResultSetStructure data = data();
 		if( COLUMNS.equals( field ) ) {
 			return new ArrayList<>( data.columns );
