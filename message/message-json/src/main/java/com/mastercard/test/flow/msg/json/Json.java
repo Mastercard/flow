@@ -151,7 +151,7 @@ public class Json extends AbstractMessage<Json> {
 	}
 
 	@Override
-	public Object get( String field ) {
+	protected Object access( String field ) {
 		AtomicReference<Object> result = new AtomicReference<>();
 		traverse( data(), field, false,
 				( map, key ) -> result.set( map.get( key ) ),

@@ -82,7 +82,7 @@ public class Text extends AbstractMessage<Text> {
 	}
 
 	@Override
-	public Object get( String field ) {
+	protected Object access( String field ) {
 		Matcher m = Pattern.compile( field ).matcher( build() );
 		if( m.find() ) {
 			return m.groupCount() == 0 ? m.group( 0 ) : m.group( 1 );
