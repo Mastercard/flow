@@ -29,6 +29,11 @@ public class History {
 		 */
 		UNEXPECTED(true),
 		/**
+		 * We had an opportunity to process the {@link Flow}, but the root {@link Actor}
+		 * is autonomous so we could not observe results
+		 */
+		NOT_OBSERVED(true),
+		/**
 		 * An error occurred when the {@link Flow} was processed
 		 */
 		ERROR(false),
@@ -62,7 +67,7 @@ public class History {
 	 * @param result The outcome of processing that {@link Flow}
 	 */
 	public void recordResult( Flow flow, Result result ) {
-		results.put( flow, result );
+		results.putIfAbsent( flow, result );
 	}
 
 	/**
