@@ -50,23 +50,25 @@ class HistoryTest {
 				.meta( data -> data
 						.description( "child" ) ) );
 
-		History hst = new History();
-
 		Stream.of( null, Result.PENDING, Result.SUCCESS, Result.SKIP, Result.ERROR )
 				.forEach( r -> {
+					History hst = new History();
 					hst.recordResult( parent, r );
 					assertEquals( null, hst.skipReason( child, State.FUL, Collections.emptySet() )
 							.orElse( null ),
 							"basis " + r );
 				} );
 
-		hst.recordResult( parent, Result.UNEXPECTED );
-
-		assertEquals( "Ancestor failed", hst.skipReason( child, State.FUL, Collections.emptySet() )
-				.orElse( null ),
-				"basis failure" );
+		{
+			History hst = new History();
+			hst.recordResult( parent, Result.UNEXPECTED );
+			assertEquals( "Ancestor failed", hst.skipReason( child, State.FUL, Collections.emptySet() )
+					.orElse( null ),
+					"basis failure" );
+		}
 
 		try {
+			History hst = new History();
 			AssertionOptions.SUPPRESS_BASIS_CHECK.set( "true" );
 			assertEquals( null, hst.skipReason( child, State.FUL, Collections.emptySet() )
 					.orElse( null ),

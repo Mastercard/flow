@@ -280,4 +280,43 @@ public class TestModel {
 
 		return new Mdl().withFlows( first, second, third );
 	}
+
+	/**
+	 * A model with three flows:
+	 * <ul>
+	 * <li>A to B</li>
+	 * <li>B to C</li>
+	 * <li>A to C</li>
+	 * </ul>
+	 *
+	 * @return A model with three flows
+	 */
+	public static Model asynchronousTransfer() {
+		Flow first = Creator.build( flow -> flow
+				.meta( data -> data
+						.description( "first" ) )
+				.call( a -> a.from( Actors.A ).to( Actors.B )
+						.request( new Text( "Give 'this' to C" ) )
+						.response( new Text( "OK, but not right now" ) ) ) );
+
+		Flow second = Creator
+				.build( flow -> flow
+						.meta( data -> data
+								.description( "second" ) )
+						.prerequisite( first )
+						.call( a -> a.from( Actors.B ).to( Actors.C )
+								.request( new Text( "Hi! 'this' is from A" ) )
+								.response( new Text( "OK thanks!" ) ) ) );
+
+		Flow third = Creator
+				.build( flow -> flow
+						.meta( data -> data
+								.description( "third" ) )
+						.prerequisite( second )
+						.call( a -> a.from( Actors.A ).to( Actors.C )
+								.request( new Text( "Did B give you anything?" ) )
+								.response( new Text( "Yep! Is 'this' it?" ) ) ) );
+
+		return new Mdl().withFlows( first, second, third );
+	}
 }
