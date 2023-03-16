@@ -1,9 +1,15 @@
 package com.mastercard.test.flow.msg.sql;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -181,6 +187,73 @@ class QueryTest {
 	}
 
 	/**
+	 * Shows that types are preserved in the round-trip to byte content
+	 */
+	@Test
+	void types() {
+		Query query = new Query( "SELECT 1" )
+				.set( "0", true )
+				.set( "1", (byte) 1 )
+				.set( "2", (short) 2 )
+				.set( "3", 3 )
+				.set( "4", 4.0f )
+				.set( "5", 5L )
+				.set( "6", 6.0 )
+				.set( "7", 'a' )
+				.set( "8", "bcd" )
+				.set( "9", new BigInteger( "9" ) )
+				.set( "10", new BigDecimal( "10.0" ) )
+				.set( "11", "bytes".getBytes( UTF_8 ) )
+				.set( "12", new Date( 0 ) )
+				.set( "13", new Time( 1000 ) )
+				.set( "14", new Timestamp( 2000 ) )
+				.set( "15", null );
+
+		assertEquals( ""
+				+ "Query:\n"
+				+ "SELECT\n"
+				+ "  1\n"
+				+ "Bind variables:\n"
+				+ "  0 : true\n"
+				+ "  1 : 1\n"
+				+ "  2 : 2\n"
+				+ "  3 : 3\n"
+				+ "  4 : 4.0\n"
+				+ "  5 : 5\n"
+				+ "  6 : 6.0\n"
+				+ "  7 : a\n"
+				+ "  8 : bcd\n"
+				+ "  9 : 9\n"
+				+ " 10 : 10.0\n"
+				+ " 11 : Ynl0ZXM=\n"
+				+ " 12 : 1970-01-01\n"
+				+ " 13 : 01:00:01\n"
+				+ " 14 : 1970-01-01 01:00:02.0\n"
+				+ " 15 : null",
+				query.assertable() );
+
+		Query parsed = new Query( "" ).peer( query.content() );
+
+		assertEquals( "SELECT 1", parsed.get( Query.SQL ) );
+		assertEquals( true, parsed.get( "0" ) );
+		assertEquals( (byte) 1, parsed.get( "1" ) );
+		assertEquals( (short) 2, parsed.get( "2" ) );
+		assertEquals( 3, parsed.get( "3" ) );
+		assertEquals( 4.0f, parsed.get( "4" ) );
+		assertEquals( 5L, parsed.get( "5" ) );
+		assertEquals( 6.0, parsed.get( "6" ) );
+		assertEquals( 'a', parsed.get( "7" ) );
+		assertEquals( "bcd", parsed.get( "8" ) );
+		assertEquals( new BigInteger( "9" ), parsed.get( "9" ) );
+		assertEquals( new BigDecimal( "10.0" ), parsed.get( "10" ) );
+		assertArrayEquals( "bytes".getBytes( UTF_8 ), (byte[]) parsed.get( "11" ) );
+		assertEquals( new Date( 0 ), parsed.get( "12" ) );
+		assertEquals( new Time( 1000 ), parsed.get( "13" ) );
+		assertEquals( new Timestamp( 2000 ), parsed.get( "14" ) );
+		assertEquals( null, parsed.get( "15" ) );
+	}
+
+	/**
 	 * Exercises mask inheritance to peers
 	 */
 	@Test
@@ -225,34 +298,4 @@ class QueryTest {
 		assertThrows( IllegalStateException.class, () -> query.content() );
 	}
 
-	/**
-	 * Demonstrates custom encoding of byte array bind variables
-	 */
-	@Test
-	void bytes() {
-		Query query = new Query( "UPDATE table SET byte_column = ?" )
-				.set( "1", "value".getBytes( UTF_8 ) );
-
-		assertEquals( ""
-				+ "Query:\n"
-				+ "UPDATE\n"
-				+ "  table\n"
-				+ "SET\n"
-				+ "  byte_column = ?\n"
-				+ "Bind variables:\n"
-				+ "  1 : bytes: dmFsdWU=",
-				query.assertable() );
-
-		Query roundTrip = query.peer( query.content() );
-
-		assertEquals( ""
-				+ "Query:\n"
-				+ "UPDATE\n"
-				+ "  table\n"
-				+ "SET\n"
-				+ "  byte_column = ?\n"
-				+ "Bind variables:\n"
-				+ "  1 : bytes: dmFsdWU=",
-				roundTrip.assertable() );
-	}
 }
