@@ -245,6 +245,7 @@ class ResultTest {
 	 */
 	@Test
 	void types() {
+
 		Result result = new Result(
 				"bit", "tinyint", "smallint", "integer", "bigint", "biggerint",
 				"real", "double", "decimal",
@@ -264,9 +265,9 @@ class ResultTest {
 						.set( "0:9", 'a' )
 						.set( "0:10", "bcd" )
 						.set( "0:11", "bytes".getBytes( UTF_8 ) )
-						.set( "0:12", new Date( 0 ) )
-						.set( "0:13", new Time( 1000 ) )
-						.set( "0:14", new Timestamp( 2000 ) )
+						.set( "0:12", Date.valueOf( "1970-01-02" ) )
+						.set( "0:13", Time.valueOf( "03:04:06" ) )
+						.set( "0:14", Timestamp.valueOf( "1970-01-02 03:04:07.0" ) )
 						.set( "0:15", null );
 
 		assertEquals( ""
@@ -283,9 +284,9 @@ class ResultTest {
 				+ " character : a\n"
 				+ "   varchar : bcd\n"
 				+ "      blob : Ynl0ZXM=\n"
-				+ "      date : 1970-01-01\n"
-				+ "      time : 01:00:01\n"
-				+ " timestamp : 1970-01-01 01:00:02.0\n"
+				+ "      date : 1970-01-02\n"
+				+ "      time : 03:04:06\n"
+				+ " timestamp : 1970-01-02 03:04:07.0\n"
 				+ "     value : null",
 				result.assertable() );
 
@@ -303,9 +304,9 @@ class ResultTest {
 		assertEquals( 'a', parsed.get( "0:9" ) );
 		assertEquals( "bcd", parsed.get( "0:10" ) );
 		assertArrayEquals( "bytes".getBytes( UTF_8 ), (byte[]) parsed.get( "0:11" ) );
-		assertEquals( new Date( 0 ), parsed.get( "0:12" ) );
-		assertEquals( new Time( 1000 ), parsed.get( "0:13" ) );
-		assertEquals( new Timestamp( 2000 ), parsed.get( "0:14" ) );
+		assertEquals( Date.valueOf( "1970-01-02" ), parsed.get( "0:12" ) );
+		assertEquals( Time.valueOf( "03:04:06" ), parsed.get( "0:13" ) );
+		assertEquals( Timestamp.valueOf( "1970-01-02 03:04:07.0" ), parsed.get( "0:14" ) );
 		assertEquals( null, parsed.get( "0:15" ) );
 	}
 }

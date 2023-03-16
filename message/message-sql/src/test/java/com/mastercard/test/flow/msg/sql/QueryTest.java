@@ -191,6 +191,7 @@ class QueryTest {
 	 */
 	@Test
 	void types() {
+
 		Query query = new Query( "SELECT 1" )
 				.set( "0", true )
 				.set( "1", (byte) 1 )
@@ -204,9 +205,9 @@ class QueryTest {
 				.set( "9", new BigInteger( "9" ) )
 				.set( "10", new BigDecimal( "10.0" ) )
 				.set( "11", "bytes".getBytes( UTF_8 ) )
-				.set( "12", new Date( 0 ) )
-				.set( "13", new Time( 1000 ) )
-				.set( "14", new Timestamp( 2000 ) )
+				.set( "12", Date.valueOf( "1970-01-02" ) )
+				.set( "13", Time.valueOf( "03:04:06" ) )
+				.set( "14", Timestamp.valueOf( "1970-01-02 03:04:07.0" ) )
 				.set( "15", null );
 
 		assertEquals( ""
@@ -226,9 +227,9 @@ class QueryTest {
 				+ "  9 : 9\n"
 				+ " 10 : 10.0\n"
 				+ " 11 : Ynl0ZXM=\n"
-				+ " 12 : 1970-01-01\n"
-				+ " 13 : 01:00:01\n"
-				+ " 14 : 1970-01-01 01:00:02.0\n"
+				+ " 12 : 1970-01-02\n"
+				+ " 13 : 03:04:06\n"
+				+ " 14 : 1970-01-02 03:04:07.0\n"
 				+ " 15 : null",
 				query.assertable() );
 
@@ -247,9 +248,9 @@ class QueryTest {
 		assertEquals( new BigInteger( "9" ), parsed.get( "9" ) );
 		assertEquals( new BigDecimal( "10.0" ), parsed.get( "10" ) );
 		assertArrayEquals( "bytes".getBytes( UTF_8 ), (byte[]) parsed.get( "11" ) );
-		assertEquals( new Date( 0 ), parsed.get( "12" ) );
-		assertEquals( new Time( 1000 ), parsed.get( "13" ) );
-		assertEquals( new Timestamp( 2000 ), parsed.get( "14" ) );
+		assertEquals( Date.valueOf( "1970-01-02" ), parsed.get( "12" ) );
+		assertEquals( Time.valueOf( "03:04:06" ), parsed.get( "13" ) );
+		assertEquals( Timestamp.valueOf( "1970-01-02 03:04:07.0" ), parsed.get( "14" ) );
 		assertEquals( null, parsed.get( "15" ) );
 	}
 
