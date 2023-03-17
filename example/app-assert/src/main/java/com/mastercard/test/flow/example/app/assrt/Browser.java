@@ -81,6 +81,8 @@ public class Browser implements
 			options.addArguments( "--lang=en_GB" );
 			options.addArguments( "--disable-gpu" );
 			options.addArguments( "--window-size=1400,800" );
+			// https://bugs.chromium.org/p/chromedriver/issues/detail?id=4361
+			options.addArguments( "--remote-allow-origins=*" );
 
 			// suppress most stdout noise. We still get a "ChromeDriver was started
 			// successfully." line for some reason
