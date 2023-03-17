@@ -1,8 +1,3 @@
-# Configures git behaviour so everyone gets the same line-endings where it matters
-# check what file extensions exist in the project with:
-# find . -type f -name '*.*' | sed 's|.*\.||' | sort -u
-
-*.css  text eol=lf
 *.html text eol=lf
 *.java text eol=lf
 *.js   text eol=lf

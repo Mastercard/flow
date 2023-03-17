@@ -5,8 +5,6 @@ import static java.util.stream.Collectors.toCollection;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.sql.Date;
-import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -223,9 +221,7 @@ public abstract class AbstractMessage<T extends AbstractMessage<T>>
 	}
 
 	static {
-		registerDefensiveCopier( Date.class, d -> new Date( d.getTime() ) );
-		registerDefensiveCopier( Time.class, t -> new Time( t.getTime() ) );
-		registerDefensiveCopier( Timestamp.class, ts -> new Timestamp( ts.getTime() ) );
+		registerDefensiveCopier( Timestamp.class, t -> new Timestamp( t.getTime() ) );
 	}
 
 	/**

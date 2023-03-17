@@ -252,7 +252,7 @@ public class Result extends AbstractMessage<Result> {
 	 */
 	private static String formatValue( Object value ) {
 		if( value instanceof byte[] ) {
-			return Base64.getEncoder().encodeToString( (byte[]) value );
+			return "bytes: " + Base64.getEncoder().encodeToString( (byte[]) value );
 		}
 		return String.valueOf( value );
 	}
@@ -284,6 +284,7 @@ public class Result extends AbstractMessage<Result> {
 		}
 
 		ResultSetStructure prepForSerialisation() {
+			rows.clear();
 			maps.stream()
 					.map( row -> row.entrySet().stream()
 							.map( e -> new TypedKVP<>( e.getKey(), e.getValue() ) )

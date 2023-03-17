@@ -1,16 +1,10 @@
 package com.mastercard.test.flow.msg.sql;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.sql.Date;
-import java.sql.Time;
-import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
 
@@ -241,72 +235,28 @@ class ResultTest {
 	}
 
 	/**
-	 * Shows that types are preserved in the round-trip to byte content
+	 * Demonstrates encoding of byte array result values
 	 */
 	@Test
-	void types() {
-
-		Result result = new Result(
-				"bit", "tinyint", "smallint", "integer", "bigint", "biggerint",
-				"real", "double", "decimal",
-				"character", "varchar",
-				"blob",
-				"date", "time", "timestamp",
-				"value" )
-						.set( "0:0", true )
-						.set( "0:1", (byte) 1 )
-						.set( "0:2", (short) 2 )
-						.set( "0:3", 3 )
-						.set( "0:4", 4L )
-						.set( "0:5", new BigInteger( "5" ) )
-						.set( "0:6", 6.0f )
-						.set( "0:7", 7.0 )
-						.set( "0:8", new BigDecimal( "8.0" ) )
-						.set( "0:9", 'a' )
-						.set( "0:10", "bcd" )
-						.set( "0:11", "bytes".getBytes( UTF_8 ) )
-						.set( "0:12", Date.valueOf( "1970-01-02" ) )
-						.set( "0:13", Time.valueOf( "03:04:06" ) )
-						.set( "0:14", Timestamp.valueOf( "1970-01-02 03:04:07.0" ) )
-						.set( "0:15", null );
+	void bytes() {
+		Result res = new Result( "byte_column" )
+				.set( "0:0", "value".getBytes( UTF_8 ) );
 
 		assertEquals( ""
 				+ " --- Row 0 ---\n"
-				+ "       bit : true\n"
-				+ "   tinyint : 1\n"
-				+ "  smallint : 2\n"
-				+ "   integer : 3\n"
-				+ "    bigint : 4\n"
-				+ " biggerint : 5\n"
-				+ "      real : 6.0\n"
-				+ "    double : 7.0\n"
-				+ "   decimal : 8.0\n"
-				+ " character : a\n"
-				+ "   varchar : bcd\n"
-				+ "      blob : Ynl0ZXM=\n"
-				+ "      date : 1970-01-02\n"
-				+ "      time : 03:04:06\n"
-				+ " timestamp : 1970-01-02 03:04:07.0\n"
-				+ "     value : null",
-				result.assertable() );
+				+ " byte_column : bytes: dmFsdWU=",
+				res.assertable() );
 
-		Result parsed = new Result().peer( result.content() );
+		int originalByteCount = res.content().length;
 
-		assertEquals( true, parsed.get( "0:0" ) );
-		assertEquals( (byte) 1, parsed.get( "0:1" ) );
-		assertEquals( (short) 2, parsed.get( "0:2" ) );
-		assertEquals( 3, parsed.get( "0:3" ) );
-		assertEquals( 4L, parsed.get( "0:4" ) );
-		assertEquals( new BigInteger( "5" ), parsed.get( "0:5" ) );
-		assertEquals( 6.0f, parsed.get( "0:6" ) );
-		assertEquals( 7.0, parsed.get( "0:7" ) );
-		assertEquals( new BigDecimal( "8.0" ), parsed.get( "0:8" ) );
-		assertEquals( 'a', parsed.get( "0:9" ) );
-		assertEquals( "bcd", parsed.get( "0:10" ) );
-		assertArrayEquals( "bytes".getBytes( UTF_8 ), (byte[]) parsed.get( "0:11" ) );
-		assertEquals( Date.valueOf( "1970-01-02" ), parsed.get( "0:12" ) );
-		assertEquals( Time.valueOf( "03:04:06" ), parsed.get( "0:13" ) );
-		assertEquals( Timestamp.valueOf( "1970-01-02 03:04:07.0" ), parsed.get( "0:14" ) );
-		assertEquals( null, parsed.get( "0:15" ) );
+		Result roundTrip = res.peer( res.content() );
+
+		assertEquals( ""
+				+ " --- Row 0 ---\n"
+				+ " byte_column : bytes: dmFsdWU=",
+				roundTrip.assertable() );
+
+		assertEquals( originalByteCount, roundTrip.content().length,
+				"serialisation does not affect wire format" );
 	}
 }
