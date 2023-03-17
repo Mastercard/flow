@@ -8,6 +8,8 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.sql.Date;
+import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -223,6 +225,8 @@ class AbstractMessageTest {
 		msg.set( "bigdecimal", new BigDecimal( "1.234" ) );
 		msg.set( "biginteger", new BigInteger( "5678" ) );
 		msg.set( "uuid", new UUID( 12345L, 67890L ) );
+		msg.set( "time", new Time( 1234567890L ) );
+		msg.set( "date", new Date( 1234567890L ) );
 		msg.set( "timestamp", new Timestamp( 1234567890L ) );
 		msg.set( "null", null );
 
@@ -238,6 +242,8 @@ class AbstractMessageTest {
 		assertEquals( new BigDecimal( "1.234" ), msg.get( "bigdecimal" ) );
 		assertEquals( new BigInteger( "5678" ), msg.get( "biginteger" ) );
 		assertEquals( new UUID( 12345L, 67890L ), msg.get( "uuid" ) );
+		assertEquals( new Time( 1234567890L ), msg.get( "time" ) );
+		assertEquals( new Date( 1234567890L ), msg.get( "date" ) );
 		assertEquals( new Timestamp( 1234567890L ), msg.get( "timestamp" ) );
 		assertEquals( null, msg.get( "null" ) );
 		assertEquals( null, msg.get( "no such field" ) );

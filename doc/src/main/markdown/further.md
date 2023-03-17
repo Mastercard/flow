@@ -245,12 +245,12 @@ Consider the following worked example:
 <!-- code_link_start -->
 
 [flow.Unpredictable]: ../../../../api/src/main/java/com/mastercard/test/flow/Unpredictable.java
-[AbstractMessage.masking(Unpredictable,UnaryOperator)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/AbstractMessage.java#L48-L55,48-55
+[AbstractMessage.masking(Unpredictable,UnaryOperator)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/AbstractMessage.java#L50-L57,50-57
 [AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L202-L209,202-209
 [mask.BenSys]: ../../test/java/com/mastercard/test/flow/doc/mask/BenSys.java
 [mask.DieSys]: ../../test/java/com/mastercard/test/flow/doc/mask/DieSys.java
 [mask.Unpredictables]: ../../test/java/com/mastercard/test/flow/doc/mask/Unpredictables.java
-[AbstractMessage.masking(Unpredictable,UnaryOperator)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/AbstractMessage.java#L48-L55,48-55
+[AbstractMessage.masking(Unpredictable,UnaryOperator)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/AbstractMessage.java#L50-L57,50-57
 [Rolling?d\+]: ../../test/java/com/mastercard/test/flow/doc/mask/Rolling.java#L30,30
 [msg.Mask]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java
 [msg.Mask.andThen(Consumer)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java#L290-L292,290-292
