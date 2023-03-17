@@ -146,7 +146,7 @@ public class Browser implements
 				WebDriverManager.chromedriver().setup();
 				ChromeOptions options = new ChromeOptions();
 				if( !SHOW ) {
-					options.addArguments( "--headless" );
+					options.addArguments( "--headless=new" );
 				}
 				// some oddness around browser locale changing with headful/less mode, possibly
 				// related to https://bugs.chromium.org/p/chromium/issues/detail?id=755338
@@ -155,7 +155,7 @@ public class Browser implements
 				options.addArguments( "--lang=en_GB" );
 				options.addArguments( "--disable-gpu" );
 				options.addArguments( "--window-size=1400,800" );
-				// https://bugs.chromium.org/p/chromedriver/issues/detail?id=4361
+				// https://github.com/SeleniumHQ/selenium/issues/11750
 				options.addArguments( "--remote-allow-origins=*" );
 
 				// suppress most stdout noise. We still get a "ChromeDriver was started
