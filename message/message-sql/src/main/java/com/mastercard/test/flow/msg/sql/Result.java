@@ -173,7 +173,7 @@ public class Result extends AbstractMessage<Result> {
 	}
 
 	@Override
-	public Object get( String field ) {
+	protected Object access( String field ) {
 		ResultSetStructure data = data();
 		if( COLUMNS.equals( field ) ) {
 			return new ArrayList<>( data.columns );
@@ -252,7 +252,7 @@ public class Result extends AbstractMessage<Result> {
 	 */
 	private static String formatValue( Object value ) {
 		if( value instanceof byte[] ) {
-			return "bytes: " + Base64.getEncoder().encodeToString( (byte[]) value );
+			return Base64.getEncoder().encodeToString( (byte[]) value );
 		}
 		return String.valueOf( value );
 	}
@@ -284,7 +284,6 @@ public class Result extends AbstractMessage<Result> {
 		}
 
 		ResultSetStructure prepForSerialisation() {
-			rows.clear();
 			maps.stream()
 					.map( row -> row.entrySet().stream()
 							.map( e -> new TypedKVP<>( e.getKey(), e.getValue() ) )

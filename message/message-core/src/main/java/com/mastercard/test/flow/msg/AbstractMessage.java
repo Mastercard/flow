@@ -5,6 +5,9 @@ import static java.util.stream.Collectors.toCollection;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,6 +16,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -111,12 +115,33 @@ public abstract class AbstractMessage<T extends AbstractMessage<T>>
 		return self();
 	}
 
+	@Override
+	public final Object get( String field ) {
+		Object value = access( field );
+		if( value == null ) {
+			return null;
+		}
+		return defensiveCopiers.getOrDefault(
+				value.getClass(),
+				o -> o )
+				.apply( value );
+	}
+
+	/**
+	 * Field accessor
+	 *
+	 * @param field The field address
+	 * @return The field value
+	 */
+	protected abstract Object access( String field );
+
 	private static final Set<Class<?>> immutableTypes = Stream.of(
 			Boolean.class, Byte.class, Short.class, Character.class,
 			Integer.class, Float.class,
 			Long.class, Double.class,
 			String.class,
-			BigDecimal.class, BigInteger.class )
+			BigDecimal.class, BigInteger.class,
+			UUID.class )
 			.collect( toCollection( HashSet::new ) );
 
 	/**
@@ -141,6 +166,15 @@ public abstract class AbstractMessage<T extends AbstractMessage<T>>
 				}
 				return copy;
 			}
+			if( defensiveCopiers.containsKey( value.getClass() ) ) {
+				Object copy = defensiveCopiers.get( value.getClass() ).apply( value );
+				if( copy == value ) {
+					throw new IllegalStateException( String.format(
+							"Ineffective defensive copy for field '%s', type %s",
+							field, value.getClass() ) );
+				}
+				return copy;
+			}
 			if( value != DELETE
 					&& !value.getClass().isPrimitive()
 					&& !value.getClass().isEnum()
@@ -151,6 +185,9 @@ public abstract class AbstractMessage<T extends AbstractMessage<T>>
 						+ "  AbstractMessage.registerImmutable( " + value.getClass().getSimpleName()
 						+ ".class )\n"
 						+ "to suppress this error.\n"
+						+ "Alternatively you can use\n"
+						+ "  AbstractMessage.registerDefensiveCopier( type, function )\n"
+						+ "to make defensive copies of you mutable types.\n"
 						+ "You can also override\n"
 						+ "  AbstractMessage.validateValueType( field, value )\n"
 						+ "in your subclass implementation to do validation more suitable\n"
@@ -171,6 +208,24 @@ public abstract class AbstractMessage<T extends AbstractMessage<T>>
 	 */
 	public static void registerImmutable( Class<?> type ) {
 		immutableTypes.add( type );
+	}
+
+	private static final Map<Class<?>, UnaryOperator<Object>> defensiveCopiers = new HashMap<>();
+
+	/**
+	 * @param <T>    value type
+	 * @param type   value type
+	 * @param copier function to make a defensive copy of a value
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T> void registerDefensiveCopier( Class<T> type, UnaryOperator<T> copier ) {
+		defensiveCopiers.put( type, (UnaryOperator<Object>) copier );
+	}
+
+	static {
+		registerDefensiveCopier( Date.class, d -> new Date( d.getTime() ) );
+		registerDefensiveCopier( Time.class, t -> new Time( t.getTime() ) );
+		registerDefensiveCopier( Timestamp.class, ts -> new Timestamp( ts.getTime() ) );
 	}
 
 	/**

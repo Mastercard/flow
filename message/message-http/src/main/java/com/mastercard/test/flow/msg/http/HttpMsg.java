@@ -124,7 +124,7 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	}
 
 	@Override
-	public Object get( String field ) {
+	protected Object access( String field ) {
 		if( BODY.equals( field ) ) {
 			return body.orElse( null );
 		}
@@ -175,7 +175,7 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	 * @return The complete formatted body
 	 */
 	protected String enchunken( String content, boolean wire ) {
-		if( wire && "chunked".equals( get( header( "Transfer-Encoding" ) ) ) ) {
+		if( wire && "chunked".equals( get( header( "transfer-encoding" ) ) ) ) {
 			return String.format( ""
 					+ "%s\r\n" // chunk length
 					+ "%s\r\n" // chunk
@@ -196,7 +196,7 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	 * @return The actual content
 	 */
 	protected String dechunken( String chunked ) {
-		if( "chunked".equals( get( header( "Transfer-Encoding" ) ) ) ) {
+		if( "chunked".equals( get( header( "transfer-encoding" ) ) ) ) {
 			StringBuilder unchunked = new StringBuilder();
 			String input = "\r\n" + chunked; // so we can catch the first chunk with our regex
 			Matcher m = chunkLength.matcher( input );
@@ -248,16 +248,24 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	}
 
 	/**
+	 * Creates a header field name. Note that
+	 * <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-field-names">header
+	 * fields are case-insensitive</a>. Accordingly, this method will convert the
+	 * supplied name to lower-case before adding the sigils that identify it as a
+	 * header field.
+	 *
 	 * @param name The desired header name
 	 * @return The value to pass as the field name in {@link #set(String, Object)}
 	 *         and {@link #get(String)}
 	 */
 	public static String header( String name ) {
-		return HEADER_PRESUFIX + name + HEADER_PRESUFIX;
+		return HEADER_PRESUFIX + name.toLowerCase() + HEADER_PRESUFIX;
 	}
 
 	/**
-	 * The inverse of {@link #header(String)}
+	 * The inverse of {@link #header(String)}. Bear in mind that
+	 * {@link #header(String)} lower-casing behaviour is a destructive operation, so
+	 * the inversion might not be perfect.
 	 *
 	 * @param name The value returned from {@link #header(String)}
 	 * @return The value passed to that invocation of {@link #header(String)}

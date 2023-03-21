@@ -62,7 +62,7 @@ class ModuleDiagramTest {
 	void framework() throws Exception {
 		Util.insert( Paths.get( "../README.md" ),
 				"<!-- start_module_diagram:framework -->",
-				s -> diagram( false, "com.mastercard.test.flow" ),
+				s -> diagram( "TB", false, "com.mastercard.test.flow" ),
 				"<!-- end_module_diagram -->" );
 	}
 
@@ -75,13 +75,13 @@ class ModuleDiagramTest {
 	void example() throws Exception {
 		Util.insert( Paths.get( "../example/README.md" ),
 				"<!-- start_module_diagram:example -->",
-				s -> diagram( true,
+				s -> diagram( "LR", true,
 						"com.mastercard.test.flow",
 						"com.mastercard.test.flow.example" ),
 				"<!-- end_module_diagram -->" );
 	}
 
-	private static String diagram( boolean intergroupLinks, String... groupIDs ) {
+	private static String diagram( String orientation, boolean intergroupLinks, String... groupIDs ) {
 		PomData root = new PomData( null, Paths.get( "../pom.xml" ) );
 
 		Set<String> artifacts = new HashSet<>();
@@ -105,7 +105,9 @@ class ModuleDiagramTest {
 								pd.groupId(),
 								pd.artifactId() ) ) ) );
 
-		StringBuilder mermaid = new StringBuilder( "```mermaid\ngraph LR\n" );
+		StringBuilder mermaid = new StringBuilder( "```mermaid\ngraph " )
+				.append( orientation )
+				.append( "\n" );
 
 		for( String groupID : groupIDs ) {
 			mermaid.append( "  subgraph " ).append( groupID ).append( "\n" );

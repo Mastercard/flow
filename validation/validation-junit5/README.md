@@ -10,3 +10,27 @@ Junit5 validation components
  * [../validation](..) Checking model consistency
 
 <!-- title end -->
+
+## Usage
+
+```xml
+
+<dependency>
+  <!-- model validation -->
+  <groupId>com.mastercard.test.flow</groupId>
+  <artifactId>validation-junit5</artifactId>
+  <version>${flow.version}</version>
+</dependency>
+```
+
+The `Validator` implementation provided by this module can used in a [dynamic test](https://junit.org/junit5/docs/current/user-guide/#writing-tests-dynamic-tests):
+
+```java
+@TestFactory
+Stream<DynamicNode> checks() {
+	return new Validator()
+			.checking( MY_SYSTEM_MODEL )
+			.with( AbstractValidator.defaultChecks() )
+			.tests();
+}
+```

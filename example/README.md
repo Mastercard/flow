@@ -60,10 +60,9 @@ graph TD
 
 <!-- system_diagram_end -->
 
+## Artifact dependency structure
 
-<details>
-<summary>Artifact dependency structure</summary>
-    Solid lines are <code>compile</code>-scope dependencies, dotted are <code>test</code>-scope.
+Solid lines are <code>compile</code>-scope dependencies, dotted are <code>test</code>-scope.
 
 <!-- start_module_diagram:example -->
 
@@ -127,7 +126,6 @@ graph LR
 ```
 
 <!-- end_module_diagram -->
-</details>
 
 ## Starting the services
 

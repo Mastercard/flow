@@ -98,7 +98,7 @@ public class Query extends AbstractMessage<Query> {
 	}
 
 	@Override
-	public Object get( String field ) {
+	protected Object access( String field ) {
 		return data().get( field );
 	}
 
@@ -142,7 +142,7 @@ public class Query extends AbstractMessage<Query> {
 	 */
 	private static String formatValue( Object value ) {
 		if( value instanceof byte[] ) {
-			return "bytes: " + Base64.getEncoder().encodeToString( (byte[]) value );
+			return Base64.getEncoder().encodeToString( (byte[]) value );
 		}
 		return String.valueOf( value );
 	}
@@ -166,7 +166,7 @@ public class Query extends AbstractMessage<Query> {
 		private final List<TypedKVP<String>> pairs = new ArrayList<>();
 
 		/**
-		 * @param m The values for sewrialisation
+		 * @param m The values for serialisation
 		 */
 		TypedMap( Map<String, Object> m ) {
 			m.forEach( ( k, v ) -> pairs.add( new TypedKVP<>( k, v ) ) );

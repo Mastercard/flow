@@ -6,9 +6,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.function.UnaryOperator;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -79,8 +87,12 @@ class AbstractMessageTest {
 		}
 
 		@Override
-		public Object get( String field ) {
-			throw new UnsupportedOperationException();
+		protected Object access( String field ) {
+			return updates.stream()
+					.filter( u -> u.field().equals( field ) )
+					.findAny()
+					.map( Update::value )
+					.orElse( null );
 		}
 
 		@Override
@@ -162,7 +174,7 @@ class AbstractMessageTest {
 	void mutableValues() throws Exception {
 
 		// pitest runs the test multiple times in the same classloader, so we have to
-		// clear the static immuatble type set back to default
+		// clear the static immutable type set back to default
 		Field f = AbstractMessage.class.getDeclaredField( "immutableTypes" );
 		f.setAccessible( true );
 		((Set<Class<?>>) f.get( null )).remove( ArrayList.class );
@@ -177,6 +189,9 @@ class AbstractMessageTest {
 				+ "If you're sure that this type is immutable, then you can call\n"
 				+ "  AbstractMessage.registerImmutable( EmptyList.class )\n"
 				+ "to suppress this error.\n"
+				+ "Alternatively you can use\n"
+				+ "  AbstractMessage.registerDefensiveCopier( type, function )\n"
+				+ "to make defensive copies of you mutable types.\n"
 				+ "You can also override\n"
 				+ "  AbstractMessage.validateValueType( field, value )\n"
 				+ "in your subclass implementation to do validation more suitable\n"
@@ -189,6 +204,113 @@ class AbstractMessageTest {
 		// doing
 		AbstractMessage.registerImmutable( ArrayList.class );
 		msg.set( "field", new ArrayList<>() );
+	}
+
+	/**
+	 * Runs through the default allowed types and shows they pass the mutability
+	 * filter
+	 */
+	@Test
+	void validTypes() {
+		ConcreteMessage msg = new ConcreteMessage( "msg" );
+		msg.set( "boolean", true );
+		msg.set( "byte", (byte) 1 );
+		msg.set( "short", (short) 2 );
+		msg.set( "character", 'a' );
+		msg.set( "integer", 4 );
+		msg.set( "float", 4.0f );
+		msg.set( "long", 8L );
+		msg.set( "double", 8.0 );
+		msg.set( "string", "bcd" );
+		msg.set( "bigdecimal", new BigDecimal( "1.234" ) );
+		msg.set( "biginteger", new BigInteger( "5678" ) );
+		msg.set( "uuid", new UUID( 12345L, 67890L ) );
+		msg.set( "time", new Time( 1234567890L ) );
+		msg.set( "date", new Date( 1234567890L ) );
+		msg.set( "timestamp", new Timestamp( 1234567890L ) );
+		msg.set( "null", null );
+
+		assertEquals( true, msg.get( "boolean" ) );
+		assertEquals( (byte) 1, msg.get( "byte" ) );
+		assertEquals( (short) 2, msg.get( "short" ) );
+		assertEquals( 'a', msg.get( "character" ) );
+		assertEquals( 4, msg.get( "integer" ) );
+		assertEquals( 4.0f, msg.get( "float" ) );
+		assertEquals( 8L, msg.get( "long" ) );
+		assertEquals( 8.0, msg.get( "double" ) );
+		assertEquals( "bcd", msg.get( "string" ) );
+		assertEquals( new BigDecimal( "1.234" ), msg.get( "bigdecimal" ) );
+		assertEquals( new BigInteger( "5678" ), msg.get( "biginteger" ) );
+		assertEquals( new UUID( 12345L, 67890L ), msg.get( "uuid" ) );
+		assertEquals( new Time( 1234567890L ), msg.get( "time" ) );
+		assertEquals( new Date( 1234567890L ), msg.get( "date" ) );
+		assertEquals( new Timestamp( 1234567890L ), msg.get( "timestamp" ) );
+		assertEquals( null, msg.get( "null" ) );
+		assertEquals( null, msg.get( "no such field" ) );
+	}
+
+	/**
+	 * Demonstrates the mechanism that allows mutable field types to be used via
+	 * defensive copies
+	 *
+	 * @throws Exception if something goes wrong with our reflection
+	 */
+	@SuppressWarnings("unchecked")
+	@Test
+	void defensiveCopy() throws Exception {
+
+		// pitest runs the test multiple times in the same classloader, so we have to
+		// clear the static copier map set back to default
+		Field f = AbstractMessage.class.getDeclaredField( "defensiveCopiers" );
+		f.setAccessible( true );
+		((Map<Class<?>, UnaryOperator<Object>>) f.get( null )).remove( StringBuilder.class );
+
+		ConcreteMessage msg = new ConcreteMessage( "msg" );
+
+		assertThrows( IllegalArgumentException.class,
+				() -> msg.set( "field", new StringBuilder( "buff" ) ) );
+
+		AbstractMessage.registerDefensiveCopier( StringBuilder.class,
+				b -> new StringBuilder( "copy of [" ).append( b.toString() ).append( "]" ) );
+
+		msg.set( "field", new StringBuilder( "buff" ) );
+
+		assertEquals( ""
+				+ "msg\n"
+				+ "  field=copy of [buff]",
+				msg.asHuman(),
+				"The message holds a defensive copy of the supplied value" );
+
+		assertEquals( "copy of [copy of [buff]]", msg.get( "field" ).toString(),
+				"When queried, the message returns a defensive copy of the held value" );
+	}
+
+	/**
+	 * Demonstrates that we reject ineffective defensive copiers
+	 *
+	 * @throws Exception if something goes wrong with our reflection
+	 */
+	@SuppressWarnings("unchecked")
+	@Test
+	void badDefensiveCopy() throws Exception {
+
+		// pitest runs the test multiple times in the same classloader, so we have to
+		// clear the static copier map set back to default
+		Field f = AbstractMessage.class.getDeclaredField( "defensiveCopiers" );
+		f.setAccessible( true );
+		((Map<Class<?>, UnaryOperator<Object>>) f.get( null )).remove( StringBuilder.class );
+
+		ConcreteMessage msg = new ConcreteMessage( "msg" );
+
+		AbstractMessage.registerDefensiveCopier( StringBuilder.class,
+				b -> b );
+
+		IllegalStateException ise = assertThrows( IllegalStateException.class,
+				() -> msg.set( "field", new StringBuilder( "buff" ) ) );
+
+		assertEquals(
+				"Ineffective defensive copy for field 'field', type class java.lang.StringBuilder",
+				ise.getMessage() );
 	}
 
 	/**
@@ -214,6 +336,9 @@ class AbstractMessageTest {
 				+ "If you're sure that this type is immutable, then you can call\n"
 				+ "  AbstractMessage.registerImmutable( Object.class )\n"
 				+ "to suppress this error.\n"
+				+ "Alternatively you can use\n"
+				+ "  AbstractMessage.registerDefensiveCopier( type, function )\n"
+				+ "to make defensive copies of you mutable types.\n"
 				+ "You can also override\n"
 				+ "  AbstractMessage.validateValueType( field, value )\n"
 				+ "in your subclass implementation to do validation more suitable\n"

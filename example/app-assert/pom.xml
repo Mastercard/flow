@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.mastercard.test.flow.example</groupId>
 		<artifactId>app</artifactId>
-		<version>0.0.12-SNAPSHOT</version>
+		<version>0.0.13-SNAPSHOT</version>
 	</parent>
 	<artifactId>app-assert</artifactId>
 	<packaging>jar</packaging>
@@ -35,6 +35,11 @@
 					<!-- This conflicts with the newer version that selenium needs -->
 					<groupId>com.google.guava</groupId>
 					<artifactId>guava</artifactId>
+				</exclusion>
+				<exclusion>
+					<!-- Avoid incompatible slf4j -->
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-api</artifactId>
 				</exclusion>
 			</exclusions>
 		</dependency>

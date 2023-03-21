@@ -4,7 +4,7 @@
 
 	<groupId>com.mastercard.test.flow</groupId>
 	<artifactId>parent</artifactId>
-	<version>0.0.12-SNAPSHOT</version>
+	<version>0.0.13-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>flow</name>
 	<description>Testing framework</description>
@@ -55,7 +55,7 @@
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<jline.version>3.21.0</jline.version>
+		<jline.version>3.23.0</jline.version>
 		<sonar.organization>mastercard</sonar.organization>
 		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 		<!-- The health of the example project is not terribly interesting, and
@@ -73,7 +73,7 @@
 				<!-- JSON support -->
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-databind</artifactId>
-				<version>2.14.1</version>
+				<version>2.14.2</version>
 			</dependency>
 
 			<dependency>
@@ -87,14 +87,14 @@
 				<!-- testing -->
 				<groupId>org.junit.jupiter</groupId>
 				<artifactId>junit-jupiter</artifactId>
-				<version>5.9.1</version>
+				<version>5.9.2</version>
 			</dependency>
 
 			<dependency>
 				<!-- testing for test components -->
 				<groupId>org.junit.platform</groupId>
 				<artifactId>junit-platform-launcher</artifactId>
-				<version>1.9.1</version>
+				<version>1.9.2</version>
 			</dependency>
 
 			<dependency>
@@ -129,7 +129,7 @@
 				<!-- web browser automation -->
 				<groupId>org.seleniumhq.selenium</groupId>
 				<artifactId>selenium-java</artifactId>
-				<version>4.7.2</version>
+				<version>4.8.1</version>
 			</dependency>
 
 			<dependency>
@@ -137,7 +137,7 @@
 			     provides automatic management of the drivers for that -->
 				<groupId>io.github.bonigarcia</groupId>
 				<artifactId>webdrivermanager</artifactId>
-				<version>5.3.0</version>
+				<version>5.3.2</version>
 			</dependency>
 
 			<dependency>
@@ -155,10 +155,10 @@
 			</dependency>
 
 			<dependency>
-				<!-- Logging support (version dictated by spark) -->
+				<!-- Logging support -->
 				<groupId>org.slf4j</groupId>
 				<artifactId>slf4j-simple</artifactId>
-				<version>1.7.32</version>
+				<version>2.0.7</version>
 			</dependency>
 
 		</dependencies>
@@ -172,7 +172,7 @@
 					<!-- junit5 support -->
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>
-					<version>3.0.0-M7</version>
+					<version>3.0.0</version>
 				</plugin>
 
 				<plugin>
@@ -219,7 +219,7 @@
 					     a `mvn test-compile` invocation -->
 					<groupId>org.pitest</groupId>
 					<artifactId>pitest-maven</artifactId>
-					<version>1.10.4</version>
+					<version>1.11.5</version>
 					<configuration>
 						<timestampedReports>false</timestampedReports>
 						<exportLineCoverage>true</exportLineCoverage>
@@ -233,7 +233,7 @@
 						<dependency>
 							<groupId>org.pitest</groupId>
 							<artifactId>pitest-junit5-plugin</artifactId>
-							<version>1.1.1</version>
+							<version>1.1.2</version>
 						</dependency>
 					</dependencies>
 				</plugin>
@@ -244,8 +244,7 @@
 					<!-- `mvn javadoc:javadoc` to generate target/site/apidocs in each module -->
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-javadoc-plugin</artifactId>
-					<!-- Downgrade to avoid https://issues.apache.org/jira/browse/MJAVADOC-700 -->
-					<version>3.2.0</version>
+					<version>3.5.0</version>
 				</plugin>
 
 				<plugin>
@@ -265,7 +264,7 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-deploy-plugin</artifactId>
-					<version>3.0.0</version>
+					<version>3.1.0</version>
 				</plugin>
 
 			</plugins>
