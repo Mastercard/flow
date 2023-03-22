@@ -9,7 +9,7 @@ This guide explores some features that will be useful as the system model grows 
 Adding a call to [`.reporting()`][AbstractFlocessor.reporting(Reporting)] to the construction chain of the `Flocessor` instance controls whether a HTML report of the test run is produced. The report will detail both the expected and observed system behaviour and the results of comparing the two.
 The [`Reporting` enum value][Reporting] that you supply controls whether the report is generated and under what circumstances it is automatically opened in a browser.
 
-By default the report will be saved to a timestamped directory under `target/mctf`, but the `mctf.report.name` system property offers control over the destination directory.
+By default the report will be saved to a timestamped directory under `target/mctf`, but the `mctf.report.dir` system property offers control over the destination directory.
 
 <!-- code_link_start -->
 
@@ -29,7 +29,7 @@ If you find yourself in the following circumstances:
 
 then you can use the report replay feature to quickly iterate changes to your flows until the system model is accurate.
 
-Run the same test that produced the report, but set system property `mctf.report.replay` to activate replay mode. The property can be set to the path to the report to read data from, or to `latest` to replay from the most recent report in `target/mctf`.
+Run the same test that produced the report, but set system property `mctf.replay` to activate replay mode. The property can be set to the path to the report to read data from, or to `latest` to replay from the most recent report in `target/mctf`.
 
 You can use [`Replay.isActive()`][Replay.isActive()] in your assertion components to avoid setup and teardown activities that serve no purpose when the source of data is a report rather than the actual system.
 

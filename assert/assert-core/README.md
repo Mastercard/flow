@@ -57,7 +57,7 @@ Some aspects of assertion behaviour can be controlled by system properties:
 
 ## Flow Selection
 
-The framework will default to exercising all flows in the model that are relevant to the system under test. It is possible to run a subset of flows by setting the `mctf.filter` system properties described above.
+The framework will default to exercising all flows in the model that are relevant to the system under test. It is possible to run a subset of flows by setting the filter system properties described above.
 
 Note that flows will automatically be brought into the execution order as required to satisfy flow dependencies in the system model.
 
@@ -66,8 +66,10 @@ Note that flows will automatically be brought into the execution order as requir
 If a parent flow fails, it is likely that the descendants of that flow will fail in the same way.
 The assert components will thus skip running them.
 This speeds up test execution and avoids spamming the report with duplicates of the same failure.
+This behaviour can be avoided by setting system property `mctf.suppress.basis` to `true`.
 
 We'll also skip flows where the dependency flows suffered an error.
+This behaviour can be avoided by setting system property `mctf.suppress.dependency` to `true`.
 
 ## Flow ordering
 
@@ -78,8 +80,8 @@ The assert components will work out a flow execution order that:
 
 ## Report generation
 
-The results of flow execution can be (depending on how the Flocessor is configured) collated into a human-readable report that details observed system behaviour and the results of comparing that against the system model.
-The location of the report can be controlled with the `mctf.dir` and `mctf.report.name` system properties.
+The results of flow execution can be (depending on how the `Flocessor` is configured) collated into a human-readable report that details observed system behaviour and the results of comparing that against the system model.
+The location of the report can be controlled with the `mctf.dir` and `mctf.report.dir` system properties.
 
 ## Report replay
 
@@ -94,7 +96,7 @@ While we _could_ run these iterative assertions against the same system that pro
 Using a report as the source of data for assertion is likely to be more efficient than exercising the actual system, and is obviously far more convenient if the system is difficult to reliably access.
 
 Set the `mctf.replay=path/to/report_directory` system property to activate replay mode - the specified report will be used as the source of observed behaviour rather than the actual system.
-Setting `mctf.reply=latest` will cause the most recently-generated report in the `mctf` artifact directory to be replayed.
+Setting `mctf.replay=latest` will cause the most recently-generated report in the `mctf` artifact directory to be replayed.
 
 In your tests you can check the value of `Replay.isActive()` to detect if replay mode is active.
 This allows you to avoid doing initialisation and teardown operations that are only relevant if you're testing against the actual system.
