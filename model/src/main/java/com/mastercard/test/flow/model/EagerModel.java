@@ -122,7 +122,7 @@ public abstract class EagerModel extends TitledModel {
 	}
 
 	@Override
-	public Model withListener( Listener l ) {
+	public Model listener( Listener l ) {
 		if( l != null ) {
 			l.count( this, 0, members.size() );
 		}

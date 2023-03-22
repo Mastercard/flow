@@ -94,7 +94,7 @@ class CombineModelTest {
 						NoDeps.class,
 						Deps.class ) );
 		BuildListener bl = new BuildListener();
-		Model ret = gm.withListener( bl );
+		Model ret = gm.listener( bl );
 		assertSame( gm, ret );
 
 		assertEquals( ""

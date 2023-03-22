@@ -72,7 +72,7 @@ public class Mdl implements Model {
 	}
 
 	@Override
-	public Model withListener( Listener l ) {
+	public Model listener( Listener l ) {
 		throw new UnsupportedOperationException();
 	}
 

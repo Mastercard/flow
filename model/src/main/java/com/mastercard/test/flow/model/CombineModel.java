@@ -67,8 +67,8 @@ public class CombineModel extends TitledModel {
 	}
 
 	@Override
-	public Model withListener( Listener l ) {
-		children.forEach( c -> c.withListener( l ) );
+	public Model listener( Listener l ) {
+		children.forEach( c -> c.listener( l ) );
 		return this;
 	}
 
