@@ -193,13 +193,13 @@ class EagerModelTest {
 
 	/**
 	 * SHows that the
-	 * {@link EagerModel#withListener(com.mastercard.test.flow.Model.Listener)}
-	 * returns the same instance
+	 * {@link EagerModel#listener(com.mastercard.test.flow.Model.Listener)} returns
+	 * the same instance
 	 */
 	@Test
-	void withListener() {
+	void listener() {
 		Model m = new TaggedModel();
-		Model r = m.withListener( null );
+		Model r = m.listener( null );
 		assertSame( m, r );
 	}
 

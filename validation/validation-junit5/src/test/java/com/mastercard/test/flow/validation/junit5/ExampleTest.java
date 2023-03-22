@@ -73,7 +73,7 @@ class ExampleTest {
 			}
 
 			@Override
-			public Model withListener( Listener l ) {
+			public Model listener( Listener l ) {
 				throw new UnsupportedOperationException();
 			}
 		};

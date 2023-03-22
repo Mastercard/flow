@@ -61,7 +61,7 @@ public interface Model {
 	 *          sub-models
 	 * @return <code>this</code>
 	 */
-	Model withListener( Listener l );
+	Model listener( Listener l );
 
 	/**
 	 * Instrumentation for {@link Model} construction

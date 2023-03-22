@@ -180,7 +180,7 @@ class LazyModelTest {
 				.with( Transitive.class );
 
 		BuildListener bl = new BuildListener();
-		lm.withListener( bl );
+		lm.listener( bl );
 
 		// request a flow to cause a single submodel to be built
 		assertEquals( 1, lm.flows( Collections.singleton( "a" ), Collections.emptySet() ).count() );
@@ -354,7 +354,7 @@ class LazyModelTest {
 			Set<String> include, Set<String> exclude,
 			String tags, String flows, String builds ) {
 		BuildListener bl = new BuildListener();
-		assertSame( m, m.withListener( bl ) );
+		assertSame( m, m.listener( bl ) );
 
 		assertEquals( tags, m.tags().toString() );
 		assertEquals( "", bl.buildEvents(), "tag access does not build models" );

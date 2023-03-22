@@ -142,7 +142,7 @@ public class LazyModel extends TitledModel {
 			}
 			try {
 				T instance = (T) constructor.newInstance( parameters );
-				instance.withListener( listener.orElse( null ) );
+				instance.listener( listener.orElse( null ) );
 				instances.put( type, instance );
 			}
 			catch( Exception e ) {
@@ -162,9 +162,9 @@ public class LazyModel extends TitledModel {
 	}
 
 	@Override
-	public Model withListener( Listener l ) {
+	public Model listener( Listener l ) {
 		listener = Optional.ofNullable( l );
-		instances.values().forEach( i -> i.withListener( l ) );
+		instances.values().forEach( i -> i.listener( l ) );
 		return this;
 	}
 }
