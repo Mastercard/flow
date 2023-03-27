@@ -12,7 +12,6 @@ permissions:  # added using https://github.com/step-security/secure-workflows
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     env:
       LANG: en_GB
@@ -60,6 +59,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     continue-on-error: true
+    concurrency: pages_branch
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@1f99358870fe1c846a3ccba386cc2b2246836776 # v2.2.1
