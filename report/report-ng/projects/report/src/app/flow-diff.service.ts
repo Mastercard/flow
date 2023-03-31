@@ -90,6 +90,7 @@ export class FlowDiffService {
       }
     });
 
+    let lastRefresh = Date.now();
     mdds.onFlow("from", (label, entry, flow) => {
       this.sourceData.forEach(dp => {
         if (dp.left !== null && dp.left.entry.detail === entry.detail) {
@@ -98,9 +99,13 @@ export class FlowDiffService {
         }
       }
       );
-      this.rebuildChanges();
-      this.recollateChanges();
-      this.refreshListeners.forEach(cb => cb());
+      let delta = Date.now() - lastRefresh;
+      if (mdds.flowLoadProgress("from") == 100 || delta > 3000) {
+        this.rebuildChanges();
+        this.recollateChanges();
+        this.refreshListeners.forEach(cb => cb());
+        lastRefresh = Date.now();
+      }
     });
     mdds.onFlow("to", (label, entry, flow) => {
       this.sourceData.forEach(dp => {
@@ -110,9 +115,13 @@ export class FlowDiffService {
         }
       }
       );
-      this.rebuildChanges();
-      this.recollateChanges();
-      this.refreshListeners.forEach(cb => cb());
+      let delta = Date.now() - lastRefresh;
+      if (mdds.flowLoadProgress("to") == 100 || delta > 3000) {
+        this.rebuildChanges();
+        this.recollateChanges();
+        this.refreshListeners.forEach(cb => cb());
+        lastRefresh = Date.now();
+      }
     });
   }
 
