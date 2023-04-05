@@ -68,15 +68,6 @@
 			<version>${project.version}</version>
 		</dependency>
 
-		<!-- snippet-start:validation -->
-		<dependency>
-			<!-- system model validation -->
-			<groupId>com.mastercard.test.flow</groupId>
-			<artifactId>validation-junit5</artifactId>
-			<version>${project.version}</version>
-		</dependency>
-		<!-- snippet-end:validation -->
-
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>report-core</artifactId>
@@ -95,12 +86,23 @@
 			<version>${project.version}</version>
 		</dependency>
 
+		<!-- snippet-start:validation -->
+		<dependency>
+			<!-- system model validation -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>validation-junit5</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- snippet-end:validation -->
+
 		<!-- snippet-start:assertion -->
 		<dependency>
 			<!-- system assertion -->
 			<groupId>com.mastercard.test.flow</groupId>
 			<artifactId>assert-junit5</artifactId>
 			<version>${project.version}</version>
+			<scope>test</scope>
 		</dependency>
 		<!-- snippet-end:assertion -->
 
