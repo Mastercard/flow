@@ -253,14 +253,18 @@ public abstract class AbstractMessage<T extends AbstractMessage<T>>
 		}
 
 		/**
-		 * @return The field address
+		 * Gets the field address
+		 *
+		 * @return The address of the field to update
 		 */
 		public String field() {
 			return field;
 		}
 
 		/**
-		 * @return The new field value
+		 * Gets the field value
+		 *
+		 * @return The new value of the updated field
 		 */
 		public Object value() {
 			return value;

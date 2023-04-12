@@ -114,6 +114,8 @@ public class MutableMetadata {
 	}
 
 	/**
+	 * Builds an immutable copy of the current state
+	 *
 	 * @return An immutable {@link Metadata} instance
 	 */
 	public ConcreteMetadata build() {

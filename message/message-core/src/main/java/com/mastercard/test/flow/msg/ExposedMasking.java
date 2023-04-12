@@ -27,6 +27,8 @@ import com.mastercard.test.flow.Unpredictable;
 public interface ExposedMasking extends Message {
 
 	/**
+	 * Accessor for masking operations.
+	 *
 	 * @return The sources of {@link Unpredictable} data for which this message has
 	 *         masking operations
 	 */

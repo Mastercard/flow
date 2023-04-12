@@ -190,6 +190,8 @@ public class MutableFlow {
 	}
 
 	/**
+	 * Builds an immutable copy of the current state
+	 *
 	 * @return An immutable {@link Flow} instance
 	 */
 	public Flow build() {

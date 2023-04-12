@@ -68,6 +68,8 @@ public class MutableDependency {
 	}
 
 	/**
+	 * Builds an immutable copy of the current state
+	 *
 	 * @param defaultFlow The {@link Flow} to use if the {@link Flow} in the field
 	 *                    addresses is <code>null</code>
 	 * @return The immutable version of the current state

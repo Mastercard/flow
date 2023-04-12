@@ -137,6 +137,8 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	}
 
 	/**
+	 * Determines if an address targets a field in the HTTP message
+	 *
 	 * @param field a field name
 	 * @return <code>true</code> if the supplied field relates to the HTTP message
 	 *         and not the body message
@@ -212,6 +214,8 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	}
 
 	/**
+	 * Computes the final set of field values
+	 *
 	 * @return The final message data
 	 */
 	protected Map<String, Object> data() {
@@ -228,7 +232,9 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	}
 
 	/**
-	 * @return message headers
+	 * Accesses HTTP header values
+	 *
+	 * @return name/values map of message headers
 	 */
 	public Map<String, String> headers() {
 		Map<String, String> headers = new TreeMap<>();
@@ -239,6 +245,8 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	}
 
 	/**
+	 * Determines if an address targets a header field
+	 *
 	 * @param field a field name
 	 * @return <code>true</code> if the supplied field should be populated in the
 	 *         header
@@ -275,6 +283,8 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	}
 
 	/**
+	 * Gets the HTTP version value
+	 *
 	 * @return message HTTP version
 	 */
 	public String version() {
@@ -282,6 +292,8 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	}
 
 	/**
+	 * Gets the body {@link Message}
+	 *
 	 * @return message body as a {@link Message} object
 	 */
 	public Optional<ExposedMasking> body() {
@@ -289,6 +301,8 @@ public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 	}
 
 	/**
+	 * Gets the body content
+	 *
 	 * @return The text of the message body as a string
 	 */
 	public String bodyText() {

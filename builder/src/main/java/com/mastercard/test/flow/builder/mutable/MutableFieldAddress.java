@@ -81,6 +81,8 @@ public class MutableFieldAddress {
 	}
 
 	/**
+	 * Builds an immutable copy of the current state
+	 *
 	 * @param defaultFlow The {@link Flow} to use if the {@link Flow} in this object
 	 *                    is <code>null</code>
 	 * @return The immutable version of the current state
