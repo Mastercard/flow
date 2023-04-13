@@ -42,7 +42,8 @@ These tests produce a rich execution report, [for example](https://mastercard.gi
  * [Further reading](doc/src/main/markdown/further.md): Covers more advanced usage.
  * The submodules under [example](example) illustrate a complete service constellation with flow-based testing
 
-## Artifact dependency structure
+<details>
+<summary>Artifact dependency structure</summary>
 
 <!-- start_module_diagram:framework -->
 
@@ -72,7 +73,7 @@ graph TB
 ```
 
 <!-- end_module_diagram -->
-
+</details>
 
 ## Links
 
