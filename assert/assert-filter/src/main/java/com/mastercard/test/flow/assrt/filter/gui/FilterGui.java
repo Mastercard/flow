@@ -36,7 +36,9 @@ import com.mastercard.test.flow.assrt.filter.FilterOptions;
 public class FilterGui {
 
 	/**
-	 * @return <code>true</code> if the gui should be invoked
+	 * Determines if the gui should be shown
+	 *
+	 * @return <code>true</code> if the gui should be shown
 	 */
 	public static boolean requested() {
 		return "gui".equals( FilterOptions.FILTER_UPDATE.value() )

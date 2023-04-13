@@ -38,6 +38,9 @@ public interface FieldAddress {
 	String field();
 
 	/**
+	 * Determines if the address is fully-specified, i.e.: it unambiguously
+	 * identifies a single field in a single message in a single flow
+	 *
 	 * @return <code>true</code> if this address is complete
 	 */
 	default boolean isComplete() {

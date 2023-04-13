@@ -163,6 +163,8 @@ public class MutableInteraction implements Interaction {
 	}
 
 	/**
+	 * Builds an immutable copy of the current state
+	 *
 	 * @param p The {@link Interaction} that caused this one
 	 * @return An immutable {@link Interaction} instance
 	 */

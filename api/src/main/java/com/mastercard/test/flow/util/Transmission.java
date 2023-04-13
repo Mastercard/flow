@@ -120,7 +120,10 @@ public class Transmission {
 	}
 
 	/**
-	 * @return A string that describes the transmission, but with no tags
+	 * Constructs a string that describes the transmission, but with no tag
+	 * information
+	 *
+	 * @return An untagged description
 	 */
 	public String toUntaggedString() {
 		StringBuilder sb = new StringBuilder();

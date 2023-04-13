@@ -273,6 +273,8 @@ public abstract class Builder<T extends Builder<T>> {
 	}
 
 	/**
+	 * Typed self-reference accessor
+	 *
 	 * @return <code>this</code>
 	 */
 	@SuppressWarnings("unchecked")

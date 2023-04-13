@@ -241,9 +241,10 @@ To use these, add a dependency:
 	<groupId>com.mastercard.test.flow</groupId>
 	<artifactId>validation-junit5</artifactId>
 	<version>${flow.version}</version>
+	<scope>test</scope>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L72-L77,72-77)
+[Snippet context](../../../pom.xml#L90-L96,90-96)
 
 <!-- snippet end -->
 
@@ -292,9 +293,10 @@ Add a dependency:
 	<groupId>com.mastercard.test.flow</groupId>
 	<artifactId>assert-junit5</artifactId>
 	<version>${flow.version}</version>
+	<scope>test</scope>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L99-L104,99-104)
+[Snippet context](../../../pom.xml#L100-L106,100-106)
 
 <!-- snippet end -->
 

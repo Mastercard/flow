@@ -38,6 +38,8 @@ public class MutableRootInteraction extends MutableInteraction {
 	}
 
 	/**
+	 * Builds an immutable copy of the current state
+	 *
 	 * @return An immutable {@link Interaction} instance
 	 */
 	public ConcreteRootInteraction build() {
