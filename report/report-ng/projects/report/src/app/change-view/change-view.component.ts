@@ -1,7 +1,7 @@
 import { ViewportScroller } from '@angular/common';
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
-import { MatSelectionListChange } from '@angular/material/list';
+import { MatLegacySelectionListChange as MatSelectionListChange } from '@angular/material/legacy-list';
 import { ActivatedRoute } from '@angular/router';
 import { DiffContent, DiffTableFormat } from 'ngx-text-diff/lib/ngx-text-diff.model';
 import { Observable, Subject } from 'rxjs';

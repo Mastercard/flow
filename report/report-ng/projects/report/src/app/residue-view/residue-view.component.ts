@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { MatSelectionListChange } from '@angular/material/list';
+import { MatLegacySelectionListChange as MatSelectionListChange } from '@angular/material/legacy-list';
 import { DiffTableFormat } from 'ngx-text-diff/lib/ngx-text-diff.model';
 import { Residue, residueAsserted, residueAssertionPassed } from '../types';
 
