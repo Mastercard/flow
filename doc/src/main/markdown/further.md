@@ -375,7 +375,7 @@ Empty dependencies can be added to the system model via the [`Builder.prerequisi
 
 ### Chaining
 
-While a dependency on flow `A` from flow `B` will guarantee that `A` will be processed before `B`, it does not give any stronger assurances than that. for example, it is perfectly possible that other flows will be interleaved between `A` and `B`. If this is a problem then you can use flow chaining to gain greater control over the execution order.
+While a dependency on flow `A` from flow `B` will guarantee that `A` will be processed before `B`, it does not give any stronger assurances than that. For example, it is perfectly possible that other flows will be interleaved between `A` and `B`. If this is a problem then you can use flow chaining to gain greater control over the execution order.
 
 If you add a tag with the prefix of `chain:` to a group of flows, they will be scheduled as a unit in the overall execution order - flows that do not bear the same chain tag will not be interleaved into that unit. The order of flows within a chain is still determined by the standard constraints described above. A flow should only belong to a single chain.
 
