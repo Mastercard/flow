@@ -5,7 +5,7 @@ import java.util.stream.Stream;
 import com.mastercard.test.flow.Model;
 
 /**
- * A validation check that can be applied to a {@link Model} or constituents
+ * A validation behaviour that can be applied to a {@link Model} or constituents
  * thereof
  */
 public interface Validation {

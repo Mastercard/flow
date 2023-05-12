@@ -39,14 +39,14 @@ public class Validator extends AbstractValidator<Validator> {
 	 * @return A stream of test cases that validate the model
 	 */
 	public Stream<DynamicNode> tests() {
-		return checks()
+		return validations()
 				.map( this::container );
 	}
 
 	private DynamicContainer container( Validation validation ) {
 		return DynamicContainer.dynamicContainer(
 				validation.name(),
-				validation.checks( model() )
+				batchedChecks( validation )
 						.map( this::test ) );
 	}
 
