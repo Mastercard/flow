@@ -1,11 +1,15 @@
 package com.mastercard.test.flow.validation;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -49,9 +53,10 @@ public abstract class AbstractValidator<T extends AbstractValidator<T>> {
 		};
 	}
 
-	private final Set<Validation> checks = new TreeSet<>(
+	private final Set<Validation> validations = new TreeSet<>(
 			Comparator.comparing( Validation::name ) );
 	private Model model;
+	private int batchSize = 1;
 
 	private List<Predicate<Violation>> accepted = new ArrayList<>();
 
@@ -63,7 +68,7 @@ public abstract class AbstractValidator<T extends AbstractValidator<T>> {
 	 * @see #defaultChecks()
 	 */
 	public T with( Validation... check ) {
-		Collections.addAll( checks, check );
+		Collections.addAll( validations, check );
 		return self();
 	}
 
@@ -90,6 +95,19 @@ public abstract class AbstractValidator<T extends AbstractValidator<T>> {
 	}
 
 	/**
+	 * Controls how individual {@link Validation} {@link Check} instances are
+	 * batched up to reduce overhead in the downstream test harness
+	 *
+	 * @param size The maximum number of {@link Check}s that should be executed in a
+	 *             single test case
+	 * @return <code>this</code>
+	 */
+	public T batching( int size ) {
+		batchSize = size;
+		return self();
+	}
+
+	/**
 	 * Typesafe self-reference
 	 *
 	 * @return <code>this</code>
@@ -104,8 +122,50 @@ public abstract class AbstractValidator<T extends AbstractValidator<T>> {
 	 *
 	 * @return The checks to perform
 	 */
-	protected Stream<Validation> checks() {
-		return checks.stream();
+	protected Stream<Validation> validations() {
+		return validations.stream();
+	}
+
+	/**
+	 * Extracts {@link Check} instances by applying the supplied {@link Validation}
+	 * to the {@link Model}, then grouping them up according to the
+	 * {@link #batching(int)} size
+	 *
+	 * @param validation The {@link Validation} to apply
+	 * @return A sequence of batched {@link Check} instances
+	 */
+	protected Stream<Check> batchedChecks( Validation validation ) {
+		if( batchSize < 2 ) {
+			// early exit for no-batching case
+			return validation.checks( model );
+		}
+
+		Deque<List<Check>> batches = new ArrayDeque<>();
+		validation.checks( model )
+				.forEach( check -> {
+					if( batches.isEmpty() || batches.getLast().size() >= batchSize ) {
+						batches.add( new ArrayList<>() );
+					}
+					batches.getLast().add( check );
+				} );
+
+		AtomicInteger checkCount = new AtomicInteger( 1 );
+		return batches.stream()
+				.map( batch -> {
+					if( batch.size() == 1 ) {
+						return batch.get( 0 );
+					}
+					return new Check(
+							validation,
+							String.format( "%s (%s-%s)",
+									validation.name(), checkCount.get(), checkCount.addAndGet( batch.size() ) - 1 ),
+							() -> batch.stream()
+									.map( Check::check )
+									.filter( Optional::isPresent )
+									.map( Optional::get )
+									.findFirst()
+									.orElse( null ) );
+				} );
 	}
 
 	/**
