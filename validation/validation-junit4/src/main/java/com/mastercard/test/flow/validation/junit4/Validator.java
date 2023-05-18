@@ -49,8 +49,8 @@ public class Validator extends AbstractValidator<Validator> {
 	 * @return A list of <code>{test name, runnable}</code> test parameter pairs
 	 */
 	public Collection<Object[]> parameters() {
-		return checks()
-				.flatMap( validation -> validation.checks( model() ) )
+		return validations()
+				.flatMap( this::batchedChecks )
 				.map( this::parameterPair )
 				.collect( toList() );
 	}
