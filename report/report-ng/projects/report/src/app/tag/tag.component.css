@@ -4,5 +4,5 @@
 }
 
 .tag:hover:not(.disabled) {
-  font-weight: bolder;
+  text-shadow: 0px 0px 1px black
 }
