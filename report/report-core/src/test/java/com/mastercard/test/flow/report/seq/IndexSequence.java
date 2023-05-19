@@ -257,7 +257,8 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	public IndexSequence clickTag( String tag ) {
 		trace( "clickTag", tag );
 
-		driver.findElements( By.tagName( "app-tag" ) ).stream()
+		driver.findElement( By.tagName( "app-flow-nav-list" ) )
+				.findElements( By.tagName( "app-tag" ) ).stream()
 				.filter( te -> tag.equals( te.getText() ) )
 				.findFirst()
 				.orElseThrow( () -> new AssertionError( "Couldn't find tag " + tag ) )

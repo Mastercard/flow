@@ -1,7 +1,7 @@
 <section>
   <mat-button-toggle-group name="display" [vertical]="true" [(ngModel)]="options.display" ngDefaultControl>
     <mat-button-toggle *ngFor="let v of displayEnum | enumIterate" id="{{v}}" value="{{v}}"
-      matTooltip="{{displayTip(v)}}">
+      matTooltip="{{displayTip(v)}}" matTooltipPosition="right">
       <mat-icon>{{displayIcon(v)}}</mat-icon>
     </mat-button-toggle>
   </mat-button-toggle-group>
@@ -10,7 +10,7 @@
   <hr />
   <mat-button-toggle-group name="data_display" [vertical]="true" [(ngModel)]="options.dataDisplay" ngDefaultControl>
     <mat-button-toggle *ngFor="let v of dataDisplayEnum | enumIterate" id="{{v}}" value="{{v}}"
-      matTooltip=" {{dataTip(v)}}">
+      matTooltip=" {{dataTip(v)}}" matTooltipPosition="right">
       <mat-icon svgIcon="{{dataSvgIcon(v)}}">{{dataIcon(v)}}</mat-icon>
     </mat-button-toggle>
   </mat-button-toggle-group>
@@ -19,17 +19,19 @@
   <hr />
   <mat-button-toggle-group name="diff_type" [vertical]="true" [(ngModel)]="options.diffType" ngDefaultControl>
     <mat-button-toggle *ngFor="let v of diffTypeEnum | enumIterate" id="{{v}}" value="{{v}}"
-      matTooltip=" {{diffTip(v)}}">
+      matTooltip=" {{diffTip(v)}}" matTooltipPosition="right">
       <mat-icon>{{diffIcon(v)}}</mat-icon>
     </mat-button-toggle>
   </mat-button-toggle-group>
 </section>
 <section *ngIf="options.display === 'Diff' || options.display === 'Basis'">
   <mat-button-toggle-group name="diff_options" [vertical]="true" [(ngModel)]="options.diffFormat" ngDefaultControl>
-    <mat-button-toggle id="SideBySide" value="SideBySide" matTooltip="Side-by-side comparison">
+    <mat-button-toggle id="SideBySide" value="SideBySide" matTooltip="Side-by-side comparison"
+      matTooltipPosition="right">
       <mat-icon>vertical_split</mat-icon>
     </mat-button-toggle>
-    <mat-button-toggle id="LineByLine" value="LineByLine" matTooltip="Line-by-line comparison">
+    <mat-button-toggle id="LineByLine" value="LineByLine" matTooltip="Line-by-line comparison"
+      matTooltipPosition="right">
       <mat-icon>horizontal_split</mat-icon>
     </mat-button-toggle>
   </mat-button-toggle-group>
