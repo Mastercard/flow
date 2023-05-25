@@ -25,8 +25,8 @@ class FileFlowSequenceTest extends AbstractFlowSequenceTest {
 				.hasTransmissions(
 						" BEN request       [e    ]",
 						"   CHE request     [e    ]",
-						"   CHE response    [e ap ]",
-						" BEN response      [e a f]" );
+						"   CHE response    [e ap ] 100%",
+						" BEN response      [e a f] 100%" );
 	}
 
 	/**

@@ -267,6 +267,9 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 						.collect( joining() ) )
 				.append( "]" );
 
+		afs.findElements( By.className( "coverage" ) )
+				.forEach( ce -> sb.append( " " ).append( ce.getText() ) );
+
 		return sb.toString();
 	}
 
