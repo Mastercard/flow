@@ -70,4 +70,15 @@ export class ModelDiffDataSourceComponent implements OnInit {
     });
   }
 
+  getValue(): string {
+    return this.input.value;
+  }
+
+  setValue(value: string): void {
+    this.input.setValue(value);
+  }
+
+  valueChanges(observer: (value: any) => void): void {
+    this.input.valueChanges.subscribe(observer);
+  }
 }

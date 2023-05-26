@@ -9,6 +9,5 @@ export class EnumIteratePipe implements PipeTransform {
     return Object.keys(obj).filter(k => Number.isNaN(+k)) as K[];
   }
 
-
 }
 

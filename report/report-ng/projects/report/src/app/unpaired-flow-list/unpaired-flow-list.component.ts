@@ -22,7 +22,7 @@ export class UnpairedFlowListComponent implements OnInit {
     // We've got a whole new dataset!
     fps.onRebuild(() => this.rebuild());
 
-    // it'd ne nice if the filters were just a visual thing, but I don't
+    // it'd be nice if the filters were just a visual thing, but I don't
     // know how to maintain a dragged order in the face of things being
     // filtered in and out
     filter.onUpdate(() => this.rebuild());
