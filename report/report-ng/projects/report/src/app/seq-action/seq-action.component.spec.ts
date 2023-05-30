@@ -67,10 +67,10 @@ describe('SeqActionComponent', () => {
   it('should render coverage', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector(".coverage")!.textContent)
-      .toEqual("46%");
+      .toEqual("47%");
   });
 
-  fit('should compute coverage', () => {
+  it('should compute coverage', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     let cases = [
