@@ -107,9 +107,15 @@ export class SeqActionComponent implements OnInit {
     const levenshtein: number = this.dmp.diff_levenshtein(diffs);
     const max = Math.max(full.length, asserted.length);
 
-    // using floor to avoid the false confidence a 100% result
-    // would give when the diff is actually non-zero
-    return Math.floor(100.0 * (1.0 - (levenshtein / max))) + "%";
+    let coverage = Math.round(100.0 * (1.0 - (levenshtein / max))) + "%";
+
+    // long messages with small diffs might round to 100%, but
+    // that would be misleading
+    if (coverage === '100%' && levenshtein != 0) {
+      coverage = "99%";
+    }
+
+    return coverage;
   }
 }
 
