@@ -7,11 +7,11 @@
     <mat-expansion-panel-header>
         <mat-panel-title>
             <span class="source_link">
-                <a id="from_link" href="{{from.getValue}}">{{from.linkText}}</a>
+                <a id="from_link" href="{{from.getValue()}}">{{from.linkText}}</a>
                 <mat-progress-bar [mode]="from.progressState" [value]="from.progressValue"></mat-progress-bar>
             </span>
             <span class="source_link">
-                <a id="to_link" href="{{to.getValue}}">{{to.linkText}}</a>
+                <a id="to_link" href="{{to.getValue()}}">{{to.linkText}}</a>
                 <mat-progress-bar [mode]="to.progressState" [value]="to.progressValue"></mat-progress-bar>
             </span>
         </mat-panel-title>
