@@ -106,7 +106,7 @@ For interactions where we have captured actual data from the system under test t
 For most systems it will not be possible to directly compare captured messages against expectations - there may be unpredictable fields in the messages that have to be masked out before a useful comparison can be made.
 The percentage figure presented against messages gives an indication of how heavily messages have been masked before comparison.
  * A low figure indicates that extensive masking has been performed before assertion, so we can have limited confidence that our test data matches reality.
- * A high figure indicates that minimal masking has been applied - our test data is a good represntation of system behaviour.
+ * A high figure indicates that minimal masking has been applied - our test data is a good representation of system behaviour.
 
 Obviously, higher figures are better.
 
