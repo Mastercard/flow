@@ -8,7 +8,7 @@ declare var data: any;
 /**
  * This is the report app entrypoint. All it does is determine
  * what sort of data has been embedded in the index.html file
- * and then present the apropriate compnent (or an error message)
+ * and then present the apropriate component (or an error message)
  */
 @Component({
   selector: 'app-root',
@@ -22,7 +22,6 @@ export class AppComponent {
   error_data?: any;
 
   ngOnInit(): void {
-
     if (isIndex(data)) {
       this.index = data;
     }
