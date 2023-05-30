@@ -102,6 +102,14 @@ Clicking on the requests and responses will show the message data for that trans
 
 For the expected and actual messages, the data can be displayed in a human-readable format, or the bytes can be interpreted as UTF8 or as raw data in a hexdump.
 
+For interactions where we have captured actual data from the system under test the result of comparing that data against expectations, and hence test success, is reflected in the sequence diagram.
+For most systems it will not be possible to directly compare captured messages against expectations - there may be unpredictable fields in the messages that have to be masked out before a useful comparison can be made.
+The percentage figure presented against messages gives an indication of how heavily messages have been masked before comparison.
+ * A low figure indicates that extensive masking has been performed before assertion, so we can have limited confidence that our test data matches reality.
+ * A high figure indicates that minimal masking has been applied - our test data is a good represntation of system behaviour.
+
+Obviously, higher figures are better.
+
 Clicking the search icon in the top-right of the sequence view allows message content to be searched - messages that contain the search term will be highlighted in the sequence diagram and occurrences of the term will be highlighted in message content.
 
 #### Context
