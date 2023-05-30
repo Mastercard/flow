@@ -45,6 +45,9 @@ During development, replace that placeholder value with the appropriate JSON str
 
 Examples of such structures can be found in the `target/report` directory of the [report-core](../report-core) module after a test run.
 
+The unit tests can be run with `ng test`. By default the tests are run in interactive mode.
+If you just want to run them all once without seeing them then run `ng test --browsers ChromeHeadless --watch=false`
+
 ### Java
 
 The artifacts generated from the angular application are packages in `target/classes`. You might have to explicitly add this directory as a source folder in your IDE build path configuration to avoid failures in downstream projects.
