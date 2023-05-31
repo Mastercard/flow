@@ -59,15 +59,15 @@ export class SeqActionComponent implements OnInit {
       && this.action.transmission.asserted?.actual === this.action.transmission.asserted?.expect;
     this.assertionFailed = this.hasActual && !this.assertionPassed;
 
-    // full.expect is the raw message from the system model, asserted.expect is
+    // full.actual is the raw message captured from the system, asserted.actual is
     // the same message after masking operations have been applied. The coverage
     // metric gives an indication of how much those two differ, which can be taken
     // as an indication of test strength. 100% means that no masking has taken
     // place - the test is strong. 0% indicates that masking has completely
     // transformed the message - the test is weak
     this.assertionCoverage = this.computeCoverage(
-      this.action.transmission.full.expect,
-      this.action.transmission.asserted?.expect);
+      this.action.transmission.full.actual,
+      this.action.transmission.asserted?.actual);
 
     this.search.onSearch(term => {
       this.markExpected = this.action.transmission.full.expect.indexOf(term) >= 0;
@@ -94,8 +94,9 @@ export class SeqActionComponent implements OnInit {
     return classes;
   }
 
-  computeCoverage(full: string, asserted: string | undefined): string {
-    if (asserted === undefined || asserted === null) {
+  computeCoverage(full: string | undefined, asserted: string | undefined): string {
+    if (full === undefined || full === null
+      || asserted === undefined || asserted === null) {
       return "";
     }
 

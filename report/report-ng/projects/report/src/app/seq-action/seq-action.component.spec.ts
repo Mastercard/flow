@@ -74,6 +74,8 @@ describe('SeqActionComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     let cases = [
+      { full: undefined, asrt: 'abcde', expt: '' },
+      { full: 'abcde', asrt: undefined, expt: '' },
       { full: 'abcde', asrt: 'abcde', expt: '100%' },
       { full: 'abcde', asrt: 'abcdz', expt: '80%' },
       { full: 'abcye', asrt: 'abcdz', expt: '60%' },
@@ -83,13 +85,13 @@ describe('SeqActionComponent', () => {
     ];
 
     cases.forEach(c => {
-      component.action.transmission.full.expect = c.full;
-      component.action.transmission.asserted!.expect = c.asrt;
+      component.action.transmission.full.actual = c.full;
+      component.action.transmission.asserted!.actual = c.asrt;
       component.ngOnInit();
       fixture.detectChanges();
 
       expect(compiled.querySelector(".coverage")!.textContent)
-        .withContext("Comparing " + c.full + " and " + c.asrt)
+        .withContext("Comparing '" + c.full + "' and '" + c.asrt + "'")
         .toEqual(c.expt);
     });
   });
