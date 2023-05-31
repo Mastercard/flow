@@ -2,7 +2,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TagFilterComponent } from './tag-filter.component';
 import { RouterTestingModule } from '@angular/router/testing';
-import { MatAutocomplete } from '@angular/material/autocomplete';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { DragDropModule } from '@angular/cdk/drag-drop';
+import { ReactiveFormsModule } from '@angular/forms';
 
 describe('TagFilterComponent', () => {
   let component: TagFilterComponent;
@@ -10,8 +15,18 @@ describe('TagFilterComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [TagFilterComponent, MatAutocomplete],
-      imports: [RouterTestingModule]
+      declarations: [
+        TagFilterComponent,
+      ],
+      imports: [
+        MatAutocompleteModule,
+        RouterTestingModule,
+        MatChipsModule,
+        MatFormFieldModule,
+        BrowserAnimationsModule,
+        DragDropModule,
+        ReactiveFormsModule,
+      ]
     })
       .compileComponents();
   });

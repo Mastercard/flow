@@ -8,9 +8,9 @@ describe('SeqNoteComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ SeqNoteComponent ]
+      declarations: [SeqNoteComponent]
     })
-    .compileComponents();
+      .compileComponents();
   });
 
   beforeEach(() => {

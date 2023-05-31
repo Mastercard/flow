@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { SeqActionComponent } from './seq-action.component';
 import { BasisFetchService } from '../basis-fetch.service';
-import { empty_transmission } from '../types';
+import { MatIconModule } from '@angular/material/icon';
 
 describe('SeqActionComponent', () => {
   let component: SeqActionComponent;
@@ -12,9 +12,14 @@ describe('SeqActionComponent', () => {
   beforeEach(async () => {
     mockBfs = jasmine.createSpyObj(['onLoad', 'message']);
     await TestBed.configureTestingModule({
-      declarations: [SeqActionComponent],
+      declarations: [
+        SeqActionComponent,
+      ],
       providers: [
         { provide: BasisFetchService, useValue: mockBfs },
+      ],
+      imports: [
+        MatIconModule,
       ],
     })
       .compileComponents();

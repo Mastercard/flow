@@ -8,9 +8,9 @@ describe('HexdumpComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ HexdumpComponent ]
+      declarations: [HexdumpComponent]
     })
-    .compileComponents();
+      .compileComponents();
   });
 
   beforeEach(() => {

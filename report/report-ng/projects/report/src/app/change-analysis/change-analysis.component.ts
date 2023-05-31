@@ -9,7 +9,7 @@ import { Entry, removeResultTagsFrom } from '../types';
 @Component({
   selector: 'app-change-analysis',
   templateUrl: './change-analysis.component.html',
-  styleUrls: ['./change-analysis.component.css']
+  styleUrls: ['./change-analysis.component.css'],
 })
 export class ChangeAnalysisComponent implements OnInit {
 

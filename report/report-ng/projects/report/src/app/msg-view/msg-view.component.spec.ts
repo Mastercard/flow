@@ -8,9 +8,9 @@ describe('MsgViewComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ MsgViewComponent ]
+      declarations: [MsgViewComponent]
     })
-    .compileComponents();
+      .compileComponents();
   });
 
   beforeEach(() => {

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { FlowNavListComponent } from './flow-nav-list.component';
+import { MatListModule } from '@angular/material/list';
 
 describe('FlowNavListComponent', () => {
   let component: FlowNavListComponent;
@@ -8,7 +9,12 @@ describe('FlowNavListComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [FlowNavListComponent]
+      declarations: [
+        FlowNavListComponent,
+      ],
+      imports: [
+        MatListModule,
+      ],
     })
       .compileComponents();
   });

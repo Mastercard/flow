@@ -9,7 +9,17 @@ describe('PairSelectItemComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [PairSelectItemComponent]
+      declarations: [
+        PairSelectItemComponent,
+      ],
+      imports: [
+        // We should be ok to import MatListModule in order to
+        // avoid the errors about missing mat-list-option
+        // component, but it provokes an error instead: 
+        // NullInjectorError: No provider for MatSelectionList
+        // I've got no idea what to do about that, so we'll
+        // live with the non-fatal errors for now
+      ],
     })
       .compileComponents();
   });

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { MsgSearchInputComponent } from './msg-search-input.component';
+import { MatIconModule } from '@angular/material/icon';
 
 describe('MsgSearchInputComponent', () => {
   let component: MsgSearchInputComponent;
@@ -8,9 +9,12 @@ describe('MsgSearchInputComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ MsgSearchInputComponent ]
+      declarations: [MsgSearchInputComponent],
+      imports: [
+        MatIconModule
+      ],
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(MsgSearchInputComponent);
     component = fixture.componentInstance;

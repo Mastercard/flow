@@ -8,9 +8,9 @@ describe('HighlightedTextComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ HighlightedTextComponent ]
+      declarations: [HighlightedTextComponent]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(HighlightedTextComponent);
     component = fixture.componentInstance;
