@@ -25,8 +25,8 @@ class ServedFlowSequenceTest extends AbstractFlowSequenceTest {
 				.hasTransmissions(
 						" BEN request       [eb   ]",
 						"   CHE request     [eb   ]",
-						"   CHE response    [ebap ]",
-						" BEN response      [eba f]" );
+						"   CHE response    [ebap ] 100%",
+						" BEN response      [eba f] 100%" );
 	}
 
 	/**

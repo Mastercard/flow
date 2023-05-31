@@ -4,6 +4,7 @@ import { leftStyle, rightStyle } from '../flow-sequence/flow-sequence.component'
 import { MsgSearchService } from '../msg-search.service';
 import { TxSelectionService } from '../tx-selection.service';
 import { Transmission, isTransmission, empty_transmission } from '../types';
+import { Diff, diff_match_patch } from 'diff-match-patch';
 
 @Component({
   selector: 'app-seq-action',
@@ -11,6 +12,7 @@ import { Transmission, isTransmission, empty_transmission } from '../types';
   styleUrls: ['./seq-action.component.css']
 })
 export class SeqActionComponent implements OnInit {
+  private readonly dmp: diff_match_patch = new diff_match_patch();
 
   @Input() entity: string[] = ["empty"];
   @Input() action: Action = empty_action;
@@ -21,6 +23,7 @@ export class SeqActionComponent implements OnInit {
   hasBasis: boolean = false;
   assertionPassed: boolean = false;
   assertionFailed: boolean = false;
+  assertionCoverage: string = "";
 
   markExpected: boolean = false;
   markActual: boolean = false;
@@ -56,6 +59,16 @@ export class SeqActionComponent implements OnInit {
       && this.action.transmission.asserted?.actual === this.action.transmission.asserted?.expect;
     this.assertionFailed = this.hasActual && !this.assertionPassed;
 
+    // full.actual is the raw message captured from the system, asserted.actual is
+    // the same message after masking operations have been applied. The coverage
+    // metric gives an indication of how much those two differ, which can be taken
+    // as an indication of test strength. 100% means that no masking has taken
+    // place - the test is strong. 0% indicates that masking has completely
+    // transformed the message - the test is weak
+    this.assertionCoverage = this.computeCoverage(
+      this.action.transmission.full.actual,
+      this.action.transmission.asserted?.actual);
+
     this.search.onSearch(term => {
       this.markExpected = this.action.transmission.full.expect.indexOf(term) >= 0;
       this.markActual = (this.action.transmission.full.actual ?? "").indexOf(term) >= 0;
@@ -81,6 +94,30 @@ export class SeqActionComponent implements OnInit {
     return classes;
   }
 
+  computeCoverage(full: string | undefined, asserted: string | undefined): string {
+    if (full === undefined || full === null
+      || asserted === undefined || asserted === null) {
+      return "";
+    }
+
+    let diffs: Diff[] = this.dmp.diff_main(full, asserted);
+    this.dmp.diff_cleanupSemantic(diffs);
+
+    // levenshtein distance is the number of changed characters - minimum
+    // is 0, maximum is the length of the longer input string
+    const levenshtein: number = this.dmp.diff_levenshtein(diffs);
+    const max = Math.max(full.length, asserted.length);
+
+    let coverage = Math.round(100.0 * (1.0 - (levenshtein / max))) + "%";
+
+    // long messages with small diffs might round to 100%, but
+    // that would be misleading
+    if (coverage === '100%' && levenshtein != 0) {
+      coverage = "99%";
+    }
+
+    return coverage;
+  }
 }
 
 /**

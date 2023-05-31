@@ -38,8 +38,8 @@ export class ModelDiffComponent implements OnInit {
   }
 
   ngAfterViewInit() {
-    this.from.input.valueChanges.subscribe(v => this.updateQuery());
-    this.to.input.valueChanges.subscribe(v => this.updateQuery());
+    this.from.valueChanges(v => this.updateQuery());
+    this.to.valueChanges(v => this.updateQuery());
     this.changeView.onSelection(() => this.updateQuery());
     this.changeAnalysis.toChangeView((from, to) => {
       this.tabIndex = 2;
@@ -48,18 +48,18 @@ export class ModelDiffComponent implements OnInit {
   }
 
   swap(): void {
-    let tmp: string = this.from.input.value;
-    this.from.input.setValue(this.to.input.value);
-    this.to.input.setValue(tmp);
+    let tmp: string = this.from.getValue();
+    this.from.setValue(this.to.getValue());
+    this.to.setValue(tmp);
   }
 
   updateQuery(): void {
     const usp: URLSearchParams = new URLSearchParams();
-    if (this.from.input.value) {
-      usp.append("from", encodeURIComponent(this.from.input.value));
+    if (this.from.getValue()) {
+      usp.append("from", encodeURIComponent(this.from.getValue()));
     }
-    if (this.to.input.value) {
-      usp.append("to", encodeURIComponent(this.to.input.value));
+    if (this.to.getValue()) {
+      usp.append("to", encodeURIComponent(this.to.getValue()));
     }
     if (this.tabIndex != 0) {
       usp.append("tab", this.tabIndex.toString());
