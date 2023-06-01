@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ResidueViewComponent } from './residue-view.component';
+import { MatExpansionModule } from '@angular/material/expansion';
 
 describe('ResidueViewComponent', () => {
   let component: ResidueViewComponent;
@@ -8,9 +9,14 @@ describe('ResidueViewComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ ResidueViewComponent ]
+      declarations: [
+        ResidueViewComponent,
+      ],
+      imports: [
+        MatExpansionModule,
+      ],
     })
-    .compileComponents();
+      .compileComponents();
   });
 
   beforeEach(() => {

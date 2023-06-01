@@ -1,9 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { Component, Input } from '@angular/core';
 import { UnpairedFlowListComponent } from './unpaired-flow-list.component';
 import { ModelDiffDataService } from '../model-diff-data.service';
 import { FlowPairingService } from '../flow-pairing.service';
 import { FlowFilterService } from '../flow-filter.service';
+import { Entry } from '../types';
+import { MatListModule } from '@angular/material/list';
 
 describe('UnpairedFlowListComponent', () => {
   let component: UnpairedFlowListComponent;
@@ -19,13 +21,18 @@ describe('UnpairedFlowListComponent', () => {
     mockFilter = jasmine.createSpyObj(['onUpdate']);
 
     await TestBed.configureTestingModule({
-      declarations: [UnpairedFlowListComponent],
+      declarations: [
+        UnpairedFlowListComponent,
+        StubFlowNavList,
+      ],
       providers: [
         { provide: ModelDiffDataService, useValue: mockMdds },
         { provide: FlowPairingService, useValue: mockFps },
         { provide: FlowFilterService, useValue: mockFilter },
       ],
-
+      imports: [
+        MatListModule,
+      ],
     })
       .compileComponents();
   });
@@ -40,3 +47,14 @@ describe('UnpairedFlowListComponent', () => {
     expect(component).toBeTruthy();
   });
 });
+
+@Component({
+  selector: 'app-flow-nav-list',
+  template: ''
+})
+class StubFlowNavList {
+  @Input() basePath: string = "";
+  @Input() showResult: boolean = true;
+  @Input() draggable: boolean = false;
+  @Input() entries: Entry[] = [];
+}

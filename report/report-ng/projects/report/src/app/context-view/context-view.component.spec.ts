@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ContextViewComponent } from './context-view.component';
+import { MatExpansionModule } from '@angular/material/expansion';
 
 describe('ContextViewComponent', () => {
   let component: ContextViewComponent;
@@ -8,9 +9,14 @@ describe('ContextViewComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ ContextViewComponent ]
+      declarations: [
+        ContextViewComponent
+      ],
+      imports: [
+        MatExpansionModule,
+      ],
     })
-    .compileComponents();
+      .compileComponents();
   });
 
   beforeEach(() => {

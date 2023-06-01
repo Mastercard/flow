@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { Component, Input } from '@angular/core';
 import { TransmissionComponent } from './transmission.component';
 import { BasisFetchService } from '../basis-fetch.service';
+import { DataDisplay, Options } from '../types';
 
 describe('TransmissionComponent', () => {
   let component: TransmissionComponent;
@@ -11,7 +12,10 @@ describe('TransmissionComponent', () => {
   beforeEach(async () => {
     mockBasis = jasmine.createSpyObj(['onLoad']);
     await TestBed.configureTestingModule({
-      declarations: [TransmissionComponent],
+      declarations: [
+        TransmissionComponent,
+        StubMsgView,
+      ],
       providers: [
         { provide: BasisFetchService, useValue: mockBasis },
       ],
@@ -29,3 +33,14 @@ describe('TransmissionComponent', () => {
     expect(component).toBeTruthy();
   });
 });
+
+@Component({
+  selector: 'app-msg-view',
+  template: ''
+})
+class StubMsgView {
+  @Input() options: Options = new Options();
+  @Input() dataDisplay: DataDisplay = DataDisplay.Human;
+  @Input() human?: string;
+  @Input() base64?: string;
+}

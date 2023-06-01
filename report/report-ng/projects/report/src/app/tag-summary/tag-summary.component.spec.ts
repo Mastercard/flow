@@ -2,6 +2,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TagSummaryComponent } from './tag-summary.component';
 import { FlowFilterService } from '../flow-filter.service';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatIconModule } from '@angular/material/icon';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 describe('TagSummaryComponent', () => {
   let component: TagSummaryComponent;
@@ -14,6 +18,12 @@ describe('TagSummaryComponent', () => {
       declarations: [TagSummaryComponent],
       providers: [
         { provide: FlowFilterService, useValue: mockFilters },
+      ],
+      imports: [
+        MatButtonToggleModule,
+        MatIconModule,
+        MatExpansionModule,
+        BrowserAnimationsModule,
       ],
     })
       .compileComponents();
