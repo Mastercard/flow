@@ -82,11 +82,18 @@ describe('SeqActionComponent', () => {
       { full: undefined, asrt: 'abcde', expt: '' },
       { full: 'abcde', asrt: undefined, expt: '' },
       { full: 'abcde', asrt: 'abcde', expt: '100%' },
-      { full: 'abcde', asrt: 'abcdz', expt: '80%' },
-      { full: 'abcye', asrt: 'abcdz', expt: '60%' },
-      { full: 'abcye', asrt: 'abxdz', expt: '40%' },
-      { full: 'awcye', asrt: 'abxdz', expt: '20%' },
-      { full: 'awcye', asrt: 'vbxdz', expt: '0%' },
+      { full: 'abcde', asrt: 'vbcde', expt: '80%' },
+      { full: 'abcde', asrt: 'vwcde', expt: '60%' },
+      { full: 'abcde', asrt: 'vwxde', expt: '40%' },
+      { full: 'abcde', asrt: 'vwxye', expt: '20%' },
+      { full: 'abcde', asrt: 'vwxyz', expt: '0%' },
+      {
+        full: "rhubarb".repeat(1000),
+        asrt: "blubarb" + "rhubarb".repeat(999),
+        expt: '99%'
+        // coverage here would round to 100%, but there's a
+        // special case behaviour to avoid that false confidence
+      },
     ];
 
     cases.forEach(c => {
