@@ -1,31 +1,28 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
-import { PairSelectItemComponent } from './pair-select-item.component';
+import { Component, Input } from '@angular/core';
+import { ListPair, PairSelectItemComponent } from './pair-select-item.component';
 import { empty_flow } from '../types';
+import { MatListModule } from '@angular/material/list';
 
 describe('PairSelectItemComponent', () => {
-  let component: PairSelectItemComponent;
-  let fixture: ComponentFixture<PairSelectItemComponent>;
+  let component: TestWrapper;
+  let fixture: ComponentFixture<TestWrapper>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [
         PairSelectItemComponent,
+        TestWrapper
       ],
       imports: [
-        // We should be ok to import MatListModule in order to
-        // avoid the errors about missing mat-list-option
-        // component, but it provokes an error instead: 
-        // NullInjectorError: No provider for MatSelectionList
-        // I've got no idea what to do about that, so we'll
-        // live with the non-fatal errors for now
+        MatListModule
       ],
     })
       .compileComponents();
   });
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(PairSelectItemComponent);
+    fixture = TestBed.createComponent(TestWrapper);
     component = fixture.componentInstance;
     component.item = {
       index: 0,
@@ -49,3 +46,25 @@ describe('PairSelectItemComponent', () => {
     expect(component).toBeTruthy();
   });
 });
+
+/**
+ * It seems impossible to test a mat-list-option in isolation - it
+ * has to be embedded in a mat-selection-list to avoid injector
+ * errors. Hence we're going to test _this_ rather than app-pair-select-item
+ * directly
+ */
+@Component({
+  selector: 'app-flow-nav-list',
+  template: `
+  <mat-selection-list>
+    <app-pair-select-item 
+      [showResult]="false"
+      [item]="item"
+      [selectedIndex]="selected?.index ?? -1" >
+    </app-pair-select-item>
+  </mat-selection-list>`
+})
+class TestWrapper {
+  @Input() item!: ListPair;
+  @Input() selectedIndex: number = -1;
+}
