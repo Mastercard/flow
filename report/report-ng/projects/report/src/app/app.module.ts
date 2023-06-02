@@ -58,6 +58,7 @@ import { ResidueViewComponent } from './residue-view/residue-view.component';
 import { MsgSearchInputComponent } from './msg-search-input/msg-search-input.component';
 import { MatRipple, MatRippleModule } from '@angular/material/core';
 import { HighlightedTextComponent } from './highlighted-text/highlighted-text.component';
+import { TextDiffComponent } from './text-diff/text-diff.component';
 
 const routes: Routes = [
   { path: "diff", component: ModelDiffComponent },
@@ -99,6 +100,7 @@ const routes: Routes = [
     ResidueViewComponent,
     MsgSearchInputComponent,
     HighlightedTextComponent,
+    TextDiffComponent,
   ],
   imports: [
     BrowserAnimationsModule,
