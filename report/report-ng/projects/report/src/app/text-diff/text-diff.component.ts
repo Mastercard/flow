@@ -6,8 +6,6 @@ import { DIFF_DELETE, DIFF_INSERT, Diff, diff_match_patch } from 'diff-match-pat
   templateUrl: './text-diff.component.html',
   styleUrls: ['./text-diff.component.css']
 })
-
-
 export class TextDiffComponent implements OnInit, OnChanges {
 
   /**
@@ -47,8 +45,8 @@ export class TextDiffComponent implements OnInit, OnChanges {
   ngOnChanges(changes?: SimpleChanges): void {
     let diffs = diff(this.left, this.right);
     let lines = diffToLines(diffs);
-    this.blocks = linesToBlocks(lines, this.blockSize);
-    this.blocks = collapseBlocks(this.blocks, this.context);
+    let rawBlocks = linesToBlocks(lines, this.blockSize);
+    this.blocks = collapseBlocks(rawBlocks, this.context);
   }
 
   expand(block: Block) {
@@ -58,25 +56,11 @@ export class TextDiffComponent implements OnInit, OnChanges {
   }
 }
 
+// line-by-line or side-by-side diff display
 export type Display = 'unified' | 'split';
 
-/**
- * Added, removed, unchanged
- */
+// Defines the diff type for a single chunk of text. These values are also used as css class names
 type DiffType = 'added' | 'removed' | 'unchanged';
-
-// A group of line diffs with the same nature (either all multi-chunk, or all 1 chunk of the same type)
-interface Block {
-  lines: Line[];
-  collapsed: boolean;
-}
-
-// A single line of content, consisting of one or more chunks
-interface Line {
-  leftLineNumber: number | null;
-  rightLineNumber: number | null;
-  chunks: Chunk[];
-}
 
 // A single chunk of content, either added, removed or unchanged
 interface Chunk {
@@ -84,6 +68,25 @@ interface Chunk {
   content: string;
 }
 
+// Defines the diff type for a single line of text (that can contain multiple chunks).
+// 'changed' indictes that the line contains chunks with distinct diff types
+type LineType = DiffType | 'changed';
+
+// A single line of content, consisting of one or more chunks
+interface Line {
+  leftLineNumber: number | null;
+  rightLineNumber: number | null;
+  type: LineType;
+  chunks: Chunk[];
+}
+
+// A group of line diffs with the same LineType
+interface Block {
+  lines: Line[];
+  collapsed: boolean;
+}
+
+// Diffs two strings
 function diff(left: string, right: string) {
   let dmp = new diff_match_patch();
   let diffs = dmp.diff_main(left, right);
@@ -91,6 +94,7 @@ function diff(left: string, right: string) {
   return diffs;
 }
 
+// Splits a list of diffs onto lines
 function diffToLines(diffs: Diff[]): Line[] {
   let lines: Line[] = [];
   let lln = 1;
@@ -116,21 +120,23 @@ function diffToLines(diffs: Diff[]): Line[] {
       }
     }
 
-    if (content.length > 0) {
-      let chunk = { type: dt, content: content };
+    if (line === null) {
+      // start a new line
+      line = {
+        leftLineNumber: lln,
+        rightLineNumber: rln,
+        type: dt,
+        chunks: [],
+      };
+      lines.push(line);
+    }
 
-      if (line === null) {
-        // start a new line
-        line = {
-          leftLineNumber: lln,
-          rightLineNumber: rln,
-          chunks: [chunk],
-        };
-        lines.push(line);
-      }
-      else {
-        line.chunks.push(chunk);
-      }
+    if (line.chunks.length === 0 || content.length > 0) {
+      line.chunks.push({ type: dt, content: content });
+    }
+
+    if (content.length > 0 && line.type !== dt) {
+      line.type = 'changed';
     }
 
     if (nli != -1) {
@@ -143,6 +149,7 @@ function diffToLines(diffs: Diff[]): Line[] {
   return lines;
 }
 
+// Converts from the diff type flag used in dff-match-patch to the one used here
 function mapDiffType(dmpt: number): DiffType {
   switch (dmpt) {
     case DIFF_DELETE:
@@ -165,15 +172,15 @@ function linesToBlocks(lines: Line[], blockSize: number): Block[] {
       blocks.push(block);
     }
     else {
-      if (block.lines[0].chunks.length > 1
-        && line.chunks.length > 1
+      if (block.lines[0].type === 'changed'
+        && line.type === 'changed'
         && (blockSize <= 0 || block.lines.length < blockSize)) {
         // match! both lines are changes and our blocksize hasn't been reached yet
         block.lines.push(line);
       }
       else if (block.lines[0].chunks.length === 1
         && line.chunks.length === 1
-        && block.lines[0].chunks[0].type === line.chunks[0].type) {
+        && block.lines[0].type === line.type) {
         // match! both lines are atomic and of the same type
         block.lines.push(line);
       }
@@ -196,9 +203,7 @@ function collapseBlocks(raw: Block[], context: number): Block[] {
     // if we're configured to collapse, and the block is:
     // * comprised of atomic lines
     // * that are unchanged
-    if (context >= 0
-      && block.lines[0].chunks.length === 1
-      && block.lines[0].chunks[0].type === 'unchanged'
+    if (context >= 0 && block.lines[0].type === 'unchanged'
     ) {
       if (context === 0) {
         // no context, so no need to split, just collapse it

@@ -36,13 +36,13 @@ added`,
     }))
       .withContext("display 'unified' (default value)")
       .toEqual([
-        ['1', '1', ' ', 'unchanged  '],
-        ['2', ' ', '-', 'removed    '],
-        ['3', '2', ' ', 'unchanged  '],
-        ['4', ' ', '-', 'changed foo'],
-        [' ', '3', '+', 'changed bar'],
-        ['5', '4', ' ', 'unchanged  '],
-        [' ', '5', '+', 'added      '],
+        ['1', '1', ' ', 'unchanged    '],
+        ['2', ' ', '-', '{removed}    '],
+        ['3', '2', ' ', 'unchanged    '],
+        ['4', ' ', '-', 'changed {foo}'],
+        [' ', '3', '+', 'changed [bar]'],
+        ['5', '4', ' ', 'unchanged    '],
+        [' ', '5', '+', '[added]      '],
       ]);
   });
 
@@ -62,12 +62,12 @@ added`,
     }))
       .withContext("display 'split'")
       .toEqual([
-        ['1', ' ', 'unchanged  ', '1', ' ', 'unchanged  '],
-        ['2', '-', 'removed    ', ' ', ' ', '           '],
-        ['3', ' ', 'unchanged  ', '2', ' ', 'unchanged  '],
-        ['4', '-', 'changed foo', '3', '+', 'changed bar'],
-        ['5', ' ', 'unchanged  ', '4', ' ', 'unchanged  '],
-        [' ', ' ', '           ', '5', '+', 'added      '],
+        ['1', ' ', 'unchanged    ', '1', ' ', 'unchanged    '],
+        ['2', '-', '{removed}    ', ' ', ' ', '             '],
+        ['3', ' ', 'unchanged    ', '2', ' ', 'unchanged    '],
+        ['4', '-', 'changed {foo}', '3', '+', 'changed [bar]'],
+        ['5', ' ', 'unchanged    ', '4', ' ', 'unchanged    '],
+        [' ', ' ', '             ', '5', '+', '[added]      '],
       ]);
   });
 
@@ -84,12 +84,12 @@ unchanged`,
     }))
       .withContext("blocksize 0 (default value)")
       .toEqual([
-        ['1', '1', ' ', 'unchanged  '],
-        ['2', ' ', '-', 'changed foo'],
-        ['3', ' ', '-', 'changed foo'],
-        [' ', '2', '+', 'changed bar'],
-        [' ', '3', '+', 'changed bar'],
-        ['4', '4', ' ', 'unchanged  '],
+        ['1', '1', ' ', 'unchanged    '],
+        ['2', ' ', '-', 'changed {foo}'],
+        ['3', ' ', '-', 'changed {foo}'],
+        [' ', '2', '+', 'changed [bar]'],
+        [' ', '3', '+', 'changed [bar]'],
+        ['4', '4', ' ', 'unchanged    '],
       ]);
   });
 
@@ -107,12 +107,28 @@ unchanged`,
     }))
       .withContext("blocksize 1")
       .toEqual([
-        ['1', '1', ' ', 'unchanged  '],
-        ['2', ' ', '-', 'changed foo'],
-        [' ', '2', '+', 'changed bar'],
-        ['3', ' ', '-', 'changed foo'],
-        [' ', '3', '+', 'changed bar'],
-        ['4', '4', ' ', 'unchanged  '],
+        ['1', '1', ' ', 'unchanged    '],
+        ['2', ' ', '-', 'changed {foo}'],
+        [' ', '2', '+', 'changed [bar]'],
+        ['3', ' ', '-', 'changed {foo}'],
+        [' ', '3', '+', 'changed [bar]'],
+        ['4', '4', ' ', 'unchanged    '],
+      ]);
+  });
+
+  it('should preserve empty lines', () => {
+    expect(test(component, fixture, {
+      left: "start\n\n\n\n\nend",
+      right: "start\n\n\n\n\nend",
+    }))
+      .withContext("empty lines")
+      .toEqual([
+        ['1', '1', '', 'start'],
+        ['2', '2', '', '     '],
+        ['3', '3', '', '     '],
+        ['4', '4', '', '     '],
+        ['5', '5', '', '     '],
+        ['6', '6', '', 'end  '],
       ]);
   });
 
@@ -131,19 +147,19 @@ unchanged`,
     }))
       .withContext("collapsed unchanged blocks")
       .toEqual([
-        ['1                ', '1 ', ' ', 'head unchanged'],
-        ['              3 unchanged lines               '],
-        ['5                ', '5 ', ' ', 'head unchanged'],
-        ['6                ', '  ', '-', 'changed foo   '],
-        ['                 ', '6 ', '+', 'changed bar   '],
-        ['7                ', '7 ', ' ', 'mid unchanged '],
-        ['              3 unchanged lines               '],
-        ['11               ', '11', ' ', 'mid unchanged '],
-        ['12               ', '  ', '-', 'changed foo   '],
-        ['                 ', '12', '+', 'changed bar   '],
-        ['13               ', '13', ' ', 'tail unchanged'],
-        ['              3 unchanged lines               '],
-        ['17               ', '17', ' ', 'tail unchanged'],
+        ['1 ', '1 ', ' ', 'head unchanged'],
+        ['       3 unchanged lines       '],
+        ['5 ', '5 ', ' ', 'head unchanged'],
+        ['6 ', '  ', '-', 'changed {foo} '],
+        ['  ', '6 ', '+', 'changed [bar] '],
+        ['7 ', '7 ', ' ', 'mid unchanged '],
+        ['       3 unchanged lines       '],
+        ['11', '11', ' ', 'mid unchanged '],
+        ['12', '  ', '-', 'changed {foo} '],
+        ['  ', '12', '+', 'changed [bar] '],
+        ['13', '13', ' ', 'tail unchanged'],
+        ['       3 unchanged lines       '],
+        ['17', '17', ' ', 'tail unchanged'],
       ]);
 
     fixture.nativeElement.querySelectorAll(".collapsed")[1].click();
@@ -151,21 +167,21 @@ unchanged`,
     expect(dumpTable(fixture.nativeElement.querySelector("table")))
       .withContext("expanded the middle block")
       .toEqual([
-        ['1                ', '1 ', ' ', 'head unchanged'],
-        ['              3 unchanged lines               '],
-        ['5                ', '5 ', ' ', 'head unchanged'],
-        ['6                ', '  ', '-', 'changed foo   '],
-        ['                 ', '6 ', '+', 'changed bar   '],
-        ['7                ', '7 ', ' ', 'mid unchanged '],
-        ['8                ', '8 ', ' ', 'mid unchanged '],
-        ['9                ', '9 ', ' ', 'mid unchanged '],
-        ['10               ', '10', ' ', 'mid unchanged '],
-        ['11               ', '11', ' ', 'mid unchanged '],
-        ['12               ', '  ', '-', 'changed foo   '],
-        ['                 ', '12', '+', 'changed bar   '],
-        ['13               ', '13', ' ', 'tail unchanged'],
-        ['              3 unchanged lines               '],
-        ['17               ', '17', ' ', 'tail unchanged'],
+        ['1 ', '1 ', ' ', 'head unchanged'],
+        ['       3 unchanged lines       '],
+        ['5 ', '5 ', ' ', 'head unchanged'],
+        ['6 ', '  ', '-', 'changed {foo} '],
+        ['  ', '6 ', '+', 'changed [bar] '],
+        ['7 ', '7 ', ' ', 'mid unchanged '],
+        ['8 ', '8 ', ' ', 'mid unchanged '],
+        ['9 ', '9 ', ' ', 'mid unchanged '],
+        ['10', '10', ' ', 'mid unchanged '],
+        ['11', '11', ' ', 'mid unchanged '],
+        ['12', '  ', '-', 'changed {foo} '],
+        ['  ', '12', '+', 'changed [bar] '],
+        ['13', '13', ' ', 'tail unchanged'],
+        ['       3 unchanged lines       '],
+        ['17', '17', ' ', 'tail unchanged'],
       ]);
   });
 
@@ -185,17 +201,17 @@ unchanged`,
     }))
       .withContext("collapsed unchanged blocks")
       .toEqual([
-        ['1                ', ' ', 'head unchanged', '1 ', ' ', 'head unchanged'],
-        ['                          3 unchanged lines                          '],
-        ['5                ', ' ', 'head unchanged', '5 ', ' ', 'head unchanged'],
-        ['6                ', '-', 'changed foo   ', '6 ', '+', 'changed bar   '],
-        ['7                ', ' ', 'mid unchanged ', '7 ', ' ', 'mid unchanged '],
-        ['                          3 unchanged lines                          '],
-        ['11               ', ' ', 'mid unchanged ', '11', ' ', 'mid unchanged '],
-        ['12               ', '-', 'changed foo   ', '12', '+', 'changed bar   '],
-        ['13               ', ' ', 'tail unchanged', '13', ' ', 'tail unchanged'],
-        ['                          3 unchanged lines                          '],
-        ['17               ', ' ', 'tail unchanged', '17', ' ', 'tail unchanged'],
+        ['1 ', ' ', 'head unchanged', '1 ', ' ', 'head unchanged'],
+        ['                  3 unchanged lines                   '],
+        ['5 ', ' ', 'head unchanged', '5 ', ' ', 'head unchanged'],
+        ['6 ', '-', 'changed {foo} ', '6 ', '+', 'changed [bar] '],
+        ['7 ', ' ', 'mid unchanged ', '7 ', ' ', 'mid unchanged '],
+        ['                  3 unchanged lines                   '],
+        ['11', ' ', 'mid unchanged ', '11', ' ', 'mid unchanged '],
+        ['12', '-', 'changed {foo} ', '12', '+', 'changed [bar] '],
+        ['13', ' ', 'tail unchanged', '13', ' ', 'tail unchanged'],
+        ['                  3 unchanged lines                   '],
+        ['17', ' ', 'tail unchanged', '17', ' ', 'tail unchanged'],
       ]);
 
     fixture.nativeElement.querySelectorAll(".collapsed")[1].click();
@@ -203,19 +219,19 @@ unchanged`,
     expect(dumpTable(fixture.nativeElement.querySelector("table")))
       .withContext("expanded the middle block")
       .toEqual([
-        ['1                ', ' ', 'head unchanged', '1 ', ' ', 'head unchanged'],
-        ['                          3 unchanged lines                          '],
-        ['5                ', ' ', 'head unchanged', '5 ', ' ', 'head unchanged'],
-        ['6                ', '-', 'changed foo   ', '6 ', '+', 'changed bar   '],
-        ['7                ', ' ', 'mid unchanged ', '7 ', ' ', 'mid unchanged '],
-        ['8                ', ' ', 'mid unchanged ', '8 ', ' ', 'mid unchanged '],
-        ['9                ', ' ', 'mid unchanged ', '9 ', ' ', 'mid unchanged '],
-        ['10               ', ' ', 'mid unchanged ', '10', ' ', 'mid unchanged '],
-        ['11               ', ' ', 'mid unchanged ', '11', ' ', 'mid unchanged '],
-        ['12               ', '-', 'changed foo   ', '12', '+', 'changed bar   '],
-        ['13               ', ' ', 'tail unchanged', '13', ' ', 'tail unchanged'],
-        ['                          3 unchanged lines                          '],
-        ['17               ', ' ', 'tail unchanged', '17', ' ', 'tail unchanged'],
+        ['1 ', ' ', 'head unchanged', '1 ', ' ', 'head unchanged'],
+        ['                  3 unchanged lines                   '],
+        ['5 ', ' ', 'head unchanged', '5 ', ' ', 'head unchanged'],
+        ['6 ', '-', 'changed {foo} ', '6 ', '+', 'changed [bar] '],
+        ['7 ', ' ', 'mid unchanged ', '7 ', ' ', 'mid unchanged '],
+        ['8 ', ' ', 'mid unchanged ', '8 ', ' ', 'mid unchanged '],
+        ['9 ', ' ', 'mid unchanged ', '9 ', ' ', 'mid unchanged '],
+        ['10', ' ', 'mid unchanged ', '10', ' ', 'mid unchanged '],
+        ['11', ' ', 'mid unchanged ', '11', ' ', 'mid unchanged '],
+        ['12', '-', 'changed {foo} ', '12', '+', 'changed [bar] '],
+        ['13', ' ', 'tail unchanged', '13', ' ', 'tail unchanged'],
+        ['                  3 unchanged lines                   '],
+        ['17', ' ', 'tail unchanged', '17', ' ', 'tail unchanged'],
       ]);
   });
 
@@ -281,7 +297,30 @@ function dumpTable(table: HTMLElement): string[][] {
   // extract
   table.querySelectorAll("tr").forEach(row => {
     let rowData: string[] = [];
-    row.querySelectorAll("td").forEach(cell => rowData.push(cell.textContent?.trim() || ''));
+    row.querySelectorAll("td").forEach(cell => {
+      let content = '';
+      cell.querySelectorAll("span").forEach(span => {
+        let isAdd = span.classList.contains("added");
+        let isRem = span.classList.contains("removed");
+        if (isAdd) {
+          content += "[";
+        }
+        if (isRem) {
+          content += "{";
+        }
+        content += span.textContent;
+        if (isAdd) {
+          content += "]";
+        }
+        if (isRem) {
+          content += "}";
+        }
+      });
+      if (content.length === 0) {
+        content = cell.textContent?.trim() || '';
+      }
+      rowData.push(content);
+    });
     rows.push(rowData);
   });
 
@@ -294,8 +333,9 @@ function dumpTable(table: HTMLElement): string[][] {
     let widths: number[] = new Array<number>(columns);
     widths.fill(0);
 
-    rows.forEach(row => row
-      .forEach((cell, index) => widths[index] = Math.max(widths[index], cell.length)));
+    rows.filter(row => row.length > 1)
+      .forEach(row => row
+        .forEach((cell, index) => widths[index] = Math.max(widths[index], cell.length)));
     let totalWidth = widths.reduce((p, c) => p + c) + 4 * (widths.length - 1);
 
     rows.forEach(row => {

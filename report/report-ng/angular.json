@@ -100,7 +100,8 @@
             ],
             "scripts": [
               "projects/report/src/app/test-data.js",
-            ]
+            ],
+            "codeCoverage": true
           }
         }
       }
