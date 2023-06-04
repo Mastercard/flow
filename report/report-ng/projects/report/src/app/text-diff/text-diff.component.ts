@@ -17,12 +17,12 @@ export class TextDiffComponent implements OnInit, OnChanges {
    */
   @Input() right: string = "";
   /**
-   * Controls diff display
+   * Controls display type - line-by-line or side-by-side
    */
   @Input() display: Display = "unified";
   /**
-   * Controls the grouping of diff lines. Set 0 or less for
-   * blocks of unlimited size
+   * Controls the grouping of diff lines in line-by-line display mode.
+   * Set 0 or less for blocks of unlimited size
    */
   @Input() blockSize: number = 0;
   /**
@@ -45,7 +45,9 @@ export class TextDiffComponent implements OnInit, OnChanges {
   ngOnChanges(changes?: SimpleChanges): void {
     let diffs = diff(this.left, this.right);
     let lines = diffToLines(diffs);
+    // TODO: don't bother recomputing lines if it's just the blocksize that has changed
     let rawBlocks = linesToBlocks(lines, this.blockSize);
+    // TODO: don't bother recomputing blocks if it's just the context that has changed
     this.blocks = collapseBlocks(rawBlocks, this.context);
   }
 
@@ -76,7 +78,7 @@ type LineType = DiffType | 'changed';
 interface Line {
   leftLineNumber: number | null;
   rightLineNumber: number | null;
-  type: LineType;
+  type: LineType; // this is aguably redundant, but it makes the template much more succinct
   chunks: Chunk[];
 }
 
@@ -185,7 +187,7 @@ function linesToBlocks(lines: Line[], blockSize: number): Block[] {
         block.lines.push(line);
       }
       else {
-        // line types are different, start a new block
+        // line types are different (or blockSize has been reached), start a new block
         block = { lines: [line], collapsed: false };
         blocks.push(block);
       }

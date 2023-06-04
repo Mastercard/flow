@@ -132,6 +132,25 @@ unchanged`,
       ]);
   });
 
+  it('should diff empty lines', () => {
+    expect(test(component, fixture, {
+      left: "start\n\n\n\nmid\n\n\nend",
+      right: "start\n\n\nmid\n\n\n\nend",
+    }))
+      .withContext("empty lines")
+      .toEqual([
+        ['1', '1', ' ', 'start'],
+        ['2', '2', ' ', '     '],
+        ['3', '3', ' ', '     '],
+        ['4', ' ', '-', '{}   '],
+        ['5', '4', ' ', 'mid  '],
+        ['6', '5', ' ', '     '],
+        ['7', '6', ' ', '     '],
+        [' ', '7', '+', '[]   '],
+        ['8', '8', ' ', 'end  '],
+      ]);
+  });
+
   it('should display unified collapsed unchanged blocks', () => {
     let left = "head unchanged\n".repeat(5)
       + "changed foo\n"
