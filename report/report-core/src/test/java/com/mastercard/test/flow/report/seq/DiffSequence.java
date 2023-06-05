@@ -382,7 +382,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 		trace( "hasDiff", (Object[]) expected );
 
 		// format the line indices so our ascii art comes out nicely
-		String raw = driver.findElement( By.tagName( "td-ngx-text-diff" ) )
+		String raw = driver.findElement( By.tagName( "app-text-diff" ) )
 				.getText();
 		int liw = Stream.of( raw.split( "\n" ) )
 				.map( DIFF_LINE::matcher )
