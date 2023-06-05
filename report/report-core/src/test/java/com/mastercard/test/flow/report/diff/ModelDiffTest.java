@@ -219,20 +219,20 @@ class ModelDiffTest {
 
 		dseq.change( "updated c d e" )
 				.hasDiff(
-						" 1  1 Identity:",
-						" 2  2   updated",
-						" 3  3   c",
+						" 1  1   Identity:",
+						" 2  2     updated",
+						" 3  3     c",
 						"5 unchanged lines",
-						" 9  9   {}",
-						"10 10 Interactions:",
-						"11 11   ┌REQUEST AVA => BEN []",
+						" 9  9     {}",
+						"10 10   Interactions:",
+						"11 11     ┌REQUEST AVA => BEN []",
 						"12  -   │Hi Ben!",
 						"12  +   │Hiii Beeen!",
-						"13 13   └",
-						"14 14   ┌RESPONSE AVA <= BEN []",
+						"13 13     └",
+						"14 14     ┌RESPONSE AVA <= BEN []",
 						"15  -   │Hello Ava!",
 						"15  +   │Heeellooo Avaaa!",
-						"16 16   └" );
+						"16 16     └" );
 
 		dseq.hasUrlArgs(
 				"ff=C38030BF0DCCF31DB770B2EAFA779DFC",
@@ -249,20 +249,20 @@ class ModelDiffTest {
 				"tf=C38030BF0DCCF31DB770B2EAFA779DFC",
 				"to=http%253A%252F%252Flocalhost%253A" + to.port() + "%252Fto%252F" )
 				.hasDiff(
-						" 1  1 Identity:",
-						" 2  2   updated",
-						" 3  3   c",
+						" 1  1   Identity:",
+						" 2  2     updated",
+						" 3  3     c",
 						"5 unchanged lines",
-						" 9  9   {}",
-						"10 10 Interactions:",
-						"11 11   ┌REQUEST AVA => BEN []",
+						" 9  9     {}",
+						"10 10   Interactions:",
+						"11 11     ┌REQUEST AVA => BEN []",
 						"12  -   │Hi Ben!",
 						"12  +   │Hiii Beeen!",
-						"13 13   └",
-						"14 14   ┌RESPONSE AVA <= BEN []",
+						"13 13     └",
+						"14 14     ┌RESPONSE AVA <= BEN []",
 						"15  -   │Hello Ava!",
 						"15  +   │Heeellooo Avaaa!",
-						"16 16   └" );
+						"16 16     └" );
 	}
 
 	/**
@@ -333,7 +333,7 @@ class ModelDiffTest {
 						"removed ↦ added a b c d e f" )
 				.change( "removed ↦ added a b c d e f" )
 				.hasDiff(
-						" 1  1 Identity:",
+						" 1  1   Identity:",
 						" 2  -   removed",
 						" 3  -   a",
 						" 4  -   b",
@@ -342,13 +342,13 @@ class ModelDiffTest {
 						" 3  +   d",
 						" 4  +   e",
 						" 5  +   f",
-						" 6  6 Motivation:",
-						" 7  7   ",
-						" 8  8 Context:",
+						" 6  6   Motivation:",
+						" 7  7     ",
+						" 8  8   Context:",
 						"5 unchanged lines",
-						"14 14   ┌RESPONSE AVA <= BEN []",
-						"15 15   │Hello Ava!",
-						"16 16   └" );
+						"14 14     ┌RESPONSE AVA <= BEN []",
+						"15 15     │Hello Ava!",
+						"16 16     └" );
 
 	}
 
