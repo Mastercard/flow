@@ -14,7 +14,6 @@ import { DiffDisplay } from '../text-diff/text-diff.component';
   selector: 'app-change-view',
   templateUrl: './change-view.component.html',
   styleUrls: ['./change-view.component.css'],
-  encapsulation: ViewEncapsulation.None
 })
 export class ChangeViewComponent implements OnInit {
 

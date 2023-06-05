@@ -10,7 +10,6 @@ import { DiffDisplay } from '../text-diff/text-diff.component';
   selector: 'app-transmission',
   templateUrl: './transmission.component.html',
   styleUrls: ['./transmission.component.css'],
-  encapsulation: ViewEncapsulation.None
 })
 export class TransmissionComponent implements OnInit, OnChanges {
   action?: Action;
