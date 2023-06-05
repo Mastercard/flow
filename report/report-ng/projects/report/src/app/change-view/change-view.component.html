@@ -35,10 +35,10 @@
         <div class="drawer">
             <div>
                 <mat-button-toggle-group id="diff_type" name="diff_options" [(ngModel)]="diffFormat">
-                    <mat-button-toggle value="SideBySide" matTooltip="Side-by-side comparison">
+                    <mat-button-toggle value="split" matTooltip="Side-by-side comparison">
                         <mat-icon>vertical_split</mat-icon>
                     </mat-button-toggle>
-                    <mat-button-toggle value="LineByLine" matTooltip="Line-by-line comparison">
+                    <mat-button-toggle value="unified" matTooltip="Line-by-line comparison">
                         <mat-icon>horizontal_split</mat-icon>
                     </mat-button-toggle>
                 </mat-button-toggle-group>
@@ -60,9 +60,8 @@
         </div>
     </mat-drawer>
     <mat-drawer-content>
-        <td-ngx-text-diff *ngIf="hasDiffData()" [left]="diffLeft" [right]="diffRight" [diffContent]="diffObservable$"
-            [showToolbar]=false [format]="diffFormat">
-        </td-ngx-text-diff>
+        <app-text-diff *ngIf="hasDiffData()" [left]="diffLeft" [right]="diffRight" [display]="diffFormat">
+        </app-text-diff>
     </mat-drawer-content>
 </mat-drawer-container>
 <div id="bottom_nav">

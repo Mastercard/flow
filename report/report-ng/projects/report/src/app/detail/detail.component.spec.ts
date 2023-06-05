@@ -10,8 +10,8 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { DiffTableFormat } from 'ngx-text-diff/lib/ngx-text-diff.model';
 import { SequenceData } from '../flow-sequence/flow-sequence.component';
+import { DiffDisplay } from '../text-diff/text-diff.component';
 
 describe('DetailComponent', () => {
   let component: DetailComponent;
@@ -89,7 +89,7 @@ class StubTransmission {
   @Input() options: Options = new Options();
   @Input() display: Display = Display.Actual;
   @Input() diffType: DiffType = DiffType.Asserted;
-  @Input() diffFormat: DiffTableFormat = 'LineByLine';
+  @Input() diffFormat: DiffDisplay = 'unified';
 }
 
 @Component({

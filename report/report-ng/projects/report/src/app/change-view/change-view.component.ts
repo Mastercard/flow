@@ -3,12 +3,11 @@ import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { MatSelectionListChange } from '@angular/material/list';
 import { ActivatedRoute } from '@angular/router';
-import { DiffContent, DiffTableFormat } from 'ngx-text-diff/lib/ngx-text-diff.model';
-import { Observable, Subject } from 'rxjs';
 import { DiffPair, FlowDiffService } from '../flow-diff.service';
 import { FlowFilterService } from '../flow-filter.service';
 import { ModelDiffDataService } from '../model-diff-data.service';
 import { ListPair } from '../pair-select-item/pair-select-item.component';
+import { DiffDisplay } from '../text-diff/text-diff.component';
 
 
 @Component({
@@ -22,7 +21,7 @@ export class ChangeViewComponent implements OnInit {
   treeOpen: boolean = true;
 
   contextLines: number = 1;
-  diffFormat: DiffTableFormat = 'LineByLine';
+  diffFormat: DiffDisplay = 'unified';
 
   selected: ListPair | null = null;
   private selectionListeners: (() => void)[] = [];
@@ -32,8 +31,6 @@ export class ChangeViewComponent implements OnInit {
 
   diffLeft: string = "";
   diffRight: string = "";
-  diffObservable: Subject<DiffContent> = new Subject<DiffContent>();
-  diffObservable$: Observable<DiffContent> = this.diffObservable.asObservable();
 
   constructor(
     private fds: FlowDiffService,
@@ -133,12 +130,6 @@ export class ChangeViewComponent implements OnInit {
     if (this.selected != null && this.selected.pair.right != null) {
       this.diffRight = this.selected.pair.right.flat;
     }
-
-    const diff: DiffContent = {
-      leftContent: this.diffLeft,
-      rightContent: this.diffRight,
-    }
-    this.diffObservable.next(diff);
   }
 
   hasDiffData(): boolean {

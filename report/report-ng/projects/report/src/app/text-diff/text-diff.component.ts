@@ -1,4 +1,5 @@
 import { Component, Input, OnChanges, OnInit, SimpleChanges, ChangeDetectorRef } from '@angular/core';
+import { DIFF_EQUAL } from 'diff-match-patch';
 import { DIFF_DELETE, DIFF_INSERT, Diff, diff_match_patch } from 'diff-match-patch';
 
 @Component({
@@ -19,7 +20,7 @@ export class TextDiffComponent implements OnInit, OnChanges {
   /**
    * Controls display type - line-by-line or side-by-side
    */
-  @Input() display: Display = "unified";
+  @Input() display: DiffDisplay = "unified";
   /**
    * Controls the grouping of diff lines in line-by-line display mode.
    * Set 0 or less for blocks of unlimited size
@@ -59,7 +60,7 @@ export class TextDiffComponent implements OnInit, OnChanges {
 }
 
 // line-by-line or side-by-side diff display
-export type Display = 'unified' | 'split';
+export type DiffDisplay = 'unified' | 'split';
 
 // Defines the diff type for a single chunk of text. These values are also used as css class names
 type DiffType = 'added' | 'removed' | 'unchanged';
@@ -76,8 +77,8 @@ type LineType = DiffType | 'changed';
 
 // A single line of content, consisting of one or more chunks
 interface Line {
-  leftLineNumber: number | null;
-  rightLineNumber: number | null;
+  leftLineNumber: number;
+  rightLineNumber: number;
   type: LineType; // this is aguably redundant, but it makes the template much more succinct
   chunks: Chunk[];
 }
@@ -88,11 +89,54 @@ interface Block {
   collapsed: boolean;
 }
 
-// Diffs two strings
+// compares two strings
 function diff(left: string, right: string) {
+  let diffs: Diff[] = [];
+  let lineDiffs: Diff[] = diffRough(left, right);
+
+  while (lineDiffs.length > 0) {
+    let lineDiff = lineDiffs.shift()!;
+
+    if (lineDiff[0] === DIFF_DELETE
+      && lineDiffs.length > 0
+      && lineDiffs[0][0] === DIFF_INSERT
+      && lineDiff[1].includes("\n") == lineDiffs[0][1].includes("\n")
+    ) {
+      // we've got a deletion followed by an addition, and they've got
+      // matching single/multiline status
+      // let's diff deeper into those
+      let next = lineDiffs.shift()!;
+      diffFine(lineDiff[1], next[1])
+        .forEach(d => diffs.push(d));
+    }
+    // It looks like dif-match-patch will always present changes in 
+    // DELETE,INSERT order, so we don't have to handle inverse case
+    else {
+      // it's an unchanged line, or an add/delete without a counterpart
+      diffs.push(lineDiff);
+    }
+  }
+  // console.log("diffs", Object.assign({}, diffs));
+  return diffs;
+}
+
+// First-stage diff: find changed lines
+function diffRough(left: string, right: string) {
+  let dmp = new diff_match_patch();
+  let a = dmp.diff_linesToChars_(left, right);
+  let lineLeft = a.chars1;
+  let lineRight = a.chars2;
+  let diffs = dmp.diff_main(lineLeft, lineRight, false);
+  dmp.diff_charsToLines_(diffs, a.lineArray);
+  // console.log("diffRough", Object.assign({}, diffs));
+  return diffs;
+}
+
+// Second-stage diff: find changed chunks in lines
+function diffFine(left: string, right: string) {
   let dmp = new diff_match_patch();
   let diffs = dmp.diff_main(left, right);
-  dmp.diff_cleanupSemantic(diffs);
+  // console.log("diffFine", Object.assign({}, diffs));
   return diffs;
 }
 
@@ -141,13 +185,14 @@ function diffToLines(diffs: Diff[]): Line[] {
       line.type = 'changed';
     }
 
-    if (nli != -1) {
+    if (nli !== -1) {
+      if (line.type !== 'added') { lln++; }
+      if (line.type !== 'removed') { rln++; }
       line = null;
-      if (dt === 'added' || dt === 'unchanged') { rln++; }
-      if (dt === 'removed' || dt === 'unchanged') { lln++; }
     }
   }
 
+  // console.log("lines", lines);
   return lines;
 }
 

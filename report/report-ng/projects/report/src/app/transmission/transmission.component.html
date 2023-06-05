@@ -6,9 +6,9 @@
   [human]="action?.transmission?.full?.expect" [base64]="action?.transmission?.full?.expectBytes">
 </app-msg-view>
 <div *ngIf="effectiveDisplay === 'Diff' || effectiveDisplay === 'Basis'">
-  <td-ngx-text-diff *ngIf="hasDiffData(); else no_data_warning" [left]="diffLeft()" [right]="diffRight()"
-    [diffContent]="diffObservable$" [showToolbar]=false [format]="options.diffFormat">
-  </td-ngx-text-diff>
+  <app-text-diff *ngIf="hasDiffData(); else no_data_warning" [left]="diffLeft()" [right]="diffRight()"
+    [display]="options.diffFormat">
+  </app-text-diff>
   <ng-template #no_data_warning>
     <div class="no_data_warning">
       <mat-icon>visibility_off</mat-icon>

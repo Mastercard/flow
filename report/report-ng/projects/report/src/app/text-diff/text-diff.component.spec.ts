@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed, tick } from '@angular/core/testing';
 
-import { Display, TextDiffComponent } from './text-diff.component';
+import { DiffDisplay, TextDiffComponent } from './text-diff.component';
 
 describe('TextDiffComponent', () => {
   let component: TextDiffComponent;
@@ -144,9 +144,9 @@ unchanged`,
         ['3', '3', ' ', '     '],
         ['4', ' ', '-', '{}   '],
         ['5', '4', ' ', 'mid  '],
-        ['6', '5', ' ', '     '],
-        ['7', '6', ' ', '     '],
-        [' ', '7', '+', '[]   '],
+        [' ', '5', '+', '[]   '],
+        ['6', '6', ' ', '     '],
+        ['7', '7', ' ', '     '],
         ['8', '8', ' ', 'end  '],
       ]);
   });
@@ -282,7 +282,81 @@ unchanged`,
         ['5', '5', '', 'unchanged'],
       ]);
   });
+
+  it('should handle a typical json rest response', () => {
+    expect(test(component, fixture, {
+      left: `HTTP/1.1 200 OK
+content-type: application/json
+date: Sun, 06 Jun 2021 19:50:29 GMT
+server: Jetty(9.4.48.v20220622)
+transfer-encoding: chunked
+
+{
+  " " : 1,
+  "!" : 1,
+  "H" : 1,
+  "d" : 1,
+  "e" : 1,
+  "l" : 3,
+  "o" : 2,
+  "r" : 1,
+  "w" : 1
+}`,
+      right: `HTTP/1.1 200 OK
+content-type: application/json
+date: Sun, 06 Jun 2021 19:50:29 GMT
+server: Jetty(9.4.48.v20220622)
+transfer-encoding: chunked
+
+{
+  "e" : 1,
+  "o" : 2
+}`,
+      blockSize: 1
+    }))
+      .withContext("display 'unified' (default value)")
+      .toEqual([
+        ['1 ', '1 ', ' ', 'HTTP/1.1 200 OK                    '],
+        ['2 ', '2 ', ' ', 'content-type: application/json     '],
+        ['3 ', '3 ', ' ', 'date: Sun, 06 Jun 2021 19:50:29 GMT'],
+        ['4 ', '4 ', ' ', 'server: Jetty(9.4.48.v20220622)    '],
+        ['5 ', '5 ', ' ', 'transfer-encoding: chunked         '],
+        ['6 ', '6 ', ' ', '                                   '],
+        ['7 ', '7 ', ' ', '{                                  '],
+        ['8 ', '  ', '-', '{  " " : 1,}                       '],
+        ['9 ', '  ', '-', '{  "!" : 1,}                       '],
+        ['10', '  ', '-', '{  "H" : 1,}                       '],
+        ['11', '  ', '-', '{  "d" : 1,}                       '],
+        ['12', '8 ', ' ', '  "e" : 1,                         '],
+        ['13', '  ', '-', '{  "l" : 3,}                       '],
+        ['14', '  ', '-', '  "o" : 2{,}                       '],
+        ['  ', '9 ', '+', '  "o" : 2                          '],
+        ['15', '  ', '-', '{  "r" : 1,}                       '],
+        ['16', '  ', '-', '{  "w" : 1}                        '],
+        ['17', '10', ' ', '}                                  '],
+      ]);
+  });
+
+  it('should handle a different json', () => {
+    expect(test(component, fixture, {
+      left: `{ }`,
+      right: `{
+  "e" : 1,
+  "o" : 2
+}`,
+      blockSize: 1
+    }))
+      .withContext("display 'unified' (default value)")
+      .toEqual([
+        ['1', ' ', '-', '{{ }}       '],
+        [' ', '1', '+', '[{]         '],
+        [' ', '2', '+', '[  "e" : 1,]'],
+        [' ', '3', '+', '[  "o" : 2] '],
+        [' ', '4', '+', '[}]         '],
+      ]);
+  });
 });
+
 
 function test(
   component: TextDiffComponent,

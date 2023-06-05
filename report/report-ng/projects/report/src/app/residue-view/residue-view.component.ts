@@ -1,7 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { MatSelectionListChange } from '@angular/material/list';
-import { DiffTableFormat } from 'ngx-text-diff/lib/ngx-text-diff.model';
 import { Residue, residueAsserted, residueAssertionPassed } from '../types';
+import { DiffDisplay } from '../text-diff/text-diff.component';
 
 @Component({
   selector: 'app-residue-view',
@@ -10,7 +9,7 @@ import { Residue, residueAsserted, residueAssertionPassed } from '../types';
 })
 export class ResidueViewComponent implements OnInit {
   @Input() residues: Residue[] = [];
-  diffFormat: DiffTableFormat = 'LineByLine';
+  diffFormat: DiffDisplay = 'unified';
 
   constructor() { }
 

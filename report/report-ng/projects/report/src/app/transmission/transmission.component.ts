@@ -1,12 +1,10 @@
 import { Component, OnInit, OnChanges, Input, ViewEncapsulation } from '@angular/core';
-import { DiffContent, DiffTableFormat } from 'ngx-text-diff/lib/ngx-text-diff.model';
-import { Observable, Subject } from 'rxjs';
 import { DiffType, Display, Options } from '../types';
 import { TxSelectionService } from '../tx-selection.service';
-import { Transmission } from '../types';
 import { QueryService } from '../query.service';
 import { BasisFetchService } from '../basis-fetch.service';
 import { Action, empty_action } from '../seq-action/seq-action.component';
+import { DiffDisplay } from '../text-diff/text-diff.component';
 
 @Component({
   selector: 'app-transmission',
@@ -18,20 +16,17 @@ export class TransmissionComponent implements OnInit, OnChanges {
   action?: Action;
   @Input() options: Options = new Options();
 
-  // We don't stictly need these inputs, as we already have the options
+  // We don't strictly need these inputs, as we already have the options
   // input that contains them, but we do need to listen to changes on
   // these values so that ngOnChanges gets called
   @Input() display: Display = Display.Actual;
   @Input() diffType: DiffType = DiffType.Asserted;
-  @Input() diffFormat: DiffTableFormat = 'LineByLine';
+  @Input() diffFormat: DiffDisplay = 'unified';
 
   // If the user want to show actual or diff data but that isn't
   // available, we'll show the expected data with a warning instead
   effectiveDisplay: Display = this.display;
   substitutionWarning: boolean = false;
-
-  diffObservable: Subject<DiffContent> = new Subject<DiffContent>();
-  diffObservable$: Observable<DiffContent> = this.diffObservable.asObservable();
 
   constructor(
     private txSelect: TxSelectionService,
@@ -41,7 +36,6 @@ export class TransmissionComponent implements OnInit, OnChanges {
       this.action = action;
       this.ngOnChanges();
     });
-    basis.onLoad(() => { this.refreshDiff(); });
   }
 
   ngOnInit(): void {
@@ -49,7 +43,6 @@ export class TransmissionComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(): void {
-    this.refreshDiff();
     if (this.display !== Display.Actual) {
       this.query.set("display", this.display.toString());
     }
@@ -62,7 +55,7 @@ export class TransmissionComponent implements OnInit, OnChanges {
     else {
       this.query.delete("diff");
     }
-    if (this.diffFormat !== 'LineByLine') {
+    if (this.diffFormat !== 'unified') {
       this.query.set("dtf", this.diffFormat);
     }
     else {
@@ -80,18 +73,6 @@ export class TransmissionComponent implements OnInit, OnChanges {
       this.effectiveDisplay = Display.Expected;
       this.substitutionWarning = true;
     }
-  }
-
-  /**
-   * The diff component needs a wee kick to recalculate
-   * itself - you can't just use the left and right inputs
-   */
-  refreshDiff(): void {
-    const diff: DiffContent = {
-      leftContent: this.diffLeft(),
-      rightContent: this.diffRight(),
-    }
-    this.diffObservable.next(diff);
   }
 
   diffLeft(): string {

@@ -32,7 +32,6 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { NgxTextDiffModule } from 'ngx-text-diff';
 import { ChangeViewComponent } from './change-view/change-view.component';
 import { FlowFilterComponent } from './flow-filter/flow-filter.component';
 import { FlowNavItemComponent } from './flow-nav-item/flow-nav-item.component';
@@ -127,7 +126,6 @@ const routes: Routes = [
     MatTabsModule,
     MatToolbarModule,
     MatTooltipModule,
-    NgxTextDiffModule,
     ReactiveFormsModule,
     RouterModule.forRoot(routes, { useHash: true }),
   ],
