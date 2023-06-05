@@ -7,11 +7,12 @@ import static java.util.stream.Collectors.toMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
@@ -370,8 +371,6 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 		return this;
 	}
 
-	private static final Pattern DIFF_LINE = Pattern.compile( "^([0-9]+) ([-+0-9]+) (.*)" );
-
 	/**
 	 * Asserts on the displayed diff
 	 *
@@ -381,25 +380,46 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	public DiffSequence hasDiff( String... expected ) {
 		trace( "hasDiff", (Object[]) expected );
 
-		// format the line indices so our ascii art comes out nicely
-		String raw = driver.findElement( By.tagName( "app-text-diff" ) )
-				.getText();
-		int liw = Stream.of( raw.split( "\n" ) )
-				.map( DIFF_LINE::matcher )
-				.filter( Matcher::matches )
-				.flatMap( m -> Stream.of( m.group( 1 ), m.group( 2 ) ) )
-				.mapToInt( String::length )
-				.max()
-				.orElse( 1 );
-		String fmt = "%" + liw + "s %" + liw + "s %s";
+		List<List<String>> tableCells = new ArrayList<>();
+		WebElement diffElement = driver.findElement( By.tagName( "app-text-diff" ) );
+		diffElement.findElements( By.tagName( "tr" ) )
+				.forEach( row -> tableCells.add( row.findElements( By.tagName( "td" ) ).stream()
+						.map( WebElement::getText )
+						.collect( toList() ) ) );
 
-		String formatted = Stream.of( raw.split( "\n" ) )
-				.map( line -> {
-					Matcher m = DIFF_LINE.matcher( line );
-					if( m.matches() ) {
-						return String.format( fmt, m.group( 1 ), m.group( 2 ), m.group( 3 ) );
+		int[] widths = new int[tableCells.stream()
+				.mapToInt( List::size )
+				.max()
+				.orElse( 0 )];
+		Arrays.fill( widths, 1 );
+		tableCells.forEach( row -> {
+			if( row.size() == widths.length ) {
+				for( int i = 0; i < row.size(); i++ ) {
+					widths[i] = Math.max( widths[i], row.get( i ).length() );
+				}
+			}
+		} );
+
+		int totalWidth = IntStream.of( widths ).sum() + widths.length - 1;
+		String fmt = IntStream.of( widths )
+				.limit( widths.length - 1 )
+				.mapToObj( i -> "%" + i + "s" )
+				.collect( joining( " " ) )
+				+ " %-" + widths[widths.length - 1] + "s";
+
+		String formatted = tableCells.stream()
+				.map( row -> {
+					if( row.size() == widths.length ) {
+						return String.format( fmt, row.toArray( new Object[row.size()] ) );
 					}
-					return line;
+					String s = row.stream().collect( joining( " " ) );
+					while( s.length() < totalWidth ) {
+						s = " " + s;
+						if( s.length() < totalWidth ) {
+							s = s + " ";
+						}
+					}
+					return s;
 				} )
 				.collect( joining( "\n" ) );
 
