@@ -26,12 +26,10 @@
 </section>
 <section *ngIf="options.display === 'Diff' || options.display === 'Basis'">
   <mat-button-toggle-group name="diff_options" [vertical]="true" [(ngModel)]="options.diffFormat" ngDefaultControl>
-    <mat-button-toggle id="SideBySide" value="SideBySide" matTooltip="Side-by-side comparison"
-      matTooltipPosition="right">
+    <mat-button-toggle id="split" value="split" matTooltip="Side-by-side comparison" matTooltipPosition="right">
       <mat-icon>vertical_split</mat-icon>
     </mat-button-toggle>
-    <mat-button-toggle id="LineByLine" value="LineByLine" matTooltip="Line-by-line comparison"
-      matTooltipPosition="right">
+    <mat-button-toggle id="unified" value="unified" matTooltip="Line-by-line comparison" matTooltipPosition="right">
       <mat-icon>horizontal_split</mat-icon>
     </mat-button-toggle>
   </mat-button-toggle-group>

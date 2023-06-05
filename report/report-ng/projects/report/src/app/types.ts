@@ -93,14 +93,13 @@ export const empty_index: Index = {
   entries: []
 }
 
-import { FooterRowOutlet } from "@angular/cdk/table";
-import { DiffTableFormat } from "ngx-text-diff/lib/ngx-text-diff.model";
+import { DiffDisplay } from "./text-diff/text-diff.component";
 
 export class Options {
   display: Display = Display.Actual;
   dataDisplay: DataDisplay = DataDisplay.Human;
   diffType: DiffType = DiffType.Asserted;
-  diffFormat: DiffTableFormat = 'LineByLine';
+  diffFormat: DiffDisplay = 'unified';
 }
 
 export enum Display {
@@ -126,9 +125,9 @@ export enum DataDisplay {
   Hex = "Hex"
 }
 
-export function isDiffFormat(data: any): data is DiffTableFormat {
+export function isDiffFormat(data: any): data is DiffDisplay {
   return typeof data === 'string'
-    && (data === 'SideBySide' || data === 'LineByLine');
+    && (data === 'unified' || data === 'split');
 }
 
 /**

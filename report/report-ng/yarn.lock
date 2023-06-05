@@ -3432,7 +3432,7 @@ di@^0.0.1:
   resolved "https://registry.yarnpkg.com/di/-/di-0.0.1.tgz#806649326ceaa7caa3306d75d985ea2748ba913c"
   integrity sha512-uJaamHkagcZtHPqCIHZxnFrXlunQXgBOsZSUOWwFw31QJCAbyTBoHMW75YOTur5ZNx8pIeAKgf6GWIgaqqiLhA==
 
-diff-match-patch@^1.0.4, diff-match-patch@^1.0.5:
+diff-match-patch@^1.0.5:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/diff-match-patch/-/diff-match-patch-1.0.5.tgz#abb584d5f10cd1196dfc55aa03701592ae3f7b37"
   integrity sha512-IayShXAgj/QMXgB0IWmKx+rOPuGMhqm5w6jvFxmVenXKIzRqTAAsbBPT3kWQeGANj3jGgvcvv4yK6SxqYmikgw==
@@ -5231,13 +5231,6 @@ ngx-markdown@^14.0.1:
     mermaid "^9.1.2"
     prismjs "^1.28.0"
     tslib "^2.3.0"
-
-ngx-text-diff@^0.6.0:
-  version "0.6.0"
-  resolved "https://registry.yarnpkg.com/ngx-text-diff/-/ngx-text-diff-0.6.0.tgz#f369966fc7943bc515191acf518ee478e4e000ba"
-  integrity sha512-61njY/kRmbNLJr/a9FxhfouJ8LpUtejEGqcethZemqlE9lWqu0mxIuoqZYFB2gHkMzhvvBqfgWV190uRIxAClA==
-  dependencies:
-    diff-match-patch "^1.0.4"
 
 nice-napi@^1.0.2:
   version "1.0.2"

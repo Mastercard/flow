@@ -50,7 +50,7 @@ export class DetailComponent implements OnInit {
     this.options.display = Display[query.get("display", "Actual") as keyof typeof Display];
     this.options.dataDisplay = DataDisplay[query.get("facet", "Human") as keyof typeof DataDisplay];
     this.options.diffType = DiffType[query.get("diff", "Asserted") as keyof typeof DiffType];
-    const dtf: string = query.get("dtf", "LineByLine");
+    const dtf: string = query.get("dtf", "unified");
     if (isDiffFormat(dtf)) {
       this.options.diffFormat = dtf;
     }

@@ -86,8 +86,6 @@ As noted above, these tests will be skipped if system property `node` is set to 
 
 ## Acknowledgements
 
-Credit for the sequence diagram on the flow detail pages belongs to [geraintluff/sequence-diagram-html](https://github.com/geraintluff/sequence-diagram-html).
-
-The text diff component is sourced from [ABenassi87/ngx-text-diff](https://github.com/ABenassi87/ngx-text-diff).
+Credit for the sequence diagram on the flow detail pages belongs to [geraintluff/sequence-diagram-html](https://github.com/geraintluff/sequence-diagram-html). A pale shadow of that work has been angularised here.
 
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 12.1.2 and has since been upgraded to 14.1.2.

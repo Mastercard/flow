@@ -32,7 +32,6 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { NgxTextDiffModule } from 'ngx-text-diff';
 import { ChangeViewComponent } from './change-view/change-view.component';
 import { FlowFilterComponent } from './flow-filter/flow-filter.component';
 import { FlowNavItemComponent } from './flow-nav-item/flow-nav-item.component';
@@ -58,6 +57,7 @@ import { ResidueViewComponent } from './residue-view/residue-view.component';
 import { MsgSearchInputComponent } from './msg-search-input/msg-search-input.component';
 import { MatRipple, MatRippleModule } from '@angular/material/core';
 import { HighlightedTextComponent } from './highlighted-text/highlighted-text.component';
+import { TextDiffComponent } from './text-diff/text-diff.component';
 
 const routes: Routes = [
   { path: "diff", component: ModelDiffComponent },
@@ -99,6 +99,7 @@ const routes: Routes = [
     ResidueViewComponent,
     MsgSearchInputComponent,
     HighlightedTextComponent,
+    TextDiffComponent,
   ],
   imports: [
     BrowserAnimationsModule,
@@ -125,7 +126,6 @@ const routes: Routes = [
     MatTabsModule,
     MatToolbarModule,
     MatTooltipModule,
-    NgxTextDiffModule,
     ReactiveFormsModule,
     RouterModule.forRoot(routes, { useHash: true }),
   ],

@@ -1,0 +1,61 @@
+.linenumber {
+    user-select: none;
+    font-family: monospace;
+    filter: opacity(60%);
+    border-right:  1px solid gray;
+    text-align: right;
+    padding-right: 0.25em;
+    padding-left: 0.25em;
+}
+
+.difftype {
+    padding-left: 0.25em;
+    white-space: pre;
+}
+
+.removed{
+    background-color: #FF000033;
+    font-family: monospace;
+}
+
+.unchanged {
+    font-family: monospace;
+}
+
+.added{
+    background-color: #00FF0033;
+    font-family: monospace;
+}
+
+.content {
+    white-space: pre;
+    padding-right: 0.25em;
+    padding-left: 0.25em;
+    border-right: 1px solid gray;
+}
+
+.content.unified {
+    width: 99%;
+}
+.content.split {
+    width: 49%;
+}
+
+.collapsed {
+    user-select: none;
+    font-style: italic;
+    filter: opacity(60%);
+    text-align: center;
+    border: 1px dotted gray;
+}
+
+.collapsed:hover{
+    filter: opacity(90%);
+    background-color: #0000FF33;
+    cursor: zoom-in;
+}
+
+table {
+    border-collapse: collapse;
+    border: 1px solid gray;
+}

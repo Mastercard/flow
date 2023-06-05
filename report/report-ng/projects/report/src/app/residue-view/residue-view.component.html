@@ -19,17 +19,17 @@
             <tr *ngIf="residue.full">
                 <th>Full</th>
                 <td>
-                    <td-ngx-text-diff [left]="residue.full.expect||''" [right]="residue.full.actual||''"
-                        [showToolbar]=false [format]="diffFormat">
-                    </td-ngx-text-diff>
+                    <app-text-diff [left]="residue.full.expect||''" [right]="residue.full.actual||''"
+                        [display]="diffFormat">
+                    </app-text-diff>
                 </td>
             </tr>
             <tr *ngIf="residue.masked">
                 <th>Masked</th>
                 <td>
-                    <td-ngx-text-diff [left]="residue.masked.expect||''" [right]="residue.masked.actual||''"
-                        [showToolbar]=false [format]="diffFormat">
-                    </td-ngx-text-diff>
+                    <app-text-diff [left]="residue.masked.expect||''" [right]="residue.masked.actual||''"
+                        [display]="diffFormat">
+                    </app-text-diff>
                 </td>
             </tr>
         </table>

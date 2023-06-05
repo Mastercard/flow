@@ -1,0 +1,97 @@
+<table>
+    <ng-container *ngIf="display === 'unified'">
+        <ng-container *ngFor="let block of blocks">
+            <div *ngIf="block.collapsed; then collapsed else expanded"></div>
+            <ng-template #collapsed>
+                <tr>
+                    <td colspan="4" class="collapsed" (click)="expand(block)">
+                        {{block.lines.length}} unchanged lines
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template #expanded>
+                <ng-container *ngFor="let line of block.lines">
+                    <tr *ngIf="line.type === 'removed' || line.type === 'changed'" class="removed">
+                        <td class="left linenumber">{{line.leftLineNumber}}</td>
+                        <td class="right linenumber"></td>
+                        <td class="difftype">-</td>
+                        <td class="content unified">
+                            <ng-container *ngFor="let chunk of line.chunks">
+                                <span *ngIf="chunk.type === 'removed' || chunk.type === 'unchanged'"
+                                    class="{{chunk.type}}">{{chunk.content}}</span>
+                            </ng-container>
+                        </td>
+                    </tr>
+                </ng-container>
+                <ng-container *ngFor="let line of block.lines">
+                    <tr *ngIf="line.type === 'unchanged'" class="unchanged">
+                        <td class="left linenumber">{{line.leftLineNumber}}</td>
+                        <td class="right linenumber">{{line.rightLineNumber}}</td>
+                        <td class="difftype">&nbsp;</td>
+                        <td class="content unified">
+                            <span class="{{line.chunks[0].type}}">{{line.chunks[0].content}}</span>
+                        </td>
+                    </tr>
+                </ng-container>
+                <ng-container *ngFor="let line of block.lines">
+                    <tr *ngIf="line.type === 'added' || line.type === 'changed'" class="added">
+                        <td class="left linenumber"></td>
+                        <td class="right linenumber">{{line.rightLineNumber}}</td>
+                        <td class="difftype">+</td>
+                        <td class="content unified">
+                            <ng-container *ngFor="let chunk of line.chunks">
+                                <span *ngIf="chunk.type === 'added' || chunk.type === 'unchanged'"
+                                    class="{{chunk.type}}">{{chunk.content}}</span>
+                            </ng-container>
+                        </td>
+                    </tr>
+                </ng-container>
+            </ng-template>
+        </ng-container>
+    </ng-container>
+    <ng-container *ngIf="display === 'split'">
+        <ng-container *ngFor="let block of blocks">
+            <div *ngIf="block.collapsed; then collapsed else expanded"></div>
+            <ng-template #collapsed>
+                <tr>
+                    <td colspan="6" class="collapsed" (click)="expand(block)">
+                        {{block.lines.length}} unchanged lines
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template #expanded>
+                <ng-container *ngFor="let line of block.lines">
+                    <tr>
+                        <td class="left linenumber"
+                            [ngClass]="{'removed' : line.type === 'removed' || line.type === 'changed'}">
+                            {{line.type !== 'added' ? line.leftLineNumber : ''}}
+                        </td>
+                        <td class="difftype"
+                            [ngClass]="{'removed' : line.type === 'removed' || line.type === 'changed'}">
+                            {{line.type === 'removed' || line.type === 'changed' ? '-' : '&nbsp;'}}
+                        </td>
+                        <td class="content split"
+                            [ngClass]="{'removed' : line.type === 'removed' || line.type === 'changed'}">
+                            <ng-container *ngFor="let chunk of line.chunks">
+                                <span *ngIf="chunk.type === 'removed' || chunk.type === 'unchanged'"
+                                    class="{{chunk.type}}">{{chunk.content}}</span>
+                            </ng-container>
+                        </td>
+                        <td class="right linenumber"
+                            [ngClass]="{'added': line.type === 'added' || line.type === 'changed' }">
+                            {{line.type !== 'removed' ? line.rightLineNumber : ''}}</td>
+                        <td class="difftype" [ngClass]="{'added': line.type === 'added' || line.type === 'changed' }">
+                            {{line.type === 'added' || line.type === 'changed' ? '+' : '&nbsp;'}}</td>
+                        <td class="content split"
+                            [ngClass]="{'added': line.type === 'added' || line.type === 'changed' }">
+                            <ng-container *ngFor="let chunk of line.chunks">
+                                <span *ngIf="chunk.type === 'added' || chunk.type === 'unchanged'"
+                                    class="{{chunk.type}}">{{chunk.content}}</span>
+                            </ng-container>
+                        </td>
+                    </tr>
+                </ng-container>
+            </ng-template>
+        </ng-container>
+    </ng-container>
+</table>

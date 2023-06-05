@@ -45,8 +45,8 @@ abstract class AbstractFlowSequenceTest extends AbstractDetailTest {
 		dseq.detail( "display=Diff", "msg=2" )
 				.flow()
 				.hasMessage(
-						"1 1 No, I'm worried about her dairy consumption.",
-						"2 2 I'm cutting you both off" );
+						"1 1   No, I'm worried about her dairy consumption.",
+						"2 2   I'm cutting you both off" );
 	}
 
 	/**
