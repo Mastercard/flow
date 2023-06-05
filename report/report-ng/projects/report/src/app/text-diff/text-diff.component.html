@@ -27,7 +27,7 @@
                     <tr *ngIf="line.type === 'unchanged'" class="unchanged">
                         <td class="left linenumber">{{line.leftLineNumber}}</td>
                         <td class="right linenumber">{{line.rightLineNumber}}</td>
-                        <td class="difftype"> </td>
+                        <td class="difftype">&nbsp;</td>
                         <td class="content unified">
                             <span class="{{line.chunks[0].type}}">{{line.chunks[0].content}}</span>
                         </td>
@@ -68,7 +68,7 @@
                         </td>
                         <td class="difftype"
                             [ngClass]="{'removed' : line.type === 'removed' || line.type === 'changed'}">
-                            {{line.type === 'removed' || line.type === 'changed' ? '-' : ' '}}
+                            {{line.type === 'removed' || line.type === 'changed' ? '-' : '&nbsp;'}}
                         </td>
                         <td class="content split"
                             [ngClass]="{'removed' : line.type === 'removed' || line.type === 'changed'}">
@@ -81,7 +81,7 @@
                             [ngClass]="{'added': line.type === 'added' || line.type === 'changed' }">
                             {{line.type !== 'removed' ? line.rightLineNumber : ''}}</td>
                         <td class="difftype" [ngClass]="{'added': line.type === 'added' || line.type === 'changed' }">
-                            {{line.type === 'added' || line.type === 'changed' ? '+' : ' '}}</td>
+                            {{line.type === 'added' || line.type === 'changed' ? '+' : '&nbsp;'}}</td>
                         <td class="content split"
                             [ngClass]="{'added': line.type === 'added' || line.type === 'changed' }">
                             <ng-container *ngFor="let chunk of line.chunks">
