@@ -34,6 +34,13 @@
     border-right: 1px solid gray;
 }
 
+.content.unified {
+    width: 99%;
+}
+.content.split {
+    width: 49%;
+}
+
 .collapsed {
     user-select: none;
     font-style: italic;
