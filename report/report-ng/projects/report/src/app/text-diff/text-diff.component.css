@@ -10,6 +10,7 @@
 
 .difftype {
     padding-left: 0.25em;
+    white-space: pre;
 }
 
 .removed{
