@@ -32,7 +32,7 @@ Testing framework
 
 This project provides a framework in which the flow of data in a system can be modelled.
 This model can then be used to drive testing, both of the complete system and of subsystems in isolation.
-These tests produce a rich execution report, [for example](https://mastercard.github.io/flow/execution/latest/flow_execution_reports/example/app-itest/target/mctf/latest/index.html).
+These tests produce a rich execution report, [for example](https://mastercard.github.io/flow/execution/latest/example/app-itest/target/mctf/latest/index.html).
 
 [This document describes the motivations for this approach](doc/src/main/markdown/motivation/index.md).
 
