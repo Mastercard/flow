@@ -1,6 +1,7 @@
 import { Component, Input, OnInit, SimpleChanges } from '@angular/core';
 import { FlowFilterService } from '../flow-filter.service';
 import { Entry } from '../types';
+import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
   selector: 'app-tag-summary',
@@ -18,7 +19,11 @@ export class TagSummaryComponent implements OnInit {
   alphaSort: boolean = false;
 
   constructor(
-    private filters: FlowFilterService) {
+    private filters: FlowFilterService,
+    private icons: IconEmbedService,) {
+    icons.register(
+      "check_circle_outline", "help_outline", "error_outline",
+      "new_releases", "sort_by_alpha");
   }
 
   ngOnInit(): void {

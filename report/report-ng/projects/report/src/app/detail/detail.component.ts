@@ -19,6 +19,7 @@ import {
   residueAssertionsPassed,
   residuesAsserted,
 } from '../types';
+import { IconEmbedService } from '../icon-embed.service';
 
 /**
  * The root component of the flow detail view
@@ -45,7 +46,8 @@ export class DetailComponent implements OnInit {
     private txSelect: TxSelectionService,
     private query: QueryService,
     private basisFetch: BasisFetchService,
-    private title: Title) {
+    private title: Title,
+    private icons: IconEmbedService,) {
 
     this.options.display = Display[query.get("display", "Actual") as keyof typeof Display];
     this.options.dataDisplay = DataDisplay[query.get("facet", "Human") as keyof typeof DataDisplay];
@@ -56,6 +58,9 @@ export class DetailComponent implements OnInit {
     }
 
     this.tabIndex = Number.parseInt(query.get("tab", "0"));
+    icons.register(
+      "list", "task_alt", "foundation", "groups",
+      "check_circle_outline", "error_outline");
   }
 
   ngOnInit(): void {

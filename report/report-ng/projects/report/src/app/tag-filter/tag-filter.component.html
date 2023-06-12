@@ -5,7 +5,7 @@
     <mat-chip *ngFor="let filter of filters" [selectable]=false [removable]="true" (removed)="remove(filter)" cdkDrag
       [cdkDragDisabled]="disabled">
       <span class="tag_text">{{filter}}</span>
-      <mat-icon matChipRemove>cancel</mat-icon>
+      <mat-icon matChipRemove svgIcon="cancel"></mat-icon>
     </mat-chip>
     <input #filterInput placeholder="tag" matInput [formControl]="ctrl" [matAutocomplete]="auto"
       [matChipInputFor]="chipList" [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
@@ -18,6 +18,6 @@
   </mat-autocomplete>
   <span class="clear_button" *ngIf="filters.size && !disabled" matSuffix mat-icon-button aria-label="Clear"
     (click)="clear()">
-    <mat-icon>close</mat-icon>
+    <mat-icon svgIcon="close"></mat-icon>
   </span>
 </mat-form-field>

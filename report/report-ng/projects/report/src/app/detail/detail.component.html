@@ -1,16 +1,16 @@
 <mat-nav-list class="list_horizontal">
     <a mat-list-item href="../index.html" id="index_link">
-        <mat-icon class="link_icon">list</mat-icon>
+        <mat-icon class="link_icon" svgIcon="list"></mat-icon>
         Index
     </a>
     <a *ngIf="singleDependency; else multidep" mat-list-item href="{{singleDependency}}.html" id="dependency_link">
-        <mat-icon class="link_icon">task_alt</mat-icon>
+        <mat-icon class="link_icon" svgIcon="task_alt"></mat-icon>
         Dependency
     </a>
     <ng-template #multidep>
         <mat-list-item [disabled]="noDeps" id="dependencies_item" [matMenuTriggerFor]="depMenu">
             <span>
-                <mat-icon class="link_icon">task_alt</mat-icon>
+                <mat-icon class="link_icon" svgIcon="task_alt"></mat-icon>
                 Dependencies
             </span>
             <mat-menu #depMenu="matMenu">
@@ -23,11 +23,11 @@
         </mat-list-item>
     </ng-template>
     <a mat-list-item href="{{flow.basis}}.html" [disabled]="!flow.basis" id="basis_link">
-        <mat-icon class="link_icon">foundation</mat-icon>
+        <mat-icon class="link_icon" svgIcon="foundation"></mat-icon>
         Basis
     </a>
     <a mat-list-item href="../index.html{{peerQuery()}}" id="peer_link">
-        <mat-icon class="link_icon">groups</mat-icon>
+        <mat-icon class="link_icon" svgIcon="groups"></mat-icon>
         &nbsp;Peers
     </a>
 </mat-nav-list>
@@ -46,8 +46,8 @@
     <mat-tab>
         <ng-template mat-tab-label>
             Flow
-            <mat-icon *ngIf="msgPassed" class="pass">check_circle_outline</mat-icon>
-            <mat-icon *ngIf="msgFailed" class="fail">error_outline</mat-icon>
+            <mat-icon *ngIf="msgPassed" class="pass" svgIcon="check_circle_outline"></mat-icon>
+            <mat-icon *ngIf="msgFailed" class="fail" svgIcon="error_outline"></mat-icon>
         </ng-template>
         <app-flow-sequence [sequence]="sequence"></app-flow-sequence>
         <mat-drawer-container>
@@ -68,8 +68,8 @@
     <mat-tab *ngIf="flow.residue?.length">
         <ng-template mat-tab-label>
             Residue
-            <mat-icon *ngIf="rsdPassed" class="pass">check_circle_outline</mat-icon>
-            <mat-icon *ngIf="rsdFailed" class="fail">error_outline</mat-icon>
+            <mat-icon *ngIf="rsdPassed" class="pass" svgIcon="check_circle_outline"></mat-icon>
+            <mat-icon *ngIf="rsdFailed" class="fail" svgIcon="error_outline"></mat-icon>
         </ng-template>
         <app-residue-view [residues]="flow.residue"></app-residue-view>
     </mat-tab>

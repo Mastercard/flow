@@ -5,6 +5,7 @@ import { QueryService } from '../query.service';
 import { BasisFetchService } from '../basis-fetch.service';
 import { Action, empty_action } from '../seq-action/seq-action.component';
 import { DiffDisplay } from '../text-diff/text-diff.component';
+import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
   selector: 'app-transmission',
@@ -30,11 +31,13 @@ export class TransmissionComponent implements OnInit, OnChanges {
   constructor(
     private txSelect: TxSelectionService,
     private query: QueryService,
-    private basis: BasisFetchService) {
+    private basis: BasisFetchService,
+    private icons: IconEmbedService,) {
     txSelect.onSelected((action) => {
       this.action = action;
       this.ngOnChanges();
     });
+    icons.register("visibility_off");
   }
 
   ngOnInit(): void {

@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { FlowFilterService, Type } from '../flow-filter.service';
+import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
   selector: 'app-flow-filter',
@@ -21,8 +22,10 @@ export class FlowFilterComponent implements OnInit {
   @Input() tags: Set<string> = new Set();
 
   constructor(
-    public filterService: FlowFilterService) {
+    public filterService: FlowFilterService,
+    private icons: IconEmbedService,) {
     filterService.onUpdate(() => this.refresh());
+    icons.register("lock", "close", "clear");
   }
 
   ngOnInit(): void {

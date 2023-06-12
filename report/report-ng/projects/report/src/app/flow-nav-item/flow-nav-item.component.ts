@@ -1,5 +1,6 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { Entry } from '../types';
+import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
   selector: 'app-flow-nav-item',
@@ -18,6 +19,10 @@ export class FlowNavItemComponent implements OnInit {
   isError: boolean = false;
 
   lineClass: string = "";
+
+  constructor(private icons: IconEmbedService,) {
+    icons.register("check_circle_outline", "error_outline", "help_outline", "new_releases");
+  }
 
   ngOnInit(): void {
     this.isPass = this.showResult && this.entry.tags.indexOf("PASS") != -1;

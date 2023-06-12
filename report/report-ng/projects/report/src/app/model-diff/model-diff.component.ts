@@ -7,6 +7,7 @@ import { ChangeViewComponent } from '../change-view/change-view.component';
 import { FlowFilterService } from '../flow-filter.service';
 import { FlowPairingService } from '../flow-pairing.service';
 import { ModelDiffDataSourceComponent } from '../model-diff-data-source/model-diff-data-source.component';
+import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
   selector: 'app-model-diff',
@@ -26,12 +27,14 @@ export class ModelDiffComponent implements OnInit {
     private fps: FlowPairingService,
     private location: Location,
     route: ActivatedRoute,
-    title: Title) {
+    title: Title,
+    private icons: IconEmbedService,) {
     this.tabIndex = Number.parseInt(route.snapshot.queryParamMap.get("tab") ?? "0");
     filters.onUpdate(() => this.updateQuery());
     fps.onUnpair(p => this.updateQuery());
     fps.onPair(p => this.updateQuery());
     title.setTitle("Model diff");
+    icons.register("swap_horiz")
   }
 
   ngOnInit(): void {

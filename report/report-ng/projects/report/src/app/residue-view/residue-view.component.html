@@ -5,8 +5,8 @@
                 {{residue.name}}
             </mat-panel-title>
             <mat-panel-description>
-                <mat-icon *ngIf="assertionPassed( residue )" class="pass">check_circle_outline</mat-icon>
-                <mat-icon *ngIf="assertionFailed( residue )" class="fail">error_outline</mat-icon>
+                <mat-icon *ngIf="assertionPassed( residue )" class="pass" svgIcon="check_circle_outline"></mat-icon>
+                <mat-icon *ngIf="assertionFailed( residue )" class="fail" svgIcon="error_outline"></mat-icon>
             </mat-panel-description>
         </mat-expansion-panel-header>
         <table>

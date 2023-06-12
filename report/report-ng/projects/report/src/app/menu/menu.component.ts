@@ -1,4 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
+import { IconEmbedService } from '../icon-embed.service';
 
 /**
  * The navigation menu
@@ -26,6 +27,10 @@ export class MenuComponent implements OnInit {
   ];
 
   @Input() current: string = "";
+
+  constructor(private icons: IconEmbedService,) {
+    icons.register("menu", "format_list_bulleted", "compare");
+  }
 
   ngOnInit(): void {
   }

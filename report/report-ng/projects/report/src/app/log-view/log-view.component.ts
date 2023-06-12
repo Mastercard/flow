@@ -2,6 +2,7 @@ import { Component, OnInit, Input } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
 import { QueryService } from '../query.service';
 import { LogEvent } from '../types';
+import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
   selector: 'app-log-view',
@@ -21,10 +22,12 @@ export class LogViewComponent implements OnInit {
   firstIdx: number = 0;
 
   constructor(
-    private query: QueryService) {
+    private query: QueryService,
+    private icons: IconEmbedService,) {
     this.sourcefilter = query.get("sf", "");
     this.messagefilter = query.get("mf", "");
     this.levels = query.get("lv", "").split(",");
+    icons.register("close");
   }
 
   ngOnInit(): void {

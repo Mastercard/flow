@@ -7,6 +7,7 @@ import { FlowFilterService, Type } from '../flow-filter.service';
 import { Observable } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
+import { IconEmbedService } from '../icon-embed.service';
 
 
 @Component({
@@ -17,7 +18,9 @@ import { CdkDragDrop } from '@angular/cdk/drag-drop';
 export class TagFilterComponent implements OnInit {
 
   constructor(
-    private filterService: FlowFilterService) {
+    private filterService: FlowFilterService,
+    private icons: IconEmbedService,) {
+    icons.register("cancel", "close");
   }
 
   @Input() type: Type = Type.Include;

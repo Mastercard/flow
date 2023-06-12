@@ -1,12 +1,12 @@
 <div id="search_root">
     <div id="search_toggle" (click)="toggle()" matRipple>
-        <mat-icon>{{showInput?"clear":"search"}}</mat-icon>
+        <mat-icon svgIcon="{{showInput?'clear':'search'}}"></mat-icon>
     </div>
     <div *ngIf="showInput">
         <mat-form-field class="example-full-width" appearance="fill">
             <mat-label>Message search</mat-label>
-            <input type="search" id="search_input" matInput #input [ngModel]="value" (ngModelChange)="onSearchChange($event)"
-                name="search_term" autocomplete="new-search_term">
+            <input type="search" id="search_input" matInput #input [ngModel]="value"
+                (ngModelChange)="onSearchChange($event)" name="search_term" autocomplete="new-search_term">
         </mat-form-field>
     </div>
 </div>
