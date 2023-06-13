@@ -250,7 +250,9 @@ abstract class AbstractIndexTest {
 	 */
 	@Test
 	void combined() {
-		iseq.clickTag( "abc" )
+		iseq
+				.stepping( true )
+				.clickTag( "abc" )
 				.hasFlows(
 						"basis       [PASS, def]",
 						"child       [FAIL, def, ghi]",

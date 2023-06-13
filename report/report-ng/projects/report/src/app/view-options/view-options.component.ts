@@ -46,7 +46,7 @@ export class ViewOptionsComponent implements OnInit {
       case "Expected":
         return "psychology";
       case "Diff":
-        return "compare";
+        return "difference";
       case "Actual":
         return "visibility";
       case "Basis":

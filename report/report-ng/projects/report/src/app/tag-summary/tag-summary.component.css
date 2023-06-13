@@ -10,24 +10,24 @@ mat-icon {
 #PASS mat-icon {
     background-color: rgba(0, 192, 0, 1);
     color: white;
-    border-radius: 1ch;
+    border-radius: 1.5ch;
 }
 
 #FAIL mat-icon {
     background-color: rgba(255, 0, 0, 1);
     color: white;
-    border-radius: 1ch;
+    border-radius: 1.5ch;
 }
 
 #SKIP mat-icon {
     background-color: rgba(255, 0, 0, 0.5);
     color: white;
-    border-radius: 1ch;
+    border-radius: 1.5ch;
 }
 
 #ERROR mat-icon {
     color: rgba(255, 0, 0, 1);
-    border-radius: 1ch;
+    border-radius: 1.5ch;
 }
 
 #tag_sort_toggle {

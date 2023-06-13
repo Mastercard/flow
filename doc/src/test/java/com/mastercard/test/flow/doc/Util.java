@@ -62,7 +62,7 @@ class Util {
 	}
 
 	/**
-	 * @return A stream of all markdown files in the project
+	 * @return A stream of all java source files in the project
 	 */
 	static Stream<Path> javaFiles() {
 		return files( "java", ".java",
@@ -74,6 +74,22 @@ class Util {
 	 */
 	static Stream<Path> xmlFiles() {
 		return files( "xml", ".xml",
+				".git", "node_modules" );
+	}
+
+	/**
+	 * @return A stream of all component HTML templates in the project
+	 */
+	static Stream<Path> componentTemplateFiles() {
+		return files( "component_template", ".component.html",
+				".git", "node_modules" );
+	}
+
+	/**
+	 * @return A stream of all typescript files in the project
+	 */
+	static Stream<Path> typescriptFiles() {
+		return files( "typescript", ".ts",
 				".git", "node_modules" );
 	}
 
