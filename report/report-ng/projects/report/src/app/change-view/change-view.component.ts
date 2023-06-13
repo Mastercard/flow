@@ -20,7 +20,7 @@ export class ChangeViewComponent implements OnInit {
 
   treeOpen: boolean = true;
 
-  contextLines: number = 1;
+  contextLines: number = 4;
   diffFormat: DiffDisplay = 'unified';
 
   selected: ListPair | null = null;
@@ -44,6 +44,7 @@ export class ChangeViewComponent implements OnInit {
     fds.onPairing(() => this.rebuild());
     fds.onFlowData(() => this.rebuild());
     icons.register(
+      "add", "remove",
       "menu_open", "navigate_before", "navigate_next",
       "vertical_split", "horizontal_split", "expand_less");
   }
@@ -98,6 +99,8 @@ export class ChangeViewComponent implements OnInit {
     // our selection may have changed its index! find it in the new list
     this.view(this.route.snapshot.queryParamMap.get("ff"), this.route.snapshot.queryParamMap.get("tf"));
 
+    this.contextLines = parseInt(this.route.snapshot.queryParamMap.get("cl") || "4");
+
     this.noChangeMessage = this.filter.isEmpty()
       ? "No changes found!"
       : "Remove filters to view changes";
@@ -121,6 +124,9 @@ export class ChangeViewComponent implements OnInit {
     }
     if (this.selected !== null && this.selected.pair.right !== null) {
       usp.append("tf", this.selected.pair.right.entry.detail);
+    }
+    if (this.contextLines != 4) {
+      usp.append("cl", this.contextLines.toString());
     }
     return usp;
   }
@@ -161,12 +167,14 @@ export class ChangeViewComponent implements OnInit {
         if (this.contextLines === 0) {
           this.contextLines = 1;
         }
+        this.selectionListeners.forEach(cb => cb());
       }
       else if (group.value === 'less') {
         this.contextLines /= 2;
         if (this.contextLines < 1) {
           this.contextLines = 0;
         }
+        this.selectionListeners.forEach(cb => cb());
       }
 
       group.value = "no_such_value";

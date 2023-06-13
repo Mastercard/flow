@@ -33,7 +33,7 @@
 <mat-drawer-container>
     <mat-drawer [opened]="treeOpen" mode="side" disableClose>
         <div class="drawer">
-            <div>
+            <div class="diff_controls">
                 <mat-button-toggle-group id="diff_type" name="diff_options" [(ngModel)]="diffFormat">
                     <mat-button-toggle value="split" matTooltip="Side-by-side comparison">
                         <mat-icon svgIcon="vertical_split"></mat-icon>

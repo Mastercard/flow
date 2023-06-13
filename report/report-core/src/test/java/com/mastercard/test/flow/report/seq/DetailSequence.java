@@ -117,7 +117,7 @@ public class DetailSequence extends AbstractSequence<DetailSequence> {
 	public DetailSequence dependency() {
 		trace( "dependency" );
 		WebElement link = driver.findElement( By.id( "dependency_link" ) );
-		Assertions.assertEquals( "task_alt\nDependency", link.getText() );
+		Assertions.assertEquals( "Dependency", link.getText() );
 		link.click();
 		return new DetailSequence( this );
 	}
@@ -131,7 +131,7 @@ public class DetailSequence extends AbstractSequence<DetailSequence> {
 	public DetailSequence dependency( String linkText ) {
 		trace( "dependency", linkText );
 		WebElement menu = driver.findElement( By.id( "dependencies_item" ) );
-		Assertions.assertEquals( "task_alt Dependencies", menu.getText() );
+		Assertions.assertEquals( "Dependencies", menu.getText() );
 		menu.click();
 
 		// The menu take a little while to fully appear

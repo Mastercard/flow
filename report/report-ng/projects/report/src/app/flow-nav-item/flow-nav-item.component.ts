@@ -30,17 +30,17 @@ export class FlowNavItemComponent implements OnInit {
     this.isSkip = this.showResult && this.entry.tags.indexOf("SKIP") != -1;
     this.isError = this.showResult && this.entry.tags.indexOf("ERROR") != -1;
 
-    if (this.isSkip) {
-      this.lineClass = "skip";
-    }
-    else if (this.isPass) {
-      this.lineClass = "pass";
-    }
-    else if (this.isFail) {
+    if (this.isFail) {
       this.lineClass = "fail";
     }
     else if (this.isError) {
       this.lineClass = "error";
+    }
+    else if (this.isSkip) {
+      this.lineClass = "skip";
+    }
+    else if (this.isPass) {
+      this.lineClass = "pass";
     }
 
     if (this.basePath.length !== 0) {

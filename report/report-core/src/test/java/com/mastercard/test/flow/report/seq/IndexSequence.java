@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -95,7 +96,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	 */
 	public DiffSequence diff() {
 		trace( "diff" );
-		return navTo( "compare Model diff", DiffSequence::new );
+		return navTo( "Model diff", DiffSequence::new );
 	}
 
 	/**
@@ -197,7 +198,9 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 				copypasta( expected ),
 				copypasta( Stream.of(
 						tagSummary.findElement( By.tagName( "mat-panel-description" ) )
-								.getText()
+								.findElements( By.tagName( "span" ) ).stream()
+								.map( IndexSequence::spanIconText )
+								.collect( joining( " " ) )
 								.replace( "check_circle_outline", "_PASS_" )
 								.replace( "error_outline", "_FAIL_" )
 								.replace( "help_outline", "_SKIP_" )
@@ -205,6 +208,15 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 						tagSummary
 								.findElement( By.id( "tags" ) ).getText() ) ) );
 		return this;
+	}
+
+	private static String spanIconText( WebElement e ) {
+		List<String> content = new ArrayList<>();
+		e.findElements( By.tagName( "mat-icon" ) ).stream()
+				.map( i -> i.getAttribute( "svgIcon" ) )
+				.forEach( content::add );
+		content.add( e.getText() );
+		return content.stream().collect( joining( " " ) );
 	}
 
 	/**

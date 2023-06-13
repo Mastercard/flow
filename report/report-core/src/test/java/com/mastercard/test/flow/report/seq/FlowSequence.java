@@ -258,7 +258,7 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 		}
 
 		Set<String> icons = afs.findElements( By.tagName( "mat-icon" ) ).stream()
-				.map( WebElement::getText )
+				.map( e -> e.getAttribute( "svgIcon" ) )
 				.collect( toSet() );
 
 		sb.append( " [" )
