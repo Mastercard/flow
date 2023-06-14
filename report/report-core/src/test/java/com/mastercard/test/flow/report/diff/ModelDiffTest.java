@@ -222,7 +222,9 @@ class ModelDiffTest {
 						" 1  1   Identity:                ",
 						" 2  2     updated                ",
 						" 3  3     c                      ",
-						"        5 unchanged lines        ",
+						" 4  4     d                      ",
+						"        3 unchanged lines        ",
+						" 8  8   Context:                 ",
 						" 9  9     {}                     ",
 						"10 10   Interactions:            ",
 						"11 11     ┌REQUEST AVA => BEN [] ",
@@ -252,7 +254,9 @@ class ModelDiffTest {
 						" 1  1   Identity:                ",
 						" 2  2     updated                ",
 						" 3  3     c                      ",
-						"        5 unchanged lines        ",
+						" 4  4     d                      ",
+						"        3 unchanged lines        ",
+						" 8  8   Context:                 ",
 						" 9  9     {}                     ",
 						"10 10   Interactions:            ",
 						"11 11     ┌REQUEST AVA => BEN [] ",
@@ -263,6 +267,79 @@ class ModelDiffTest {
 						"15    -   │Hello Ava!            ",
 						"   15 +   │Heeellooo Avaaa!      ",
 						"16 16     └                      " );
+	}
+
+	/**
+	 * Shows that we can show more or less diff context by click buttons in the ui
+	 */
+	@Test
+	void context() {
+		dseq.diff(
+				"ff=C38030BF0DCCF31DB770B2EAFA779DFC",
+				"from=http%253A%252F%252Flocalhost%253A" + from.port() + "%252Ffrom%252F",
+				"tab=2",
+				"tf=C38030BF0DCCF31DB770B2EAFA779DFC",
+				"to=http%253A%252F%252Flocalhost%253A" + to.port() + "%252Fto%252F" )
+				.hasDiff(
+						" 1  1   Identity:                ",
+						" 2  2     updated                ",
+						" 3  3     c                      ",
+						" 4  4     d                      ",
+						"        3 unchanged lines        ",
+						" 8  8   Context:                 ",
+						" 9  9     {}                     ",
+						"10 10   Interactions:            ",
+						"11 11     ┌REQUEST AVA => BEN [] ",
+						"12    -   │Hi Ben!               ",
+						"   12 +   │Hiii Beeen!           ",
+						"13 13     └                      ",
+						"14 14     ┌RESPONSE AVA <= BEN []",
+						"15    -   │Hello Ava!            ",
+						"   15 +   │Heeellooo Avaaa!      ",
+						"16 16     └                      " );
+
+		dseq.lessContext() // down to 2 lines of context
+				.hasDiff(
+						" 1  1   Identity:                ",
+						" 2  2     updated                ",
+						"        7 unchanged lines        ",
+						"10 10   Interactions:            ",
+						"11 11     ┌REQUEST AVA => BEN [] ",
+						"12    -   │Hi Ben!               ",
+						"   12 +   │Hiii Beeen!           ",
+						"13 13     └                      ",
+						"14 14     ┌RESPONSE AVA <= BEN []",
+						"15    -   │Hello Ava!            ",
+						"   15 +   │Heeellooo Avaaa!      ",
+						"16 16     └                      " )
+				.moreContext() // back up to 4
+				.moreContext() // up to 8!
+				.hasDiff(
+						" 1  1   Identity:                ",
+						" 2  2     updated                ",
+						" 3  3     c                      ",
+						" 4  4     d                      ",
+						" 5  5     e                      ",
+						" 6  6   Motivation:              ",
+						" 7  7                            ",
+						" 8  8   Context:                 ",
+						" 9  9     {}                     ",
+						"10 10   Interactions:            ",
+						"11 11     ┌REQUEST AVA => BEN [] ",
+						"12    -   │Hi Ben!               ",
+						"   12 +   │Hiii Beeen!           ",
+						"13 13     └                      ",
+						"14 14     ┌RESPONSE AVA <= BEN []",
+						"15    -   │Hello Ava!            ",
+						"   15 +   │Heeellooo Avaaa!      ",
+						"16 16     └                      " )
+				.hasUrlArgs(
+						"cl=8", // context config is in the url
+						"ff=C38030BF0DCCF31DB770B2EAFA779DFC",
+						"from=http%253A%252F%252Flocalhost%253A" + from.port() + "%252Ffrom%252F",
+						"tab=2",
+						"tf=C38030BF0DCCF31DB770B2EAFA779DFC",
+						"to=http%253A%252F%252Flocalhost%253A" + to.port() + "%252Fto%252F" );
 	}
 
 	/**
@@ -345,7 +422,9 @@ class ModelDiffTest {
 						" 6  6   Motivation:              ",
 						" 7  7                            ",
 						" 8  8   Context:                 ",
-						"        5 unchanged lines        ",
+						" 9  9     {}                     ",
+						"        3 unchanged lines        ",
+						"13 13     └                      ",
 						"14 14     ┌RESPONSE AVA <= BEN []",
 						"15 15     │Hello Ava!            ",
 						"16 16     └                      " );

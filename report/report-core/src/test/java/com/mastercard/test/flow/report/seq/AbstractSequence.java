@@ -306,13 +306,14 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 	}
 
 	/**
-	 * Extracts a meanigful name from an icon element
+	 * Extracts a meaningful name from an icon element
 	 *
 	 * @param icon The icon element
 	 * @return What that icon means
 	 */
 	protected static String iconSemantic( WebElement icon ) {
-		String name = icon.getText();
+		String name = icon.findElement( By.tagName( "mat-icon" ) )
+				.getAttribute( "svgIcon" );
 		return ICON_SEMANTICS.getOrDefault( name, name );
 	}
 

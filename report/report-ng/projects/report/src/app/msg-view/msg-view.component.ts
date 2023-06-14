@@ -1,6 +1,7 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { QueryService } from '../query.service';
 import { DataDisplay, Options } from '../types';
+import { IconEmbedService } from '../icon-embed.service';
 
 
 @Component({
@@ -21,7 +22,10 @@ export class MsgViewComponent implements OnInit {
   showContent: boolean = false;
   showHex: boolean = false;
 
-  constructor(private query: QueryService) {
+  constructor(
+    private query: QueryService,
+    private icons: IconEmbedService,) {
+    icons.register("visibility_off");
   }
 
   ngOnInit(): void {

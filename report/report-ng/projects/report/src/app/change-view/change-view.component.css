@@ -32,6 +32,13 @@ div#change_controls {
     align-content: stretch;
 }
 
+.diff_controls {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: stretch;
+}
 
 #line_count {
     color: black;

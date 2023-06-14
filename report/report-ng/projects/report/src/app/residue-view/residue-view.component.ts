@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { Residue, residueAsserted, residueAssertionPassed } from '../types';
 import { DiffDisplay } from '../text-diff/text-diff.component';
+import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
   selector: 'app-residue-view',
@@ -11,7 +12,10 @@ export class ResidueViewComponent implements OnInit {
   @Input() residues: Residue[] = [];
   diffFormat: DiffDisplay = 'unified';
 
-  constructor() { }
+  constructor(
+    private icons: IconEmbedService,) {
+    icons.register("check_circle_outline", "error_outline");
+  }
 
   ngOnInit(): void {
   }

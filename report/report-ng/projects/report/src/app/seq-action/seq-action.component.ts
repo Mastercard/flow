@@ -5,6 +5,7 @@ import { MsgSearchService } from '../msg-search.service';
 import { TxSelectionService } from '../tx-selection.service';
 import { Transmission, isTransmission, empty_transmission } from '../types';
 import { Diff, diff_match_patch } from 'diff-match-patch';
+import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
   selector: 'app-seq-action',
@@ -31,7 +32,8 @@ export class SeqActionComponent implements OnInit {
   constructor(
     private txSelect: TxSelectionService,
     private basis: BasisFetchService,
-    private search: MsgSearchService) {
+    private search: MsgSearchService,
+    private icons: IconEmbedService,) {
 
     txSelect.onSelected(tx => this.selected = tx === this.action);
     basis.onLoad(() => this.hasBasis = this.basis.message(this.action) != null);
@@ -40,6 +42,9 @@ export class SeqActionComponent implements OnInit {
       this.markActual = false;
       this.markExpected = false;
     });
+
+    icons.register("psychology", "foundation", "visibility",
+      "check_circle_outline", "error_outline");
   }
 
   ngOnInit(): void {

@@ -13,7 +13,7 @@
     <input id="source_filter_input" matInput [(ngModel)]="sourcefilter" (keyup)="applyFilters()">
     <span class="clear_button" *ngIf="sourcefilter" matSuffix mat-icon-button aria-label="Clear"
       (click)="sourcefilter='';applyFilters()">
-      <mat-icon>close</mat-icon>
+      <mat-icon svgIcon="close"></mat-icon>
     </span>
   </mat-form-field>
   containing
@@ -22,7 +22,7 @@
     <input id="message_filter_input" matInput [(ngModel)]="messagefilter" (keyup)="applyFilters()">
     <span class="clear_button" *ngIf="messagefilter" matSuffix mat-icon-button aria-label="Clear"
       (click)="messagefilter='';applyFilters()">
-      <mat-icon>close</mat-icon>
+      <mat-icon svgIcon="close"></mat-icon>
     </span>
   </mat-form-field>
 </div>

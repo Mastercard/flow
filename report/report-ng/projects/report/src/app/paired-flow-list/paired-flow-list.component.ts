@@ -3,6 +3,7 @@ import { FlowFilterService } from '../flow-filter.service';
 import { FlowPairingService, Pair } from '../flow-pairing.service';
 import { ModelDiffDataService } from '../model-diff-data.service';
 import { Entry } from '../types';
+import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
   selector: 'app-paired-flow-list',
@@ -14,8 +15,9 @@ export class PairedFlowListComponent implements OnInit {
   constructor(
     private mdds: ModelDiffDataService,
     private fps: FlowPairingService,
-    private filter: FlowFilterService) {
-
+    private filter: FlowFilterService,
+    private icons: IconEmbedService,) {
+    icons.register("link_off");
   }
 
   ngOnInit(): void {

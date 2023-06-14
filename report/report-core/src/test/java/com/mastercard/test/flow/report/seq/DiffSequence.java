@@ -183,7 +183,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	public DiffSequence unpair( int index ) {
 		List<WebElement> icons = driver.findElements( By.tagName( "mat-icon" ) )
 				.stream()
-				.filter( e -> "link_off".equals( e.getText() ) )
+				.filter( e -> "link_off".equals( e.getAttribute( "svgIcon" ) ) )
 				.collect( toList() );
 
 		if( index >= icons.size() ) {
@@ -226,7 +226,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	public DiffSequence pair( int index ) {
 		List<WebElement> icons = driver.findElements( By.tagName( "mat-icon" ) )
 				.stream()
-				.filter( e -> "link".equals( e.getText() ) )
+				.filter( e -> "link".equals( e.getAttribute( "svgIcon" ) ) )
 				.collect( toList() );
 
 		if( index >= icons.size() ) {
@@ -367,6 +367,35 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 								+ "' in:\n  " + items.stream()
 										.map( DiffSequence::flowSelectItemToString )
 										.collect( joining( "\n  " ) ) ) )
+				.click();
+		return this;
+	}
+
+	/**
+	 * Clicks the "Less context" button
+	 *
+	 * @return <code>this</code>
+	 */
+	public DiffSequence lessContext() {
+		return context( "less" );
+	}
+
+	/**
+	 * Clicks the "More context" button
+	 *
+	 * @return <code>this</code>
+	 */
+	public DiffSequence moreContext() {
+		return context( "more" );
+	}
+
+	private DiffSequence context( String value ) {
+		driver.findElement( By.id( "context" ) )
+				.findElements( By.tagName( "mat-button-toggle" ) )
+				.stream()
+				.filter( mbt -> value.equals( mbt.getAttribute( "value" ) ) )
+				.findFirst()
+				.orElseThrow( () -> new IllegalStateException( "Failed to find context reduce button" ) )
 				.click();
 		return this;
 	}

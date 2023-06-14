@@ -1,7 +1,7 @@
 <div id="change_controls">
 
     <mat-button-toggle [checked]="treeOpen" matTooltip="Show change list" (click)="toggleTree($event)">
-        <mat-icon>menu_open</mat-icon>
+        <mat-icon svgIcon="menu_open"></mat-icon>
     </mat-button-toggle>
 
     <div id="pair_links">
@@ -21,10 +21,10 @@
     <div id="top_nav">
         <mat-button-toggle-group (change)="navChange($event)">
             <mat-button-toggle matTooltip="Previous" value="previous" [disabled]="!canPrevious()">
-                <mat-icon>navigate_before</mat-icon>
+                <mat-icon svgIcon="navigate_before"></mat-icon>
             </mat-button-toggle>
             <mat-button-toggle matTooltip="Next" value="next" [disabled]="!canNext()">
-                <mat-icon>navigate_next</mat-icon>
+                <mat-icon svgIcon="navigate_next"></mat-icon>
             </mat-button-toggle>
         </mat-button-toggle-group>
     </div>
@@ -33,13 +33,24 @@
 <mat-drawer-container>
     <mat-drawer [opened]="treeOpen" mode="side" disableClose>
         <div class="drawer">
-            <div>
+            <div class="diff_controls">
                 <mat-button-toggle-group id="diff_type" name="diff_options" [(ngModel)]="diffFormat">
                     <mat-button-toggle value="split" matTooltip="Side-by-side comparison">
-                        <mat-icon>vertical_split</mat-icon>
+                        <mat-icon svgIcon="vertical_split"></mat-icon>
                     </mat-button-toggle>
                     <mat-button-toggle value="unified" matTooltip="Line-by-line comparison">
-                        <mat-icon>horizontal_split</mat-icon>
+                        <mat-icon svgIcon="horizontal_split"></mat-icon>
+                    </mat-button-toggle>
+                </mat-button-toggle-group>
+                <mat-button-toggle-group id="context" (change)="contextChange($event)">
+                    <mat-button-toggle matTooltip="Less context" value="less">
+                        <mat-icon svgIcon="remove"></mat-icon>
+                    </mat-button-toggle>
+                    <mat-button-toggle id="line_count" matTooltip="Context lines" disabled="true">
+                        {{contextLines}}
+                    </mat-button-toggle>
+                    <mat-button-toggle matTooltip="More context" value="more">
+                        <mat-icon svgIcon="add"></mat-icon>
                     </mat-button-toggle>
                 </mat-button-toggle-group>
             </div>
@@ -60,20 +71,21 @@
         </div>
     </mat-drawer>
     <mat-drawer-content>
-        <app-text-diff *ngIf="hasDiffData()" [left]="diffLeft" [right]="diffRight" [display]="diffFormat">
+        <app-text-diff *ngIf="hasDiffData()" [left]="diffLeft" [right]="diffRight" [display]="diffFormat"
+            [context]="contextLines">
         </app-text-diff>
     </mat-drawer-content>
 </mat-drawer-container>
 <div id="bottom_nav">
     <mat-button-toggle-group (change)="navChange($event)">
         <mat-button-toggle matTooltip="Previous" value="previous" [disabled]="!canPrevious()">
-            <mat-icon>navigate_before</mat-icon>
+            <mat-icon svgIcon="navigate_before"></mat-icon>
         </mat-button-toggle>
         <mat-button-toggle matTooltip="Top" value="top">
-            <mat-icon>expand_less</mat-icon>
+            <mat-icon svgIcon="expand_less"></mat-icon>
         </mat-button-toggle>
         <mat-button-toggle matTooltip="Next" value="next" [disabled]="!canNext()">
-            <mat-icon>navigate_next</mat-icon>
+            <mat-icon svgIcon="navigate_next"></mat-icon>
         </mat-button-toggle>
     </mat-button-toggle-group>
 </div>

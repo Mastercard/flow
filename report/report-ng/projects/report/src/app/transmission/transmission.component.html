@@ -1,5 +1,5 @@
 <div class="no_data_warning" *ngIf="substitutionWarning">
-  <mat-icon>visibility_off</mat-icon>
+  <mat-icon svgIcon="visibility_off"></mat-icon>
   Actual data not available, displaying expected message.
 </div>
 <app-msg-view *ngIf="effectiveDisplay==='Expected'" [options]="options" [dataDisplay]="options.dataDisplay"
@@ -11,7 +11,7 @@
   </app-text-diff>
   <ng-template #no_data_warning>
     <div class="no_data_warning">
-      <mat-icon>visibility_off</mat-icon>
+      <mat-icon svgIcon="visibility_off"></mat-icon>
       No data available!
     </div>
   </ng-template>

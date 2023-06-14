@@ -1,23 +1,23 @@
 <div [ngStyle]="style" class="action" (click)="displayTransmission()" [ngClass]="class()" matRipple>
   <mark *ngIf="markExpected; else miss_expected">
-    <mat-icon>psychology</mat-icon>
+    <mat-icon svgIcon="psychology"></mat-icon>
   </mark>
   <ng-template #miss_expected>
-    <mat-icon>psychology</mat-icon>
+    <mat-icon svgIcon="psychology"></mat-icon>
   </ng-template>
-  <mat-icon *ngIf="hasBasis">foundation</mat-icon>
+  <mat-icon *ngIf="hasBasis" svgIcon="foundation"></mat-icon>
   <span class="label">{{action.label}}</span>
   <span class="tag" *ngFor="let tag of action.tags">{{tag}}</span>
   <span *ngIf="hasActual">
     <mark *ngIf="markActual; else miss_actual">
-      <mat-icon>visibility</mat-icon>
+      <mat-icon svgIcon="visibility"></mat-icon>
     </mark>
     <ng-template #miss_actual>
-      <mat-icon>visibility</mat-icon>
+      <mat-icon svgIcon="visibility"></mat-icon>
     </ng-template>
   </span>
-  <mat-icon *ngIf="assertionPassed">check_circle_outline</mat-icon>
-  <mat-icon *ngIf="assertionFailed">error_outline</mat-icon>
+  <mat-icon *ngIf="assertionPassed" svgIcon="check_circle_outline"></mat-icon>
+  <mat-icon *ngIf="assertionFailed" svgIcon="error_outline"></mat-icon>
   <span *ngIf="assertionPassed||assertionFailed" class="coverage">{{assertionCoverage}}</span>
   <div *ngIf="action.from < action.to" class="arrow" title="{{title}}">
     <svg width="100%" height="14" preserveAspectRatio="xMaxYMid slice" viewBox="0 0 1400 14">

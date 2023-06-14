@@ -2,20 +2,19 @@
     <mat-expansion-panel-header>
         <mat-panel-title>Tags</mat-panel-title>
         <mat-panel-description>
-            <span>{{summary}}
-                <span *ngFor="let rt of results;" class="result" id="{{rt}}" matTooltip="{{rt}} : {{tagCounts[rt]}}">
-                    <mat-icon *ngIf="rt === 'PASS'">check_circle_outline</mat-icon>
-                    <mat-icon *ngIf="rt === 'SKIP'">help_outline</mat-icon>
-                    <mat-icon *ngIf="rt === 'FAIL'">error_outline</mat-icon>
-                    <mat-icon *ngIf="rt === 'ERROR'">new_releases</mat-icon>
-                    {{(100 * tagCounts[rt] / entries.length).toFixed(1)}}%
-                </span>
+            <span class="summary">{{summary}}</span>
+            <span *ngFor="let rt of results;" class="result" id="{{rt}}" matTooltip="{{rt}} : {{tagCounts[rt]}}">
+                <mat-icon *ngIf="rt === 'PASS'" svgIcon="check_circle_outline"></mat-icon>
+                <mat-icon *ngIf="rt === 'SKIP'" svgIcon="help_outline"></mat-icon>
+                <mat-icon *ngIf="rt === 'FAIL'" svgIcon="error_outline"></mat-icon>
+                <mat-icon *ngIf="rt === 'ERROR'" svgIcon="new_releases"></mat-icon>
+                {{(100 * tagCounts[rt] / entries.length).toFixed(1)}}%
             </span>
         </mat-panel-description>
     </mat-expansion-panel-header>
     <div id="content">
         <mat-button-toggle id="tag_sort_toggle" [checked]="alphaSort" (change)="resort( $event.source.checked )">
-            <mat-icon>sort_by_alpha</mat-icon>
+            <mat-icon svgIcon="sort_by_alpha"></mat-icon>
         </mat-button-toggle>
         <div id="tags">
             <div *ngFor="let t of tags;" matTooltip="{{t}} : {{tagCounts[t]}}">

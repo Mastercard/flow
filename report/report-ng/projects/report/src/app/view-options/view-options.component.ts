@@ -2,6 +2,7 @@ import { Component, OnInit, Input } from '@angular/core';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { DataDisplay, DiffType, Display, Options } from '../types';
+import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
   selector: 'app-view-options',
@@ -15,11 +16,12 @@ export class ViewOptionsComponent implements OnInit {
   dataDisplayEnum = DataDisplay;
   diffTypeEnum = DiffType;
 
-  constructor(iconRegistry: MatIconRegistry, sanitizer: DomSanitizer) {
-    iconRegistry.addSvgIconLiteral('hex', sanitizer.bypassSecurityTrustHtml(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px">
-        <text x="1" y="17"  font-family="monospace" font-size="20px">0x</text>
-      </svg>`));
+  constructor(private icons: IconEmbedService,) {
+    icons.register(
+      "psychology", "difference", "visibility", "foundation",
+      "person", "text_format", "hex",
+      "subject", "rule",
+      "vertical_split", "horizontal_split");
   }
 
   ngOnInit(): void {
@@ -44,7 +46,7 @@ export class ViewOptionsComponent implements OnInit {
       case "Expected":
         return "psychology";
       case "Diff":
-        return "compare";
+        return "difference";
       case "Actual":
         return "visibility";
       case "Basis":
@@ -71,12 +73,6 @@ export class ViewOptionsComponent implements OnInit {
         return "person";
       case "UTF":
         return "text_format";
-    }
-    return "";
-  }
-
-  dataSvgIcon(d: string): string {
-    switch (d) {
       case "Hex":
         return "hex";
     }

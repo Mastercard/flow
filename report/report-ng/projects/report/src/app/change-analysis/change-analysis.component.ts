@@ -5,6 +5,7 @@ import { FlowFilterService } from '../flow-filter.service';
 import { FlowPairingService } from '../flow-pairing.service';
 import { ModelDiffDataService } from '../model-diff-data.service';
 import { Entry, removeResultTagsFrom } from '../types';
+import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
   selector: 'app-change-analysis',
@@ -39,12 +40,14 @@ export class ChangeAnalysisComponent implements OnInit {
     private mdds: ModelDiffDataService,
     private filters: FlowFilterService,
     private route: ActivatedRoute,
+    private icons: IconEmbedService,
   ) {
     fds.onFlowData(() => this.rebuild());
     fps.onRebuild(() => this.rebuild());
     fps.onPair(() => this.rebuild());
     fps.onUnpair(() => this.rebuild());
     filters.onUpdate(() => this.rebuild());
+    icons.register("compare");
   }
 
   ngOnInit(): void {

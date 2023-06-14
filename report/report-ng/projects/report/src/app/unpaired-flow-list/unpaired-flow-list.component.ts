@@ -3,6 +3,7 @@ import { FlowFilterService } from '../flow-filter.service';
 import { FlowPairingService, IndexedEntry } from '../flow-pairing.service';
 import { ModelDiffDataService } from '../model-diff-data.service';
 import { Entry } from '../types';
+import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
   selector: 'app-unpaired-flow-list',
@@ -17,7 +18,8 @@ export class UnpairedFlowListComponent implements OnInit {
   constructor(
     private mdds: ModelDiffDataService,
     private fps: FlowPairingService,
-    private filter: FlowFilterService) {
+    private filter: FlowFilterService,
+    private icons: IconEmbedService,) {
 
     // We've got a whole new dataset!
     fps.onRebuild(() => this.rebuild());
@@ -35,6 +37,7 @@ export class UnpairedFlowListComponent implements OnInit {
       this.leftEntries = this.leftEntries.filter(e => e.detail !== pair.left.entry.detail);
       this.rightEntries = this.rightEntries.filter(e => e.detail !== pair.right.entry.detail);
     });
+    icons.register("link");
   }
 
   ngOnInit(): void {

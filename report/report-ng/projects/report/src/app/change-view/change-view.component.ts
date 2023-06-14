@@ -8,6 +8,7 @@ import { FlowFilterService } from '../flow-filter.service';
 import { ModelDiffDataService } from '../model-diff-data.service';
 import { ListPair } from '../pair-select-item/pair-select-item.component';
 import { DiffDisplay } from '../text-diff/text-diff.component';
+import { IconEmbedService } from '../icon-embed.service';
 
 
 @Component({
@@ -19,7 +20,7 @@ export class ChangeViewComponent implements OnInit {
 
   treeOpen: boolean = true;
 
-  contextLines: number = 1;
+  contextLines: number = 4;
   diffFormat: DiffDisplay = 'unified';
 
   selected: ListPair | null = null;
@@ -36,11 +37,16 @@ export class ChangeViewComponent implements OnInit {
     private mdds: ModelDiffDataService,
     private filter: FlowFilterService,
     private scroll: ViewportScroller,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private icons: IconEmbedService,
   ) {
     filter.onUpdate(() => this.rebuild());
     fds.onPairing(() => this.rebuild());
     fds.onFlowData(() => this.rebuild());
+    icons.register(
+      "add", "remove",
+      "menu_open", "navigate_before", "navigate_next",
+      "vertical_split", "horizontal_split", "expand_less");
   }
 
   ngOnInit(): void {
@@ -93,6 +99,8 @@ export class ChangeViewComponent implements OnInit {
     // our selection may have changed its index! find it in the new list
     this.view(this.route.snapshot.queryParamMap.get("ff"), this.route.snapshot.queryParamMap.get("tf"));
 
+    this.contextLines = parseInt(this.route.snapshot.queryParamMap.get("cl") || "4");
+
     this.noChangeMessage = this.filter.isEmpty()
       ? "No changes found!"
       : "Remove filters to view changes";
@@ -116,6 +124,9 @@ export class ChangeViewComponent implements OnInit {
     }
     if (this.selected !== null && this.selected.pair.right !== null) {
       usp.append("tf", this.selected.pair.right.entry.detail);
+    }
+    if (this.contextLines != 4) {
+      usp.append("cl", this.contextLines.toString());
     }
     return usp;
   }
@@ -147,22 +158,6 @@ export class ChangeViewComponent implements OnInit {
     this.treeOpen = !this.treeOpen;
   }
 
-  /**
-   * I'd really like to have controls for the amount of content around changes to show,
-   *  but the diff component we're using doesn't seem to support it. It _claims_ to 
-   * support a boolean on/off switch, but it doesn't really work
-                <mat-button-toggle-group id="context" (change)="contextChange($event)">
-                    <mat-button-toggle matTooltip="Less context" value="less">
-                        <mat-icon>remove</mat-icon>
-                    </mat-button-toggle>
-                    <mat-button-toggle id="line_count" matTooltip="Context lines" disabled="true">
-                        {{contextLines > 0 ? '&#8734;': contextLines}}
-                    </mat-button-toggle>
-                    <mat-button-toggle matTooltip="More context" value="more">
-                        <mat-icon>add</mat-icon>
-                    </mat-button-toggle>
-                </mat-button-toggle-group>
-   */
   contextChange(event: MatButtonToggleChange) {
     let toggle = event.source;
     if (toggle) {
@@ -172,17 +167,14 @@ export class ChangeViewComponent implements OnInit {
         if (this.contextLines === 0) {
           this.contextLines = 1;
         }
+        this.selectionListeners.forEach(cb => cb());
       }
       else if (group.value === 'less') {
         this.contextLines /= 2;
         if (this.contextLines < 1) {
           this.contextLines = 0;
         }
-      }
-
-      // TODO: build or find a diff component that allows variable context
-      if (this.contextLines > 1) {
-        this.contextLines = 1;
+        this.selectionListeners.forEach(cb => cb());
       }
 
       group.value = "no_such_value";
