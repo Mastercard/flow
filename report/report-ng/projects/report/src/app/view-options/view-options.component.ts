@@ -18,7 +18,7 @@ export class ViewOptionsComponent implements OnInit {
 
   constructor(private icons: IconEmbedService,) {
     icons.register(
-      "psychology", "compare", "visibility", "foundation",
+      "psychology", "difference", "visibility", "foundation",
       "person", "text_format", "hex",
       "subject", "rule",
       "vertical_split", "horizontal_split");
