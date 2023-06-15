@@ -132,7 +132,346 @@
 [Changes][v0.0.13]
 
 
+<a name="v0.0.12"></a>
+# [v0.0.12](https://github.com/Mastercard/flow/releases/tag/v0.0.12) - 14 Jun 2023
+
+<!-- Release notes generated using configuration in .github/release.yml at v0.0.12 -->
+
+## What's Changed
+### Enhancements
+* Added total debt metric, formatting by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/230
+* Reflecting the case-insensitivity of http headers by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/275
+* Added autonomous actors by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/281
+* Added defensive copy mechanism by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/282
+### Dependencies
+* Bump pitest-maven from 1.10.3 to 1.10.4 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/183
+* Bump pitest-junit5-plugin from 1.1.0 to 1.1.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/184
+* Bump @angular/cli from 15.0.4 to 15.0.5 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/185
+* Bump @babel/core from 7.20.7 to 7.20.12 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/186
+* Bump babel-loader from 9.1.0 to 9.1.2 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/188
+* Bump actions/download-artifact from 3.0.1 to 3.0.2 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/189
+* Bump actions/upload-artifact from 3.1.1 to 3.1.2 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/190
+* Bump actions/setup-node from 3.5.1 to 3.6.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/191
+* Bump actions/checkout from 3.2.0 to 3.3.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/192
+* Bump junit-platform-launcher from 1.9.1 to 1.9.2 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/200
+* Bump pitest-junit5-plugin from 1.1.1 to 1.1.2 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/201
+* Bump junit-jupiter from 5.9.1 to 5.9.2 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/202
+* Bump maven-surefire-plugin from 3.0.0-M7 to 3.0.0-M8 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/203
+* Bump actions/cache from 3.2.2 to 3.2.3 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/211
+* Bump github/codeql-action from 2.1.37 to 2.1.38 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/210
+* Bump step-security/harden-runner from 2.0.0 to 2.1.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/209
+* Bump typescript from 4.6.4 to 4.8.4 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/207
+* Bump @types/node from 12.20.55 to 18.11.18 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/205
+* Bump @babel/core from 7.20.7 to 7.20.12 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/206
+* Bump babel-loader from 9.1.0 to 9.1.2 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/208
+* Bump karma-jasmine-html-reporter from 1.7.0 to 2.0.0 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/204
+* Bump jline.version from 3.21.0 to 3.22.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/214
+* Bump github/codeql-action from 2.1.38 to 2.1.39 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/218
+* Bump webdrivermanager from 5.3.0 to 5.3.2 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/215
+* Bump ua-parser-js from 0.7.32 to 0.7.33 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/220
+* Bump github/codeql-action from 2.1.39 to 2.2.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/229
+* Bump tslib from 2.4.1 to 2.5.0 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/228
+* Bump selenium-java from 4.7.2 to 4.8.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/222
+* Bump picocli from 4.7.0 to 4.7.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/221
+* Bump jackson-databind from 2.14.1 to 2.14.2 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/224
+* Bump http-cache-semantics from 4.1.0 to 4.1.1 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/235
+* Bump pitest-maven from 1.10.4 to 1.11.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/238
+* Bump actions/cache from 3.2.3 to 3.2.4 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/242
+* Bump @types/node from 18.11.18 to 18.11.19 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/241
+* Bump maven-enforcer-plugin from 3.1.0 to 3.2.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/236
+* Bump maven-deploy-plugin from 3.0.0 to 3.1.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/244
+* Bump @types/node from 18.11.19 to 18.13.0 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/245
+* Bump github/codeql-action from 2.2.1 to 2.2.4 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/248
+* Bump actions/cache from 3.2.4 to 3.2.5 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/249
+* Bump actions/setup-java from 3.9.0 to 3.10.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/247
+* Bump selenium-java from 4.8.0 to 4.8.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/252
+* Bump maven-surefire-plugin from 3.0.0-M8 to 3.0.0-M9 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/253
+* Bump @types/node from 18.13.0 to 18.14.0 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/257
+* Bump maven-javadoc-plugin from 3.2.0 to 3.5.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/254
+* Bump pitest-maven from 1.11.0 to 1.11.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/266
+* Bump @babel/core from 7.20.12 to 7.21.0 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/268
+* Bump @types/node from 18.14.0 to 18.14.2 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/270
+* Bump github/codeql-action from 2.2.4 to 2.2.5 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/271
+* Bump step-security/harden-runner from 2.1.0 to 2.2.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/272
+* Bump actions/cache from 3.2.5 to 3.2.6 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/273
+* Bump @types/node from 18.14.2 to 18.14.6 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/278
+* Bump pitest-maven from 1.11.1 to 1.11.4 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/277
+### Other Changes
+* Added release config by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/193
+* Restored support for node 14.15.1 by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/194
+* Avoiding broken display of mermaid with &lt;details&gt; by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/196
+* Added timeouts for example service discovery by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/197
+* Filled out usage documentation by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/198
+* Fixing mermaid orientation by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/212
+* fixed copypasta by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/213
+* upgraded slf4j by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/219
+* Made black ones appear on grey lines [#265](https://github.com/Mastercard/flow/issues/265) by [@Chaitu-Tatipamula](https://github.com/Chaitu-Tatipamula) in https://github.com/Mastercard/flow/pull/274
+
+## New Contributors
+* [@Chaitu-Tatipamula](https://github.com/Chaitu-Tatipamula) made their first contribution in https://github.com/Mastercard/flow/pull/274
+
+**Full Changelog**: https://github.com/Mastercard/flow/compare/v0.0.11...v0.0.12
+
+[Changes][v0.0.12]
+
+
+<a name="v0.0.11"></a>
+# [v0.0.11](https://github.com/Mastercard/flow/releases/tag/v0.0.11) - 15 Jun 2023
+
+## What's Changed
+* Bump mockito-core from 4.9.0 to 4.10.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/160
+* Bump selenium-java from 4.7.1 to 4.7.2 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/158
+* [StepSecurity] Apply security best practices by [@step-security-bot](https://github.com/step-security-bot) in https://github.com/Mastercard/flow/pull/161
+* Bump mockito-core from 4.10.0 to 4.11.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/164
+* Bump ossf/scorecard-action from 2.0.6 to 2.1.2 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/162
+* Bump actions/cache from 1.1.2 to 3.2.2 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/163
+* Bump rxjs from 6.6.7 to 7.8.0 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/165
+* Bump jasmine-core from 3.8.0 to 4.5.0 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/166
+* Bump tslib from 2.4.0 to 2.4.1 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/167
+* Bump karma-coverage from 2.0.3 to 2.2.0 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/169
+* Bump karma from 6.3.20 to 6.4.1 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/168
+* Simplified dependabot config, restricted permissions that weren't cau… by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/170
+* Bump @types/jasmine from 3.8.2 to 4.3.1 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/171
+* Bump karma-jasmine from 4.0.2 to 5.1.0 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/172
+* Bump @babel/core from 7.19.6 to 7.20.7 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/175
+* Bump babel-loader from 8.2.5 to 9.1.0 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/174
+* Bump @angular/cli from 14.2.6 to 15.0.4 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/173
+* Bump karma-jasmine-html-reporter from 1.7.0 to 2.0.0 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/178
+* Bump @types/node from 12.20.55 to 18.11.18 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/181
+* Bump typescript from 4.6.4 to 4.8.4 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/179
+* Fixed model build for dependencies, added static propagation by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/177
+* Allowed release job to write the updated poms by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/182
+
+## New Contributors
+* [@step-security-bot](https://github.com/step-security-bot) made their first contribution in https://github.com/Mastercard/flow/pull/161
+
+**Full Changelog**: https://github.com/Mastercard/flow/compare/v0.0.10...v0.0.11
+
+[Changes][v0.0.11]
+
+
+<a name="v0.0.10"></a>
+# [v0.0.10](https://github.com/Mastercard/flow/releases/tag/v0.0.10) - 15 Jun 2023
+
+## What's Changed
+* Handling byte arrays through jackson serialisation by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/157
+
+
+**Full Changelog**: https://github.com/Mastercard/flow/compare/v0.0.9...v0.0.10
+
+[Changes][v0.0.10]
+
+
+<a name="v0.0.9"></a>
+# [v0.0.9](https://github.com/Mastercard/flow/releases/tag/v0.0.9) - 15 Jun 2023
+
+## Enhancements
+* Improving http message robustness by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/143
+* Encoded byte arrays usefully by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/156
+
+## Dependencies
+* Bump selenium-java from 4.5.3 to 4.6.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/132
+* Bump webdrivermanager from 5.3.0 to 5.3.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/135
+* Bump picocli from 4.6.3 to 4.7.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/133
+* Bump maven-release-plugin from 3.0.0-M6 to 3.0.0-M7 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/136
+* Revert "Bump webdrivermanager from 5.3.0 to 5.3.1" by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/137
+* Bump pitest-maven from 1.9.9 to 1.9.10 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/139
+* Bump jackson-databind from 2.14.0-rc3 to 2.14.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/140
+* Bump loader-utils from 2.0.3 to 2.0.4 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/142
+* Bump pitest-maven from 1.9.10 to 1.9.11 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/144
+* Bump jackson-databind from 2.14.0 to 2.14.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/148
+* Bump engine.io from 6.2.0 to 6.2.1 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/147
+* Bump mockito-core from 4.8.1 to 4.9.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/146
+* Bump selenium-java from 4.6.0 to 4.7.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/152
+* Bump selenium-java from 4.7.0 to 4.7.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/155
+* Bump really-executable-jar-maven-plugin from 1.5.0 to 2.0.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/154
+* Updated pitest by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/153
+
+## What's Changed
+* Documentation tweaks by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/138
+* fixed copypasta by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/150
+
+
+**Full Changelog**: https://github.com/Mastercard/flow/compare/v0.0.8...v0.0.9
+
+[Changes][v0.0.9]
+
+
+<a name="v0.0.8"></a>
+# [v0.0.8](https://github.com/Mastercard/flow/releases/tag/v0.0.8) - 15 Jun 2023
+
+## Enhancements
+* Coppice UI tweaks by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/112
+* Added programmatic assertion filter by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/116
+* Disregarding result tags in model diff by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/117
+* Added message search by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/121
+* Report basis hoist by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/122
+* Occulted flows by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/123
+* Dependency inclusion by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/127
+
+## Dependencies
+* Bump pitest-junit5-plugin from 1.0.0 to 1.1.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/109
+* Bump selenium-java from 4.4.0 to 4.5.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/111
+* Not sure why dependabot isn't doing this, but :shrug: by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/113
+* Bump pitest-maven from 1.9.5 to 1.9.7 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/114
+* Bump jackson-databind from 2.14.0-rc1 to 2.14.0-rc2 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/119
+* Bump pitest-maven from 1.9.7 to 1.9.8 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/120
+* Bump selenium-java from 4.5.0 to 4.5.2 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/125
+* Bump mockito-core from 4.8.0 to 4.8.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/124
+* Bump maven-shade-plugin from 3.4.0 to 3.4.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/128
+* Bump jackson-databind from 2.14.0-rc2 to 2.14.0-rc3 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/129
+* Bump pitest-maven from 1.9.8 to 1.9.9 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/131
+* Bump selenium-java from 4.5.2 to 4.5.3 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/130
+
+## What's Changed
+* Fixed sonar-identified potential NPEs by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/115
+* Added manual test and mutation trigger by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/118
+* yarn upgrade and report naming by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/126
+
+
+**Full Changelog**: https://github.com/Mastercard/flow/compare/v0.0.7...v0.0.8
+
+[Changes][v0.0.8]
+
+
+<a name="v0.0.7"></a>
+# [v0.0.7](https://github.com/Mastercard/flow/releases/tag/v0.0.7) - 15 Jun 2023
+
+## What's Changed
+* Filter UI tweak by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/108
+
+
+**Full Changelog**: https://github.com/Mastercard/flow/compare/v0.0.6...v0.0.7
+
+[Changes][v0.0.7]
+
+
+<a name="v0.0.6"></a>
+# [v0.0.6](https://github.com/Mastercard/flow/releases/tag/v0.0.6) - 15 Jun 2023
+
+## Enhancements
+* Made the filter gui more accessible to downstream code by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/102
+* Fixed logging of system actors by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/106
+
+## Dependencies
+* Bump javassist from 3.29.1-GA to 3.29.2-GA by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/100
+* Bump maven-shade-plugin from 3.3.0 to 3.4.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/101
+* Bump junit-jupiter from 5.9.0 to 5.9.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/103
+* Bump junit-platform-launcher from 1.9.0 to 1.9.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/105
+
+## What's Changed
+* Added javadoc links by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/98
+* Added scan for sysout usage by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/107
+
+
+**Full Changelog**: https://github.com/Mastercard/flow/compare/v0.0.5...v0.0.6
+
+[Changes][v0.0.6]
+
+
+<a name="v0.0.5"></a>
+# [v0.0.5](https://github.com/Mastercard/flow/releases/tag/v0.0.5) - 15 Jun 2023
+
+## Enhancements
+* Model tag validation fix by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/89
+* Headless coppice by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/90
+
+## Dependencies
+* Bump jackson-databind from 2.13.3 to 2.13.4 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/92
+* Bump mockito-core from 4.6.1 to 4.7.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/95
+* Bump selenium-java from 4.3.0 to 4.4.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/94
+* Bump junit-jupiter from 5.8.2 to 5.9.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/97
+* Bump mockito-core from 4.7.0 to 4.8.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/96
+
+## What's Changed
+* Added maven central badge by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/87
+* Added link to maven search by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/88
+* Usage updates by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/79
+
+
+**Full Changelog**: https://github.com/Mastercard/flow/compare/v0.0.4...v0.0.5
+
+[Changes][v0.0.5]
+
+
+<a name="v0.0.4"></a>
+# [v0.0.4](https://github.com/Mastercard/flow/releases/tag/v0.0.4) - 15 Jun 2023
+
+## What's Changed
+* Add release artifact signing profile by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/86
+
+
+**Full Changelog**: https://github.com/Mastercard/flow/compare/v0.0.3...v0.0.4
+
+[Changes][v0.0.4]
+
+
+<a name="v0.0.3"></a>
+# [v0.0.3](https://github.com/Mastercard/flow/releases/tag/v0.0.3) - 15 Jun 2023
+
+## Enhancements
+
+## Dependencies
+* Bump maven-resources-plugin from 3.2.0 to 3.3.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/62
+* Bump maven-shade-plugin from 3.2.4 to 3.3.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/61
+* Bump jackson-databind from 2.13.2.1 to 2.13.3 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/59
+* Bump maven-antrun-plugin from 3.0.0 to 3.1.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/58
+* bumped version of java-diff-utils by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/64
+* Bump terser from 5.7.1 to 5.14.2 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/68
+* Bump slf4j-simple from 1.7.32 to 2.0.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/70
+* Bump javassist from 3.28.0-GA to 3.29.1-GA by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/71
+* Bump assertj-swing-junit from 3.9.2 to 3.17.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/72
+* Revert "Bump assertj-swing-junit from 3.9.2 to 3.17.1" by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/75
+* Revert "Revert "Bump assertj-swing-junit from 3.9.2 to 3.17.1"" by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/76
+* Bump webdrivermanager from 5.2.0 to 5.3.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/73
+* Bump maven-deploy-plugin from 3.0.0-M2 to 3.0.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/80
+* Bump picocli from 4.6.2 to 4.6.3 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/83
+* Bump pitest-maven from 1.9.4 to 1.9.5 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/84
+* Bump frontend-maven-plugin from 1.12.0 to 1.12.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/81
+* Angular upgrade by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/66
+* upgraded ngx-marked by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/67
+
+## What's Changed
+* Updated to go to maven central rather than github packages by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/42
+* Added automation to publish test results to pages by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/43
+* Avoided fails and corrected schedule by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/44
+* yaml is fun by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/45
+* inlined publish - the inter-workflow link didn't seem to work by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/46
+* only publish on main by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/47
+* Linked jobs by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/48
+* Added links to build artifacts by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/49
+* more intelligent artifact management by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/50
+* Copyright by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/51
+* changed ingestion dir to accomodate latest symlink by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/52
+* Fixed links to project root by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/53
+* Added manual index job by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/54
+* Tolerate fails by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/55
+* removed mention of transaction by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/56
+* Replaced manual diagram with mermaid generated from test data by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/57
+* Added dependency structure diagrams by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/63
+* Correcting code markup by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/65
+* Fixing version by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/69
+* Fixed logging by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/77
+* Complying with sonatype requirements by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/78
+* tweaks for release build by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/85
+
+
+**Full Changelog**: https://github.com/Mastercard/flow/compare/0.0.1...v0.0.3
+
+[Changes][v0.0.3]
+
+
 [v0.0.14]: https://github.com/Mastercard/flow/compare/v0.0.13...v0.0.14
-[v0.0.13]: https://github.com/Mastercard/flow/tree/v0.0.13
+[v0.0.13]: https://github.com/Mastercard/flow/compare/v0.0.12...v0.0.13
+[v0.0.12]: https://github.com/Mastercard/flow/compare/v0.0.11...v0.0.12
+[v0.0.11]: https://github.com/Mastercard/flow/compare/v0.0.10...v0.0.11
+[v0.0.10]: https://github.com/Mastercard/flow/compare/v0.0.9...v0.0.10
+[v0.0.9]: https://github.com/Mastercard/flow/compare/v0.0.8...v0.0.9
+[v0.0.8]: https://github.com/Mastercard/flow/compare/v0.0.7...v0.0.8
+[v0.0.7]: https://github.com/Mastercard/flow/compare/v0.0.6...v0.0.7
+[v0.0.6]: https://github.com/Mastercard/flow/compare/v0.0.5...v0.0.6
+[v0.0.5]: https://github.com/Mastercard/flow/compare/v0.0.4...v0.0.5
+[v0.0.4]: https://github.com/Mastercard/flow/compare/v0.0.3...v0.0.4
+[v0.0.3]: https://github.com/Mastercard/flow/tree/v0.0.3
 
 <!-- Generated by https://github.com/rhysd/changelog-from-release v3.7.1 -->
