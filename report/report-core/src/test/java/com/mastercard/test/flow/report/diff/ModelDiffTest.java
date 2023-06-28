@@ -355,29 +355,29 @@ class ModelDiffTest {
 						"Unchanged 1 On tags: b c d 1 never changed: b" );
 
 		dseq.analysisDiffs(
-				"14 characters on 1 flow c d e B ii Bee ee oo aa" )
-				.expandAnalysis( "14 characters on 1 flow c d e B ii Bee ee oo aa" )
+				"8 characters on 1 flow c d e ii ee oo aa" )
+				.expandAnalysis( "8 characters on 1 flow c d e ii ee oo aa" )
 				.hasSubjectFlows(
 						"updated c d e | updated c d e" );
 
 		dseq.clickDiff( 0 )
 				.hasDiff(
-						" 1   - Identity:                ",
-						" 2   -   removed                ",
-						" 3   -   a                      ",
-						" 4   -   b                      ",
-						" 5   -   c                      ",
-						" 6   - Motivation:              ",
-						" 7   -                          ",
-						" 8   - Context:                 ",
-						" 9   -   {}                     ",
-						"10   - Interactions:            ",
-						"11   -   ┌REQUEST AVA => BEN [] ",
-						"12   -   │Hi Ben!               ",
-						"13   -   └                      ",
-						"14   -   ┌RESPONSE AVA <= BEN []",
-						"15   -   │Hello Ava!            ",
-						"16   -   └                      " );
+						" 1  1   Identity:                ",
+						" 2  2     updated                ",
+						" 3  3     c                      ",
+						" 4  4     d                      ",
+						"        3 unchanged lines        ",
+						" 8  8   Context:                 ",
+						" 9  9     {}                     ",
+						"10 10   Interactions:            ",
+						"11 11     ┌REQUEST AVA => BEN [] ",
+						"12    -   │Hi Ben!               ",
+						"   12 +   │Hiii Beeen!           ",
+						"13 13     └                      ",
+						"14 14     ┌RESPONSE AVA <= BEN []",
+						"15    -   │Hello Ava!            ",
+						"   15 +   │Heeellooo Avaaa!      ",
+						"16 16     └                      " );
 	}
 
 	/**
@@ -525,8 +525,8 @@ class ModelDiffTest {
 						"Changed 2 On tags: a b c d e f 3 always changed: a e f",
 						"Unchanged 1 On tags: b c d 0 never changed:" )
 				.analysisDiffs(
-						"30 characters on 1 flow a b c d e remov updat a c b d c e B ii Bee ee oo aa",
-						"16 characters on 1 flow c d e f updat add c f" );
+						"24 characters on 1 flow a b c d e remov updat a c b d c e ii ee oo aa",
+						"14 characters on 1 flow c d e f upd t dd c f" );
 
 	}
 }

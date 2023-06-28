@@ -106,7 +106,6 @@ export class SeqActionComponent implements OnInit {
     }
 
     let diffs: Diff[] = this.dmp.diff_main(full, asserted);
-    this.dmp.diff_cleanupSemantic(diffs);
 
     // levenshtein distance is the number of changed characters - minimum
     // is 0, maximum is the length of the longer input string
