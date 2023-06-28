@@ -116,6 +116,9 @@ export class ChangeViewComponent implements OnInit {
     if (this.selected === null && this.all.length > 0) {
       this.selected = this.all[0];
     }
+
+    this.refreshDiff();
+    this.selectionListeners.forEach(cb => cb());
   }
 
   buildQuery(usp: URLSearchParams): URLSearchParams {

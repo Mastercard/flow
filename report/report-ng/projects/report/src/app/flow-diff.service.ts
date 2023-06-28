@@ -235,7 +235,6 @@ export class FlowDiffService {
         let diffs: Diff[] = this.dmp.diff_main(
           pair.left?.flat ?? '',
           pair.right?.flat ?? '');
-        this.dmp.diff_cleanupSemantic(diffs);
 
         diffs
           .filter(d => d[0] !== DIFF_EQUAL)

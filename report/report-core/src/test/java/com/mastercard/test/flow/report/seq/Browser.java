@@ -131,9 +131,6 @@ public class Browser implements
 
 	private static void quitBrowser() {
 		if( driver != null ) {
-			// chromedriver seems to have an impossible-to-suppress stderr line on startup,
-			// so it's only fair that we mirror that on shutdown
-			System.err.println( "Shutting down browser" );
 			driver.quit();
 			driver = null;
 		}
@@ -158,8 +155,7 @@ public class Browser implements
 				// https://github.com/SeleniumHQ/selenium/issues/11750
 				options.addArguments( "--remote-allow-origins=*" );
 
-				// suppress most stdout noise. We still get a "ChromeDriver was started
-				// successfully." line for some reason
+				// suppress stdout noise
 				System.setProperty( CHROME_DRIVER_SILENT_OUTPUT_PROPERTY, "true" );
 				Logger.getLogger( "org.openqa.selenium" ).setLevel( Level.OFF );
 
