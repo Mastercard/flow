@@ -1,3 +1,30 @@
+<a name="v0.0.15"></a>
+# [v0.0.15](https://github.com/Mastercard/flow/releases/tag/v0.0.15) - 28 Jun 2023
+
+<!-- Release notes generated using configuration in .github/release.yml at v0.0.15 -->
+
+## What's Changed
+### Enhancements
+* Avoided semantic diffs, fixed summary/change link [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/435
+### Dependencies
+* Bump maven-shade-plugin from 3.4.1 to 3.5.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/421
+* Bump @types/node from 20.3.0 to 20.3.1 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/425
+* Bump pitest-maven from 1.14.1 to 1.14.2 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/429
+* Bump ossf/scorecard-action from 2.1.3 to 2.2.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/431
+* Bump step-security/harden-runner from 2.4.0 to 2.4.1 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/432
+* Bump @types/jasmine from 4.3.2 to 4.3.4 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/434
+* Bump karma-coverage from 2.2.0 to 2.2.1 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/427
+* Bump jasmine-core from 4.6.0 to 5.0.1 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/423
+* Bump frontend-maven-plugin from 1.12.1 to 1.13.3 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/430
+### Other Changes
+* Added changelog automation by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/420
+
+
+**Full Changelog**: https://github.com/Mastercard/flow/compare/v0.0.14...v0.0.15
+
+[Changes][v0.0.15]
+
+
 <a name="v0.0.14"></a>
 # [v0.0.14](https://github.com/Mastercard/flow/releases/tag/v0.0.14) - 14 Jun 2023
 
@@ -461,6 +488,7 @@
 [Changes][v0.0.3]
 
 
+[v0.0.15]: https://github.com/Mastercard/flow/compare/v0.0.14...v0.0.15
 [v0.0.14]: https://github.com/Mastercard/flow/compare/v0.0.13...v0.0.14
 [v0.0.13]: https://github.com/Mastercard/flow/compare/v0.0.12...v0.0.13
 [v0.0.12]: https://github.com/Mastercard/flow/compare/v0.0.11...v0.0.12
