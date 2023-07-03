@@ -17,4 +17,5 @@ export class IndexRouteComponent implements OnInit {
     this.indexData.set(this.index);
   }
 
+  // looking for the route definitions? They're in app.module.ts
 }

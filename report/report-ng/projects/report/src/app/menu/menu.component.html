@@ -2,7 +2,7 @@
     <mat-icon svgIcon="menu"></mat-icon>
 </button>
 <mat-menu #menu="matMenu">
-    <a mat-menu-item *ngFor="let item of displayItems()" routerLink="{{item.href}}">
+    <a mat-menu-item *ngFor="let item of displayItems()" routerLink="/{{item.href}}">
         <mat-icon svgIcon="{{item.icon}}"></mat-icon>
         {{item.text}}
     </a>
