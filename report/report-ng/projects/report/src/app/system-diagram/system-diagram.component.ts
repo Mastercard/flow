@@ -59,23 +59,30 @@ export class SystemDiagramComponent implements OnInit {
     let ac = Object.keys(actors).length;
     this.summary = "" + ic + " interactions between " + ac + " actors";
 
-    if (this.diagram) {
-      this.diagram = ("graph LR" + this.diagram).trim();
-    }
-
     if (this.containerElRef != null) {
       // it looks like mermaid doesn't have great support for refreshing
-      // an existing diagram - we have to clear an attribute and replace
-      // all the svg elements of the previous diagram with our new diagram
-      // markup, then trigger mermaid to render again
+      // an existing diagram - we have to clear an attribute and manually
+      // delete the generated svg
       this.containerElRef.nativeElement
         .querySelector("pre")
         .removeAttribute("data-processed");
       this.containerElRef.nativeElement
         .querySelector("pre")
-        .innerHTML = this.diagram;
+        .innerHTML = "";
     }
-    mermaid.init();
+
+    if (this.diagram) {
+      this.diagram = ("graph LR" + this.diagram).trim();
+      // now we know we have something to drawm put that text into
+      // the dom and trigger the render again
+      if (this.containerElRef != null) {
+        this.containerElRef.nativeElement
+          .querySelector("pre")
+          .innerHTML = this.diagram;
+      }
+      mermaid.init();
+    }
+
   }
 
   private extractInteraction(
