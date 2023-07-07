@@ -1,10 +1,10 @@
 <mat-expansion-panel *ngIf="loadProgress != 0">
     <mat-expansion-panel-header>
-        <mat-panel-title>System</mat-panel-title>
+        <mat-panel-title>Interactions</mat-panel-title>
         <mat-panel-description>{{summary}}</mat-panel-description>
     </mat-expansion-panel-header>
     <div #myTestDiv id="container">
         <mat-progress-bar *ngIf="loadProgress != 100" [value]="loadProgress"></mat-progress-bar>
-        <pre class="mermaid">{{diagram}}</pre>
+        <pre class="mermaid"></pre>
     </div>
 </mat-expansion-panel>
