@@ -24,18 +24,12 @@ export class MenuComponent implements OnInit {
       text: "Model diff",
       icon: "compare"
     },
-    {
-      id: "sysd",
-      href: "sysd",
-      text: "System diagram",
-      icon: "schema"
-    },
   ];
 
   @Input() current: string = "";
 
   constructor(private icons: IconEmbedService,) {
-    icons.register("menu", "format_list_bulleted", "compare", "schema");
+    icons.register("menu", "format_list_bulleted", "compare");
   }
 
   ngOnInit(): void {

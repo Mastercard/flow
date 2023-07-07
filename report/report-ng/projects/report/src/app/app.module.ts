@@ -62,7 +62,6 @@ import { SystemDiagramComponent } from './system-diagram/system-diagram.componen
 
 const routes: Routes = [
   { path: "diff", component: ModelDiffComponent },
-  { path: "sysd", component: SystemDiagramComponent },
   { path: "**", component: IndexComponent },
 ]
 
