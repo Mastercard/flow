@@ -53,8 +53,13 @@ export class SystemDiagramComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // start the model load
-    this.modelData.path(this.modelLabel, "");
+    // we can't do the get requests to load flow data
+    // when we're browsing on the file system, so let's
+    // avoid errors in the log by not even trying
+    if (location.protocol !== "file:") {
+      // start the model load
+      this.modelData.path(this.modelLabel, "");
+    }
   }
 
   /**
