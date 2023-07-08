@@ -61,9 +61,77 @@ class JsApp {
 					.orElseThrow(
 							() -> new IllegalStateException( "Failed to find index.html in " + resDir ) );
 			indexTemplate = new Template( originalIndexPath );
+			Files.delete( originalIndexPath );
 		}
 		catch( IOException ioe ) {
 			throw new UncheckedIOException( "Failed to extract index.html", ioe );
+		}
+
+		fixLazyChunkLoadingPath( resDir );
+	}
+
+	/**
+	 * <p>
+	 * I hate this with the heat of a thousand suns, but I <i>really</i> want the
+	 * report file structure to be like:
+	 * </p>
+	 *
+	 * <pre>
+	 * /report
+	 *  ├ index.html
+	 *  ├ /detail
+	 *  │  ├ &lt;hash&gt;.html
+	 *  │  ├ &lt;hash&gt;.html
+	 *  │  ├ ...
+	 *  │  └ &lt;hash&gt;.html
+	 *  └ /res
+	 *     ├ main.&lt;hash&gt;.js
+	 *     ├ polyfills.&lt;hash&gt;.js
+	 *     ├ &lt;whatever>.&lt;hash&gt;.js
+	 *     ├ ...
+	 *     └ styles.&lt;hash&gt;.css
+	 * </pre>
+	 * <p>
+	 * This makes the report entrypoint super-obvious. Angular seems to have other
+	 * ideas though, and all the stuff that I want in <code>/res</code> is just
+	 * splatted into the root directory.
+	 * </p>
+	 * <p>
+	 * We're working around this in two ways:
+	 * </p>
+	 * <ul>
+	 * <li>Updating index.html to add <code>/res</code> to resource reference paths.
+	 * That's what is happening in {@link Template#insert(Object, Path)}</li>
+	 * <li>This method, which is dealing with lazy-loaded javascript chunks by
+	 * updating <code>runtime.js</code> to add <code>/res</code>.</li>
+	 * </ul>
+	 * <p>
+	 * <b>N.B.:</b> This second fix will work OK for the index page, but it will
+	 * fail for the for detail pages, as we can apply the first fix dynamically in
+	 * the detail pages, but they all share the same <code>runtime.js</code> file,
+	 * and we can only fix the relative path once. For the moment we only need the
+	 * runtime.js fix for mermaid, which is only used in the index page, so this
+	 * isn't a problem yet.
+	 * </p>
+	 *
+	 * @param resDir
+	 */
+	private static void fixLazyChunkLoadingPath( Path resDir ) {
+		try( Stream<Path> files = Files.find( resDir, 1,
+				( path, attr ) -> path.getFileName().toString().startsWith( "runtime." ) ) ) {
+			Path runtime = files.findFirst()
+					.orElse( null );
+			if( runtime != null ) {
+				String content = new String( Files.readAllBytes( runtime ), UTF_8 );
+				String fixed = content.replaceAll( "(\\(\\d+===e\\?\"common\":e\\))", "\"res/\" + $1" );
+				if( fixed.equals( content ) ) {
+					throw new IllegalStateException( "Failed to fix chunk load path" );
+				}
+				Files.write( runtime, fixed.getBytes( UTF_8 ) );
+			}
+		}
+		catch( IOException ioe ) {
+			throw new UncheckedIOException( "Failed to update lazy chunk loading", ioe );
 		}
 	}
 

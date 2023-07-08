@@ -1,6 +1,7 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, HostListener } from '@angular/core';
 import { Entry } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
+import { EntryHoverService } from '../entry-hover.service';
 
 @Component({
   selector: 'app-flow-nav-item',
@@ -20,7 +21,10 @@ export class FlowNavItemComponent implements OnInit {
 
   lineClass: string = "";
 
-  constructor(private icons: IconEmbedService,) {
+  constructor(
+    icons: IconEmbedService,
+    private hover: EntryHoverService,
+  ) {
     icons.register("check_circle_outline", "error_outline", "help_outline", "new_releases");
   }
 
@@ -46,6 +50,14 @@ export class FlowNavItemComponent implements OnInit {
     if (this.basePath.length !== 0) {
       this.basePath += "/";
     }
+  }
+
+  @HostListener('mouseenter') onMouseEnter() {
+    this.hover.hovered(this.entry);
+  }
+
+  @HostListener('mouseleave') onMouseLeave() {
+    this.hover.hovered(null);
   }
 
   tags(): string[] {
