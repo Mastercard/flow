@@ -98,7 +98,7 @@ public class Writer {
 		// delete whatever might be there already
 		QuietFiles.recursiveDelete( root );
 		// write static content
-		app = new JsApp( "/com/mastercard/test/flow/report", root ); // TODO: restore the res dir
+		app = new JsApp( "/com/mastercard/test/flow/report", root.resolve( "res" ) );
 	}
 
 	/**
