@@ -120,13 +120,15 @@ class JsApp {
 		try( Stream<Path> files = Files.find( resDir, 1,
 				( path, attr ) -> path.getFileName().toString().startsWith( "runtime." ) ) ) {
 			Path runtime = files.findFirst()
-					.orElseThrow( () -> new IllegalStateException( "Failed to find runtime.js file" ) );
-			String content = new String( Files.readAllBytes( runtime ), UTF_8 );
-			String fixed = content.replaceAll( "(\\(\\d+===e\\?\"common\":e\\))", "\"res/\" + $1" );
-			if( fixed.equals( content ) ) {
-				throw new IllegalStateException( "Failed to fix chunk load path" );
+					.orElse( null );
+			if( runtime != null ) {
+				String content = new String( Files.readAllBytes( runtime ), UTF_8 );
+				String fixed = content.replaceAll( "(\\(\\d+===e\\?\"common\":e\\))", "\"res/\" + $1" );
+				if( fixed.equals( content ) ) {
+					throw new IllegalStateException( "Failed to fix chunk load path" );
+				}
+				Files.write( runtime, fixed.getBytes( UTF_8 ) );
 			}
-			Files.write( runtime, fixed.getBytes( UTF_8 ) );
 		}
 		catch( IOException ioe ) {
 			throw new UncheckedIOException( "Failed to update lazy chunk loading", ioe );
