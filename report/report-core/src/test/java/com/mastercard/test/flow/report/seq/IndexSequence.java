@@ -1,31 +1,20 @@
 package com.mastercard.test.flow.report.seq;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.Duration.ofSeconds;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.StringWriter;
-import java.io.UncheckedIOException;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
@@ -36,7 +25,6 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.w3c.dom.Document;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
@@ -399,24 +387,77 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	 *                 content
 	 * @return <code>this</code>
 	 */
-	public IndexSequence hasInteractions( String expected ) {
+	public IndexSequence hasInteractions( String... expected ) {
 		trace( "hasInteractions", expected );
-		String svg = toPrettyString( driver
+		String svg = driver
 				.findElement( By.id( "interactions_diagram" ) )
-				.getAttribute( "innerHTML" ), 2 );
+				.getAttribute( "innerHTML" );
 
-		// mermaid generates a timestamp ID that we need to mask
-		svg = svg.replaceAll( "mermaid-\\d+", "mermaid-masked-timestamp" );
+		String svgSummary = summariseSVG( svg );
 
-		String expectedContent = expectedContent( expected );
-
-		// do a rough comparison first to avoid platform-specific layouts
-		if( !roundSVG( expectedContent, 5 ).equals( roundSVG( svg, 5 ) ) ) {
-			// have the failure show the exact layout
-			assertEquals( expectedContent, svg, "Interaction diagram" );
-		}
+		assertEquals(
+				copypasta( expected ),
+				copypasta( svgSummary ),
+				"interaction diagram structure" );
 
 		return self();
+	}
+
+	/**
+	 * Extracts the gist of the interaction diagram.
+	 *
+	 * @param svg The diagram
+	 * @return A string that describes the diagram
+	 */
+	private static String summariseSVG( String svg ) {
+		try {
+			Document doc = DocumentBuilderFactory.newInstance()
+					.newDocumentBuilder()
+					.parse( new InputSource( new StringReader( svg ) ) );
+			XPath xpath = XPathFactory.newInstance().newXPath();
+
+			StringBuilder sb = new StringBuilder();
+
+			sb.append( "Nodes:" );
+			NodeList nl = (NodeList) xpath.compile( "//span[@class='nodeLabel']" )
+					.evaluate( doc, XPathConstants.NODESET );
+			for( int i = 0; i < nl.getLength(); i++ ) {
+				sb.append( "\n  " )
+						.append( nl.item( i ).getTextContent() );
+			}
+
+			sb.append( "\nEdges:" );
+			nl = (NodeList) xpath.compile( "//path[@class!='arrowMarkerPath']" )
+					.evaluate( doc, XPathConstants.NODESET );
+			for( int i = 0; i < nl.getLength(); i++ ) {
+				Set<String> classes = Stream.of( nl.item( i )
+						.getAttributes()
+						.getNamedItem( "class" )
+						.getTextContent()
+						.split( " " ) )
+						.collect( toSet() );
+
+				sb.append( "\n " );
+				Stream.of( "LS-", "edge-thickness-", "edge-pattern-", "LE-" )
+						.forEach( prefix -> {
+							sb.append( " " )
+									.append( classes.stream()
+											.filter( c -> c.startsWith( prefix ) )
+											.map( c -> c.substring( prefix.length() ) )
+											.findFirst().orElse( prefix + "???" ) );
+						} );
+
+				if( nl.item( i ).getAttributes().getNamedItem( "style" ).getTextContent()
+						.contains( "stroke-width: 0" ) ) {
+					sb.append( " <INVISIBLE>" );
+				}
+			}
+
+			return sb.toString();
+		}
+		catch( Exception e ) {
+			throw new IllegalStateException( "failed to summarise\n" + svg, e );
+		}
 	}
 
 	private IndexSequence dragChip( String text, String sourceId, String destId ) {
@@ -457,94 +498,4 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 		return String.format( fmt, flowDescription( e ), flowTags( e ) );
 	}
 
-	private static String expectedContent( String name ) {
-		String resource = IndexSequence.class.getSimpleName() + "/" + name;
-		try( BufferedInputStream bis = new BufferedInputStream(
-				IndexSequence.class.getClassLoader().getResourceAsStream( resource ) );
-				ByteArrayOutputStream data = new ByteArrayOutputStream(); ) {
-			byte[] buff = new byte[8192];
-			int read;
-			while( (read = bis.read( buff )) != -1 ) {
-				data.write( buff, 0, read );
-			}
-			return new String( data.toByteArray(), UTF_8 );
-		}
-		catch( IOException ioe ) {
-			throw new UncheckedIOException( "Failed to get resource '" + resource + "'", ioe );
-		}
-	}
-
-	/**
-	 * From https://stackoverflow.com/a/33541820
-	 *
-	 * @param xml    A string of XML
-	 * @param indent How many spaces to indent nested elements
-	 * @return pretty-printed xml
-	 */
-	public static String toPrettyString( String xml, int indent ) {
-		try {
-			// Turn xml string into a document
-			Document document = DocumentBuilderFactory.newInstance()
-					.newDocumentBuilder()
-					.parse( new InputSource( new ByteArrayInputStream( xml.getBytes( "utf-8" ) ) ) );
-
-			// Remove whitespaces outside tags
-			document.normalize();
-			XPath xPath = XPathFactory.newInstance().newXPath();
-			NodeList nodeList = (NodeList) xPath.evaluate( "//text()[normalize-space()='']",
-					document,
-					XPathConstants.NODESET );
-
-			for( int i = 0; i < nodeList.getLength(); ++i ) {
-				Node node = nodeList.item( i );
-				node.getParentNode().removeChild( node );
-			}
-
-			// Setup pretty print options
-			TransformerFactory transformerFactory = TransformerFactory.newInstance();
-			transformerFactory.setAttribute( "indent-number", indent );
-			Transformer transformer = transformerFactory.newTransformer();
-			transformer.setOutputProperty( OutputKeys.ENCODING, "UTF-8" );
-			transformer.setOutputProperty( OutputKeys.OMIT_XML_DECLARATION, "yes" );
-			transformer.setOutputProperty( OutputKeys.INDENT, "yes" );
-
-			// Return pretty print xml string
-			StringWriter stringWriter = new StringWriter();
-			transformer.transform( new DOMSource( document ), new StreamResult( stringWriter ) );
-			return stringWriter.toString()
-					.replace( "\r\n", "\n" );// fix windows line endings
-		}
-		catch( Exception e ) {
-			throw new RuntimeException( e );
-		}
-	}
-
-	private static final Pattern FLOAT_PATTERN = Pattern.compile( "\\d+\\.\\d+" );
-
-	/**
-	 * Apparently mermaid behaviour is platform-specific - we get a slightly
-	 * different layout on linux than we do on windows. This method rounds off all
-	 * the floats in the svg. The result will look awful, but we'll be able to do
-	 * rough comparisons between platforms
-	 *
-	 * @param svg       The SVG text
-	 * @param tolerance WHere to round numbers to
-	 * @return
-	 */
-	private static final String roundSVG( String svg, int tolerance ) {
-		StringBuilder rounded = new StringBuilder();
-		Matcher m = FLOAT_PATTERN.matcher( svg );
-		int start = 0;
-
-		while( m.find() ) {
-			rounded.append( svg.substring( start, m.start() ) );
-			start = m.end();
-			float f = Float.parseFloat( m.group() );
-			f = Math.round( f / tolerance ) * tolerance;
-			rounded.append( f );
-		}
-		rounded.append( svg.substring( start ) );
-
-		return rounded.toString();
-	}
 }

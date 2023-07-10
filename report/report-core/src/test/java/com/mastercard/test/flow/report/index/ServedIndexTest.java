@@ -31,7 +31,14 @@ class ServedIndexTest extends AbstractIndexTest {
 	void interactions() {
 		iseq.hasInteractionSummary( "2 interactions between 3 actors" )
 				.expandInteractions()
-				.hasInteractions( "interactions.svg" );
+				.hasInteractions(
+						"Nodes:",
+						"  AVA",
+						"  BEN",
+						"  CHE",
+						"Edges:",
+						"  AVA normal solid BEN",
+						"  AVA normal solid CHE" );
 	}
 
 	/**
@@ -43,7 +50,14 @@ class ServedIndexTest extends AbstractIndexTest {
 		iseq.clickTag( "PASS" )
 				.hasInteractionSummary( "1 interactions between 2 actors" )
 				.expandInteractions()
-				.hasInteractions( "filtered.svg" );
+				.hasInteractions(
+						"Nodes:",
+						"  AVA",
+						"  BEN",
+						"  CHE",
+						"Edges:",
+						"  AVA normal solid BEN",
+						"  AVA thick solid CHE <INVISIBLE>" );
 	}
 
 	/**
@@ -55,7 +69,14 @@ class ServedIndexTest extends AbstractIndexTest {
 				.expandInteractions()
 				.hoverEntry( "basis       [PASS, abc, def]" )
 				.hasInteractionSummary( "1 interactions between 2 actors" )
-				.hasInteractions( "hovered.svg" );
+				.hasInteractions(
+						"Nodes:",
+						"  AVA",
+						"  BEN",
+						"  CHE",
+						"Edges:",
+						"  AVA thick solid BEN",
+						"  AVA normal dotted CHE" );
 	}
 
 	/**
