@@ -65,7 +65,7 @@ public class Mdl {
 							.description( "dependency" )
 							.tags( set( "abc", "ghi", "jkl", "mno" ) ) )
 					.call( a -> a
-							.from( Actrs.AVA ).to( Actrs.BEN )
+							.from( Actrs.AVA ).to( Actrs.CHE )
 							.request( REQ ).response( RES ) ) );
 
 	/**
