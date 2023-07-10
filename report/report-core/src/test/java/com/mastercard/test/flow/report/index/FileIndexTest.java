@@ -1,5 +1,6 @@
 package com.mastercard.test.flow.report.index;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.mastercard.test.flow.report.seq.Browser;
@@ -15,5 +16,14 @@ class FileIndexTest extends AbstractIndexTest {
 	/***/
 	FileIndexTest() {
 		super( report.fileUrl() );
+	}
+
+	/**
+	 * Shows that the interactions panel is not shown when we can't load the flow
+	 * details
+	 */
+	@Test
+	void noInteractions() {
+		iseq.hasInteractionSummary( "" );
 	}
 }

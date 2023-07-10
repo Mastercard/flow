@@ -3,18 +3,30 @@ package com.mastercard.test.flow.report.seq;
 import static java.time.Duration.ofSeconds;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable;
 
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathFactory;
 
 import org.junit.jupiter.api.Assertions;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
 /**
  * Encapsulates the nuts and bolts of interacting with the index page so the
@@ -54,6 +66,42 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 			args = "#?" + Stream.of( arguments ).collect( Collectors.joining( "&" ) );
 		}
 		return get( url + args );
+	}
+
+	/**
+	 * Hovers the pointer over an index entry
+	 *
+	 * @param name The text of the index item (same format as asserted by
+	 *             {@link #hasFlows(String...)})
+	 * @return <code>this</code>
+	 */
+	public IndexSequence hoverEntry( String name ) {
+		trace( "hoverEntry", name );
+		List<WebElement> flowItems = driver.findElements( By.tagName( "app-flow-nav-item" ) );
+		int width = flowItems.stream()
+				.map( IndexSequence::flowDescription )
+				.mapToInt( String::length )
+				.max()
+				.orElse( 0 );
+		WebElement linkItem = flowItems.stream()
+				.filter( e -> name.equals( printFlow( width, e ) ) )
+				.findFirst()
+				.orElse( null );
+		if( linkItem == null ) {
+			Assertions.fail( String.format(
+					"Failed to find detail link '%s' in%s",
+					name,
+					flowItems.stream()
+							.map( e -> "\n" + printFlow( width, e ) )
+							.collect( joining() ) ) );
+		}
+		else {
+			new Actions( driver )
+					.moveToElement( linkItem )
+					.build()
+					.perform();
+		}
+		return self();
 	}
 
 	/**
@@ -301,6 +349,117 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 		return dragChip( tag, "tag_exclude", "tag_include" );
 	}
 
+	/**
+	 * Asserts on the displayed interaction summary text.
+	 *
+	 * @param expected The expected text, or the empty string if we're expecting
+	 *                 that element not to be shown at all
+	 * @return <code>this</code>
+	 */
+	public IndexSequence hasInteractionSummary( String expected ) {
+		trace( "hasInteractionSummary", expected );
+		assertEquals( expected, driver
+				.findElements( By.id( "interaction_summary" ) ).stream()
+				.map( WebElement::getText )
+				.collect( joining( "\n" ) ),
+				"Interaction summary" );
+		return self();
+	}
+
+	/**
+	 * Clicks on the expansion panel to show the interaction diagram.
+	 *
+	 * @return <code>this</code>
+	 */
+	public IndexSequence expandInteractions() {
+		trace( "expandInteractions" );
+		driver.findElement( By.id( "interactions_title" ) )
+				.click();
+		new WebDriverWait( driver, ofSeconds( 2 ) )
+				.until( elementToBeClickable( By.id( "interactions_diagram" ) ) );
+		return self();
+	}
+
+	/**
+	 * Asserts on the displayed interaction diagram.
+	 *
+	 * @param expected The name of the resource file that contains the expected SVG
+	 *                 content
+	 * @return <code>this</code>
+	 */
+	public IndexSequence hasInteractions( String... expected ) {
+		trace( "hasInteractions", (Object[]) expected );
+		String svg = driver
+				.findElement( By.id( "interactions_diagram" ) )
+				.getAttribute( "innerHTML" );
+
+		String svgSummary = summariseSVG( svg );
+
+		assertEquals(
+				copypasta( expected ),
+				copypasta( svgSummary ),
+				"interaction diagram structure" );
+
+		return self();
+	}
+
+	/**
+	 * Extracts the gist of the interaction diagram.
+	 *
+	 * @param svg The diagram
+	 * @return A string that describes the diagram
+	 */
+	private static String summariseSVG( String svg ) {
+		try {
+			Document doc = DocumentBuilderFactory.newInstance()
+					.newDocumentBuilder()
+					.parse( new InputSource( new StringReader( svg ) ) );
+			XPath xpath = XPathFactory.newInstance().newXPath();
+
+			StringBuilder sb = new StringBuilder();
+
+			sb.append( "Nodes:" );
+			NodeList nl = (NodeList) xpath.compile( "//span[@class='nodeLabel']" )
+					.evaluate( doc, XPathConstants.NODESET );
+			for( int i = 0; i < nl.getLength(); i++ ) {
+				sb.append( "\n  " )
+						.append( nl.item( i ).getTextContent() );
+			}
+
+			sb.append( "\nEdges:" );
+			nl = (NodeList) xpath.compile( "//path[@class!='arrowMarkerPath']" )
+					.evaluate( doc, XPathConstants.NODESET );
+			for( int i = 0; i < nl.getLength(); i++ ) {
+				Set<String> classes = Stream.of( nl.item( i )
+						.getAttributes()
+						.getNamedItem( "class" )
+						.getTextContent()
+						.split( " " ) )
+						.collect( toSet() );
+
+				sb.append( "\n " );
+				Stream.of( "LS-", "edge-thickness-", "edge-pattern-", "LE-" )
+						.forEach( prefix -> {
+							sb.append( " " )
+									.append( classes.stream()
+											.filter( c -> c.startsWith( prefix ) )
+											.map( c -> c.substring( prefix.length() ) )
+											.findFirst().orElse( prefix + "???" ) );
+						} );
+
+				if( nl.item( i ).getAttributes().getNamedItem( "style" ).getTextContent()
+						.contains( "stroke-width: 0" ) ) {
+					sb.append( " <INVISIBLE>" );
+				}
+			}
+
+			return sb.toString();
+		}
+		catch( Exception e ) {
+			throw new IllegalStateException( "failed to summarise\n" + svg, e );
+		}
+	}
+
 	private IndexSequence dragChip( String text, String sourceId, String destId ) {
 		WebElement source = driver.findElement( By.id( sourceId ) );
 		WebElement chip = source.findElements( By.tagName( "mat-chip" ) ).stream()
@@ -338,4 +497,5 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 		String fmt = "%-" + descWidth + "s  %s";
 		return String.format( fmt, flowDescription( e ), flowTags( e ) );
 	}
+
 }
