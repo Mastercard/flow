@@ -31,6 +31,13 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Set up Node
+        uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
+        with:
+          node-version: '14.15.1'
+          cache: 'yarn'
+          cache-dependency-path: report/report-ng/yarn.lock
+
       - name: Cache SonarCloud packages
         uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
         with:
@@ -49,4 +56,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B -Pcoverage -Dnode=none verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Mastercard_flow
+        run: mvn -B -Pcoverage -Dnode=system verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Mastercard_flow
