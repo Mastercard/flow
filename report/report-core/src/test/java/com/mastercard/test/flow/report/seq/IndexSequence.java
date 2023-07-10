@@ -388,7 +388,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	 * @return <code>this</code>
 	 */
 	public IndexSequence hasInteractions( String... expected ) {
-		trace( "hasInteractions", expected );
+		trace( "hasInteractions", (Object[]) expected );
 		String svg = driver
 				.findElement( By.id( "interactions_diagram" ) )
 				.getAttribute( "innerHTML" );
