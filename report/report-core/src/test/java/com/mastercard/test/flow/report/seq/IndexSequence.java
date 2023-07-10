@@ -15,6 +15,8 @@ import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -406,9 +408,14 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 		// mermaid generates a timestamp ID that we need to mask
 		svg = svg.replaceAll( "mermaid-\\d+", "mermaid-masked-timestamp" );
 
-		assertEquals(
-				expectedContent( expected ),
-				svg );
+		String expectedContent = expectedContent( expected );
+
+		// do a rough comparison first to avoid platform-specific layouts
+		if( !roundSVG( expectedContent, 5 ).equals( roundSVG( svg, 5 ) ) ) {
+			// have the failure show the exact layout
+			assertEquals( expectedContent, svg, "Interaction diagram" );
+		}
+
 		return self();
 	}
 
@@ -510,5 +517,34 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 		catch( Exception e ) {
 			throw new RuntimeException( e );
 		}
+	}
+
+	private static final Pattern FLOAT_PATTERN = Pattern.compile( "\\d+\\.\\d+" );
+
+	/**
+	 * Apparently mermaid behaviour is platform-specific - we get a slightly
+	 * different layout on linux than we do on windows. This method rounds off all
+	 * the floats in the svg. The result will look awful, but we'll be able to do
+	 * rough comparisons between platforms
+	 *
+	 * @param svg       The SVG text
+	 * @param tolerance WHere to round numbers to
+	 * @return
+	 */
+	private static final String roundSVG( String svg, int tolerance ) {
+		StringBuilder rounded = new StringBuilder();
+		Matcher m = FLOAT_PATTERN.matcher( svg );
+		int start = 0;
+
+		while( m.find() ) {
+			rounded.append( svg.substring( start, m.start() ) );
+			start = m.end();
+			float f = Float.parseFloat( m.group() );
+			f = Math.round( f / tolerance ) * tolerance;
+			rounded.append( f );
+		}
+		rounded.append( svg.substring( start ) );
+
+		return rounded.toString();
 	}
 }
