@@ -57,7 +57,7 @@ class ServedIndexTest extends AbstractIndexTest {
 						"  CHE",
 						"Edges:",
 						"  AVA normal solid BEN",
-						"  AVA thick solid CHE <INVISIBLE>" );
+						"  AVA normal solid CHE <INVISIBLE>" );
 	}
 
 	/**
