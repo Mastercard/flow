@@ -10,6 +10,7 @@ import static org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClick
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -25,6 +26,7 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
@@ -447,10 +449,12 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 											.findFirst().orElse( prefix + "???" ) );
 						} );
 
-				if( nl.item( i ).getAttributes().getNamedItem( "style" ).getTextContent()
-						.contains( "stroke-width: 0" ) ) {
-					sb.append( " <INVISIBLE>" );
-				}
+				Optional.of( nl.item( i ) )
+						.map( Node::getAttributes )
+						.map( a -> a.getNamedItem( "style" ) )
+						.map( Node::getTextContent )
+						.filter( s -> s.contains( "stroke-width: 0" ) )
+						.ifPresent( s -> sb.append( " <INVISIBLE>" ) );
 			}
 
 			return sb.toString();
