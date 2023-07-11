@@ -202,7 +202,6 @@ export class SystemDiagramComponent implements OnInit {
             .querySelector("pre")
             .innerHTML = diagram;
 
-          console.log("rendering", diagram);
           mermaid.init();
           this.renderedEdgeCount = this.edges.length;
         }
