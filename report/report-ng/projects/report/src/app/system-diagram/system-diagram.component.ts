@@ -77,6 +77,8 @@ export class SystemDiagramComponent implements OnInit {
         f!.root, this.edges, requests)
       );
 
+    // force a re-render of the diagram
+    this.renderedEdgeCount = -1;
     this.refilterEdges();
   }
 
