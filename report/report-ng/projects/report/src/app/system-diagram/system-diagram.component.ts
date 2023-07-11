@@ -30,6 +30,7 @@ export class SystemDiagramComponent implements OnInit {
   loadProgress: number = 0;
   summary: string = "";
   edges: Edge[] = [];
+  renderedEdgeCount: number = 0;
   hovered: Entry | null = null;
 
   @ViewChild('myTestDiv') containerElRef: ElementRef | null = null;
@@ -178,29 +179,106 @@ export class SystemDiagramComponent implements OnInit {
     this.summary = ic + " interactions between " + ac + " actors";
 
     if (this.containerElRef != null) {
-      // it looks like mermaid doesn't have great support for refreshing
-      // an existing diagram - we have to clear an attribute and manually
-      // delete the generated svg
-      this.containerElRef.nativeElement
-        .querySelector("pre")
-        .removeAttribute("data-processed");
-      this.containerElRef.nativeElement
-        .querySelector("pre")
-        .innerHTML = "";
+      if (this.edges.length != this.renderedEdgeCount) {
+        // we 've got a new edge - we have to rerender the diagram completely
 
-      if (this.edges.length > 0) {
-        let diagram = "graph LR\n" + this.edges
-          .map(e => "  " + e.from + " " + e.edge + " " + e.to)
-          .join("\n");
-        // now we know we have something to draw, put that text into
-        // the dom and trigger mermaid
+        // it looks like mermaid doesn't have great support for refreshing
+        // an existing diagram - we have to clear an attribute and manually
+        // delete the generated svg
         this.containerElRef.nativeElement
           .querySelector("pre")
-          .innerHTML = diagram;
+          .removeAttribute("data-processed");
+        this.containerElRef.nativeElement
+          .querySelector("pre")
+          .innerHTML = "";
 
-        mermaid.init();
+        if (this.edges.length > 0) {
+          let diagram = "graph LR\n" + this.edges
+            .map(e => "  " + e.from + " " + e.edge + " " + e.to)
+            .join("\n");
+          // now we know we have something to draw, put that text into
+          // the dom and trigger mermaid
+          this.containerElRef.nativeElement
+            .querySelector("pre")
+            .innerHTML = diagram;
+
+          console.log("rendering", diagram);
+          mermaid.init();
+          this.renderedEdgeCount = this.edges.length;
+        }
+      }
+      else {
+        // edge count hasn't changed, so we can get away with editing styles
+        let paths: HTMLElement[] = (Array.from(this.containerElRef?.nativeElement
+          .querySelectorAll("path")) as HTMLElement[])
+          .filter(path => path.classList.contains("flowchart-link"));
+
+        this.edges.forEach(edge => {
+          paths
+            .filter(path => path.classList.contains("LS-" + edge.from)
+              && path.classList.contains("LE-" + edge.to))
+            .forEach(path => {
+              if (edge.edge === this.dottedEdge) {
+                this.dottedEdgeStyle(path);
+              }
+              else if (edge.edge === this.thickEdge) {
+                this.thickEdgeStyle(path);
+              }
+              else if (edge.edge === this.invisibleEdge) {
+                this.invisibleEdgeStyle(path);
+              }
+              else {
+                this.lineEdgeStyle(path);
+              }
+            });
+        });
       }
     }
   }
 
+  private lineEdgeStyle(e: HTMLElement): void {
+    this.replaceClass(e, "edge-thickness-", "normal");
+    this.replaceClass(e, "edge-pattern-", "solid");
+    this.setAttr(e, "style", "");
+    this.setAttr(e, "marker-end", "url(#flowchart-pointEnd)");
+  }
+
+  private thickEdgeStyle(e: HTMLElement): void {
+    this.replaceClass(e, "edge-thickness-", "thick");
+    this.replaceClass(e, "edge-pattern-", "solid");
+    this.setAttr(e, "style", "");
+    this.setAttr(e, "marker-end", "url(#flowchart-pointEnd)");
+  }
+
+  private dottedEdgeStyle(e: HTMLElement): void {
+    this.replaceClass(e, "edge-thickness-", "normal");
+    this.replaceClass(e, "edge-pattern-", "dotted");
+    this.setAttr(e, "style", "");
+    this.setAttr(e, "marker-end", "url(#flowchart-pointEnd)");
+  }
+
+  private invisibleEdgeStyle(e: HTMLElement): void {
+    this.replaceClass(e, "edge-thickness-", "normal");
+    this.replaceClass(e, "edge-pattern-", "solid");
+    this.setAttr(e, "style", "stroke-width: 0");
+    this.setAttr(e, "marker-end", "");
+  }
+
+  private replaceClass(e: HTMLElement, prefix: string, suffix: string) {
+    e.classList.forEach(c => {
+      if (c.startsWith(prefix)) {
+        e.classList.remove(c);
+      }
+    });
+    e.classList.add(prefix + suffix);
+  }
+
+  private setAttr(e: HTMLElement, name: string, value: string) {
+    if (value) {
+      e.setAttribute(name, value);
+    }
+    else {
+      e.removeAttribute(name);
+    }
+  }
 }
