@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.mastercard.test.flow.report.seq.Browser;
@@ -58,6 +59,45 @@ class ServedIndexTest extends AbstractIndexTest {
 						"Edges:",
 						"  AVA normal solid BEN",
 						"  AVA normal solid CHE <INVISIBLE>" );
+
+		iseq.toggleFilteredActorHide()
+				.hasInteractions(
+						"Nodes:",
+						"  AVA",
+						"  BEN",
+						"Edges:",
+						"  AVA normal solid BEN" );
+	}
+
+	/**
+	 * Checks that the user can extract the mermaid markup
+	 */
+	@Test
+	@DisabledIf(value = "java.awt.GraphicsEnvironment#isHeadless",
+			disabledReason = "no clipboard")
+	void mermaidMarkup() {
+		iseq.expandInteractions()
+				.hasMermaidMarkup(
+						"graph LR",
+						"  AVA --> BEN",
+						"  AVA --> CHE" );
+
+		iseq.diagramOrientation( "TD" )
+				.hasMermaidMarkup(
+						"graph TD",
+						"  AVA --> BEN",
+						"  AVA --> CHE" );
+
+		iseq.clickTag( "PASS" )
+				.hasMermaidMarkup(
+						"graph TD",
+						"  AVA --> BEN",
+						"  AVA ~~~ CHE" );
+
+		iseq.toggleFilteredActorHide()
+				.hasMermaidMarkup(
+						"graph TD",
+						"  AVA --> BEN" );
 	}
 
 	/**

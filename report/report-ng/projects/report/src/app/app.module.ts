@@ -59,6 +59,7 @@ import { MatRippleModule } from '@angular/material/core';
 import { HighlightedTextComponent } from './highlighted-text/highlighted-text.component';
 import { TextDiffComponent } from './text-diff/text-diff.component';
 import { SystemDiagramComponent } from './system-diagram/system-diagram.component';
+import { ClipboardModule } from '@angular/cdk/clipboard';
 
 const routes: Routes = [
   { path: "diff", component: ModelDiffComponent },
@@ -106,6 +107,7 @@ const routes: Routes = [
   imports: [
     BrowserAnimationsModule,
     BrowserModule,
+    ClipboardModule,
     DragDropModule,
     FormsModule,
     HttpClientModule,

@@ -4,6 +4,9 @@ import { ModelDiffDataService } from '../model-diff-data.service';
 import { Entry, Flow, Interaction } from '../types';
 import { FlowFilterService } from '../flow-filter.service';
 import { EntryHoverService } from '../entry-hover.service';
+import { MatButtonToggleChange } from '@angular/material/button-toggle';
+import { ClipboardModule } from '@angular/cdk/clipboard';
+import { IconEmbedService } from '../icon-embed.service';
 
 interface Edge {
   from: string;
@@ -32,6 +35,9 @@ export class SystemDiagramComponent implements OnInit {
   edges: Edge[] = [];
   renderedEdgeCount: number = 0;
   hovered: Entry | null = null;
+  orientation: string = "LR";
+  hideFilteredActors: boolean = false;
+  mermaidMarkup: string = "";
 
   @ViewChild('myTestDiv') containerElRef: ElementRef | null = null;
 
@@ -39,18 +45,29 @@ export class SystemDiagramComponent implements OnInit {
     private modelData: ModelDiffDataService,
     private filter: FlowFilterService,
     private hover: EntryHoverService,
+    icons: IconEmbedService,
   ) {
     modelData.onFlow(this.modelLabel, (label: string, entry: Entry, flow: Flow) => {
       this.loadProgress = modelData.flowLoadProgress(this.modelLabel);
       this.refreshEdges();
     });
     filter.onUpdate(() => {
-      this.refilterEdges();
+      console.log("filter.onUpdate", this.hideFilteredActors);
+      if (this.hideFilteredActors) {
+        this.refreshEdges();
+      }
+      else {
+        this.refilterEdges();
+      }
     });
     hover.onHover((entry: Entry | null) => {
       this.hovered = entry;
       this.rehoverFlow();
     });
+
+    icons.register(
+      "panorama_vertical", "panorama_horizontal",
+      "filter_alt", "content_copy");
   }
 
   ngOnInit(): void {
@@ -63,14 +80,33 @@ export class SystemDiagramComponent implements OnInit {
     }
   }
 
+  forceRerender(): void {
+    this.renderedEdgeCount = -1;
+    this.refilterEdges();
+  }
+
+  updateFilterHide(event: MatButtonToggleChange) {
+    this.hideFilteredActors = event.source.checked;
+    this.renderedEdgeCount = -1;
+    this.refreshEdges();
+  }
+
+  copyContent(event: MatButtonToggleChange): void {
+    // we're abusing a toggle button for the visuals, so keep it unchecked
+    event.source.checked = false;
+  }
+
   /**
    * Called when a flow has been loaded, recalculates all the edges in the system
    */
   private refreshEdges(): void {
+    console.log("refreshEdges", this.hideFilteredActors);
+
     let requests: { [key: string]: { [key: string]: number } } = {};
     this.edges = [];
 
     this.modelData.index(this.modelLabel)?.index?.entries
+      .filter(e => !this.hideFilteredActors || this.filter.passes(e))
       .map(e => this.modelData.flowFor(this.modelLabel, e))
       .filter(f => f != null)
       .forEach(f => this.extractEdges(
@@ -180,9 +216,13 @@ export class SystemDiagramComponent implements OnInit {
     let ac = actors.size;
     this.summary = ic + " interactions between " + ac + " actors";
 
+    this.mermaidMarkup = "graph " + this.orientation + "\n" + this.edges
+      .map(e => "  " + e.from + " " + e.edge + " " + e.to)
+      .join("\n");
+
     if (this.containerElRef != null) {
       if (this.edges.length != this.renderedEdgeCount) {
-        // we 've got a new edge - we have to rerender the diagram completely
+        // we've got a new edge - we have to rerender the diagram completely
 
         // it looks like mermaid doesn't have great support for refreshing
         // an existing diagram - we have to clear an attribute and manually
@@ -195,14 +235,11 @@ export class SystemDiagramComponent implements OnInit {
           .innerHTML = "";
 
         if (this.edges.length > 0) {
-          let diagram = "graph LR\n" + this.edges
-            .map(e => "  " + e.from + " " + e.edge + " " + e.to)
-            .join("\n");
           // now we know we have something to draw, put that text into
           // the dom and trigger mermaid
           this.containerElRef.nativeElement
             .querySelector("pre")
-            .innerHTML = diagram;
+            .innerHTML = this.mermaidMarkup;
 
           mermaid.init();
           this.renderedEdgeCount = this.edges.length;
