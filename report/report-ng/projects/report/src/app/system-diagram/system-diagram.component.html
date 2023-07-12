@@ -8,7 +8,8 @@
         <div id="interaction_controls_diagram">
             <div id="interaction_controls">
                 <section>
-                    <mat-button-toggle-group [vertical]="true" [(ngModel)]="orientation" (change)="forceRerender()">
+                    <mat-button-toggle-group id="interactions_orientation_group" [vertical]="true"
+                        [(ngModel)]="orientation" (change)="forceRerender()">
                         <mat-button-toggle matTooltip="Vertical layout" matTooltipPosition="right" value="TD">
                             <mat-icon svgIcon="panorama_vertical"></mat-icon>
                         </mat-button-toggle>
@@ -18,14 +19,14 @@
                     </mat-button-toggle-group>
                 </section>
                 <section>
-                    <mat-button-toggle (change)="updateFilterHide($event)" [checked]="hideFilteredActors"
-                        matTooltip="Hide filtered actors" matTooltipPosition="right">
+                    <mat-button-toggle id="hide_filtered_actors_toggle" (change)="updateFilterHide($event)"
+                        [checked]="hideFilteredActors" matTooltip="Hide filtered actors" matTooltipPosition="right">
                         <mat-icon svgIcon="filter_alt"></mat-icon>
                     </mat-button-toggle>
                 </section>
                 <section>
-                    <mat-button-toggle (change)="copyContent($event)" [cdkCopyToClipboard]="mermaidMarkup"
-                        matTooltip="Copy mermaid" matTooltipPosition="right">
+                    <mat-button-toggle id="copy_mermaid_button" (change)="copyContent($event)"
+                        [cdkCopyToClipboard]="mermaidMarkup" matTooltip="Copy mermaid" matTooltipPosition="right">
                         <mat-icon svgIcon="content_copy"></mat-icon>
                     </mat-button-toggle>
                 </section>

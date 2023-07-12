@@ -38,7 +38,25 @@ class ServedIndexTest extends AbstractIndexTest {
 						"  CHE",
 						"Edges:",
 						"  AVA normal solid BEN",
-						"  AVA normal solid CHE" );
+						"  AVA normal solid CHE" )
+				.hasMermaidMarkup(
+						"graph LR",
+						"  AVA --> BEN",
+						"  AVA --> CHE" );
+
+		iseq.diagramOrientation( "TD" )
+				.hasInteractions(
+						"Nodes:",
+						"  AVA",
+						"  BEN",
+						"  CHE",
+						"Edges:",
+						"  AVA normal solid BEN",
+						"  AVA normal solid CHE" )
+				.hasMermaidMarkup(
+						"graph TD",
+						"  AVA --> BEN",
+						"  AVA --> CHE" );
 	}
 
 	/**
@@ -57,7 +75,22 @@ class ServedIndexTest extends AbstractIndexTest {
 						"  CHE",
 						"Edges:",
 						"  AVA normal solid BEN",
-						"  AVA normal solid CHE <INVISIBLE>" );
+						"  AVA normal solid CHE <INVISIBLE>" )
+				.hasMermaidMarkup(
+						"graph LR",
+						"  AVA --> BEN",
+						"  AVA ~~~ CHE" );
+
+		iseq.toggleFilteredActorHide()
+				.hasInteractions(
+						"Nodes:",
+						"  AVA",
+						"  BEN",
+						"Edges:",
+						"  AVA normal solid BEN" )
+				.hasMermaidMarkup(
+						"graph LR",
+						"  AVA --> BEN" );
 	}
 
 	/**

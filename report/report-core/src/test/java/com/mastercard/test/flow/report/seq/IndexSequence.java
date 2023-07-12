@@ -7,6 +7,10 @@ import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable;
 
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -379,6 +383,81 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 				.click();
 		new WebDriverWait( driver, ofSeconds( 2 ) )
 				.until( elementToBeClickable( By.id( "interactions_diagram" ) ) );
+		return self();
+	}
+
+	/**
+	 * Clicks on the "Copy mermaid" button, then asserts on the clipboard contents.
+	 * Tries to restore the clipboard state to what it was before the test.
+	 *
+	 * @param expected Expected mermaid content
+	 * @return <code>this</code>
+	 */
+	public IndexSequence hasMermaidMarkup( String... expected ) {
+		trace( "hasMermaidMarkup", (Object[]) expected );
+
+		Clipboard cb = Toolkit.getDefaultToolkit().getSystemClipboard();
+		Transferable before = cb.getContents( this );
+
+		try {
+			driver.findElement( By.id( "copy_mermaid_button" ) )
+					.click();
+
+			Transferable after = cb.getContents( this );
+
+			assertEquals(
+					copypasta( expected ),
+					copypasta( after.getTransferData( DataFlavor.stringFlavor ).toString() ),
+					"mermaid markup" );
+		}
+		catch( Exception e ) {
+			throw new IllegalStateException( "failed to extract mermaid", e );
+		}
+		finally {
+			cb.setContents( before, ( clipboard, contents ) -> {
+				// we don't care about losing clipboard ownership
+			} );
+		}
+
+		return self();
+	}
+
+	/**
+	 * Clicks on the diagram orientation toggles
+	 *
+	 * @param orientation The new orientation
+	 * @return <code>this</code>
+	 */
+	public IndexSequence diagramOrientation( String orientation ) {
+		trace( "diagramOrientation", orientation );
+
+		List<WebElement> toggles = driver.findElement( By.id( "interactions_orientation_group" ) )
+				.findElements( By.tagName( "mat-button-toggle" ) );
+
+		toggles.stream()
+				.filter( e -> orientation.equals( e.getAttribute( "value" ) ) )
+				.findFirst()
+				.orElseThrow( () -> new IllegalStateException(
+						String.format( "Failed to find diagram orientation value '%s' in %s",
+								orientation, toggles.stream()
+										.map( e -> e.getAttribute( "value" ) )
+										.collect( toSet() ) ) ) )
+				.click();
+
+		return self();
+	}
+
+	/**
+	 * Clicks the "hide filtered actors" toggle
+	 *
+	 * @return <code>this</code>
+	 */
+	public IndexSequence toggleFilteredActorHide() {
+		trace( "toggleFilteredActorHide" );
+
+		driver.findElement( By.id( "hide_filtered_actors_toggle" ) )
+				.click();
+
 		return self();
 	}
 
