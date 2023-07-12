@@ -13,13 +13,14 @@ Junit4 validation components
 
 ## Usage
 
+After [importing the `bom`](../../bom):
+
 ```xml
 
 <dependency>
   <!-- model validation -->
   <groupId>com.mastercard.test.flow</groupId>
   <artifactId>validation-junit4</artifactId>
-  <version>${flow.version}</version>
 </dependency>
 ```
 

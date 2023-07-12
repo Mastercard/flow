@@ -22,6 +22,7 @@ Testing framework
  * [validation](validation) Checking model consistency
  * [assert](assert) Comparing models against systems
  * [report](report) Visualising assertion results
+ * [bom](bom) Bill of materials
  * [aggregator](aggregator) Aggregates build artifacts
  * [example](example) Service constellation to exercise the flow framework
  * [doc](doc) Documentation resources

@@ -32,6 +32,7 @@
 		<module>validation</module>
 		<module>assert</module>
 		<module>report</module>
+		<module>bom</module>
 		<module>aggregator</module>
 		<module>example</module>
 		<module>doc</module>

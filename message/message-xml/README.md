@@ -13,12 +13,13 @@ Extensible Markup Language Messages
 
 ## Usage
 
+After [importing the `bom`](../../bom):
+
 ```xml
 <dependency>
   <!-- xml message type -->
   <groupId>com.mastercard.test.flow</groupId>
   <artifactId>message-xml</artifactId>
-  <version>${flow.version}</version>
 </dependency>
 ```
 

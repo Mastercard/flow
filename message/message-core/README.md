@@ -15,11 +15,13 @@ Message implementation utilities
 
 You'll only need to consume this artifact directly if you're implementing your own `Message` type.
 
+
+After [importing the `bom`](../../bom):
+
 ```xml
 <dependency>
   <!-- message implementation utilities -->
   <groupId>com.mastercard.test.flow</groupId>
   <artifactId>message-core</artifactId>
-  <version>${flow.version}</version>
 </dependency>
 ```
