@@ -1,3 +1,14 @@
-#container {
+#interaction_root {
+    display: flex;
+    flex-direction: column;
+}
+
+#interaction_controls_diagram {
+    display: flex;
+    flex-direction: row;
+}
+
+#interactions_diagram {
     text-align: center;
+    flex-grow: 1;
 }

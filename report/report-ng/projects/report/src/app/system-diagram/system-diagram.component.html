@@ -3,8 +3,34 @@
         <mat-panel-title id="interactions_title">Interactions</mat-panel-title>
         <mat-panel-description id="interaction_summary">{{summary}}</mat-panel-description>
     </mat-expansion-panel-header>
-    <div #myTestDiv id="container">
+    <div #myTestDiv id="interaction_root">
         <mat-progress-bar *ngIf="loadProgress != 100" [value]="loadProgress"></mat-progress-bar>
-        <pre id="interactions_diagram" class="mermaid"></pre>
+        <div id="interaction_controls_diagram">
+            <div id="interaction_controls">
+                <section>
+                    <mat-button-toggle-group [vertical]="true" [(ngModel)]="orientation" (change)="forceRerender()">
+                        <mat-button-toggle matTooltip="Vertical layout" matTooltipPosition="right" value="TD">
+                            <mat-icon svgIcon="panorama_vertical"></mat-icon>
+                        </mat-button-toggle>
+                        <mat-button-toggle matTooltip="Horizontal layout" matTooltipPosition="right" value="LR">
+                            <mat-icon svgIcon="panorama_horizontal"></mat-icon>
+                        </mat-button-toggle>
+                    </mat-button-toggle-group>
+                </section>
+                <section>
+                    <mat-button-toggle (change)="updateFilterHide($event)" [checked]="hideFilteredActors"
+                        matTooltip="Hide filtered actors" matTooltipPosition="right">
+                        <mat-icon svgIcon="filter_alt"></mat-icon>
+                    </mat-button-toggle>
+                </section>
+                <section>
+                    <mat-button-toggle (change)="copyContent($event)" [cdkCopyToClipboard]="mermaidMarkup"
+                        matTooltip="Copy mermaid" matTooltipPosition="right">
+                        <mat-icon svgIcon="content_copy"></mat-icon>
+                    </mat-button-toggle>
+                </section>
+            </div>
+            <pre id="interactions_diagram" class="mermaid"></pre>
+        </div>
     </div>
 </mat-expansion-panel>
