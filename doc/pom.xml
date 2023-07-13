@@ -10,6 +10,19 @@
 	<packaging>jar</packaging>
 	<description>Documentation resources</description>
 
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<!-- controls flow artifact versions -->
+				<groupId>com.mastercard.test.flow</groupId>
+				<artifactId>bom</artifactId>
+				<version>${project.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
@@ -22,7 +35,6 @@
 			<!-- flow construction -->
 			<groupId>com.mastercard.test.flow</groupId>
 			<artifactId>builder</artifactId>
-			<version>${project.version}</version>
 		</dependency>
 		<!-- snippet-end:build -->
 
@@ -31,20 +43,17 @@
 			<!-- simple text message type (other types packaged separately) -->
 			<groupId>com.mastercard.test.flow</groupId>
 			<artifactId>message-text</artifactId>
-			<version>${project.version}</version>
 		</dependency>
 		<!-- snippet-end:message -->
 
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>message-json</artifactId>
-			<version>${project.version}</version>
 		</dependency>
 
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>message-http</artifactId>
-			<version>${project.version}</version>
 		</dependency>
 
 		<!-- snippet-start:model -->
@@ -52,38 +61,32 @@
 			<!-- flow grouping -->
 			<groupId>com.mastercard.test.flow</groupId>
 			<artifactId>model</artifactId>
-			<version>${project.version}</version>
 		</dependency>
 		<!-- snippet-end:model -->
 
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>validation-core</artifactId>
-			<version>${project.version}</version>
 		</dependency>
 
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>validation-junit4</artifactId>
-			<version>${project.version}</version>
 		</dependency>
 
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>report-core</artifactId>
-			<version>${project.version}</version>
 		</dependency>
 
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>assert-core</artifactId>
-			<version>${project.version}</version>
 		</dependency>
 
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>assert-junit4</artifactId>
-			<version>${project.version}</version>
 		</dependency>
 
 		<!-- snippet-start:validation -->
@@ -91,7 +94,6 @@
 			<!-- system model validation -->
 			<groupId>com.mastercard.test.flow</groupId>
 			<artifactId>validation-junit5</artifactId>
-			<version>${project.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<!-- snippet-end:validation -->
@@ -101,7 +103,6 @@
 			<!-- system assertion -->
 			<groupId>com.mastercard.test.flow</groupId>
 			<artifactId>assert-junit5</artifactId>
-			<version>${project.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<!-- snippet-end:assertion -->

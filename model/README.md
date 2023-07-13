@@ -37,12 +37,13 @@ Thus when we're iterating on changing the `foo` behaviour we can supply the `foo
 
 ## Usage
 
+After [importing the `bom`](../bom):
+
 ```xml
 <dependency>
   <!-- flow grouping -->
   <groupId>com.mastercard.test.flow</groupId>
   <artifactId>model</artifactId>
-  <version>${flow.version}</version>
 </dependency>
 ```
 

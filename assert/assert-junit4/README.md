@@ -18,12 +18,13 @@ It provides the `Flocessor` the `FlowRule` classes, which should be combined in 
 
 ## Usage
 
+After [importing the `bom`](../../bom):
+
 ```xml
 <dependency>
   <!-- system assertion -->
   <groupId>com.mastercard.test.flow</groupId>
   <artifactId>assert-junit4</artifactId>
-  <version>${flow.version}</version>
   <scope>test</scope>
 </dependency>
 ```

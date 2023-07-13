@@ -13,12 +13,13 @@ Structured Query Language messages
 
 ## Usage
 
+After [importing the `bom`](../../bom):
+
 ```xml
 <dependency>
   <!-- sql message types -->
   <groupId>com.mastercard.test.flow</groupId>
   <artifactId>message-sql</artifactId>
-  <version>${flow.version}</version>
 </dependency>
 ```
 

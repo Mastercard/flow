@@ -7,13 +7,27 @@ This guide will take you from an empty project to a full, if basic, flow-tested 
 ## Dependency management
 
 This library is published as a set of tightly-scoped and loosely-coupled jars.
-Each of the artifacts you consume should have the same version number, so it's best to define the library version in a property and reuse that in all dependency declarations:
+Each of the artifacts you consume should have the same version number, which can be conveniently achieved by importing the bill of materials pom:
 
 ```xml
-<properties>
-  <flow.version>x.y.z</flow.version>
-</properties>
+<project>
+  ...
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <!-- controls flow artifact versions -->
+        <groupId>com.mastercard.test.flow</groupId>
+        <artifactId>bom</artifactId>
+        <version>x.y.x</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  ...
+<project>
 ```
+
 The latest release version is [![Maven Central](https://img.shields.io/maven-central/v/com.mastercard.test.flow/parent)](https://search.maven.org/search?q=com.mastercard.test.flow).
 
 Bear in mind that the artifacts provided by this project are intended for usage in testing only.
@@ -58,10 +72,9 @@ Add a dependency:
 	<!-- flow construction -->
 	<groupId>com.mastercard.test.flow</groupId>
 	<artifactId>builder</artifactId>
-	<version>${flow.version}</version>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L21-L26,21-26)
+[Snippet context](../../../pom.xml#L34-L38,34-38)
 
 <!-- snippet end -->
 
@@ -106,10 +119,9 @@ For our purposes the [`Text` message type][txt.Text] is appropriate, so we add a
 	<!-- simple text message type (other types packaged separately) -->
 	<groupId>com.mastercard.test.flow</groupId>
 	<artifactId>message-text</artifactId>
-	<version>${flow.version}</version>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L30-L35,30-35)
+[Snippet context](../../../pom.xml#L42-L46,42-46)
 
 <!-- snippet end -->
 
@@ -193,10 +205,9 @@ To package flows together we'll need:
 	<!-- flow grouping -->
 	<groupId>com.mastercard.test.flow</groupId>
 	<artifactId>model</artifactId>
-	<version>${flow.version}</version>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L51-L56,51-56)
+[Snippet context](../../../pom.xml#L60-L64,60-64)
 
 <!-- snippet end -->
 
@@ -240,11 +251,10 @@ To use these, add a dependency:
 	<!-- system model validation -->
 	<groupId>com.mastercard.test.flow</groupId>
 	<artifactId>validation-junit5</artifactId>
-	<version>${flow.version}</version>
 	<scope>test</scope>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L90-L96,90-96)
+[Snippet context](../../../pom.xml#L93-L98,93-98)
 
 <!-- snippet end -->
 
@@ -292,11 +302,10 @@ Add a dependency:
 	<!-- system assertion -->
 	<groupId>com.mastercard.test.flow</groupId>
 	<artifactId>assert-junit5</artifactId>
-	<version>${flow.version}</version>
 	<scope>test</scope>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L100-L106,100-106)
+[Snippet context](../../../pom.xml#L102-L107,102-107)
 
 <!-- snippet end -->
 

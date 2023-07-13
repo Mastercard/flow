@@ -13,12 +13,13 @@ Freeform text Message
 
 ## Usage
 
+After [importing the `bom`](../../bom):
+
 ```xml
 <dependency>
   <!-- textual message type -->
   <groupId>com.mastercard.test.flow</groupId>
   <artifactId>message-text</artifactId>
-  <version>${flow.version}</version>
 </dependency>
 ```
 

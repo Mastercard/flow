@@ -2,6 +2,7 @@ package com.mastercard.test.flow.doc;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -17,6 +18,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
 
@@ -28,10 +30,20 @@ import com.mastercard.test.flow.report.QuietFiles;
 @SuppressWarnings("static-method")
 class DependencyTest {
 
-	private static Pattern DEP = Pattern.compile( "<dependency>(.*)</dependency>", Pattern.DOTALL );
+	private static Pattern DEP = Pattern.compile( "<dependency>(.*?)</dependency>", Pattern.DOTALL );
 	private static Pattern GRP = Pattern.compile( "<groupId>(.*)</groupId>" );
 	private static Pattern RTF = Pattern.compile( "<artifactId>(.*)</artifactId>" );
 	private static Pattern VRS = Pattern.compile( "<version>(.*)</version>" );
+
+	/**
+	 * These files contain dependency declarations that aren't so trivially
+	 * validated, so we'll skip over them here and trust to manual review.
+	 */
+	private static final Set<Path> EXCLUDED = Stream.of(
+			"../bom/README.md",
+			"../doc/src/main/markdown/quickstart.md" )
+			.map( Paths::get )
+			.collect( toSet() );
 
 	/**
 	 * Checks that all of the suggested dependency declarations in the readmes
@@ -54,6 +66,7 @@ class DependencyTest {
 
 		return Stream.concat(
 				Util.markdownFiles()
+						.filter( p -> !EXCLUDED.contains( p ) )
 						.map( path -> dynamicTest( path.toString(), () -> {
 							String content = new String( QuietFiles.readAllBytes( path ), UTF_8 );
 							Matcher depM = DEP.matcher( content );
@@ -64,10 +77,9 @@ class DependencyTest {
 								Matcher rtfM = RTF.matcher( depM.group( 1 ) );
 								assertTrue( rtfM.find(), "artifactId found in " + depM.group( 0 ) );
 
+								// our documentation assumes a bom import, so we shouldn't have a version
 								Matcher vrsM = VRS.matcher( depM.group( 1 ) );
-								assertTrue( vrsM.find(), "version found in " + depM.group( 0 ) );
-								assertEquals( "${flow.version}", vrsM.group( 1 ),
-										"Version element in\n" + depM.group( 0 ) );
+								Assertions.assertFalse( vrsM.find(), "version found in " + depM.group( 0 ) );
 
 								String dep = grpM.group( 1 ) + ":" + rtfM.group( 1 );
 								used.add( dep );

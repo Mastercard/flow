@@ -38,12 +38,13 @@ and in the [example system model project](../example/app-model).
 
 ## Usage
 
+After [importing the `bom`](../bom):
+
 ```xml
 <dependency>
   <!-- flow construction -->
   <groupId>com.mastercard.test.flow</groupId>
   <artifactId>builder</artifactId>
-  <version>${flow.version}</version>
 </dependency>
 ```
 

@@ -13,12 +13,13 @@ Browser interaction messages
 
 ## Usage
 
+After [importing the `bom`](../../bom):
+
 ```xml
 <dependency>
   <!-- browser interaction message type -->
   <groupId>com.mastercard.test.flow</groupId>
   <artifactId>message-web</artifactId>
-  <version>${flow.version}</version>
 </dependency>
 ```
 

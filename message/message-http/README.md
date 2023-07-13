@@ -13,12 +13,14 @@ HypterText Transfer Protocol messages
 
 ## Usage
 
+
+After [importing the `bom`](../../bom):
+
 ```xml
 <dependency>
   <!-- http message type -->
   <groupId>com.mastercard.test.flow</groupId>
   <artifactId>message-http</artifactId>
-  <version>${flow.version}</version>
 </dependency>
 ```
 

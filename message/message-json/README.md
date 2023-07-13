@@ -13,12 +13,13 @@ JavaScript Object Notation Messages
 
 ## Usage
 
+After [importing the `bom`](../../bom):
+
 ```xml
 <dependency>
   <!-- json message type -->
   <groupId>com.mastercard.test.flow</groupId>
   <artifactId>message-json</artifactId>
-  <version>${flow.version}</version>
 </dependency>
 ```
 
