@@ -1,3 +1,34 @@
+<a name="v0.0.16"></a>
+# [v0.0.16](https://github.com/Mastercard/flow/releases/tag/v0.0.16) - 13 Jul 2023
+
+<!-- Release notes generated using configuration in .github/release.yml at v0.0.16 -->
+
+## What's Changed
+### Enhancements
+* System diagram by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/443
+* Testing for system diagrams by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/453
+* Improved diagram performance by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/456
+* Diagram controls by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/459
+* bom by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/460
+### Dependencies
+* Bump tslib from 2.5.3 to 2.6.0 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/436
+* Bump @types/node from 20.3.1 to 20.3.3 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/438
+* Bump frontend-maven-plugin from 1.13.3 to 1.13.4 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/440
+* Bump @types/jasmine from 4.3.4 to 4.3.5 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/439
+* Bump h2 from 2.1.214 to 2.2.220 in /example by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/442
+* Bump actions/setup-node from 3.6.0 to 3.7.0 by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/447
+* Bump @babel/core from 7.22.5 to 7.22.8 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/450
+* Bump @types/node from 20.3.3 to 20.4.1 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/448
+* Bump semver from 5.7.1 to 5.7.2 in /report/report-ng by [@dependabot](https://github.com/dependabot) in https://github.com/Mastercard/flow/pull/458
+### Other Changes
+* Hopefully improves sonar coverage by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/454
+
+
+**Full Changelog**: https://github.com/Mastercard/flow/compare/v0.0.15...v0.0.16
+
+[Changes][v0.0.16]
+
+
 <a name="v0.0.15"></a>
 # [v0.0.15](https://github.com/Mastercard/flow/releases/tag/v0.0.15) - 28 Jun 2023
 
@@ -488,6 +519,7 @@
 [Changes][v0.0.3]
 
 
+[v0.0.16]: https://github.com/Mastercard/flow/compare/v0.0.15...v0.0.16
 [v0.0.15]: https://github.com/Mastercard/flow/compare/v0.0.14...v0.0.15
 [v0.0.14]: https://github.com/Mastercard/flow/compare/v0.0.13...v0.0.14
 [v0.0.13]: https://github.com/Mastercard/flow/compare/v0.0.12...v0.0.13
