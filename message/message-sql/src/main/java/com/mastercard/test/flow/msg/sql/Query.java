@@ -6,12 +6,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -48,6 +51,38 @@ public class Query extends AbstractMessage<Query> {
 	public Query( String sql ) {
 		this( HashMap::new );
 		set( SQL, sql );
+	}
+
+	/**
+	 * Sets the bind variables
+	 *
+	 * @param binds bind variable values
+	 * @return <code>this</code>
+	 */
+	public Query binds( Object... binds ) {
+		return binds( Stream.of( binds ) );
+	}
+
+	/**
+	 * Sets the bind variables
+	 *
+	 * @param binds bind variable values
+	 * @return <code>this</code>
+	 */
+	public Query binds( Collection<Object> binds ) {
+		return binds( binds.stream() );
+	}
+
+	/**
+	 * Sets the bind variables
+	 *
+	 * @param binds bind variable values
+	 * @return <code>this</code>
+	 */
+	public Query binds( Stream<Object> binds ) {
+		AtomicInteger idx = new AtomicInteger( 1 );
+		binds.forEach( bv -> set( String.valueOf( idx.getAndIncrement() ), bv ) );
+		return self();
 	}
 
 	private Query( byte[] bytes ) {

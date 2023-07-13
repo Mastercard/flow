@@ -11,7 +11,10 @@ import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.TreeSet;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -35,6 +38,56 @@ class QueryTest {
 		IllegalArgumentException e = Assertions.assertThrows( IllegalArgumentException.class,
 				() -> query.asHuman() );
 		Assertions.assertEquals( "Failed to parse '{]' ([123, 93])", e.getMessage() );
+	}
+
+	/**
+	 * Exercises the convenient bind-variable setters
+	 */
+	@Test
+	void binds() {
+		String query = "SELECT foo FROM table WHERE a = ? AND b = ? and c = ?";
+		String expected = ""
+				+ "Query:\n"
+				+ "SELECT\n"
+				+ "  foo\n"
+				+ "FROM\n"
+				+ "  table\n"
+				+ "WHERE\n"
+				+ "  a = ?\n"
+				+ "  AND b = ?\n"
+				+ "  and c = ?\n"
+				+ "Bind variables:\n"
+				+ "  1 : abc\n"
+				+ "  2 : def\n"
+				+ "  3 : ghi";
+
+		assertEquals(
+				expected,
+				new Query( query )
+						.binds( "abc", "def", "ghi" )
+						.asHuman(),
+				"varargs" );
+
+		assertEquals(
+				expected,
+				new Query( query )
+						.binds( Arrays.asList( "abc", "def", "ghi" ) )
+						.asHuman(),
+				"list" );
+
+		assertEquals(
+				expected,
+				new Query( query )
+						.binds( Stream.of( "abc", "def", "ghi" ) )
+						.asHuman(),
+				"list" );
+
+		assertEquals(
+				expected,
+				new Query( query )
+						.binds( new TreeSet<>( Arrays.asList( "ghi", "abc", "def" ) ) )
+						.asHuman(),
+				"set" );
 	}
 
 	/**

@@ -135,17 +135,19 @@ public class Result extends AbstractMessage<Result> {
 
 	@Override
 	protected Object validateValueType( String field, Object value ) {
-		// We want to allow adding rows with a list. We copy the list values anyway, so
-		// have no fears about mutability
+		// We want to allow adding rows with a list. Make a defensive copy to avoid
+		// mysterious changes to data after it's been passed to the message
 		if( field.matches( "\\d+" ) && value instanceof List<?> ) {
-			// need to check it's not a nested list though
+			List<Object> copy = new ArrayList<>();
+			// need to check it's not nested though
 			int idx = 0;
 			for( Object o : (List<?>) value ) {
-				super.validateValueType( field + ":" + idx, o );
+				copy.add( super.validateValueType( field + ":" + idx, o ) );
 				idx++;
 			}
-			return value;
+			return copy;
 		}
+
 		return super.validateValueType( field, value );
 	}
 

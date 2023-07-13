@@ -11,6 +11,7 @@ import java.math.BigInteger;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -178,6 +179,21 @@ class ResultTest {
 				() -> res.set( "0", l ) );
 		assertTrue( iae.getMessage().startsWith( "Field '0:1' - Possibly-mutable value type" ),
 				iae.getMessage() );
+	}
+
+	/**
+	 * Shows that we you can't change a row once it's been passed to the message
+	 */
+	@Test
+	void defensive() {
+		List<Object> row = new ArrayList<>( Arrays.asList( "value" ) );
+		Result res = new Result( "column" )
+				.set( "0", row );
+		row.set( 0, "changed" );
+
+		assertEquals( ""
+				+ " --- Row 0 ---\n"
+				+ " column : value", res.asHuman() );
 	}
 
 	/**
