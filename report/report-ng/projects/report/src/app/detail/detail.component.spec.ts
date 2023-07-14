@@ -4,7 +4,7 @@ import { DetailComponent } from './detail.component';
 import { BasisFetchService } from '../basis-fetch.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatListModule } from '@angular/material/list';
-import { DiffType, Display, LogEvent, Options } from '../types';
+import { DiffType, Display, LogEvent, Options, empty_flow, empty_interaction } from '../types';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
@@ -49,13 +49,78 @@ describe('DetailComponent', () => {
   beforeEach(() => {
     fixture = TestBed.createComponent(DetailComponent);
     component = fixture.componentInstance;
+    component.flow = {
+      description: "",
+      tags: [],
+      motivation: "",
+      trace: "",
+      dependencies: {},
+      context: {},
+      residue: [],
+      root: empty_interaction,
+      logs: [],
+    };
     fixture.detectChanges();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('should have one tab with no logs, context or residue', () => {
+    expect(testTabs(component, fixture, {
+    }))
+      .toEqual(["Flow"]);
+  });
+
+  it('should have two tabs with logs', () => {
+    expect(testTabs(component, fixture, {
+      "logs": [{}]
+    }))
+      .toEqual(["Flow", "Logs"]);
+  });
+
+  it('should have two tabs with a context', () => {
+    expect(testTabs(component, fixture, {
+      "ctx": { "foo": "bar" }
+    }))
+      .toEqual(["Flow", "Context"]);
+  });
+
+  it('should have two tabs with a residue', () => {
+    expect(testTabs(component, fixture, {
+      "rsd": [{ "foo": "bar" }]
+    }))
+      .toEqual(["Flow", "Residue"]);
+  });
+
+  it('should have all tabs', () => {
+    expect(testTabs(component, fixture, {
+      "logs": [{}],
+      "ctx": { "foo": "bar" },
+      "rsd": [{ "foo": "bar" }]
+    }))
+      .toEqual(["Flow", "Context", "Residue", "Logs"]);
+  });
 });
+
+function testTabs(component: DetailComponent, fixture: ComponentFixture<DetailComponent>, args: any): string[] {
+  if (args.logs != undefined) {
+    component.flow.logs = args.logs;
+  }
+  if (args.ctx != undefined) {
+    component.flow.context = args.ctx;
+  }
+  if (args.rsd != undefined) {
+    component.flow.residue = args.rsd;
+  }
+
+  fixture.detectChanges();
+
+  let nl: NodeList = fixture.nativeElement
+    .querySelectorAll("div.mat-tab-label-content");
+  return Array.from(nl).map(e => e.textContent?.trim() || "???");
+}
 
 @Component({
   selector: 'app-log-view',

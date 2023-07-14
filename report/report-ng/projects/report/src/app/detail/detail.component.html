@@ -42,7 +42,7 @@
 </div>
 <div id="trace">{{flow.trace}}</div>
 
-<mat-tab-group dynamicHeight [(selectedIndex)]="tabIndex" (selectedTabChange)="onTabChange()">
+<mat-tab-group dynamicHeight [(selectedIndex)]=" tabIndex" (selectedTabChange)="onTabChange()">
     <mat-tab>
         <ng-template mat-tab-label>
             Flow
@@ -74,8 +74,7 @@
         <app-residue-view [residues]="flow.residue"></app-residue-view>
     </mat-tab>
 
-    <mat-tab label="Logs">
+    <mat-tab *ngIf="flow.logs.length" label="Logs">
         <app-log-view [logs]="flow.logs"></app-log-view>
     </mat-tab>
-
 </mat-tab-group>
