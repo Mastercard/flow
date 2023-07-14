@@ -42,54 +42,39 @@
 </div>
 <div id="trace">{{flow.trace}}</div>
 
-<ng-container
-    *ngIf="(flow.context | keyvalue)?.length|| flow.residue?.length || flow.logs.length || flow.logs.length; else flowonly">
-    <mat-tab-group dynamicHeight [(selectedIndex)]=" tabIndex" (selectedTabChange)="onTabChange()">
-        <mat-tab>
-            <ng-template mat-tab-label>
-                Flow
-                <mat-icon *ngIf="msgPassed" class="pass" svgIcon="check_circle_outline"></mat-icon>
-                <mat-icon *ngIf="msgFailed" class="fail" svgIcon="error_outline"></mat-icon>
-            </ng-template>
-            <app-flow-sequence [sequence]="sequence"></app-flow-sequence>
-            <mat-drawer-container>
-                <mat-drawer [opened]="true" mode="side" disableClose>
-                    <app-view-options [options]="options"></app-view-options>
-                </mat-drawer>
-                <mat-drawer-content>
-                    <app-transmission [options]="options" [display]="options.display" [diffType]="options.diffType"
-                        [diffFormat]="options.diffFormat"></app-transmission>
-                </mat-drawer-content>
-            </mat-drawer-container>
-        </mat-tab>
+<mat-tab-group dynamicHeight [(selectedIndex)]=" tabIndex" (selectedTabChange)="onTabChange()">
+    <mat-tab>
+        <ng-template mat-tab-label>
+            Flow
+            <mat-icon *ngIf="msgPassed" class="pass" svgIcon="check_circle_outline"></mat-icon>
+            <mat-icon *ngIf="msgFailed" class="fail" svgIcon="error_outline"></mat-icon>
+        </ng-template>
+        <app-flow-sequence [sequence]="sequence"></app-flow-sequence>
+        <mat-drawer-container>
+            <mat-drawer [opened]="true" mode="side" disableClose>
+                <app-view-options [options]="options"></app-view-options>
+            </mat-drawer>
+            <mat-drawer-content>
+                <app-transmission [options]="options" [display]="options.display" [diffType]="options.diffType"
+                    [diffFormat]="options.diffFormat"></app-transmission>
+            </mat-drawer-content>
+        </mat-drawer-container>
+    </mat-tab>
 
-        <mat-tab label="Context" *ngIf="(flow.context | keyvalue)?.length">
-            <app-context-view [context]="flow.context"></app-context-view>
-        </mat-tab>
+    <mat-tab label="Context" *ngIf="(flow.context | keyvalue)?.length">
+        <app-context-view [context]="flow.context"></app-context-view>
+    </mat-tab>
 
-        <mat-tab *ngIf="flow.residue?.length">
-            <ng-template mat-tab-label>
-                Residue
-                <mat-icon *ngIf="rsdPassed" class="pass" svgIcon="check_circle_outline"></mat-icon>
-                <mat-icon *ngIf="rsdFailed" class="fail" svgIcon="error_outline"></mat-icon>
-            </ng-template>
-            <app-residue-view [residues]="flow.residue"></app-residue-view>
-        </mat-tab>
+    <mat-tab *ngIf="flow.residue?.length">
+        <ng-template mat-tab-label>
+            Residue
+            <mat-icon *ngIf="rsdPassed" class="pass" svgIcon="check_circle_outline"></mat-icon>
+            <mat-icon *ngIf="rsdFailed" class="fail" svgIcon="error_outline"></mat-icon>
+        </ng-template>
+        <app-residue-view [residues]="flow.residue"></app-residue-view>
+    </mat-tab>
 
-        <mat-tab *ngIf="flow.logs.length" label="Logs">
-            <app-log-view [logs]="flow.logs"></app-log-view>
-        </mat-tab>
-    </mat-tab-group>
-</ng-container>
-<ng-template #flowonly>
-    <app-flow-sequence [sequence]="sequence"></app-flow-sequence>
-    <mat-drawer-container>
-        <mat-drawer [opened]="true" mode="side" disableClose>
-            <app-view-options [options]="options"></app-view-options>
-        </mat-drawer>
-        <mat-drawer-content>
-            <app-transmission [options]="options" [display]="options.display" [diffType]="options.diffType"
-                [diffFormat]="options.diffFormat"></app-transmission>
-        </mat-drawer-content>
-    </mat-drawer-container>
-</ng-template>
+    <mat-tab *ngIf="flow.logs.length" label="Logs">
+        <app-log-view [logs]="flow.logs"></app-log-view>
+    </mat-tab>
+</mat-tab-group>

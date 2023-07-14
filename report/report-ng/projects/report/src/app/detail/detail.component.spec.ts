@@ -67,10 +67,10 @@ describe('DetailComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should have no tabs with no logs, context or residue', () => {
+  it('should have one tab with no logs, context or residue', () => {
     expect(testTabs(component, fixture, {
     }))
-      .toEqual([]);
+      .toEqual(["Flow"]);
   });
 
   it('should have two tabs with logs', () => {
