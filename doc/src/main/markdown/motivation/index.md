@@ -183,6 +183,8 @@ This one model can then be used to drive all assertion components.
 A unified comprehensive system model driving testing of all subsystems can give confidence that the subsystems will integrate correctly.
 This is very valuable in situations where integration testing is inconvenient to run.
 
+A concrete example of how a unified model can be used to provide integration and unit testing is described [here](../example/coverage/index.md).
+
 ---
  * A single unified model should be shared by all assertion components
 
