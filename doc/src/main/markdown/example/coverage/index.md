@@ -32,10 +32,13 @@ The service under test is provoked with requests taken from the system model. Th
 The "hello" flow is thus exercised in three unit test suites:
 
 ![UI test](ui.drawio.svg)
+
 [UI test execution report](https://mastercard.github.io/flow/execution/latest/example/app-ui/target/mctf/latest/detail/482730F5C81EA0249B98F6DA9D9780EA.html)
 
 ![Core test](core.drawio.svg)
+
 [Core test execution report](https://mastercard.github.io/flow/execution/latest/example/app-core/target/mctf/latest/detail/482730F5C81EA0249B98F6DA9D9780EA.html)
 
 ![Histogram test](histogram.drawio.svg)
+
 [Histogram test execution report](https://mastercard.github.io/flow/execution/latest/example/app-histogram/target/mctf/latest/detail/482730F5C81EA0249B98F6DA9D9780EA.html)
