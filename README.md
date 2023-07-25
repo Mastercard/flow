@@ -2,7 +2,6 @@
 [![](https://github.com/Mastercard/flow/actions/workflows/maven.yml/badge.svg)](https://github.com/Mastercard/flow/actions/workflows/maven.yml)
 [![](https://github.com/Mastercard/flow/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/Mastercard/flow/actions/workflows/codeql-analysis.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Mastercard_flow&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Mastercard_flow)
-[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=Mastercard_flow&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=Mastercard_flow)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Mastercard_flow&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Mastercard_flow)
 [![](https://img.shields.io/github/license/Mastercard/flow)](LICENCE)
 [![Maven Central](https://img.shields.io/maven-central/v/com.mastercard.test.flow/parent)](https://search.maven.org/search?q=com.mastercard.test.flow)
