@@ -215,7 +215,7 @@
 					     a `mvn test-compile` invocation -->
 					<groupId>org.pitest</groupId>
 					<artifactId>pitest-maven</artifactId>
-					<version>1.14.3</version>
+					<version>1.14.4</version>
 					<configuration>
 						<timestampedReports>false</timestampedReports>
 						<exportLineCoverage>true</exportLineCoverage>
