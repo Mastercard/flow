@@ -1,6 +1,8 @@
 package com.mastercard.test.flow.report;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Comparator.comparing;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -8,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Assertions;
@@ -72,45 +75,19 @@ class WriterTest {
 
 		// check file listing of report
 		Assertions.assertEquals( ""
-				+ "detail/08535047C5991FED96BECB327EAFF8E7.html\n"
-				+ "detail/0D943F64D05D282F91C856027DF72923.html\n"
-				+ "detail/4C5FFE22176C7ABC272D95A0E5D62262.html\n"
-				+ "detail/823B8031950E57346DCE6FFD4BE56F54.html\n"
-				+ "index.html\n"
-				+ "res/10.<hash>.js\n"
-				+ "res/129.<hash>.js\n"
-				+ "res/181.<hash>.js\n"
-				+ "res/231.<hash>.js\n"
-				+ "res/237.<hash>.js\n"
-				+ "res/27.<hash>.js\n"
-				+ "res/285.<hash>.js\n"
-				+ "res/3rdpartylicenses.txt\n"
-				+ "res/405.<hash>.js\n"
-				+ "res/449.<hash>.js\n"
-				+ "res/457.<hash>.js\n"
-				+ "res/481.<hash>.js\n"
-				+ "res/485.<hash>.js\n"
-				+ "res/513.<hash>.js\n"
-				+ "res/567.<hash>.js\n"
-				+ "res/653.<hash>.js\n"
-				+ "res/688.<hash>.js\n"
-				+ "res/690.<hash>.js\n"
-				+ "res/693.<hash>.js\n"
-				+ "res/696.<hash>.js\n"
-				+ "res/763.<hash>.js\n"
-				+ "res/78.<hash>.js\n"
-				+ "res/822.<hash>.js\n"
-				+ "res/884.<hash>.js\n"
-				+ "res/890.<hash>.js\n"
-				+ "res/909.<hash>.js\n"
-				+ "res/925.<hash>.js\n"
-				+ "res/974.<hash>.js\n"
-				+ "res/common.<hash>.js\n"
-				+ "res/favicon.ico\n"
-				+ "res/main.<hash>.js\n"
-				+ "res/polyfills.<hash>.js\n"
-				+ "res/runtime.<hash>.js\n"
-				+ "res/styles.<hash>.css",
+				+ "  1 x detail/08535047C5991FED96BECB327EAFF8E7.html\n"
+				+ "  1 x detail/0D943F64D05D282F91C856027DF72923.html\n"
+				+ "  1 x detail/4C5FFE22176C7ABC272D95A0E5D62262.html\n"
+				+ "  1 x detail/823B8031950E57346DCE6FFD4BE56F54.html\n"
+				+ "  1 x index.html\n"
+				+ "  1 x res/3rdpartylicenses.txt\n"
+				+ " 27 x res/_digits_.<hash>.js\n"
+				+ "  1 x res/common.<hash>.js\n"
+				+ "  1 x res/favicon.ico\n"
+				+ "  1 x res/main.<hash>.js\n"
+				+ "  1 x res/polyfills.<hash>.js\n"
+				+ "  1 x res/runtime.<hash>.js\n"
+				+ "  1 x res/styles.<hash>.css",
 				Files.walk( dir )
 						.filter( Files::isRegularFile )
 						.map( dir::relativize )
@@ -119,7 +96,11 @@ class WriterTest {
 						// files produced by the angular build have a content-hash suffix
 						// to avoid cached versions being used
 						.map( s -> s.replaceAll( "\\.[a-f0-9]{16}\\.(js|css)", ".<hash>.$1" ) )
-						.sorted()
+						.map( s -> s.replaceAll( "(res/)\\d+(\\.<hash>.js)", "$1_digits_$2" ) )
+						.collect( groupingBy( s -> s ) )
+						.entrySet().stream()
+						.sorted( comparing( Entry::getKey ) )
+						.map( e -> String.format( "%3d x %s", e.getValue().size(), e.getKey() ) )
 						.collect( Collectors.joining( "\n" ) ) );
 
 		String detail = new String( Files.readAllBytes( dir.resolve(
