@@ -133,7 +133,7 @@
 			     provides automatic management of the drivers for that -->
 				<groupId>io.github.bonigarcia</groupId>
 				<artifactId>webdrivermanager</artifactId>
-				<version>5.5.2</version>
+				<version>5.5.3</version>
 			</dependency>
 
 			<dependency>
