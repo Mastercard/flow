@@ -37,7 +37,7 @@ export class DetailComponent implements OnInit {
   rsdFailed: boolean = false;
   noDeps: boolean = true;
   singleDependency: string = "";
-  sequence: SequenceData = { entity: [], item: [] };
+  sequence: SequenceData = { entity: [], exercised: [], item: [] };
   options: Options = new Options();
   tabIndex = 0;
 
@@ -159,7 +159,7 @@ export class DetailComponent implements OnInit {
 export function toSequence(flow: Flow): SequenceData {
   const [names, indices] = extractActors(flow.root, [], new Map());
   const actions = extractTransmissions(flow.root, indices, []);
-  return { entity: names, item: actions };
+  return { entity: names, exercised: flow.exercised, item: actions };
 }
 
 function extractActors(ntr: Interaction, names: string[], indices: Map<string, number>): [string[], Map<string, number>] {

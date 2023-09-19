@@ -15,6 +15,13 @@
 	z-index: 1;
 }
 
+.sut_entity {
+	background-color: lightgray;
+	border-radius: 10px 10px 0 0;
+	margin-right: 5%;
+	margin-left: 5%;
+}
+
 app-msg-search-input {
 	float: right;
 	position: relative;
@@ -29,9 +36,16 @@ app-msg-search-input {
 }
 
 .line {
-	border-left: 2px solid #DDD;
 	bottom: 0;
 	position: absolute;
 	top: 0;
 	z-index: 0;
+}
+
+.def_line {
+	border-left: 2px solid #DDD;
+}
+
+.sut_line {
+	border-left: 2px solid #888;
 }

@@ -621,6 +621,9 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		reportUpdates.add( d -> executionFailures.stream()
 				.map( e -> error( LogEvent.stackTrace( e ) ) )
 				.forEach( d.logs::add ) );
+		reportUpdates.add( d -> systemUnderTest.stream()
+				.map( Actor::name )
+				.forEach( d.exercised::add ) );
 		report( w -> w.with( flow, reportUpdates.stream()
 				.reduce( d -> {
 					// no-op

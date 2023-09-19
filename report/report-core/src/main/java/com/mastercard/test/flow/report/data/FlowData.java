@@ -67,6 +67,12 @@ public class FlowData {
 	public final List<ResidueData> residue;
 
 	/**
+	 * The names of the actors that are in the system under test
+	 */
+	@JsonProperty("exercised")
+	public final Set<String> exercised;
+
+	/**
 	 * A record of system events that happened when the {@link Flow} was exercised
 	 */
 	@JsonProperty("logs")
@@ -83,6 +89,7 @@ public class FlowData {
 	 * @param context      A map from {@link Context#name()} to {@link Context}
 	 *                     object. We'll leave jackson to serialise the contents
 	 * @param residue      A map from {@link Residue} name to residue data
+	 * @param exercised    The names of the actors that are in the system under test
 	 * @param logs         A record of system events that happened when the
 	 *                     {@link Flow} was exercised
 	 */
@@ -96,6 +103,7 @@ public class FlowData {
 			@JsonProperty("root") InteractionData root,
 			@JsonProperty("context") Map<String, Object> context,
 			@JsonProperty("residue") List<ResidueData> residue,
+			@JsonProperty("exercised") Set<String> exercised,
 			@JsonProperty("logs") List<LogEvent> logs ) {
 		this.description = description;
 		this.tags = new TreeSet<>( tags );
@@ -106,6 +114,7 @@ public class FlowData {
 		this.root = root;
 		this.context = new TreeMap<>( context );
 		this.residue = new ArrayList<>( residue );
+		this.exercised = new TreeSet<>( exercised );
 		this.logs = logs;
 	}
 
@@ -120,6 +129,6 @@ public class FlowData {
 		return new FlowData( description, tags, motivation, trace,
 				b,
 				dependencies, root, context,
-				residue, logs );
+				residue, exercised, logs );
 	}
 }
