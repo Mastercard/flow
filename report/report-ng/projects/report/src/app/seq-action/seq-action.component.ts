@@ -1,6 +1,5 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { BasisFetchService } from '../basis-fetch.service';
-import { leftStyle, rightStyle } from '../flow-sequence/flow-sequence.component';
 import { MsgSearchService } from '../msg-search.service';
 import { TxSelectionService } from '../tx-selection.service';
 import { Transmission, isTransmission, empty_transmission } from '../types';
@@ -179,3 +178,30 @@ export const empty_action: Action = {
   tags: [],
   transmission: empty_transmission
 };
+
+
+/**
+ * @param pos The column index
+ * @param count The number of columns
+ * @returns The style data to apply to things that extends to the right of the column
+ */
+function leftStyle(pos: number, count: number): Object {
+  return { "margin-left": percentage((pos + 0.5) / count) };
+}
+
+/**
+ * @param pos The column index
+ * @param count The number of columns
+ * @returns The style data to apply to things that extends to the left of the column
+ */
+function rightStyle(pos: number, count: number): Object {
+  return { "margin-right": percentage((count - pos - 0.5) / count) };
+}
+
+/**
+ * @param ratio A number in range 0-1
+ * @returns The input ration, but as a percentage string to 1 decimal place
+ */
+function percentage(ratio: number): string {
+  return (Math.round(ratio * 1000) / 10) + '%';
+}

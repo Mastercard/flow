@@ -2,13 +2,16 @@
   <div class="header">
     <div class="entity" *ngFor="let entity of sequence.entity; index as i;"
       [ngStyle]="columnStyle( i, sequence.entity.length )">
-      {{entity}}
+      <div [ngClass]="sequence.exercised.includes( entity ) ? 'sut_entity': 'def_entity'">
+        {{entity}}
+      </div>
     </div>
     <app-msg-search-input></app-msg-search-input>
   </div>
   <div class="body">
     <div class="line" *ngFor="let entity of sequence.entity; index as i;"
-      [ngStyle]="leftStyle( i, sequence.entity.length )">
+      [ngStyle]="leftStyle( i, sequence.entity.length )"
+      [ngClass]="sequence.exercised.includes( entity ) ? 'sut_line': 'def_line'">
     </div>
     <div *ngFor="let item of sequence.item">
       <app-seq-action *ngIf="isAction(item)" [entity]="sequence.entity" [action]="item"></app-seq-action>

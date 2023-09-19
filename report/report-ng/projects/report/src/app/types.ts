@@ -143,6 +143,7 @@ export interface Flow {
   residue: Residue[];
   dependencies: Dependencies;
   root: Interaction;
+  exercised: string[];
   logs: LogEvent[];
 }
 
@@ -167,6 +168,8 @@ export function isFlow(data: any): data is Flow {
     && isInteraction(data.root)
     && Array.isArray(data.residue)
     && data.residue.every(isResidue)
+    && Array.isArray(data.exercised)
+    && data.exercised.every((item: any) => typeof item === 'string')
     && Array.isArray(data.logs)
     && data.logs.every(isLogEvent);
   ;
@@ -464,5 +467,6 @@ export const empty_flow: Flow = {
   context: {},
   residue: [],
   root: empty_interaction,
+  exercised: [],
   logs: [],
 };

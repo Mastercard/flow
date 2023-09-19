@@ -11,7 +11,7 @@ import { TxSelectionService } from '../tx-selection.service';
 })
 export class FlowSequenceComponent implements OnInit {
 
-  @Input() sequence: SequenceData = { entity: [], item: [] };
+  @Input() sequence: SequenceData = { entity: [], exercised: [], item: [] };
 
   constructor(
     private txSelect: TxSelectionService) {
@@ -48,6 +48,8 @@ export class FlowSequenceComponent implements OnInit {
 export interface SequenceData {
   /** The column headers in the diagram */
   entity: string[];
+  /** The column headers that are in the system under test */
+  exercised: string[];
   /** The things that happen in the sequence */
   item: Array<Action | Note | Section>;
 }
@@ -87,5 +89,5 @@ export function rightStyle(pos: number, count: number): Object {
  * @returns The input ration, but as a percentage string to 1 decimal place
  */
 function percentage(ratio: number): string {
-  return (Math.round(ratio * 1000) / 10) + '%';
+  return "calc(" + (Math.round(ratio * 1000) / 10) + "% - 1px )";
 }

@@ -210,7 +210,7 @@ public class Writer {
 			}
 
 			if( !desiredBases.isEmpty() ) {
-				// keep track of the missing ones. If those get added to the rpeort later we'll
+				// keep track of the missing ones. If those get added to the report later we'll
 				// want to update this flow to point at them
 				missingBases.put( flow, desiredBases );
 			}
@@ -238,6 +238,7 @@ public class Writer {
 					flow.residue()
 							.map( r -> new ResidueData( r.name(), r, null, null ) )
 							.collect( toList() ),
+					new TreeSet<>(),
 					new ArrayList<>() );
 			update();
 		}
