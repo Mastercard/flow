@@ -151,7 +151,6 @@ function lines(component: HTMLElement): string[] {
 function highlit(component: HTMLElement): string[] {
   let spans: HTMLElement[] = Array.from(component
     .querySelectorAll("span"));
-  console.log(spans);
   return spans
     .filter(e => e.classList.contains("hovered")
       || e.classList.contains("same_value"))

@@ -52,7 +52,6 @@ export class SystemDiagramComponent implements OnInit {
       this.refreshEdges();
     });
     filter.onUpdate(() => {
-      console.log("filter.onUpdate", this.hideFilteredActors);
       if (this.hideFilteredActors) {
         this.refreshEdges();
       }
@@ -100,7 +99,6 @@ export class SystemDiagramComponent implements OnInit {
    * Called when a flow has been loaded, recalculates all the edges in the system
    */
   private refreshEdges(): void {
-    console.log("refreshEdges", this.hideFilteredActors);
 
     let requests: { [key: string]: { [key: string]: number } } = {};
     this.edges = [];

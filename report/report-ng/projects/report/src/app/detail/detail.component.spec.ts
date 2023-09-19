@@ -58,6 +58,7 @@ describe('DetailComponent', () => {
       context: {},
       residue: [],
       root: empty_interaction,
+      exercised: [],
       logs: [],
     };
     fixture.detectChanges();
@@ -135,7 +136,7 @@ class StubLogView {
   template: ''
 })
 class StubFlowSequence {
-  @Input() sequence: SequenceData = { entity: [], item: [] };
+  @Input() sequence: SequenceData = { entity: [], exercised: [], item: [] };
 }
 
 @Component({
