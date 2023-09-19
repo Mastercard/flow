@@ -162,6 +162,7 @@ class WriterTest {
 				+ "    \"full\" : null,\n"
 				+ "    \"masked\" : null\n"
 				+ "  } ],\n"
+				+ "  \"exercised\" : [ ],\n"
 				+ "  \"logs\" : [ ]\n"
 				+ "}\n"
 				+ "      // END_JSON_DATA",

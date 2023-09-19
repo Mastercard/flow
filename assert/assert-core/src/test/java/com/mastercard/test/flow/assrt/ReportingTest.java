@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mastercard.test.flow.Actor;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.data.Entry;
@@ -284,5 +285,25 @@ class ReportingTest {
 		assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
 		FlowData fd = r.detail( ie );
 		assertTrue( fd.tags.contains( "SKIP" ), fd.tags.toString() );
+	}
+
+	/**
+	 * Shows that the {@link Actor}s under test are recorded to the report
+	 */
+	@Test
+	void exercised() {
+		TestFlocessor tf = new TestFlocessor( "exercised", TestModel.abc() )
+				.system( State.FUL, B )
+				.reporting( QUIETLY )
+				.behaviour( assrt -> {
+					// no assertions made
+				} );
+		tf.execute();
+
+		Reader r = new Reader( tf.report() );
+		Index index = r.read();
+		Entry ie = index.entries.get( 0 );
+		FlowData fd = r.detail( ie );
+		assertEquals( "[B]", fd.exercised.toString() );
 	}
 }
