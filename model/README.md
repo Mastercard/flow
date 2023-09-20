@@ -17,20 +17,20 @@ This module provides an API by which Flows can be grouped and collected into a c
 
 The three concrete classes are:
  * [`EagerModel`][EagerModel] - this will build all of its constituent flows immediately upon model construction
- * [`LazyModel`][LazyModel] - this combines multiple `EagerModel` implementations, and constructs them as required as Flows are requested.
+ * [`LazyModel`][LazyModel!] - this combines multiple `EagerModel` implementations, and constructs them as required as Flows are requested.
  * [`CombineModel`][CombineModel] - combines multiple child `Model` instances.
 
 The point of structuring Flow construction into separate models is to improve testing performance and iteration time.
 
 For example, let's assume that the system under test has two separate functions, called `foo` and `bar`.
 Our system model will thus contains a bunch Flow instances, some tagged with `foo`, and some tagged with `bar`.
-Let's also assume that those flow instances are defined in two separate EagerModels, one for `foo` flows and one for `bar` flows, and those two models are combined in a LazyModel. 
+Let's also assume that those flow instances are defined in two separate `EagerModel`s, one for `foo` flows and one for `bar` flows, and those two models are combined in a `LazyModel`.
 Thus when we're iterating on changing the `foo` behaviour we can supply the `foo` tag to the assert component and avoid building all the `bar` flows that we don't even want to run.
 
 <!-- code_link_start -->
 
 [EagerModel]: src/main/java/com/mastercard/test/flow/model/EagerModel.java
-[LazyModel]: src/main/java/com/mastercard/test/flow/model/LazyModel.java
+[LazyModel!]: src/main/java/com/mastercard/test/flow/model/LazyModel.java
 [CombineModel]: src/main/java/com/mastercard/test/flow/model/CombineModel.java
 
 <!-- code_link_end -->

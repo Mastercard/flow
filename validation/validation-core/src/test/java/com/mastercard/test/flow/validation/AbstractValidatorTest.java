@@ -42,6 +42,7 @@ class AbstractValidatorTest {
 				+ "Dependency loop\n"
 				+ "Flow Identity\n"
 				+ "Interaction Identity\n"
+				+ "Lazy model tagging\n"
 				+ "Message sharing\n"
 				+ "Model tagging\n"
 				+ "Result tag misuse\n"

@@ -2,6 +2,7 @@
 package com.mastercard.test.flow.model;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -58,12 +59,23 @@ public abstract class EagerModel extends TitledModel {
 	 */
 	public static TaggedGroup typeTags( Class<? extends EagerModel> type ) {
 		try {
-			Field f = type.getDeclaredField( "MODEL_TAGS" );
+			Field f = type.getDeclaredField( LazyModel.MODEL_TAGS_FIELD_NAME );
+
+			int mod = f.getModifiers();
+			if( !(Modifier.isPublic( mod )
+					&& Modifier.isStatic( mod )
+					&& Modifier.isFinal( mod )
+					&& TaggedGroup.class.isAssignableFrom( f.getType() )) ) {
+				throw new IllegalArgumentException(
+						type + " must have a `public static final TaggedGroup MODEL_TAGS` field" );
+			}
+
 			return (TaggedGroup) f.get( null );
 		}
 		catch( NoSuchFieldException | IllegalAccessException e ) {
-			throw new IllegalArgumentException(
-					type + " must have a `public static TaggedGroup MODEL_TAGS` field", e );
+			throw new IllegalArgumentException( String.format(
+					"Failed to access %s.%s", type, LazyModel.MODEL_TAGS_FIELD_NAME ),
+					e );
 		}
 	}
 

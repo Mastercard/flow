@@ -89,7 +89,7 @@ One of the benefits of selective execution (not having to build every flow in or
 
 The two main `Model` implementations provided in this framework are:
  * [`EagerModel`][EagerModel]: Builds flows instances in the constructor.
- * [`LazyModel`][LazyModel]: A collection of `EagerModel` instances, which are constructed as flows are requested.
+ * [`LazyModel`][LazyModel!]: A collection of `EagerModel` instances, which are constructed as flows are requested.
 
 If a flow in one `EagerModel` type is derived from a flow in another `EagerModel`, then you can simply declare the dependency model as a constructor parameter.
 The `LazyModel` that both models are registered to will handle satisfying the dependency.
@@ -102,7 +102,7 @@ You can see this behaviour in action in the example system model:
 <!-- code_link_start -->
 
 [EagerModel]: ../../../../model/src/main/java/com/mastercard/test/flow/model/EagerModel.java
-[LazyModel]: ../../../../model/src/main/java/com/mastercard/test/flow/model/LazyModel.java
+[LazyModel!]: ../../../../model/src/main/java/com/mastercard/test/flow/model/LazyModel.java
 [Implicit]: ../../../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Implicit.java
 [Deferred]: ../../../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Deferred.java
 [ExampleSystem]: ../../../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/ExampleSystem.java

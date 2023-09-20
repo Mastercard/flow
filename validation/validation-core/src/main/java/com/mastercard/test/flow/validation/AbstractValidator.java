@@ -20,6 +20,7 @@ import com.mastercard.test.flow.validation.check.DependencyInclusionCheck;
 import com.mastercard.test.flow.validation.check.DependencyLoopCheck;
 import com.mastercard.test.flow.validation.check.FlowIdentityCheck;
 import com.mastercard.test.flow.validation.check.InteractionIdentityCheck;
+import com.mastercard.test.flow.validation.check.LazyModelTaggingCheck;
 import com.mastercard.test.flow.validation.check.MessageSharingCheck;
 import com.mastercard.test.flow.validation.check.ModelTaggingCheck;
 import com.mastercard.test.flow.validation.check.ResultTagCheck;
@@ -46,6 +47,7 @@ public abstract class AbstractValidator<T extends AbstractValidator<T>> {
 				new DependencyInclusionCheck(),
 				new FlowIdentityCheck(),
 				new InteractionIdentityCheck(),
+				new LazyModelTaggingCheck(),
 				new MessageSharingCheck(),
 				new ModelTaggingCheck(),
 				new ResultTagCheck(),
