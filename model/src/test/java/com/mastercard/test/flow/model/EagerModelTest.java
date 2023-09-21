@@ -210,8 +210,41 @@ class EagerModelTest {
 	void typeTags() {
 		assertEquals( "∩[c]⋃[a, b, c, d, e]",
 				EagerModel.typeTags( TaggedModel.class ).toString() );
+	}
 
-		assertThrows( IllegalArgumentException.class,
+	/**
+	 * Trying to extract the tags of a model that simply doesn't have the expected
+	 * <code>MODEL_TAGS</code> field
+	 */
+	@Test
+	void untagged() {
+		IllegalArgumentException e = assertThrows( IllegalArgumentException.class,
 				() -> EagerModel.typeTags( LumpyModel.class ) );
+		assertEquals( ""
+				+ "class com.mastercard.test.flow.model.EagerModelTest$LumpyModel "
+				+ "must have a `public static final TaggedGroup MODEL_TAGS` field",
+				e.getMessage() );
+	}
+
+	private static class BadlyTagged extends EagerModel {
+		public static TaggedGroup MODEL_TAGS = new TaggedGroup( "should be final" );
+
+		public BadlyTagged() {
+			super( MODEL_TAGS );
+		}
+	}
+
+	/**
+	 * Trying to extract the tags of a model where the <code>MODEL_TAGS</code> field
+	 * exists, but is not of the expected form
+	 */
+	@Test
+	void badlyTagged() {
+		IllegalArgumentException e = assertThrows( IllegalArgumentException.class,
+				() -> EagerModel.typeTags( BadlyTagged.class ) );
+		assertEquals( ""
+				+ "class com.mastercard.test.flow.model.EagerModelTest$BadlyTagged "
+				+ "must have a `public static final TaggedGroup MODEL_TAGS` field",
+				e.getMessage() );
 	}
 }

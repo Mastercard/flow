@@ -5,8 +5,10 @@ import org.junit.jupiter.api.Test;
 
 import com.mastercard.test.flow.assrt.Order;
 import com.mastercard.test.flow.builder.Chain;
+import com.mastercard.test.flow.model.LazyModel;
 import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.validation.check.ChainOverlapCheck;
+import com.mastercard.test.flow.validation.check.ReflectiveModelTaggingCheck;
 import com.mastercard.test.flow.validation.check.ResultTagCheck;
 
 /**
@@ -41,5 +43,15 @@ class SharedConstantTest {
 		Assertions.assertEquals( Writer.FAIL_TAG, ResultTagCheck.FAIL_TAG );
 		Assertions.assertEquals( Writer.SKIP_TAG, ResultTagCheck.SKIP_TAG );
 		Assertions.assertEquals( Writer.ERROR_TAG, ResultTagCheck.ERROR_TAG );
+	}
+
+	/**
+	 * We've got a validation check that exercises aspects of a particular model
+	 * implementation.
+	 */
+	@Test
+	void lazyModelStrings() {
+		Assertions.assertEquals( LazyModel.MODEL_TAGS_FIELD_NAME,
+				ReflectiveModelTaggingCheck.MODEL_TAGS_FIELD_NAME );
 	}
 }

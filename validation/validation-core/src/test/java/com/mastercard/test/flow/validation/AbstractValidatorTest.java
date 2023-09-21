@@ -44,6 +44,7 @@ class AbstractValidatorTest {
 				+ "Interaction Identity\n"
 				+ "Message sharing\n"
 				+ "Model tagging\n"
+				+ "Reflective model tagging\n"
 				+ "Result tag misuse\n"
 				+ "Trace uniqueness",
 				tv.validations()

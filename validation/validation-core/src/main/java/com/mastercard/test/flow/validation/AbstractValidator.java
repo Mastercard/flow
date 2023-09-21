@@ -22,6 +22,7 @@ import com.mastercard.test.flow.validation.check.FlowIdentityCheck;
 import com.mastercard.test.flow.validation.check.InteractionIdentityCheck;
 import com.mastercard.test.flow.validation.check.MessageSharingCheck;
 import com.mastercard.test.flow.validation.check.ModelTaggingCheck;
+import com.mastercard.test.flow.validation.check.ReflectiveModelTaggingCheck;
 import com.mastercard.test.flow.validation.check.ResultTagCheck;
 import com.mastercard.test.flow.validation.check.TraceUniquenessCheck;
 
@@ -48,6 +49,7 @@ public abstract class AbstractValidator<T extends AbstractValidator<T>> {
 				new InteractionIdentityCheck(),
 				new MessageSharingCheck(),
 				new ModelTaggingCheck(),
+				new ReflectiveModelTaggingCheck(),
 				new ResultTagCheck(),
 				new TraceUniquenessCheck(),
 		};

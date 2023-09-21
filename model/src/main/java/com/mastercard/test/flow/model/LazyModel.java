@@ -39,6 +39,12 @@ import com.mastercard.test.flow.util.TaggedGroup;
  */
 public class LazyModel extends TitledModel {
 
+	/**
+	 * The name of the <code>public static final TaggedGroup</code> field that
+	 * submodel classes are assumed to have
+	 */
+	public static final String MODEL_TAGS_FIELD_NAME = "MODEL_TAGS";
+
 	private static final Comparator<Class<?>> cc = Comparator.comparing( Class::getName );
 	private final Map<Class<? extends EagerModel>, TaggedGroup> types = new TreeMap<>( cc );
 	private final Map<Class<? extends EagerModel>, Model> instances = new TreeMap<>( cc );

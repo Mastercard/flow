@@ -19,13 +19,13 @@
 		</dependency>
 
 		<dependency>
-			<!-- Context/residue serialisation -->
+			<!-- Context/residue serialisation for inheritance health metric -->
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
 		</dependency>
 
 		<dependency>
-			<!-- text diffs -->
+			<!-- text diffs for inheritance health metric -->
 			<groupId>io.github.java-diff-utils</groupId>
 			<artifactId>java-diff-utils</artifactId>
 		</dependency>
