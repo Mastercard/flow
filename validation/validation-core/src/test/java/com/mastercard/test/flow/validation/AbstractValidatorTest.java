@@ -42,9 +42,9 @@ class AbstractValidatorTest {
 				+ "Dependency loop\n"
 				+ "Flow Identity\n"
 				+ "Interaction Identity\n"
-				+ "Lazy model tagging\n"
 				+ "Message sharing\n"
 				+ "Model tagging\n"
+				+ "Reflective model tagging\n"
 				+ "Result tag misuse\n"
 				+ "Trace uniqueness",
 				tv.validations()

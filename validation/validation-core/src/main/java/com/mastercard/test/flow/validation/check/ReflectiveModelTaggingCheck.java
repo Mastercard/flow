@@ -14,25 +14,25 @@ import com.mastercard.test.flow.validation.Validation;
 import com.mastercard.test.flow.validation.Violation;
 
 /**
- * Checks that <code>EagerModel</code> implementations report their tags
- * accurately via reflection and via method call
+ * Checks that model implementations that offer reflective access to model
+ * tagging information do so in an accurate manner
  */
-public class LazyModelTaggingCheck implements Validation {
+public class ReflectiveModelTaggingCheck implements Validation {
 
 	/**
 	 * The name of the <code>public static final TaggedGroup</code> field that
-	 * lazily constructed model types are assumed to have
+	 * lazily-constructed model types are assumed to have
 	 */
 	public static final String MODEL_TAGS_FIELD_NAME = "MODEL_TAGS";
 
 	@Override
 	public String name() {
-		return "Lazy model tagging";
+		return "Reflective model tagging";
 	}
 
 	@Override
 	public String explanation() {
-		return "Lazily constructed models report tags correctly";
+		return "Models that offer reflective tagging information do so accurately";
 	}
 
 	@Override
@@ -46,7 +46,7 @@ public class LazyModelTaggingCheck implements Validation {
 				.filter( f -> Modifier.isStatic( f.getModifiers() ) )
 				.filter( f -> Modifier.isFinal( f.getModifiers() ) )
 				.filter( f -> TaggedGroup.class.isAssignableFrom( f.getType() ) )
-				.filter( f -> "MODEL_TAGS".equals( f.getName() ) )
+				.filter( f -> MODEL_TAGS_FIELD_NAME.equals( f.getName() ) )
 				.findFirst();
 
 		if( mf.isPresent() ) {
@@ -61,13 +61,11 @@ public class LazyModelTaggingCheck implements Validation {
 						: null ) );
 			}
 			catch( Exception e ) {
-				throw new IllegalStateException( "Failed to access " + mf.get(), e );
+				throw new IllegalStateException( "Failed to access tags for " + model.getClass(), e );
 			}
 		}
 
-		model.subModels().forEach( child ->
-
-		buildChecks( child, checks ) );
+		model.subModels().forEach( child -> buildChecks( child, checks ) );
 
 		return checks;
 	}

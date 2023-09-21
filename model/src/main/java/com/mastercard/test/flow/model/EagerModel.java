@@ -76,7 +76,7 @@ public abstract class EagerModel extends TitledModel {
 		catch( NoSuchFieldException | IllegalAccessException e ) {
 			throw new IllegalArgumentException( String.format(
 					"%s must have a `public static final %s %s` field",
-					type, TaggedGroup.class.getSimpleName(), LazyModel.MODEL_TAGS_FIELD_NAME ) );
+					type, TaggedGroup.class.getSimpleName(), LazyModel.MODEL_TAGS_FIELD_NAME ), e );
 		}
 	}
 

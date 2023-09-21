@@ -1,5 +1,6 @@
 package com.mastercard.test.flow.validation.check;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
@@ -15,15 +16,15 @@ import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.util.TaggedGroup;
 
 /**
- * Exercises {@link LazyModelTaggingCheck}
+ * Exercises {@link ReflectiveModelTaggingCheck}
  */
 @SuppressWarnings("unused")
-class LazyModelTaggingCheckTest extends AbstractValidationTest {
+class ReflectiveModelTaggingCheckTest extends AbstractValidationTest {
 
 	/***/
-	LazyModelTaggingCheckTest() {
-		super( new LazyModelTaggingCheck(), "Lazy model tagging",
-				"Lazily constructed models report tags correctly" );
+	ReflectiveModelTaggingCheckTest() {
+		super( new ReflectiveModelTaggingCheck(), "Reflective model tagging",
+				"Models that offer reflective tagging information do so accurately" );
 	}
 
 	private static class UnTagged extends Branch {
@@ -73,7 +74,7 @@ class LazyModelTaggingCheckTest extends AbstractValidationTest {
 	@Test
 	void inaccurate() {
 		test( new Inaccurate(),
-				"  details: com.mastercard.test.flow.validation.check.LazyModelTaggingCheckTest$Inaccurate.tags() should just return MODEL_TAGS\n"
+				"  details: com.mastercard.test.flow.validation.check.ReflectiveModelTaggingCheckTest$Inaccurate.tags() should just return MODEL_TAGS\n"
 						+ " expected: null\n"
 						+ "   actual: null\n"
 						+ "offenders: " );
@@ -94,7 +95,7 @@ class LazyModelTaggingCheckTest extends AbstractValidationTest {
 	@Test
 	void nonIdentity() {
 		test( new NonIdentity(),
-				"  details: com.mastercard.test.flow.validation.check.LazyModelTaggingCheckTest$NonIdentity.tags() should just return MODEL_TAGS\n"
+				"  details: com.mastercard.test.flow.validation.check.ReflectiveModelTaggingCheckTest$NonIdentity.tags() should just return MODEL_TAGS\n"
 						+ " expected: null\n"
 						+ "   actual: null\n"
 						+ "offenders: " );
@@ -206,7 +207,11 @@ class LazyModelTaggingCheckTest extends AbstractValidationTest {
 	 */
 	@Test
 	void accessFailure() {
-		assertThrows( IllegalStateException.class, () -> test( new AccessFailure() ) );
+		Model m = new AccessFailure();
+		IllegalStateException ise = assertThrows( IllegalStateException.class, () -> test( m ) );
+		assertEquals( "Failed to access tags for class "
+				+ "com.mastercard.test.flow.validation.check.ReflectiveModelTaggingCheckTest$AccessFailure",
+				ise.getMessage() );
 	}
 
 	/**
@@ -223,11 +228,11 @@ class LazyModelTaggingCheckTest extends AbstractValidationTest {
 								new Inaccurate() ) ),
 				new NonIdentity() ),
 				"Valid : pass",
-				"  details: com.mastercard.test.flow.validation.check.LazyModelTaggingCheckTest$Inaccurate.tags() should just return MODEL_TAGS\n"
+				"  details: com.mastercard.test.flow.validation.check.ReflectiveModelTaggingCheckTest$Inaccurate.tags() should just return MODEL_TAGS\n"
 						+ " expected: null\n"
 						+ "   actual: null\n"
 						+ "offenders: ",
-				"  details: com.mastercard.test.flow.validation.check.LazyModelTaggingCheckTest$NonIdentity.tags() should just return MODEL_TAGS\n"
+				"  details: com.mastercard.test.flow.validation.check.ReflectiveModelTaggingCheckTest$NonIdentity.tags() should just return MODEL_TAGS\n"
 						+ " expected: null\n"
 						+ "   actual: null\n"
 						+ "offenders: " );

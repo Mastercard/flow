@@ -8,7 +8,7 @@ import com.mastercard.test.flow.builder.Chain;
 import com.mastercard.test.flow.model.LazyModel;
 import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.validation.check.ChainOverlapCheck;
-import com.mastercard.test.flow.validation.check.LazyModelTaggingCheck;
+import com.mastercard.test.flow.validation.check.ReflectiveModelTaggingCheck;
 import com.mastercard.test.flow.validation.check.ResultTagCheck;
 
 /**
@@ -52,6 +52,6 @@ class SharedConstantTest {
 	@Test
 	void lazyModelStrings() {
 		Assertions.assertEquals( LazyModel.MODEL_TAGS_FIELD_NAME,
-				LazyModelTaggingCheck.MODEL_TAGS_FIELD_NAME );
+				ReflectiveModelTaggingCheck.MODEL_TAGS_FIELD_NAME );
 	}
 }
