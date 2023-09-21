@@ -66,16 +66,17 @@ public abstract class EagerModel extends TitledModel {
 					&& Modifier.isStatic( mod )
 					&& Modifier.isFinal( mod )
 					&& TaggedGroup.class.isAssignableFrom( f.getType() )) ) {
-				throw new IllegalArgumentException(
-						type + " must have a `public static final TaggedGroup MODEL_TAGS` field" );
+				throw new IllegalArgumentException( String.format(
+						"%s must have a `public static final %s %s` field",
+						type, TaggedGroup.class.getSimpleName(), LazyModel.MODEL_TAGS_FIELD_NAME ) );
 			}
 
 			return (TaggedGroup) f.get( null );
 		}
 		catch( NoSuchFieldException | IllegalAccessException e ) {
 			throw new IllegalArgumentException( String.format(
-					"Failed to access %s.%s", type, LazyModel.MODEL_TAGS_FIELD_NAME ),
-					e );
+					"%s must have a `public static final %s %s` field",
+					type, TaggedGroup.class.getSimpleName(), LazyModel.MODEL_TAGS_FIELD_NAME ) );
 		}
 	}
 
