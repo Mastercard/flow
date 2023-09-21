@@ -59,9 +59,6 @@ import org.junit.jupiter.api.TestFactory;
  * enough of the fully-qualified class name to resolve the ambiguity.
  * </p>
  */
-// This test will fail in the middle of release preparation as all the
-// ${project.version} usages get transformed into the actual version
-@Tag("avoid_on_release")
 class SnippetTest {
 
 	private static final String MD_START = "<!-- snippet start -->";
