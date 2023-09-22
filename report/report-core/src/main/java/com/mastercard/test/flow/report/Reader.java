@@ -95,6 +95,16 @@ public class Reader {
 			return Template.extract( file, type );
 		}
 		catch( @SuppressWarnings("unused") FileNotFoundException fnfe ) {
+			if( fnfe.getMessage().contains( "Permission denied" ) ) {
+				// on linux platforms missing read permission results in a
+				// FileNotFoundException.
+				// Our semantics return null if there is no data, so this would be a confusing
+				// debug session: the file is *definitely* there, but Flow is claiming
+				// otherwise by returning null!
+				// Hence we're reduced to looking at the exception message. This is obviously
+				// really fragile, but I don't see a better option
+				throw new IllegalStateException( "Failed to read " + uri, fnfe );
+			}
 			return null;
 		}
 		catch( IOException | UncheckedIOException e ) {

@@ -18,7 +18,6 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -103,7 +102,7 @@ class ReaderTest {
 	}
 
 	/**
-	 * What happens when we can't read the index /
+	 * What happens when we can't read the index
 	 *
 	 * @throws Exception unexpected oopsy
 	 */
@@ -134,8 +133,6 @@ class ReaderTest {
 	 */
 	@Test
 	@EnabledOnOs(OS.LINUX)
-	@Disabled("TODO: get this working on linux, "
-			+ "becuase harrassing the github build agents is a painful iteration")
 	void badReadLinux() throws Exception {
 		Path dir = Paths.get( "target", "ReaderTest", "badReadLinux" );
 		WriterTest.writeReport( dir );
