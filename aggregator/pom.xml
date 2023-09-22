@@ -18,19 +18,19 @@
 		</dependency>
 
 		<dependency>
-			<groupId>com.mastercard.test.flow</groupId>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>builder</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 
 		<dependency>
-			<groupId>com.mastercard.test.flow</groupId>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>message-core</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 
 		<dependency>
-			<groupId>com.mastercard.test.flow</groupId>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>message-text</artifactId>
 			<version>${project.version}</version>
 		</dependency>
@@ -66,7 +66,7 @@
 		</dependency>
 
 		<dependency>
-			<groupId>com.mastercard.test.flow</groupId>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>model</artifactId>
 			<version>${project.version}</version>
 		</dependency>
@@ -84,13 +84,13 @@
 		</dependency>
 
 		<dependency>
-			<groupId>com.mastercard.test.flow</groupId>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>validation-junit5</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 
 		<dependency>
-			<groupId>com.mastercard.test.flow</groupId>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>coppice</artifactId>
 			<version>${project.version}</version>
 		</dependency>
@@ -120,7 +120,7 @@
 		</dependency>
 
 		<dependency>
-			<groupId>com.mastercard.test.flow</groupId>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>assert-junit5</artifactId>
 			<version>${project.version}</version>
 		</dependency>
