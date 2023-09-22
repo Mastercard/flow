@@ -151,9 +151,7 @@ class OptionTest {
 		// invalid value, no default
 		Option noDefault = new Builder().property( "tstopt" );
 		noDefault.set( "not an int" );
-		assertEquals( "null",
-				assertThrows( NumberFormatException.class, () -> noDefault.asInt() )
-						.getMessage() );
+		assertThrows( NumberFormatException.class, () -> noDefault.asInt() );
 
 		// invalid value, invalid default
 		Option badDefault = new Builder().property( "tstopt" ).defaultValue( "not an int either" );

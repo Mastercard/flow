@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -22,7 +21,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestFactory;
 
 /**
@@ -130,23 +128,18 @@ class SnippetTest {
 			if( ex == null ) {
 
 				String content = new String( Files.readAllBytes( file ), UTF_8 );
-				Iterator<String> lines = Arrays.asList( content.split( "\n", -1 ) ).iterator();
 				Map<String, Snippet> extant = new HashMap<>();
 				int lineNumber = 0;
 
-				while( lines.hasNext() ) {
+				for( String line : Arrays.asList( content.split( "\n", -1 ) ) ) {
 					lineNumber++;
-					String line = lines.next();
-
 					Delimiter sd = delimiter( file );
 					Matcher start = sd.start.matcher( line.trim() );
 					Matcher end = sd.end.matcher( line.trim() );
 					if( start.matches() ) {
-
 						extant.put( start.group( 1 ), new Snippet( file, lineNumber + 1 ) );
 					}
 					else if( end.matches() ) {
-
 						excerpts.put( file + ":" + end.group( 1 ),
 								extant.remove( end.group( 1 ) ) );
 					}
