@@ -24,14 +24,14 @@
 		</dependency>
 
 		<dependency>
-			<groupId>com.mastercard.test.flow</groupId>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>message-json</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
 		</dependency>
 
 		<dependency>
-			<groupId>com.mastercard.test.flow</groupId>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>message-text</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>

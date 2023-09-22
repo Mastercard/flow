@@ -14,6 +14,7 @@ import static com.mastercard.test.flow.example.app.model.ExampleSystem.Unpredict
 import static com.mastercard.test.flow.example.app.model.ExampleSystem.Unpredictables.RNG;
 
 import java.awt.Desktop;
+import java.awt.Desktop.Action;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -105,7 +106,7 @@ class IntegrationTest {
 
 			// open the browser
 			URI uri = new URI( "http://localhost:" + service.port() );
-			if( Desktop.isDesktopSupported() ) {
+			if( Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported( Action.BROWSE ) ) {
 				System.out.println( "Opening browser to " + uri );
 				Desktop.getDesktop().browse( uri );
 			}
