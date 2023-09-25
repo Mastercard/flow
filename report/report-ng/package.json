@@ -24,7 +24,7 @@
     "@babel/core": "^7.22.20",
     "@types/d3": "^7.4.0",
     "@types/diff-match-patch": "^1.0.32",
-    "@types/dompurify": "^3.0.2",
+    "@types/dompurify": "^3.0.3",
     "diff-match-patch": "^1.0.5",
     "mermaid": "^10.4.0",
     "ngx-markdown": "^14.0.1",
