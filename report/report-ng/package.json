@@ -22,7 +22,7 @@
     "@angular/platform-browser-dynamic": "^14.1.2",
     "@angular/router": "^14.1.2",
     "@babel/core": "^7.22.20",
-    "@types/d3": "^7.4.0",
+    "@types/d3": "^7.4.1",
     "@types/diff-match-patch": "^1.0.32",
     "@types/dompurify": "^3.0.3",
     "diff-match-patch": "^1.0.5",
