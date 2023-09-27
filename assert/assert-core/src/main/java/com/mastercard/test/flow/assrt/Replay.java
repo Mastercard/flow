@@ -1,10 +1,14 @@
 
 package com.mastercard.test.flow.assrt;
 
+import static java.util.stream.Collectors.joining;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.report.Reader;
@@ -52,13 +56,15 @@ public class Replay {
 	/**
 	 * Works out the appropriate data source based on system properties
 	 *
+	 * @param path The elements of the path from the Flow artifact directory to
+	 *             where the test writes reports
 	 * @return The path to the report that should be used as a source of data, or
 	 *         <code>null</code> if there is no such report
 	 */
-	public static String source() {
+	public static String source( String... path ) {
 		String src = AssertionOptions.REPLAY.value();
 		if( LATEST.equals( src ) ) {
-			src = mostRecent();
+			src = mostRecent( path );
 		}
 		return src;
 	}
@@ -69,7 +75,7 @@ public class Replay {
 	/**
 	 * @param source The path to the report to use as a source of data, or
 	 *               <code>null</code> for an empty {@link Replay}
-	 * @see #source()
+	 * @see #source(String...)
 	 */
 	public Replay( String source ) {
 		reader = source != null ? new Reader( Paths.get( source ) ) : null;
@@ -131,8 +137,14 @@ public class Replay {
 	 *
 	 * @return The most recent execution report
 	 */
-	private static final String mostRecent() {
-		Path report = Reader.mostRecent( AssertionOptions.ARTIFACT_DIR.value(),
+	private static final String mostRecent( String... path ) {
+		Path report = Reader.mostRecent(
+				// searching in the test's report directory
+				Stream.concat(
+						Stream.of( AssertionOptions.ARTIFACT_DIR.value() ),
+						Stream.of( path ) )
+						.filter( Objects::nonNull )
+						.collect( joining( "/" ) ),
 				// let's stick to primary sources of data
 				p -> !p.getFileName().toString().endsWith( REPLAYED_SUFFIX ) );
 		if( report == null ) {

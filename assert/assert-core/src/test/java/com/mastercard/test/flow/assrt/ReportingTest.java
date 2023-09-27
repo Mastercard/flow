@@ -11,12 +11,16 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mastercard.test.flow.Actor;
@@ -305,5 +309,41 @@ class ReportingTest {
 		Entry ie = index.entries.get( 0 );
 		FlowData fd = r.detail( ie );
 		assertEquals( "[B]", fd.exercised.toString() );
+	}
+
+	/**
+	 * Shows that a stably-named symlink is created that points to the latest report
+	 */
+	@Test
+	@DisabledOnOs(OS.WINDOWS) // requires special permissions to create symlinks
+	void symlink() {
+		TestFlocessor tf = new TestFlocessor( "symlink", TestModel.abc() )
+				.system( State.FUL, B )
+				.reporting( QUIETLY )
+				.behaviour( assrt -> {
+					// no assertions made
+				} );
+		tf.execute();
+
+		Path writtenPath = tf.report();
+		Path linkedPath = writtenPath.resolveSibling( "latest" );
+
+		assertTrue( writtenPath.getFileName().toString().matches( "\\d{6}-\\d{6}" ),
+				"Report is written to timestamped directory" );
+		assertTrue( Files.exists( linkedPath ),
+				"The expected symlink has been created" );
+		assertTrue( Files.isSymbolicLink( linkedPath ),
+				"It really is a symlink" );
+
+		Reader dr = new Reader( writtenPath );
+		Index direct = dr.read();
+
+		Reader lr = new Reader( linkedPath );
+		Index linked = lr.read();
+
+		// reading either provides the same data
+		assertEquals( direct.meta.modelTitle, linked.meta.modelTitle );
+		assertEquals( direct.meta.testTitle, linked.meta.testTitle );
+		assertEquals( direct.meta.timestamp, linked.meta.timestamp );
 	}
 }

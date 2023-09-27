@@ -94,7 +94,7 @@ public class Reader {
 			String file = br.lines().collect( joining( "\n" ) );
 			return Template.extract( file, type );
 		}
-		catch( @SuppressWarnings("unused") FileNotFoundException fnfe ) {
+		catch( FileNotFoundException fnfe ) {
 			if( fnfe.getMessage().contains( "Permission denied" ) ) {
 				// on linux platforms missing read permission results in a
 				// FileNotFoundException.
@@ -113,8 +113,8 @@ public class Reader {
 	}
 
 	/**
-	 * Searches the a directory for the most recent execution report that satisfies
-	 * a constraint
+	 * Searches a directory for the most recent execution report that satisfies a
+	 * constraint
 	 *
 	 * @param dir    The directory to search in
 	 * @param filter Additional search constraint

@@ -2,6 +2,7 @@ package com.mastercard.test.flow.report;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
@@ -128,6 +129,18 @@ public class QuietFiles {
 	 */
 	public static Stream<Path> list( Path dir ) {
 		return wrap( () -> Files.list( dir ) );
+	}
+
+	/**
+	 * @see Files#move(Path, Path, CopyOption...)
+	 * @param source  the path to the file to move
+	 * @param target  the path to the target file (may be associated with a
+	 *                different provider to the source path)
+	 * @param options options specifying how the move should be done
+	 * @return the path to the target file
+	 */
+	public static Path move( Path source, Path target, CopyOption... options ) {
+		return wrap( () -> Files.move( source, target, options ) );
 	}
 
 	/**
