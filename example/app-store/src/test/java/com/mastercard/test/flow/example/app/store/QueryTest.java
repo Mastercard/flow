@@ -79,7 +79,7 @@ class QueryTest {
 		if( !Replay.isActive() ) {
 			service.start();
 		}
-		reportName = AssertionOptions.REPORT_NAME.temporarily( "query_latest" );
+		reportName = AssertionOptions.REPORT_NAME.temporarily( "latest" );
 	}
 
 	/**
@@ -99,7 +99,7 @@ class QueryTest {
 	@TestFactory
 	Stream<DynamicNode> flows() {
 		Flocessor flocessor = new Flocessor( "Query test", ExampleSystem.MODEL )
-				.reporting( FAILURES )
+				.reporting( FAILURES, "query" )
 				.exercising( flow -> Flows.intersects( flow, Actors.STORE ), LOG::info )
 				.system( State.LESS, Actors.STORE )
 				.masking( BORING, HOST, CLOCK, RNG )
