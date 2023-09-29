@@ -3,6 +3,7 @@ package com.mastercard.test.flow.example.app.itest;
 
 import static com.mastercard.test.flow.assrt.Reporting.FAILURES;
 import static com.mastercard.test.flow.example.app.model.ExampleSystem.Actors.CORE;
+import static com.mastercard.test.flow.example.app.model.ExampleSystem.Actors.DB;
 import static com.mastercard.test.flow.example.app.model.ExampleSystem.Actors.HISTOGRAM;
 import static com.mastercard.test.flow.example.app.model.ExampleSystem.Actors.QUEUE;
 import static com.mastercard.test.flow.example.app.model.ExampleSystem.Actors.STORE;
@@ -133,7 +134,7 @@ class IntegrationTest {
 	Stream<DynamicNode> flows() {
 		Flocessor f = new Flocessor( "Integration test", ExampleSystem.MODEL )
 				.reporting( FAILURES )
-				.system( State.FUL, WEB_UI, UI, CORE, QUEUE, HISTOGRAM )
+				.system( State.FUL, WEB_UI, UI, CORE, QUEUE, HISTOGRAM, STORE, DB )
 				.masking( BORING, CLOCK, HOST, RNG )
 				.logs( Util.LOG_CAPTURE )
 				.applicators(

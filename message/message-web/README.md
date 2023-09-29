@@ -138,7 +138,7 @@ if( assrt.expected().request() instanceof WebSequence
 	response = results.process( driver );
 }
 ```
-[Snippet context](../../example/app-itest/src/test/java/com/mastercard/test/flow/example/app/itest/IntegrationTest.java#L155-L166,155-166)
+[Snippet context](../../example/app-itest/src/test/java/com/mastercard/test/flow/example/app/itest/IntegrationTest.java#L156-L167,156-167)
 
 <!-- snippet end -->
 
