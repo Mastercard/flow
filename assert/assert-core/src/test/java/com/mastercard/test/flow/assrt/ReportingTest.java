@@ -12,7 +12,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.function.Function;
@@ -29,6 +31,7 @@ import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.data.Entry;
 import com.mastercard.test.flow.report.data.FlowData;
 import com.mastercard.test.flow.report.data.Index;
+import com.mastercard.test.flow.util.Option.Temporary;
 
 /**
  * Exercises {@link Reporting} values
@@ -319,18 +322,19 @@ class ReportingTest {
 	void symlink() {
 		TestFlocessor tf = new TestFlocessor( "symlink", TestModel.abc() )
 				.system( State.FUL, B )
-				.reporting( QUIETLY )
+				.reporting( QUIETLY, "symlink" )
 				.behaviour( assrt -> {
 					// no assertions made
 				} );
-		tf.execute();
+		try( Temporary t = AssertionOptions.REPORT_NAME.temporarily( "sub/path/report" ) ) {
+			tf.execute();
+		}
 
 		Path writtenPath = tf.report();
-		Path linkedPath = writtenPath.resolveSibling( "latest" );
+		Path linkedPath = Paths.get( "target/mctf/symlink/latest" );
 
-		assertTrue( writtenPath.getFileName().toString().matches( "\\d{6}-\\d{6}" ),
-				"Report is written to timestamped directory" );
-		assertTrue( Files.exists( linkedPath ),
+		assertEquals( "target/mctf/symlink/sub/path/report", writtenPath.toString() );
+		assertTrue( Files.exists( linkedPath, LinkOption.NOFOLLOW_LINKS ),
 				"The expected symlink has been created" );
 		assertTrue( Files.isSymbolicLink( linkedPath ),
 				"It really is a symlink" );

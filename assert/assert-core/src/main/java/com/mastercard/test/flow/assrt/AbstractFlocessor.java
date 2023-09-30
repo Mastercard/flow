@@ -10,6 +10,7 @@ import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -215,7 +216,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T masking( Unpredictable... sources ) {
-		this.masks = sources.clone();
+		masks = sources.clone();
 		return self();
 	}
 
@@ -350,8 +351,8 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @see AssertionOptions#SUPPRESS_FILTER
 	 */
 	public T exercising( Predicate<Flow> filter, Consumer<String> rejectionLog ) {
-		this.flowFilter = filter;
-		this.filterRejectionLog = rejectionLog;
+		flowFilter = filter;
+		filterRejectionLog = rejectionLog;
 		return self();
 	}
 
@@ -982,7 +983,26 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 				// if required, create a predictably-named link to it
 				if( !"latest".equals( reportDir.getFileName().toString() ) ) {
 					try {
-						Files.createSymbolicLink( testDir.resolve( "latest" ), reportDir );
+						Path linkPath = testDir.resolve( "latest" );
+						boolean shouldLink;
+						// we want to delete an existing symlink, but avoid changing any other kind of
+						// file that might exist at that path
+						if( Files.exists( linkPath, LinkOption.NOFOLLOW_LINKS ) ) {
+							if( Files.isSymbolicLink( linkPath ) ) {
+								Files.delete( linkPath );
+								shouldLink = true;
+							}
+							else {
+								shouldLink = false;
+							}
+						}
+						else {
+							shouldLink = true;
+						}
+
+						if( shouldLink ) {
+							Files.createSymbolicLink( linkPath, linkPath.getParent().relativize( reportDir ) );
+						}
 					}
 					catch( @SuppressWarnings("unused") IOException ioe ) {
 						// The symlink to the latest report is a nice-to-have. Some platforms (e.g.:

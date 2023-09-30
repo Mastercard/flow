@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.CopyOption;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
@@ -58,10 +59,10 @@ public class QuietFiles {
 	 */
 	public static void recursiveDelete( Path path ) {
 		try {
-			if( !Files.exists( path ) ) {
+			if( !Files.exists( path, LinkOption.NOFOLLOW_LINKS ) ) {
 				// we're done here
 			}
-			else if( Files.isDirectory( path ) ) {
+			else if( Files.isDirectory( path, LinkOption.NOFOLLOW_LINKS ) ) {
 				try( Stream<Path> children = Files.list( path ) ) {
 					children.forEach( QuietFiles::recursiveDelete );
 				}
