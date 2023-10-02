@@ -8,6 +8,9 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -93,6 +96,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	private final String title;
 	private Dependencies dependencies;
 	private Reporting reporting = Reporting.NEVER;
+	private String[] reportPath = {};
 	private Writer report;
 
 	/**
@@ -136,11 +140,11 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * The path to the execution report that we're replaying data from, or
 	 * <code>null</code> if we're not replaying
 	 */
-	private final String replaySource = Replay.source();
+	private String replaySource = Replay.source();
 	/**
 	 * If we're replaying, we'll use this as the source of data for assertion
 	 */
-	private final Replay replay = new Replay( replaySource );
+	private Replay replay = new Replay( replaySource );
 
 	/**
 	 * Test action
@@ -190,12 +194,17 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	/**
 	 * Controls report generation
 	 *
-	 * @param r Whether or not to generate a report, and whether or not to display
-	 *          it at the conclusion of testing
+	 * @param r    Whether or not to generate a report, and whether or not to
+	 *             display it at the conclusion of testing
+	 * @param path The directory path underneath the flow artifact directory in
+	 *             which to write the report
 	 * @return <code>this</code>
 	 */
-	public T reporting( Reporting r ) {
+	public T reporting( Reporting r, String... path ) {
 		reporting = r;
+		reportPath = path;
+		replaySource = Replay.source( path );
+		replay = new Replay( replaySource );
 		return self();
 	}
 
@@ -207,7 +216,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T masking( Unpredictable... sources ) {
-		this.masks = sources.clone();
+		masks = sources.clone();
 		return self();
 	}
 
@@ -342,8 +351,8 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @see AssertionOptions#SUPPRESS_FILTER
 	 */
 	public T exercising( Predicate<Flow> filter, Consumer<String> rejectionLog ) {
-		this.flowFilter = filter;
-		this.filterRejectionLog = rejectionLog;
+		flowFilter = filter;
+		filterRejectionLog = rejectionLog;
 		return self();
 	}
 
@@ -937,10 +946,13 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 
 	private void report( Consumer<Writer> data, boolean error ) {
 		if( reporting.writing() ) {
-			boolean alreadyBrowsing = true;
+			Path testDir = null;
+			Path reportDir = null;
 			if( report == null ) {
 
 				String testTitle = title;
+
+				testDir = Paths.get( AssertionOptions.ARTIFACT_DIR.value(), reportPath );
 
 				// work out what the report directory should be called
 				String name = AssertionOptions.REPORT_NAME.value();
@@ -958,14 +970,51 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 					// the REPORT_NAME property is the same as the REPLAY property
 				}
 
-				report = new Writer( model.title(), testTitle,
-						Paths.get( AssertionOptions.ARTIFACT_DIR.value() ).resolve( name ) );
-				alreadyBrowsing = false;
+				reportDir = testDir.resolve( name );
+
+				report = new Writer( model.title(), testTitle, reportDir );
 			}
+
 			data.accept( report );
 
-			if( !alreadyBrowsing && reporting.shouldOpen( error ) ) {
-				report.browse();
+			if( testDir != null && reportDir != null ) {
+				// We've just created a new report! We should:
+
+				// if required, create a predictably-named link to it
+				if( !"latest".equals( reportDir.getFileName().toString() ) ) {
+					try {
+						Path linkPath = testDir.resolve( "latest" );
+						boolean shouldLink;
+						// we want to delete an existing symlink, but avoid changing any other kind of
+						// file that might exist at that path
+						if( Files.exists( linkPath, LinkOption.NOFOLLOW_LINKS ) ) {
+							if( Files.isSymbolicLink( linkPath ) ) {
+								Files.delete( linkPath );
+								shouldLink = true;
+							}
+							else {
+								shouldLink = false;
+							}
+						}
+						else {
+							shouldLink = true;
+						}
+
+						if( shouldLink ) {
+							Files.createSymbolicLink( linkPath, linkPath.getParent().relativize( reportDir ) );
+						}
+					}
+					catch( @SuppressWarnings("unused") IOException ioe ) {
+						// The symlink to the latest report is a nice-to-have. Some platforms (e.g.:
+						// windows) restrict the ability to create symlinks so we can't count on it
+						// working.
+					}
+				}
+
+				// also, if appropriate, open a browser to it
+				if( reporting.shouldOpen( error ) ) {
+					report.browse();
+				}
 			}
 		}
 	}
