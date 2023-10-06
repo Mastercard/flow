@@ -28,7 +28,7 @@ public class HistogramImp implements Histogram {
 	@Override
 	public Map<String, Integer> histogram( String text, String characters ) {
 		LOG.info( "Counting [{}] characters in '{}'", characters, text );
-		Optional<Set<Character>> queried = Optional.ofNullable( characters )
+		Optional<Set<Character>> queried = Optional.ofNullable( characters.toLowerCase() )
 				.map( s -> s.chars()
 						.mapToObj( i -> (char) i )
 						.collect( Collectors.toSet() ) );
@@ -40,7 +40,7 @@ public class HistogramImp implements Histogram {
 
 	private static Map<String, Integer> histogram( String text, Predicate<Character> test ) {
 		Map<String, Integer> m = new TreeMap<>();
-		Optional.ofNullable( text )
+		Optional.ofNullable( text.toLowerCase() )
 				.ifPresent( s -> s.chars()
 						.mapToObj( i -> (char) i )
 						.filter( test )
