@@ -9,7 +9,8 @@
 
 .diff_display {
     display: flex;
-    flex-wrap: wrap
+    flex-wrap: wrap;
+    white-space: break-spaces;
 }
 
 .rem {
