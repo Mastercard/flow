@@ -79,10 +79,10 @@ public class Deferred extends EagerModel {
 		String deferredId = "29e2271a-e645-420e-8ef9-238d37ceb4cc";
 
 		String text = "I'll be back!";
-		List<Object> counts = Arrays.asList( " ", 2, "!", 1, "'", 1, "I", 1, "a", 1, "b", 2, "c", 1,
-				"e", 1, "k", 1, "l", 2 );
-		String countText = "{\" \":2,\"!\":1,\"'\":1,\"I\":1,\"a\":1,"
-				+ "\"b\":2,\"c\":1,\"e\":1,\"k\":1,\"l\":2}";
+		List<Object> counts = Arrays.asList( " ", 2, "!", 1, "'", 1, "a", 1, "b", 2, "c", 1, "e", 1,
+				"i", 1, "k", 1, "l", 2 );
+		String countText = "{\" \":2,\"!\":1,\"'\":1,\"a\":1,"
+				+ "\"b\":2,\"c\":1,\"e\":1,\"i\":1,\"k\":1,\"l\":2}";
 
 		enqueue = Creator.build( provoked, flow -> flow
 				.meta( data -> data

@@ -75,7 +75,7 @@ public class Direct extends EagerModel {
 
 		String text = "Hello world!";
 		List<Object> counts = Arrays.asList(
-				" ", 1, "!", 1, "H", 1, "d", 1, "e", 1, "l", 3, "o", 2, "r", 1, "w", 1 );
+				" ", 1, "!", 1, "h", 1, "d", 1, "e", 1, "l", 3, "o", 2, "r", 1, "w", 1 );
 		hello = Deriver.build( empty, flow -> flow
 				.meta( data -> data
 						.description( "hello" )
@@ -96,19 +96,16 @@ public class Direct extends EagerModel {
 						.motivation( m -> m + ", in Switzerland" ) )
 				.update( UI,
 						rq( "o", "oOoOo" ),
-						rs( "O", 4,
-								"o", 6 ) )
+						rs( "o", 10 ) )
 				.update( CORE,
 						rq( "text", "HelloOoOo woOoOorld!" ),
-						rs( "result.o", 6,
-								"result.O", 4 ) )
+						rs( "result.o", 10 ) )
 				.update( HISTOGRAM,
 						rq( "o", "oOoOo" ),
-						rs( "O", 4,
-								"o", 6 ) ) );
+						rs( "o", 10 ) ) );
 
 		List<Object> deletes = valueFill( DELETE,
-				" ", "!", "H", "d", "l", "r", "w" );
+				" ", "!", "h", "d", "l", "r", "w" );
 		Flow vowels = Deriver.build( hello, flow -> flow
 				.meta( data -> data.description( "vowels" )
 						.motivation( "Counting only vowels" )
@@ -124,7 +121,17 @@ public class Direct extends EagerModel {
 						rq( HttpReq.PATH, "/count/subset?characters=aeiou" ),
 						rs( deletes ) ) );
 
-		members( flatten( empty, hello, yodel, vowels ) );
+		Flow shouty = Deriver.build( hello, flow -> flow.meta(
+				data -> data.description( "shout" )
+						.motivation( m -> m + ", in a loud environment" ) )
+				.update( UI,
+						rq( ".+", "HELLO WORLD!" ) )
+				.update( CORE,
+						rq( "text", "HELLO WORLD!" ) )
+				.update( HISTOGRAM,
+						rq( ".+", "HELLO WORLD!" ) ) );
+
+		members( flatten( empty, hello, yodel, vowels, shouty ) );
 	}
 
 }
