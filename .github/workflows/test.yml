@@ -42,7 +42,7 @@ jobs:
       uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
       with:
         name: flow_execution_reports
-        path: '**/example/**/target/mctf/latest'
+        path: 'example/**/target/mctf/latest'
 
     - name: Save angular coverage reports
       uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
