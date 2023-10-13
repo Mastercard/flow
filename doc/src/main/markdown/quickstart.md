@@ -279,13 +279,7 @@ Stream<DynamicNode> checks() {
 
 Run the test - it should pass.
 
-If you'd prefer to use jUnit4, then [`validation-junit4` is also available][junit4.Validator].
-
-<!-- code_link_start -->
-
-[junit4.Validator]: ../../../../validation/validation-junit4/src/main/java/com/mastercard/test/flow/validation/junit4/Validator.java
-
-<!-- code_link_end -->
+If you'd prefer to use jUnit4, then [`validation-junit4` is also available](../../../../validation/validation-junit4).
 
 ## Asserting the model against the system
 
@@ -341,12 +335,7 @@ The `behaviour()` is where you define the test actions. The behaviour defined he
 Run the test - it should pass.
 Try changing the message values in the flows or the system behaviour to provoke a failure.
 
-If you'd prefer to use jUnit4, then [`assert-junit4` is also available][junit4.Flocessor].
-<!-- code_link_start -->
-
-[junit4.Flocessor]: ../../../../assert/assert-junit4/src/main/java/com/mastercard/test/flow/assrt/junit4/Flocessor.java
-
-<!-- code_link_end -->
+If you'd prefer to use jUnit4, then [`assert-junit4` is also available](../../../../assert/assert-junit4).
 
 ## Conclusion
 
