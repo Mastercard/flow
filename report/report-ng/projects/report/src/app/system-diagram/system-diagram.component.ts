@@ -245,6 +245,13 @@ export class SystemDiagramComponent implements OnInit {
       }
       else {
         // edge count hasn't changed, so we can get away with editing styles
+
+        // style names have the svg's ID (which is dynamic) as a prefix, so we have to find that first
+        let markers: HTMLElement[] = (Array.from(this.containerElRef?.nativeElement
+          .querySelectorAll("marker")) as HTMLElement[])
+          .filter(marker => marker.id.includes("flowchart-pointEnd"));
+        let pointEndId = markers.length > 0 ? markers[0].id : "unknown!";
+
         let paths: HTMLElement[] = (Array.from(this.containerElRef?.nativeElement
           .querySelectorAll("path")) as HTMLElement[])
           .filter(path => path.classList.contains("flowchart-link"));
@@ -255,16 +262,16 @@ export class SystemDiagramComponent implements OnInit {
               && path.classList.contains("LE-" + edge.to))
             .forEach(path => {
               if (edge.edge === this.dottedEdge) {
-                this.dottedEdgeStyle(path);
+                this.dottedEdgeStyle(path, pointEndId);
               }
               else if (edge.edge === this.thickEdge) {
-                this.thickEdgeStyle(path);
+                this.thickEdgeStyle(path, pointEndId);
               }
               else if (edge.edge === this.invisibleEdge) {
                 this.invisibleEdgeStyle(path);
               }
               else {
-                this.lineEdgeStyle(path);
+                this.lineEdgeStyle(path, pointEndId);
               }
             });
         });
@@ -272,25 +279,25 @@ export class SystemDiagramComponent implements OnInit {
     }
   }
 
-  private lineEdgeStyle(e: HTMLElement): void {
+  private lineEdgeStyle(e: HTMLElement, pointEndId: string): void {
     this.replaceClass(e, "edge-thickness-", "normal");
     this.replaceClass(e, "edge-pattern-", "solid");
     this.setAttr(e, "style", "");
-    this.setAttr(e, "marker-end", "url(#flowchart-pointEnd)");
+    this.setAttr(e, "marker-end", "url(#" + pointEndId + ")");
   }
 
-  private thickEdgeStyle(e: HTMLElement): void {
+  private thickEdgeStyle(e: HTMLElement, pointEndId: string): void {
     this.replaceClass(e, "edge-thickness-", "thick");
     this.replaceClass(e, "edge-pattern-", "solid");
     this.setAttr(e, "style", "");
-    this.setAttr(e, "marker-end", "url(#flowchart-pointEnd)");
+    this.setAttr(e, "marker-end", "url(#" + pointEndId + ")");
   }
 
-  private dottedEdgeStyle(e: HTMLElement): void {
+  private dottedEdgeStyle(e: HTMLElement, pointEndId: string): void {
     this.replaceClass(e, "edge-thickness-", "normal");
     this.replaceClass(e, "edge-pattern-", "dotted");
     this.setAttr(e, "style", "");
-    this.setAttr(e, "marker-end", "url(#flowchart-pointEnd)");
+    this.setAttr(e, "marker-end", "url(#" + pointEndId + ")");
   }
 
   private invisibleEdgeStyle(e: HTMLElement): void {
