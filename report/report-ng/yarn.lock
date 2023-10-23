@@ -1825,10 +1825,10 @@
   dependencies:
     "@types/ms" "*"
 
-"@types/diff-match-patch@^1.0.32":
-  version "1.0.32"
-  resolved "https://registry.yarnpkg.com/@types/diff-match-patch/-/diff-match-patch-1.0.32.tgz#d9c3b8c914aa8229485351db4865328337a3d09f"
-  integrity sha512-bPYT5ECFiblzsVzyURaNhljBH2Gh1t9LowgUwciMrNAhFewLkHT2H0Mto07Y4/3KCOGZHRQll3CTtQZ0X11D/A==
+"@types/diff-match-patch@^1.0.35":
+  version "1.0.35"
+  resolved "https://registry.yarnpkg.com/@types/diff-match-patch/-/diff-match-patch-1.0.35.tgz#40e8b2a02d47f648154936c39098a594099d2a80"
+  integrity sha512-+RpmGthShsToYni9Df1DBhFfPuMV1/VgDvedhSCgP5ll7QsNYcaxfqv4/8Vzbw7FtEscD80OCyycQuMtIVL07Q==
 
 "@types/dompurify@^3.0.3":
   version "3.0.3"
