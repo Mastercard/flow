@@ -10,6 +10,7 @@
 	<packaging>pom</packaging>
 	<description>Visualising assertion results</description>
 	<modules>
+		<module>duct</module>
 		<module>report-core</module>
 		<module>report-ng</module>
 	</modules>

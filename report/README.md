@@ -8,6 +8,7 @@ Visualising assertion results
 
 
  * [../flow](https://github.com/Mastercard/flow) Testing framework
+ * [duct](duct) Report server
  * [report-core](report-core) Report input/output
  * [report-ng](report-ng) Report webapp
 
