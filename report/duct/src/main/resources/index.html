@@ -1,0 +1,28 @@
+<html>
+	<head>
+		<title>Duct</title>
+		<script>
+			// make repeated heartbeat requests to keep the duct instance alive
+			setInterval( function() {
+					var xmlHttp = new XMLHttpRequest();
+					xmlHttp.onreadystatechange = function() { 
+						console.log(xmlHttp.responseText);
+					}
+					xmlHttp.open("GET", "/heartbeat", true); 
+					xmlHttp.send(null);
+				},
+				30000 );
+		</script>
+	</head>
+	<body>
+		<h1>Duct</h1>
+		<p>Duct is a utility that serves test execution reports produced by the <a href=\"https://github.com/Mastercard/flow\">flow framework</a></p>
+		<p>Reports are being served from <code>%__SERVED_DIR__%</code></p>
+		<ul>
+%__REPORT_LIST__%
+		</ul>
+	</body>
+	<footer>
+	<p><a href="/shutdown">shutdown</a> | <a href="log.txt">Logs</a></p>
+	</footer>
+</html>

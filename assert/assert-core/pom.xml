@@ -19,6 +19,13 @@
 		</dependency>
 
 		<dependency>
+			<!-- report serving -->
+			<groupId>${project.groupId}</groupId>
+			<artifactId>duct</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter</artifactId>
 			<scope>test</scope>
