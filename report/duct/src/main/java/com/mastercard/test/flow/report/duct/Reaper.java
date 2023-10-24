@@ -29,6 +29,7 @@ class Reaper extends Thread {
 		Duration delay = Duration.between( Instant.now(), duct.expiry() );
 		while( !delay.isNegative() ) {
 			try {
+				LOG.info( "Sleeping for " + delay );
 				Thread.sleep( delay.toMillis() );
 			}
 			catch( InterruptedException e ) {

@@ -138,6 +138,7 @@ class Gui {
 	 * Adds the icon to the system tray
 	 */
 	void show() {
+		LOG.info( "Showing gui" );
 		try {
 			SystemTray.getSystemTray().add( trayIcon );
 		}
@@ -150,6 +151,7 @@ class Gui {
 	 * Removes the icon from the system tray
 	 */
 	void hide() {
+		LOG.info( "hiding gui" );
 		SystemTray.getSystemTray().remove( trayIcon );
 	}
 }

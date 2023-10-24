@@ -3,13 +3,16 @@ package com.mastercard.test.flow.report.duct;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import spark.Service;
 
 /**
  * Handles the webser functionality
  */
 class Server {
-
+	private static final Logger LOG = LoggerFactory.getLogger( Server.class );
 	private Service spark;
 
 	Server( Duct duct, Path servedDirectory, int port ) {
@@ -32,11 +35,13 @@ class Server {
 	}
 
 	void start() {
+		LOG.info( "Starting server" );
 		spark.init();
 		spark.awaitInitialization();
 	}
 
 	void stop() {
+		LOG.info( "Stopping server" );
 		spark.stop();
 	}
 

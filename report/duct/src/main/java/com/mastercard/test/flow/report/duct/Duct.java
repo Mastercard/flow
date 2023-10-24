@@ -199,6 +199,7 @@ public class Duct {
 	 */
 	public Instant heartbeat() {
 		expiry = Instant.now().plus( LIFESPAN );
+		LOG.info( "beep! life extended to {}", expiry );
 		return expiry;
 	}
 
@@ -219,6 +220,7 @@ public class Duct {
 	 */
 	public URL add( Path source ) {
 		heartbeat();
+		LOG.info( "Adding {}" + source );
 		if( !Files.exists( source ) ) {
 			LOG.error( "Nothing found at {}", source );
 			return null;
@@ -285,6 +287,7 @@ public class Duct {
 	 * Regenerates the served index file
 	 */
 	private void reindex() {
+		LOG.info( "Regenerating index" );
 		try {
 			String content = INDEX_TEMPLATE
 					.replace( "%__SERVED_DIR__%",
