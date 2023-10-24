@@ -2,8 +2,9 @@
     <span>Flow reports</span>
 </mat-toolbar>
 
-<p>Let's copy the log view!
-</p>
-<pre>
-{{reports | json}}
-</pre>
+<p>filter controls here!</p>
+
+<mat-nav-list>
+    <app-duct-index-item *ngFor="let report of reports" [report]="report">
+    </app-duct-index-item>
+</mat-nav-list>

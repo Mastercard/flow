@@ -62,6 +62,7 @@ import { SystemDiagramComponent } from './system-diagram/system-diagram.componen
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { DuctIndexComponent } from './duct-index/duct-index.component';
 import { MatPaginatorModule } from '@angular/material/paginator';
+import { DuctIndexItemComponent } from './duct-index-item/duct-index-item.component';
 
 const routes: Routes = [
   { path: "diff", component: ModelDiffComponent },
@@ -106,6 +107,7 @@ const routes: Routes = [
     TextDiffComponent,
     SystemDiagramComponent,
     DuctIndexComponent,
+    DuctIndexItemComponent,
   ],
   imports: [
     BrowserAnimationsModule,

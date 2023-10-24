@@ -12,24 +12,23 @@ export class DuctIndexComponent {
     {
       meta: { modelTitle: "abc", testTitle: "def", timestamp: 12345 },
       counts: { pass: 1, fail: 2, skip: 3, error: 4 },
-      path: "foo/bar/baz"
+      path: "link/to/first/report"
     },
     {
       meta: { modelTitle: "ghi", testTitle: "jkl", timestamp: 24680 },
-      counts: { pass: 5, fail: 6, skip: 7, error: 8 },
-      path: "foo/bar/baz"
+      counts: { pass: 5, fail: 0, skip: 7, error: 8 },
+      path: "link/to/second/report"
     },
     {
-      meta: { modelTitle: "abc", testTitle: "def", timestamp: 12345 },
-      counts: { pass: 1, fail: 2, skip: 3, error: 4 },
-      path: "foo/bar/baz"
+      meta: { modelTitle: "abc", testTitle: "def", timestamp: 1456216437826 },
+      counts: { pass: 1, fail: 2, skip: 3, error: 0 },
+      path: "link/to/third/report"
     },
   ];
 
-
 }
 
-interface Report {
+export interface Report {
   meta: Meta;
   counts: Counts;
   path: string;
