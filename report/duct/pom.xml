@@ -26,6 +26,13 @@
 		</dependency>
 
 		<dependency>
+			<!-- report parsing -->
+			<groupId>${project.groupId}</groupId>
+			<artifactId>report-core</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
 			<!-- Logging support -->
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
@@ -66,8 +73,18 @@
 			</plugin>
 
 			<plugin>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<!-- skips surefire tests without skipping failsafe tests.
+                 Property value seems to magically default to false -->
+					<skipTests>true</skipTests>
+				</configuration>
+			</plugin>
+
+			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>3.2.1</version>
 				<executions>
 					<execution>
 						<id>integration-test</id>

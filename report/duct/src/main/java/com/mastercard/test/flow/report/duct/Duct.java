@@ -1,23 +1,16 @@
 package com.mastercard.test.flow.report.duct;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.stream.Collectors.joining;
 
 import java.awt.Desktop;
-import java.awt.Dimension;
-import java.awt.Image;
-import java.awt.MenuItem;
-import java.awt.PopupMenu;
-import java.awt.SystemTray;
-import java.awt.TrayIcon;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -28,13 +21,11 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.stream.Stream;
 
-import javax.imageio.ImageIO;
-import javax.swing.JFileChooser;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import spark.Service;
+import com.mastercard.test.flow.report.Reader;
+import com.mastercard.test.flow.report.data.Index;
 
 /**
  * An application that serves flow reports
@@ -44,7 +35,7 @@ public class Duct {
 	/**
 	 * Application entrypoint
 	 *
-	 * @param args List of report paths (absolute) to serve
+	 * @param args List of report paths (absolute) to serve and browse
 	 * @throws Exception on failure
 	 */
 	public static void main( String[] args ) throws Exception {
@@ -64,8 +55,8 @@ public class Duct {
 	}
 
 	/**
-	 * Makes a best-effort attempt at serving a report via duct and opening a
-	 * browser to it. This might involve starting a fresh instance of the duct
+	 * Makes a best-effort attempt at serving a report via {@link Duct} and opening
+	 * a browser to it. This might involve starting a fresh instance of the duct
 	 * application. It might fail silently
 	 *
 	 * @param report The report directory to serve
@@ -84,20 +75,27 @@ public class Duct {
 		}
 		else {
 			// we'll have to spawn our own instance
-			Path jarSrc = Stream.of( System.getProperty( "java.class.path" )
-					.split( File.pathSeparator ) )
-					.filter( p -> p.matches( ".*duct-.*\\.jar" ) )
-					.findAny()
-					.map( Paths::get )
-					.orElseThrow( () -> new IllegalStateException(
-							"Failed to find duct jar" ) );
 
-			ProcessBuilder pb = new ProcessBuilder(
-					"java", "-jar",
-					jarSrc.toAbsolutePath().toString(),
-					report.toAbsolutePath().toString() );
 			try {
+				// Thanks to our maven-shade-plugin config, the jar that provides this class
+				// contains all of its dependencies. Thus we can find it via the classloader and
+				// `java -jar`-invoke it to create a new instance
+
+				// this process will persist after the demise of the current JVM
+				ProcessBuilder pb = new ProcessBuilder(
+						"java", "-jar",
+						// The classloader knows where this class came from - inspect it to find the jar
+						Paths.get( Duct.class.getProtectionDomain()
+								.getCodeSource()
+								.getLocation()
+								.toURI() ).toAbsolutePath().toString(),
+						// pass the report path on the commandline - the above main method will take
+						// care of adding and browsing it
+						report.toAbsolutePath().toString() );
 				pb.start();
+			}
+			catch( URISyntaxException e ) {
+				throw new IllegalStateException( "Failed to find duct jar", e );
 			}
 			catch( @SuppressWarnings("unused") IOException e ) {
 				// oh well, we tried
@@ -141,12 +139,12 @@ public class Duct {
 	}
 
 	/**
-	 * How long a duct instance will live without heartbeat requests
+	 * How long a {@link Duct} instance will live without heartbeat requests
 	 */
 	private static final Duration LIFESPAN = Duration.of( 90, ChronoUnit.SECONDS );
 
 	/**
-	 * The port that Duct will serve on
+	 * The port that {@link Duct} will serve on
 	 */
 	public static final int PORT = 2276;
 
@@ -154,6 +152,7 @@ public class Duct {
 			.resolve( "mctf_duct" );
 	private static final Logger LOG;
 	static {
+		// logger initialisation has to happen *after* the content directory is known
 		try {
 			Files.createDirectories( servedDirectory );
 			System.setProperty( "org.slf4j.simpleLogger.logFile",
@@ -167,67 +166,9 @@ public class Duct {
 
 	private static final String INDEX_TEMPLATE = resource( "index.html" );
 
-	private final TrayIcon trayIcon;
-	private Service service;
+	private final Gui gui = new Gui( this );
+	private final Server server = new Server( this, servedDirectory, PORT );
 	private Instant expiry;
-
-	/**
-	 * @param servedDirectory The directory to serve reports from
-	 */
-	public Duct() {
-		try {
-			Image icon = ImageIO.read( Duct.class.getClassLoader().getResource( "duct.png" ) );
-			trayIcon = new TrayIcon( icon, "duct", buildMenu() );
-			Dimension d = trayIcon.getSize();
-			// manually resize so we can use smooth scaling
-			trayIcon.setImage( icon.getScaledInstance( d.width, d.height, Image.SCALE_SMOOTH ) );
-		}
-		catch( Exception e ) {
-			LOG.error( "Failed to read icon", e );
-			throw new IllegalStateException( e );
-		}
-	}
-
-	private PopupMenu buildMenu() {
-		PopupMenu menu = new PopupMenu();
-
-		MenuItem index = new MenuItem( "Duct index" );
-		index.addActionListener( ev -> {
-			try {
-				Desktop.getDesktop().browse( new URI( "http://localhost:" + service.port() ) );
-			}
-			catch( Exception e ) {
-				LOG.error( "Failed to provoke browser", e );
-			}
-		} );
-		menu.add( index );
-
-		MenuItem add = new MenuItem( "Add report..." );
-		add.addActionListener( ev -> {
-			JFileChooser chooser = new JFileChooser();
-			chooser.setFileSelectionMode( JFileChooser.DIRECTORIES_ONLY );
-
-			int result = chooser.showDialog( null, "duct: Serve report" );
-			if( result == JFileChooser.APPROVE_OPTION ) {
-				URL serving = add( chooser.getSelectedFile().toPath() );
-				try {
-					Desktop.getDesktop().browse( serving.toURI() );
-				}
-				catch( Exception e ) {
-					LOG.error( "Failed to provoke browser", e );
-				}
-			}
-		} );
-		menu.add( add );
-
-		menu.addSeparator();
-
-		MenuItem exit = new MenuItem( "Exit" );
-		exit.addActionListener( ev -> stop() );
-		menu.add( exit );
-
-		return menu;
-	}
 
 	/**
 	 * Starts the server, add the system tray icon
@@ -235,56 +176,20 @@ public class Duct {
 	 * @throws Exception on failure
 	 */
 	public void start() throws Exception {
-		service = Service.ignite()
-				.port( PORT )
-				.externalStaticFileLocation( servedDirectory.toAbsolutePath().toString() );
-		service.staticFiles.header( "Access-Control-Allow-Origin", "*" );
-
-		service.get( "/heartbeat",
-				( req, res ) -> "Expiry at " + heartbeat() );
-
-		service.get( "/shutdown",
-				( req, res ) -> {
-					stop();
-					return "Shutting down";
-				} );
-
-		service.post( "/add",
-				( req, res ) -> add( Paths.get( req.body().trim() ) ).toString() );
-
-		service.init();
-		service.awaitInitialization();
-
+		server.start();
 		reindex();
-
-		SystemTray.getSystemTray().add( trayIcon );
+		gui.show();
 
 		expiry = Instant.now().plus( LIFESPAN );
-		Thread reaper = new Thread( () -> {
-			Duration delay = Duration.between( Instant.now(), expiry );
-			while( !delay.isNegative() ) {
-				try {
-					Thread.sleep( delay.toMillis() );
-				}
-				catch( InterruptedException e ) {
-					LOG.warn( "unexpected interruption", e );
-					Thread.currentThread().interrupt();
-				}
-				delay = Duration.between( Instant.now(), expiry );
-			}
-
-			stop();
-		}, "duct reaper" );
-		reaper.setDaemon( true );
-		reaper.start();
+		new Reaper( this ).start();
 	}
 
 	/**
 	 * Shuts down the server
 	 */
 	public void stop() {
-		SystemTray.getSystemTray().remove( trayIcon );
-		service.stop();
+		gui.hide();
+		server.stop();
 	}
 
 	/**
@@ -294,6 +199,15 @@ public class Duct {
 	 */
 	public Instant heartbeat() {
 		expiry = Instant.now().plus( LIFESPAN );
+		return expiry;
+	}
+
+	/**
+	 * Gets the time at which duct should shut down
+	 *
+	 * @return The expiry time
+	 */
+	Instant expiry() {
 		return expiry;
 	}
 
@@ -321,14 +235,20 @@ public class Duct {
 		}
 
 		try {
-			Path sink = servedDirectory.resolve( Instant.now().toString()
-					.replaceAll( "\\W+", "_" ) );
+			Index index = new Reader( source ).read();
+
+			Path sink = servedDirectory
+					.resolve( index.meta.modelTitle.replaceAll( "\\W+", "_" ) )
+					.resolve( index.meta.testTitle.replaceAll( "\\W+", "_" ) )
+					.resolve( Instant.ofEpochMilli( index.meta.timestamp ).toString()
+							.replaceAll( "\\W+", "_" ) );
+
 			Files.createDirectories( sink );
 			try( Stream<Path> files = Files.walk( source ) ) {
 				files.forEach( from -> {
 					Path to = sink.resolve( source.relativize( from ) );
 					try {
-						Files.copy( from, to );
+						Files.copy( from, to, REPLACE_EXISTING );
 					}
 					catch( IOException e ) {
 						LOG.error( "Failed to copy {} to {}", from, to, e );
@@ -336,12 +256,29 @@ public class Duct {
 				} );
 			}
 			reindex();
-			return new URL( "http://localhost:" + PORT + "/" + servedDirectory.relativize( sink ) + "/" );
+			return new URL( "http://localhost:" + PORT + "/"
+					+ servedDirectory.relativize( sink ).toString()
+							.replace( '\\', '/' )
+					+ "/" );
 		}
 		catch( Exception e ) {
 			LOG.error( "Failed to add {}", source, e );
 			return null;
 		}
+	}
+
+	/**
+	 * @return The port that duct is serving on
+	 */
+	int port() {
+		return server.port();
+	}
+
+	/**
+	 * @return The directory that holds the served content
+	 */
+	Path servedDirectory() {
+		return servedDirectory;
 	}
 
 	/**
@@ -353,21 +290,11 @@ public class Duct {
 					.replace( "%__SERVED_DIR__%",
 							servedDirectory.toAbsolutePath().toString() )
 					.replace( "%__REPORT_LIST__%",
-							Files.list( servedDirectory )
-									.filter( Files::isDirectory )
-									.filter( d -> {
-										try {
-											return Files.list( d )
-													.anyMatch( c -> "index.html".equals( c.getFileName().toString() ) );
-										}
-										catch( IOException e ) {
-											LOG.error( "Failed to list {}", d, e );
-											return false;
-										}
-									} )
-									.map( d -> servedDirectory.relativize( d ) )
-									.map( d -> "  <li><a href=\"" + d + "/\">" + d + "</a></li>\n" )
-									.collect( joining() ) );
+							Search.find( servedDirectory )
+									.map( dir -> servedDirectory.relativize( dir ) )
+									.map( path -> path.toString().replace( '\\', '/' ) )
+									.map( path -> "			<li><a href=\"" + path + "/\">" + path + "</a></li>" )
+									.collect( joining( "\n" ) ) );
 
 			Files.write(
 					servedDirectory.resolve( "index.html" ),

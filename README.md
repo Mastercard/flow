@@ -58,6 +58,7 @@ graph TB
     assert-core --> assert-junit4
     assert-core --> assert-junit5
     assert-filter --> assert-core
+    duct --> assert-core
     message-core --> message-http
     message-core --> message-json
     message-core --> message-sql
@@ -65,6 +66,7 @@ graph TB
     message-core --> message-web
     message-core --> message-xml
     report-core --> assert-filter
+    report-core --> duct
     report-ng --> report-core
     validation-core --> validation-junit4
     validation-core --> validation-junit5

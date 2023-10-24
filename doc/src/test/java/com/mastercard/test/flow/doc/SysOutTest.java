@@ -42,6 +42,9 @@ class SysOutTest {
 		accept( "../example/app-itest/src/test/java/com/mastercard/test/flow/example/app/itest/"
 				+ "IntegrationTest.java",
 				"System.out.println( \"Serving \" + reportDir );" );
+		accept( "../report/duct/src/main/java/com/mastercard/test/flow/report/duct/"
+				+ "Duct.java",
+				"System.err.println( \"Failed to browse \" + served + \" due to \" + e.getMessage() );" );
 	}
 
 	private static void accept( String file, String... line ) {
