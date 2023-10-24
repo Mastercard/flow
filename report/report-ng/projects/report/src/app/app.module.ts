@@ -60,6 +60,8 @@ import { HighlightedTextComponent } from './highlighted-text/highlighted-text.co
 import { TextDiffComponent } from './text-diff/text-diff.component';
 import { SystemDiagramComponent } from './system-diagram/system-diagram.component';
 import { ClipboardModule } from '@angular/cdk/clipboard';
+import { DuctIndexComponent } from './duct-index/duct-index.component';
+import { MatPaginatorModule } from '@angular/material/paginator';
 
 const routes: Routes = [
   { path: "diff", component: ModelDiffComponent },
@@ -103,6 +105,7 @@ const routes: Routes = [
     HighlightedTextComponent,
     TextDiffComponent,
     SystemDiagramComponent,
+    DuctIndexComponent,
   ],
   imports: [
     BrowserAnimationsModule,
@@ -122,6 +125,7 @@ const routes: Routes = [
     MatInputModule,
     MatListModule,
     MatMenuModule,
+    MatPaginatorModule,
     MatProgressBarModule,
     MatRippleModule,
     MatSelectModule,
