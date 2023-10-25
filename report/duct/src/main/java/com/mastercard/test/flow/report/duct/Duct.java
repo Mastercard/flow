@@ -30,10 +30,10 @@ import org.slf4j.LoggerFactory;
 
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.Writer;
-import com.mastercard.test.flow.report.data.Index;
+import com.mastercard.test.flow.report.data.Meta;
 
 /**
- * An application that serves flow reports
+ * An application that lives in the system tray and serves flow reports.
  */
 public class Duct {
 
@@ -147,18 +147,22 @@ public class Duct {
 	 */
 	public static final int PORT = 2276;
 
-	static final Path servedDirectory = Paths.get( System.getProperty( "java.io.tmpdir" ) )
+	/**
+	 * The directory that holds our served content
+	 */
+	static final Path SERVED_DIRECTORY = Paths.get( System.getProperty( "java.io.tmpdir" ) )
 			.resolve( "mctf_duct" );
+
 	private static final Logger LOG;
 	static {
 		// logger initialisation has to happen *after* the content directory is known
 		try {
-			Files.createDirectories( servedDirectory );
+			Files.createDirectories( SERVED_DIRECTORY );
 			System.setProperty( "org.slf4j.simpleLogger.logFile",
-					servedDirectory.resolve( "log.txt" ).toAbsolutePath().toString() );
+					SERVED_DIRECTORY.resolve( "log.txt" ).toAbsolutePath().toString() );
 			LOG = LoggerFactory.getLogger( Duct.class );
 
-			Writer.writeDuctIndex( servedDirectory );
+			Writer.writeDuctIndex( SERVED_DIRECTORY );
 		}
 		catch( Exception e ) {
 			throw new IllegalStateException( "Failed to create content directory", e );
@@ -166,9 +170,9 @@ public class Duct {
 	}
 
 	private final Gui gui = new Gui( this );
-	private final Server server = new Server( this, servedDirectory, PORT );
-	private Instant expiry;
-	private final List<ReportSummary> index = new ArrayList<>();
+	private final Server server = new Server( this, SERVED_DIRECTORY, PORT );
+	private Instant expiry = Instant.now();
+	private List<ReportSummary> index = new ArrayList<>();
 
 	/**
 	 * Starts the server, add the system tray icon
@@ -237,22 +241,24 @@ public class Duct {
 		}
 
 		try {
-			Index index = new Reader( source ).read();
-			Instant ts = Instant.ofEpochMilli( index.meta.timestamp );
+			Meta meta = new Reader( source ).read().meta;
+			Instant ts = Instant.ofEpochMilli( meta.timestamp );
 
 			// structure is rooted at date so it's easy to, e.g.: delete all your elderly
 			// reports
-			Path sink = servedDirectory
+			Path sink = SERVED_DIRECTORY
 					.resolve( DateTimeFormatter.ISO_LOCAL_DATE
 							.withZone( ZoneId.systemDefault() )
 							.format( ts ) )
-					.resolve( index.meta.modelTitle.replaceAll( "\\W+", "_" ) )
+					.resolve( meta.modelTitle.replaceAll( "\\W+", "_" ) )
 					.resolve( (DateTimeFormatter.ISO_LOCAL_TIME
 							.withZone( ZoneId.systemDefault() )
-							.format( ts ) + "_" + index.meta.testTitle)
+							.format( ts ) + "_" + meta.testTitle)
 									.replaceAll( "\\W+", "_" ) );
 
 			if( Files.exists( sink ) ) {
+				// it seems unlikely that we'd have two distinct reports with the same model and
+				// test names and the same second-precise timestamp. Let's avoid the IO load
 				LOG.info( "Skippping copy for already-existing report" );
 			}
 			else {
@@ -272,7 +278,7 @@ public class Duct {
 				reindex();
 			}
 			return new URL( "http://localhost:" + PORT + "/"
-					+ servedDirectory.relativize( sink ).toString()
+					+ SERVED_DIRECTORY.relativize( sink ).toString()
 							.replace( '\\', '/' )
 					+ "/" );
 		}
@@ -294,16 +300,12 @@ public class Duct {
 	 */
 	public void reindex() {
 		LOG.info( "Regenerating index" );
-		List<ReportSummary> l = Search.find( servedDirectory )
+		index = Search.find( SERVED_DIRECTORY )
 				.map( path -> new ReportSummary( new Reader( path ).read(),
-						servedDirectory
+						SERVED_DIRECTORY
 								.relativize( path )
 								.toString().replace( '\\', '/' ) ) )
 				.collect( toList() );
-		synchronized( index ) {
-			index.clear();
-			index.addAll( l );
-		}
 	}
 
 	/**

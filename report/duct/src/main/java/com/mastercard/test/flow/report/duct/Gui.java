@@ -140,7 +140,7 @@ class Gui {
 		MenuItem content = new MenuItem( "Manage content" );
 		content.addActionListener( ev -> {
 			try {
-				Desktop.getDesktop().open( Duct.servedDirectory.toFile() );
+				Desktop.getDesktop().open( Duct.SERVED_DIRECTORY.toFile() );
 			}
 			catch( IOException e ) {
 				LOG.error( "Failed to browse content directory", e );
