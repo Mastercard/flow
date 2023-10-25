@@ -28,6 +28,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatSliderModule } from '@angular/material/slider';
 import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -132,6 +133,7 @@ const routes: Routes = [
     MatRippleModule,
     MatSelectModule,
     MatSidenavModule,
+    MatSliderModule,
     MatTableModule,
     MatTabsModule,
     MatToolbarModule,

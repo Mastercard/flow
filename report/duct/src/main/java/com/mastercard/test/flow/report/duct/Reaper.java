@@ -29,8 +29,11 @@ class Reaper extends Thread {
 		Duration delay = Duration.between( Instant.now(), duct.expiry() );
 		while( !delay.isNegative() ) {
 			try {
-				LOG.info( "Sleeping for " + delay );
-				Thread.sleep( delay.toMillis() );
+				LOG.info( "Sleeping for a bit over" + delay );
+				// if we sleep for exactly the time left then we get a busy-loop of
+				// zero-duration sleeps right before dying. Allowing 10ms grace for another
+				// heartbeat to come in avoids pointless log noise
+				Thread.sleep( delay.toMillis() + 10 );
 			}
 			catch( InterruptedException e ) {
 				LOG.warn( "unexpected interruption", e );

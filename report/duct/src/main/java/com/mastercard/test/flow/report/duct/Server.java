@@ -6,6 +6,9 @@ import java.nio.file.Paths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+
 import spark.Service;
 
 /**
@@ -13,6 +16,9 @@ import spark.Service;
  */
 class Server {
 	private static final Logger LOG = LoggerFactory.getLogger( Server.class );
+	private static final ObjectMapper JSON = new ObjectMapper()
+			.enable( SerializationFeature.INDENT_OUTPUT );
+
 	private Service spark;
 
 	Server( Duct duct, Path servedDirectory, int port ) {
@@ -32,6 +38,9 @@ class Server {
 
 		spark.post( "/add",
 				( req, res ) -> duct.add( Paths.get( req.body().trim() ) ).toString() );
+
+		spark.get( "/list",
+				( req, res ) -> duct.index(), JSON::writeValueAsString );
 	}
 
 	void start() {

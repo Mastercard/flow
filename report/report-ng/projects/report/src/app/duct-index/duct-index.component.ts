@@ -1,32 +1,48 @@
-import { Component, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Meta, isMeta } from '../types';
+import { HttpClient } from '@angular/common/http';
+import { tap } from 'rxjs';
+import { Title } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-duct-index',
   templateUrl: './duct-index.component.html',
   styleUrls: ['./duct-index.component.css']
 })
-export class DuctIndexComponent {
+export class DuctIndexComponent implements OnInit {
 
-  reports: Report[] = [
-    {
-      meta: { modelTitle: "abc", testTitle: "def", timestamp: 12345 },
-      counts: { pass: 1, fail: 2, skip: 3, error: 4 },
-      path: "link/to/first/report"
-    },
-    {
-      meta: { modelTitle: "ghi", testTitle: "jkl", timestamp: 24680 },
-      counts: { pass: 5, fail: 0, skip: 7, error: 8 },
-      path: "link/to/second/report"
-    },
-    {
-      meta: { modelTitle: "abc", testTitle: "def", timestamp: 1456216437826 },
-      counts: { pass: 1, fail: 2, skip: 3, error: 0 },
-      path: "link/to/third/report"
-    },
-  ];
+  reports: Report[] = [];
 
+  constructor(private http: HttpClient,
+    private title: Title) {
+  }
+
+  ngOnInit(): void {
+
+    this.title.setTitle("Duct");
+
+    // load the report list
+    this.http.get('/list')
+      .pipe(tap(
+        body => console.log("fetched ", body),
+        error => {
+          console.error("failed to get /list", error);
+          this.reports = [];
+        }
+      ))
+      .subscribe(resData => {
+        if (Array.isArray(resData)) {
+          this.reports = resData
+            .filter(e => isReport(e))
+            // most recent first
+            .sort((a, b) => b.meta.timestamp - a.meta.timestamp);
+          console.log("loaded ", this.reports);
+        }
+      });
+
+  }
 }
+
 
 export interface Report {
   meta: Meta;
@@ -38,7 +54,7 @@ function isReport(data: any): data is Report {
   return data
     && isMeta(data.meta)
     && isCounts(data.counts)
-    && data.path && typeof data.path === 'string';
+    && typeof data.path === 'string';
 }
 
 interface Counts {
@@ -50,8 +66,8 @@ interface Counts {
 
 function isCounts(data: any): data is Counts {
   return data
-    && data.pass && typeof data.pass === 'number'
-    && data.fail && typeof data.fail === 'number'
-    && data.skip && typeof data.skip === 'number'
-    && data.error && typeof data.error === 'number';
+    && typeof data.pass === 'number'
+    && typeof data.fail === 'number'
+    && typeof data.skip === 'number'
+    && typeof data.error === 'number';
 }

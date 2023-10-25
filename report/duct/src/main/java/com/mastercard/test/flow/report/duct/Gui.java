@@ -11,9 +11,11 @@ import java.awt.PopupMenu;
 import java.awt.SystemTray;
 import java.awt.TrayIcon;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URL;
+import java.nio.file.Path;
+import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
@@ -27,6 +29,8 @@ import org.slf4j.LoggerFactory;
  */
 class Gui {
 
+	private static final String SEARCH_PATH_PREF = "search_path";
+
 	private static final Logger LOG = LoggerFactory.getLogger( Gui.class );
 
 	// https://brand.mastercard.com/brandcenter-ca/branding-requirements/mastercard.html
@@ -35,6 +39,8 @@ class Gui {
 	private static final Color MC_YELLOW = new Color( 247, 158, 27 );
 
 	private final TrayIcon trayIcon;
+
+	private static final Preferences prefs = Preferences.userNodeForPackage( Gui.class );
 
 	/**
 	 * @param duct The {@link Duct} instance to control
@@ -76,7 +82,8 @@ class Gui {
 		PopupMenu menu = new PopupMenu();
 		menu.add( index( duct ) );
 		menu.add( add( duct ) );
-		menu.add( content( duct ) );
+		menu.add( content() );
+		menu.add( reindex( duct ) );
 		menu.addSeparator();
 		menu.add( exit( duct ) );
 		return menu;
@@ -96,26 +103,40 @@ class Gui {
 	}
 
 	private static MenuItem add( Duct duct ) {
-		MenuItem add = new MenuItem( "Add report..." );
+		MenuItem add = new MenuItem( "Add reports..." );
 		add.addActionListener( ev -> {
-			JFileChooser chooser = new JFileChooser();
+			File start = null;
+			try {
+				start = new File( prefs.get( SEARCH_PATH_PREF, System.getProperty( "user.home" ) ) );
+			}
+			catch( Exception e ) {
+				LOG.warn( "Failed to restore search directory", e );
+			}
+
+			JFileChooser chooser = new JFileChooser( start );
 			chooser.setFileSelectionMode( JFileChooser.DIRECTORIES_ONLY );
 
 			int result = chooser.showDialog( null, "Find reports" );
 			if( result == JFileChooser.APPROVE_OPTION ) {
-				URL serving = duct.add( chooser.getSelectedFile().toPath() );
-				try {
-					Desktop.getDesktop().browse( serving.toURI() );
-				}
-				catch( Exception e ) {
-					LOG.error( "Failed to provoke browser", e );
-				}
+				Path path = chooser.getSelectedFile().toPath();
+				prefs.put( SEARCH_PATH_PREF, path.toAbsolutePath().toString() );
+
+				Search.find( path )
+						.map( duct::add )
+						.forEach( url -> {
+							try {
+								Desktop.getDesktop().browse( url.toURI() );
+							}
+							catch( Exception e ) {
+								LOG.error( "Failed to provoke browser", e );
+							}
+						} );
 			}
 		} );
 		return add;
 	}
 
-	private static MenuItem content( Duct duct ) {
+	private static MenuItem content() {
 		MenuItem content = new MenuItem( "Manage content" );
 		content.addActionListener( ev -> {
 			try {
@@ -126,6 +147,13 @@ class Gui {
 			}
 		} );
 		return content;
+	}
+
+	private static MenuItem reindex( Duct duct ) {
+		// TODO: use java.nio.file.WatchService instead
+		MenuItem exit = new MenuItem( "Refresh index" );
+		exit.addActionListener( ev -> duct.reindex() );
+		return exit;
 	}
 
 	private static MenuItem exit( Duct duct ) {

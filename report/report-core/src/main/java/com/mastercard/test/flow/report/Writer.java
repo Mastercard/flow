@@ -102,6 +102,18 @@ public class Writer {
 	}
 
 	/**
+	 * Writes the duct index file
+	 *
+	 * @param dir The directory to write to
+	 */
+	public static void writeDuctIndex( Path dir ) {
+		new JsApp( "/com/mastercard/test/flow/report", dir.resolve( "res" ) )
+				.write(
+						Collections.singletonMap( "type", "duct" ),
+						dir.resolve( INDEX_FILE_NAME ) );
+	}
+
+	/**
 	 * Adds or updates a {@link Flow} in the report
 	 *
 	 * @param flow  The {@link Flow}

@@ -2,7 +2,7 @@ package com.mastercard.test.flow.report.duct;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 import java.awt.Desktop;
 import java.io.ByteArrayOutputStream;
@@ -21,12 +21,15 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.mastercard.test.flow.report.Reader;
+import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.Index;
 
 /**
@@ -154,17 +157,18 @@ public class Duct {
 			System.setProperty( "org.slf4j.simpleLogger.logFile",
 					servedDirectory.resolve( "log.txt" ).toAbsolutePath().toString() );
 			LOG = LoggerFactory.getLogger( Duct.class );
+
+			Writer.writeDuctIndex( servedDirectory );
 		}
 		catch( Exception e ) {
 			throw new IllegalStateException( "Failed to create content directory", e );
 		}
 	}
 
-	private static final String INDEX_TEMPLATE = resource( "index.html" );
-
 	private final Gui gui = new Gui( this );
 	private final Server server = new Server( this, servedDirectory, PORT );
 	private Instant expiry;
+	private final List<ReportSummary> index = new ArrayList<>();
 
 	/**
 	 * Starts the server, add the system tray icon
@@ -216,7 +220,7 @@ public class Duct {
 	 */
 	public URL add( Path source ) {
 		heartbeat();
-		LOG.info( "Adding {}" + source );
+		LOG.info( "Adding {}", source );
 		if( !Files.exists( source ) ) {
 			LOG.error( "Nothing found at {}", source );
 			return null;
@@ -248,21 +252,25 @@ public class Duct {
 							.format( ts ) + "_" + index.meta.testTitle)
 									.replaceAll( "\\W+", "_" ) );
 
-			LOG.info( "Adding to " + sink );
-
-			Files.createDirectories( sink );
-			try( Stream<Path> files = Files.walk( source ) ) {
-				files.forEach( from -> {
-					Path to = sink.resolve( source.relativize( from ) );
-					try {
-						Files.copy( from, to, REPLACE_EXISTING );
-					}
-					catch( IOException e ) {
-						LOG.error( "Failed to copy {} to {}", from, to, e );
-					}
-				} );
+			if( Files.exists( sink ) ) {
+				LOG.info( "Skippping copy for already-existing report" );
 			}
-			reindex();
+			else {
+				LOG.info( "Copying to {} ", sink );
+				Files.createDirectories( sink );
+				try( Stream<Path> files = Files.walk( source ) ) {
+					files.forEach( from -> {
+						Path to = sink.resolve( source.relativize( from ) );
+						try {
+							Files.copy( from, to, REPLACE_EXISTING );
+						}
+						catch( IOException e ) {
+							LOG.error( "Failed to copy {} to {}", from, to, e );
+						}
+					} );
+				}
+				reindex();
+			}
 			return new URL( "http://localhost:" + PORT + "/"
 					+ servedDirectory.relativize( sink ).toString()
 							.replace( '\\', '/' )
@@ -275,37 +283,44 @@ public class Duct {
 	}
 
 	/**
-	 * @return The port that duct is serving on
+	 * @return The port that {@link Duct} is serving on
 	 */
 	int port() {
 		return server.port();
 	}
 
 	/**
-	 * Regenerates the served index file
+	 * Regenerates the served index list
 	 */
-	private void reindex() {
+	public void reindex() {
 		LOG.info( "Regenerating index" );
-		try {
-			String content = INDEX_TEMPLATE
-					.replace( "%__SERVED_DIR__%",
-							servedDirectory.toAbsolutePath().toString() )
-					.replace( "%__REPORT_LIST__%",
-							Search.find( servedDirectory )
-									.map( dir -> servedDirectory.relativize( dir ) )
-									.map( path -> path.toString().replace( '\\', '/' ) )
-									.map( path -> "			<li><a href=\"" + path + "/\">" + path + "</a></li>" )
-									.collect( joining( "\n" ) ) );
-
-			Files.write(
-					servedDirectory.resolve( "index.html" ),
-					content.getBytes( UTF_8 ) );
-		}
-		catch( IOException e ) {
-			LOG.error( "Failed to reindex", e );
+		List<ReportSummary> l = Search.find( servedDirectory )
+				.map( path -> new ReportSummary( new Reader( path ).read(),
+						servedDirectory
+								.relativize( path )
+								.toString().replace( '\\', '/' ) ) )
+				.collect( toList() );
+		synchronized( index ) {
+			index.clear();
+			index.addAll( l );
 		}
 	}
 
+	/**
+	 * Gets a summary of served reports
+	 *
+	 * @return served report summaries
+	 */
+	List<ReportSummary> index() {
+		return index;
+	}
+
+	/**
+	 * Loads a classpath resource
+	 *
+	 * @param name The resource name
+	 * @return resource content
+	 */
 	static String resource( String name ) {
 		try( InputStream resource = Duct.class.getClassLoader()
 				.getResourceAsStream( name ); ) {
