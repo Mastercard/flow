@@ -101,7 +101,7 @@ class Gui {
 			JFileChooser chooser = new JFileChooser();
 			chooser.setFileSelectionMode( JFileChooser.DIRECTORIES_ONLY );
 
-			int result = chooser.showDialog( null, "duct: Serve report" );
+			int result = chooser.showDialog( null, "Find reports" );
 			if( result == JFileChooser.APPROVE_OPTION ) {
 				URL serving = duct.add( chooser.getSelectedFile().toPath() );
 				try {
@@ -119,7 +119,7 @@ class Gui {
 		MenuItem content = new MenuItem( "Manage content" );
 		content.addActionListener( ev -> {
 			try {
-				Desktop.getDesktop().open( duct.servedDirectory().toFile() );
+				Desktop.getDesktop().open( Duct.servedDirectory.toFile() );
 			}
 			catch( IOException e ) {
 				LOG.error( "Failed to browse content directory", e );

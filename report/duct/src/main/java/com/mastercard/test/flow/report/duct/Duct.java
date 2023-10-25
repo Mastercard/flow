@@ -18,6 +18,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.stream.Stream;
 
@@ -62,7 +64,7 @@ public class Duct {
 	 * @param report The report directory to serve
 	 */
 	public static void serve( Path report ) {
-		// try adding via http
+		// try adding via http request
 		URL added = tryAdd( report );
 		if( added != null ) {
 			// there's an existing instance!
@@ -75,27 +77,20 @@ public class Duct {
 		}
 		else {
 			// we'll have to spawn our own instance
-
 			try {
-				// Thanks to our maven-shade-plugin config, the jar that provides this class
-				// contains all of its dependencies. Thus we can find it via the classloader and
-				// `java -jar`-invoke it to create a new instance
-
 				// this process will persist after the demise of the current JVM
 				ProcessBuilder pb = new ProcessBuilder(
-						"java", "-jar",
-						// The classloader knows where this class came from - inspect it to find the jar
-						Paths.get( Duct.class.getProtectionDomain()
-								.getCodeSource()
-								.getLocation()
-								.toURI() ).toAbsolutePath().toString(),
+						"java",
+						// re-use the current JVM's classpath. It's running this class, so it should
+						// also have the dependencies we need. The classpath will be bigger than duct
+						// strictly needs, but the cost of that is negligible
+						"-cp", System.getProperty( "java.class.path" ),
+						// invoke this class's main method
+						Duct.class.getName(),
 						// pass the report path on the commandline - the above main method will take
 						// care of adding and browsing it
 						report.toAbsolutePath().toString() );
 				pb.start();
-			}
-			catch( URISyntaxException e ) {
-				throw new IllegalStateException( "Failed to find duct jar", e );
 			}
 			catch( @SuppressWarnings("unused") IOException e ) {
 				// oh well, we tried
@@ -132,8 +127,9 @@ public class Duct {
 			}
 			return new URL( body );
 		}
-		catch( Exception e ) {
-			e.printStackTrace();
+		catch( @SuppressWarnings("unused") Exception e ) {
+			// A failure on this request is not unexpected - it could just be a signal that
+			// we need to start a new instance of duct
 			return null;
 		}
 	}
@@ -148,7 +144,7 @@ public class Duct {
 	 */
 	public static final int PORT = 2276;
 
-	private static final Path servedDirectory = Paths.get( System.getProperty( "java.io.tmpdir" ) )
+	static final Path servedDirectory = Paths.get( System.getProperty( "java.io.tmpdir" ) )
 			.resolve( "mctf_duct" );
 	private static final Logger LOG;
 	static {
@@ -238,12 +234,21 @@ public class Duct {
 
 		try {
 			Index index = new Reader( source ).read();
+			Instant ts = Instant.ofEpochMilli( index.meta.timestamp );
 
+			// structure is rooted at date so it's easy to, e.g.: delete all your elderly
+			// reports
 			Path sink = servedDirectory
+					.resolve( DateTimeFormatter.ISO_LOCAL_DATE
+							.withZone( ZoneId.systemDefault() )
+							.format( ts ) )
 					.resolve( index.meta.modelTitle.replaceAll( "\\W+", "_" ) )
-					.resolve( index.meta.testTitle.replaceAll( "\\W+", "_" ) )
-					.resolve( Instant.ofEpochMilli( index.meta.timestamp ).toString()
-							.replaceAll( "\\W+", "_" ) );
+					.resolve( (DateTimeFormatter.ISO_LOCAL_TIME
+							.withZone( ZoneId.systemDefault() )
+							.format( ts ) + "_" + index.meta.testTitle)
+									.replaceAll( "\\W+", "_" ) );
+
+			LOG.info( "Adding to " + sink );
 
 			Files.createDirectories( sink );
 			try( Stream<Path> files = Files.walk( source ) ) {
@@ -277,13 +282,6 @@ public class Duct {
 	}
 
 	/**
-	 * @return The directory that holds the served content
-	 */
-	Path servedDirectory() {
-		return servedDirectory;
-	}
-
-	/**
 	 * Regenerates the served index file
 	 */
 	private void reindex() {
@@ -308,7 +306,7 @@ public class Duct {
 		}
 	}
 
-	private static String resource( String name ) {
+	static String resource( String name ) {
 		try( InputStream resource = Duct.class.getClassLoader()
 				.getResourceAsStream( name ); ) {
 			return read( resource );

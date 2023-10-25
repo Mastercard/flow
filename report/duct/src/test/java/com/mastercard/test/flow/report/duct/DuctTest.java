@@ -4,10 +4,10 @@ import java.nio.file.Paths;
 
 import org.junit.jupiter.api.Test;
 
-class DuctIT {
+class DuctTest {
 
 	@Test
-	void duct() {
+	void serve() {
 		Duct.serve( Paths.get( "../../example/app-itest/target/mctf/latest" ) );
 	}
 }
