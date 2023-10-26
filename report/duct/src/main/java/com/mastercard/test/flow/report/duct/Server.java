@@ -31,7 +31,7 @@ class Server {
 	 * going to restrict our server so that it only responds to requests coming from
 	 * localhost
 	 */
-	private static Filter LOCAL_ORIGIN_ONLY = ( request, response ) -> {
+	private static final Filter LOCAL_ORIGIN_ONLY = ( request, response ) -> {
 		// SECURITY-CRITICAL BEHAVIOUR
 		try {
 			InetAddress addr = InetAddress.getByName( request.ip() );

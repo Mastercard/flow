@@ -5,11 +5,15 @@ import java.io.UncheckedIOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.mastercard.test.flow.report.Reader;
 
@@ -17,6 +21,11 @@ import com.mastercard.test.flow.report.Reader;
  * Finds reports on the filesystem
  */
 class Search {
+
+	private static final Path SRC_MAIN_JAVA = Paths.get( "src", "main", "java" );
+	private static final Path SRC_TEST_JAVA = Paths.get( "src", "test", "java" );
+
+	private static final Logger LOG = LoggerFactory.getLogger( Search.class );
 
 	/**
 	 * Walks a directory structure to find the reports it contains
@@ -30,7 +39,7 @@ class Search {
 			Files.walkFileTree( root, rf );
 		}
 		catch( IOException e ) {
-			throw new UncheckedIOException( "Failed to scan " + root, e );
+			throw new UncheckedIOException( "Search of " + root + "failed", e );
 		}
 		return rf.reports();
 	}
@@ -51,7 +60,11 @@ class Search {
 				return FileVisitResult.SKIP_SUBTREE;
 			}
 
-			// TODO: avoid scanning into java project source and node_modules trees
+			if( isJavaSourceRoot( dir ) || isNodeModules( dir ) ) {
+				// these directory structures tend to be very large and devoid of execution
+				// reports. Let's skip them.
+				return FileVisitResult.SKIP_SUBTREE;
+			}
 
 			return super.preVisitDirectory( dir, attrs );
 		}
@@ -60,4 +73,24 @@ class Search {
 			return found.stream();
 		}
 	}
+
+	/**
+	 * @param path a path
+	 * @return <code>true</code> if that path looks like it might be the root of a
+	 *         java source tree
+	 */
+	static boolean isJavaSourceRoot( Path path ) {
+		return path.endsWith( SRC_MAIN_JAVA )
+				|| path.endsWith( SRC_TEST_JAVA );
+	}
+
+	/**
+	 * @param path a path
+	 * @return <code>true</code> if that path looks like it might contain NPM
+	 *         dependencies
+	 */
+	static boolean isNodeModules( Path path ) {
+		return path.endsWith( "node_modules" );
+	}
+
 }
