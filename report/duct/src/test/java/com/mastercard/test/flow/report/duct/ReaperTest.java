@@ -4,6 +4,7 @@ import static java.time.temporal.ChronoUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
@@ -153,7 +154,8 @@ class ReaperTest {
 		private final Deque<Instant> clocks = new ArrayDeque<>();
 
 		/**
-		 * Sets the expiry values
+		 * Sets the expiry values that will be returned from successive calls to
+		 * {@link Duct#expiry()}
 		 *
 		 * @param delays A sequence of seconds past the epoch
 		 * @return <code>this</code>
@@ -166,7 +168,8 @@ class ReaperTest {
 		}
 
 		/**
-		 * Sets the clock values
+		 * Sets the values that will be returned from successive calls to the
+		 * {@link Reaper}'s clock
 		 *
 		 * @param times A sequence of seconds past the epoch
 		 * @return <code>this</code>
@@ -184,6 +187,8 @@ class ReaperTest {
 		 * @param events expected event log
 		 */
 		void expect( String events ) {
+			int expiryCount = expiries.size();
+
 			Duct duct = Mockito.mock( Duct.class );
 			Mockito.when( duct.expiry() )
 					.thenAnswer( e -> {
@@ -208,9 +213,13 @@ class ReaperTest {
 				throw new IllegalStateException( e );
 			}
 
-			assertEquals( "[]", expiries.toString(), "remaining expiries" );
-			assertEquals( "[]", clocks.toString(), "remaining clocks" );
+			assertEquals( "[]", expiries.toString(), "unexpended expiries" );
+			assertEquals( "[]", clocks.toString(), "unexpended clocks" );
 			assertEquals( events, log.stream().collect( joining( "\n" ) ) );
+
+			Mockito.verify( duct, times( expiryCount ) ).expiry();
+			Mockito.verify( duct, times( 1 ) ).stop();
+			Mockito.verifyNoMoreInteractions( duct );
 		}
 	}
 }
