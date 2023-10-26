@@ -25,8 +25,6 @@ class Search {
 	private static final Path SRC_MAIN_JAVA = Paths.get( "src", "main", "java" );
 	private static final Path SRC_TEST_JAVA = Paths.get( "src", "test", "java" );
 
-	private static final Logger LOG = LoggerFactory.getLogger( Search.class );
-
 	/**
 	 * Walks a directory structure to find the reports it contains
 	 *
@@ -45,6 +43,9 @@ class Search {
 	}
 
 	private static class ReportForager extends SimpleFileVisitor<Path> {
+
+		private static final Logger LOG = LoggerFactory.getLogger( ReportForager.class );
+
 		private List<Path> found = new ArrayList<>();
 
 		ReportForager() {
@@ -60,9 +61,14 @@ class Search {
 				return FileVisitResult.SKIP_SUBTREE;
 			}
 
-			if( isJavaSourceRoot( dir ) || isNodeModules( dir ) ) {
-				// these directory structures tend to be very large and devoid of execution
-				// reports. Let's skip them.
+			// these directory structures tend to be very large and devoid of execution
+			// reports. Let's skip them.
+			if( isJavaSourceRoot( dir ) ) {
+				LOG.info( "Skipping java source tree {}", dir );
+				return FileVisitResult.SKIP_SUBTREE;
+			}
+			if( isNodeModules( dir ) ) {
+				LOG.info( "Skipping node modules tree {}", dir );
 				return FileVisitResult.SKIP_SUBTREE;
 			}
 

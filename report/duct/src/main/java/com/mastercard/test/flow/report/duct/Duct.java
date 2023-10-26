@@ -1,16 +1,11 @@
 package com.mastercard.test.flow.report.duct;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.joining;
 
 import java.awt.Desktop;
-import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.UncheckedIOException;
-import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -18,11 +13,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.prefs.Preferences;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -30,7 +27,8 @@ import org.slf4j.LoggerFactory;
 
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.Writer;
-import com.mastercard.test.flow.report.data.Meta;
+import com.mastercard.test.flow.report.data.Index;
+import com.mastercard.test.flow.report.duct.HttpClient.Response;
 
 /**
  * An application that lives in the system tray and serves flow reports.
@@ -38,12 +36,20 @@ import com.mastercard.test.flow.report.data.Meta;
 public class Duct {
 
 	/**
+	 * The preference name where we save our index directories
+	 */
+	static final String SERVED_REPORT_PATHS_PREF = "served_report_paths";
+	/**
+	 * Our preferences object
+	 */
+	static final Preferences PREFS = Preferences.userNodeForPackage( Duct.class );
+
+	/**
 	 * Application entrypoint
 	 *
 	 * @param args List of report paths (absolute) to serve and browse
-	 * @throws Exception on failure
 	 */
-	public static void main( String[] args ) throws Exception {
+	public static void main( String[] args ) {
 		Duct duct = new Duct();
 		duct.start();
 		Stream.of( args )
@@ -104,31 +110,17 @@ public class Duct {
 	/**
 	 * Attempts to add a report to an existing duct instance
 	 *
-	 * @return The URL of the served report, or <code>null</code> if there was no
-	 *         existing duct instance
+	 * @return The URL of the served report, or <code>null</code> if the request
+	 *         failed, perhaps because there <i>was</i> no existing duct instance
 	 */
 	private static URL tryAdd( Path report ) {
 		try {
-			HttpURLConnection c = (HttpURLConnection) new URL( "http://localhost:" + PORT + "/add" )
-					.openConnection();
-			// we want to fail quickly if there is no duct instance
-			c.setConnectTimeout( 250 );
-			// but a large report might take a non-trivial duration to copy
-			c.setReadTimeout( 10000 );
-			c.setRequestMethod( "POST" );
-			c.setDoOutput( true );
-			try( OutputStream os = c.getOutputStream() ) {
-				os.write( report.toAbsolutePath().toString().getBytes( UTF_8 ) );
-			}
-			int rc = c.getResponseCode();
-			String body;
-			try( InputStream in = c.getInputStream();
-					InputStream er = c.getErrorStream(); ) {
-				body = read( rc < HttpURLConnection.HTTP_BAD_REQUEST
-						? in
-						: er );
-			}
-			return new URL( body );
+			Response<String> res = HttpClient.request(
+					"http://localhost:" + PORT + "/add",
+					"POST",
+					report.toAbsolutePath().toString(),
+					b -> new String( b, UTF_8 ) );
+			return new URL( res.body );
 		}
 		catch( @SuppressWarnings("unused") Exception e ) {
 			// A failure on this request is not unexpected - it could just be a signal that
@@ -148,52 +140,63 @@ public class Duct {
 	public static final int PORT = 2276;
 
 	/**
-	 * The directory that holds our served content
+	 * The directory that holds our index application and log file
 	 */
-	static final Path SERVED_DIRECTORY = Paths.get( System.getProperty( "java.io.tmpdir" ) )
+	static final Path INDEX_DIRECTORY = Paths.get( System.getProperty( "java.io.tmpdir" ) )
 			.resolve( "mctf_duct" );
 
 	private static final Logger LOG;
 	static {
-		// logger initialisation has to happen *after* the content directory is known
+		// logger initialisation has to happen *after* the index directory is known
 		try {
-			Files.createDirectories( SERVED_DIRECTORY );
+			Files.createDirectories( INDEX_DIRECTORY );
 			System.setProperty( "org.slf4j.simpleLogger.logFile",
-					SERVED_DIRECTORY.resolve( "log.txt" ).toAbsolutePath().toString() );
+					INDEX_DIRECTORY.resolve( "log.txt" ).toAbsolutePath().toString() );
 			LOG = LoggerFactory.getLogger( Duct.class );
 
-			Writer.writeDuctIndex( SERVED_DIRECTORY );
+			LOG.info( "Creating index files" );
+			Writer.writeDuctIndex( INDEX_DIRECTORY );
 		}
 		catch( Exception e ) {
-			throw new IllegalStateException( "Failed to create content directory", e );
+			throw new IllegalStateException( "Failed to create index directory", e );
 		}
 	}
 
 	private final Gui gui = new Gui( this );
-	private final Server server = new Server( this, SERVED_DIRECTORY, PORT );
+	private final Server server = new Server( this, INDEX_DIRECTORY, PORT );
 	private Instant expiry = Instant.now();
-	private List<ReportSummary> index = new ArrayList<>();
+	private Map<Path, ReportSummary> index = new HashMap<>();
 
 	/**
-	 * Starts the server, add the system tray icon
-	 *
-	 * @throws Exception on failure
+	 * Starts duct. The GUI will be shown and the server kicked off
 	 */
-	public void start() throws Exception {
-		server.start();
-		reindex();
+	public void start() {
 		gui.show();
+
+		server.start();
+		// map the index page routes
+		server.map( "/", INDEX_DIRECTORY );
+
+		// load the saved report directories
+		Stream.of( PREFS.get( SERVED_REPORT_PATHS_PREF, "" )
+				.split( File.pathSeparator ) )
+				.filter( s -> !s.isEmpty() )
+				.map( Paths::get )
+				.forEach( p -> index.put( p, null ) );
+
+		reindex();
 
 		expiry = Instant.now().plus( LIFESPAN );
 		new Reaper( this ).start();
 	}
 
 	/**
-	 * Shuts down the server
+	 * Shuts down the server and hides the GUI. The JVM will be free to exit after
+	 * this.
 	 */
 	public void stop() {
-		gui.hide();
 		server.stop();
+		gui.hide();
 	}
 
 	/**
@@ -203,7 +206,7 @@ public class Duct {
 	 */
 	public Instant heartbeat() {
 		expiry = Instant.now().plus( LIFESPAN );
-		LOG.info( "beep! life extended to {}", expiry );
+		LOG.debug( "beep! life extended to {}", expiry );
 		return expiry;
 	}
 
@@ -224,63 +227,33 @@ public class Duct {
 	 */
 	public URL add( Path source ) {
 		heartbeat();
+
+		if( !Reader.isReportDir( source ) ) {
+			LOG.error( "{} is not a report", source );
+			return null;
+		}
+
 		LOG.info( "Adding {}", source );
-		if( !Files.exists( source ) ) {
-			LOG.error( "Nothing found at {}", source );
-			return null;
-		}
-
-		if( !Files.isDirectory( source ) ) {
-			LOG.error( "{} is not a directory", source );
-			return null;
-		}
-
-		if( !Files.exists( source.resolve( "index.html" ) ) ) {
-			LOG.error( "{} has no index", source );
-			return null;
-		}
 
 		try {
-			Meta meta = new Reader( source ).read().meta;
-			Instant ts = Instant.ofEpochMilli( meta.timestamp );
+			Index idx = new Reader( source ).read();
+			Instant ts = Instant.ofEpochMilli( idx.meta.timestamp );
 
-			// structure is rooted at date so it's easy to, e.g.: delete all your elderly
-			// reports
-			Path sink = SERVED_DIRECTORY
-					.resolve( DateTimeFormatter.ISO_LOCAL_DATE
-							.withZone( ZoneId.systemDefault() )
-							.format( ts ) )
-					.resolve( meta.modelTitle.replaceAll( "\\W+", "_" ) )
-					.resolve( (DateTimeFormatter.ISO_LOCAL_TIME
-							.withZone( ZoneId.systemDefault() )
-							.format( ts ) + "_" + meta.testTitle)
-									.replaceAll( "\\W+", "_" ) );
+			String path = String.format( "/%s/%s/%s/",
+					idx.meta.modelTitle.replaceAll( "\\W+", "_" ),
+					idx.meta.testTitle.replaceAll( "\\W+", "_" ),
+					ts.toString().replaceAll( "\\W+", "_" ) );
 
-			if( Files.exists( sink ) ) {
-				// it seems unlikely that we'd have two distinct reports with the same model and
-				// test names and the same second-precise timestamp. Let's avoid the IO load
-				LOG.info( "Skippping copy for already-existing report" );
-			}
-			else {
-				LOG.info( "Copying to {} ", sink );
-				Files.createDirectories( sink );
-				try( Stream<Path> files = Files.walk( source ) ) {
-					files.forEach( from -> {
-						Path to = sink.resolve( source.relativize( from ) );
-						try {
-							Files.copy( from, to, REPLACE_EXISTING );
-						}
-						catch( IOException e ) {
-							LOG.error( "Failed to copy {} to {}", from, to, e );
-						}
-					} );
-				}
-				reindex();
-			}
-			return new URL( "http://localhost:" + PORT + "/"
-					+ SERVED_DIRECTORY.relativize( sink ).toString()
-							.replace( '\\', '/' )
-					+ "/" );
+			path = "/" + source.toString().replaceAll( "\\W+", "_" ) + "/";
+
+			server.map( path, source );
+			index.put( source, new ReportSummary( idx, path ) );
+
+			PREFS.put( SERVED_REPORT_PATHS_PREF, index.keySet().stream()
+					.map( Path::toString )
+					.collect( joining( File.pathSeparator ) ) );
+
+			return new URL( "http://localhost:" + PORT + path );
 		}
 		catch( Exception e ) {
 			LOG.error( "Failed to add {}", source, e );
@@ -296,16 +269,31 @@ public class Duct {
 	}
 
 	/**
+	 * Clears the index
+	 */
+	public void clearIndex() {
+		index.keySet().forEach( server::unmap );
+		index.clear();
+		PREFS.remove( SERVED_REPORT_PATHS_PREF );
+	}
+
+	/**
 	 * Regenerates the served index list
 	 */
 	public void reindex() {
 		LOG.info( "Regenerating index" );
-		index = Search.find( SERVED_DIRECTORY )
-				.map( path -> new ReportSummary( new Reader( path ).read(),
-						SERVED_DIRECTORY
-								.relativize( path )
-								.toString().replace( '\\', '/' ) ) )
-				.collect( toList() );
+		List<Path> dirs = new ArrayList<>( index.keySet() );
+		List<Path> toRemove = new ArrayList<>();
+
+		// try to remap each of our existing reports
+		dirs.forEach( dir -> {
+			if( add( dir ) == null ) {
+				// if they failed to map then we should remove it from the index
+				toRemove.add( dir );
+			}
+		} );
+
+		toRemove.forEach( index::remove );
 	}
 
 	/**
@@ -313,37 +301,7 @@ public class Duct {
 	 *
 	 * @return served report summaries
 	 */
-	List<ReportSummary> index() {
-		return index;
-	}
-
-	/**
-	 * Loads a classpath resource
-	 *
-	 * @param name The resource name
-	 * @return resource content
-	 */
-	static String resource( String name ) {
-		try( InputStream resource = Duct.class.getClassLoader()
-				.getResourceAsStream( name ); ) {
-			return read( resource );
-		}
-		catch( IOException ioe ) {
-			throw new UncheckedIOException( ioe );
-		}
-	}
-
-	private static String read( InputStream is ) {
-		try( ByteArrayOutputStream data = new ByteArrayOutputStream() ) {
-			byte[] buff = new byte[1024];
-			int read = 0;
-			while( (read = is.read( buff )) >= 0 ) {
-				data.write( buff, 0, read );
-			}
-			return new String( data.toByteArray(), UTF_8 );
-		}
-		catch( IOException ioe ) {
-			throw new UncheckedIOException( ioe );
-		}
+	Collection<ReportSummary> index() {
+		return index.values();
 	}
 }

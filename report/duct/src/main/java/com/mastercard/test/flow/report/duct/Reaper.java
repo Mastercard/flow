@@ -21,7 +21,7 @@ class Reaper extends Thread {
 
 	private Consumer<Duration> sleep = delay -> {
 		try {
-			LOG.info( "Sleeping for a bit over" + delay );
+			LOG.debug( "Sleeping for a bit over {}", delay );
 			// if we sleep for *exactly* the time left then we get a busy-loop of
 			// zero-duration sleeps right before dying. Allowing 10ms grace for another
 			// heartbeat to come in avoids pointless log noise
@@ -50,7 +50,7 @@ class Reaper extends Thread {
 			delay = Duration.between( now.get(), duct.expiry() );
 		}
 
-		LOG.info( "Expiry breached by {}, shutting down duct", delay.abs() );
+		LOG.warn( "Expiry breached by {}, shutting down duct", delay.abs() );
 		duct.stop();
 	}
 

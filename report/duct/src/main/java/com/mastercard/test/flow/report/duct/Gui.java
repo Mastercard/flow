@@ -12,7 +12,6 @@ import java.awt.SystemTray;
 import java.awt.TrayIcon;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.prefs.Preferences;
@@ -82,7 +81,7 @@ class Gui {
 		PopupMenu menu = new PopupMenu();
 		menu.add( index( duct ) );
 		menu.add( add( duct ) );
-		menu.add( content() );
+		menu.add( clearIndex( duct ) );
 		menu.add( reindex( duct ) );
 		menu.addSeparator();
 		menu.add( exit( duct ) );
@@ -90,7 +89,7 @@ class Gui {
 	}
 
 	private static MenuItem index( Duct duct ) {
-		MenuItem index = new MenuItem( "Report index" );
+		MenuItem index = new MenuItem( "Report index..." );
 		index.addActionListener( ev -> {
 			try {
 				Desktop.getDesktop().browse( new URI( "http://localhost:" + duct.port() ) );
@@ -136,30 +135,24 @@ class Gui {
 		return add;
 	}
 
-	private static MenuItem content() {
-		MenuItem content = new MenuItem( "Manage content" );
-		content.addActionListener( ev -> {
-			try {
-				Desktop.getDesktop().open( Duct.SERVED_DIRECTORY.toFile() );
-			}
-			catch( IOException e ) {
-				LOG.error( "Failed to browse content directory", e );
-			}
+	private static MenuItem clearIndex( Duct duct ) {
+		MenuItem item = new MenuItem( "Clear index" );
+		item.addActionListener( ev -> {
+			duct.clearIndex();
 		} );
-		return content;
+		return item;
 	}
 
 	private static MenuItem reindex( Duct duct ) {
-		// TODO: use java.nio.file.WatchService instead
-		MenuItem exit = new MenuItem( "Refresh index" );
-		exit.addActionListener( ev -> duct.reindex() );
-		return exit;
+		MenuItem item = new MenuItem( "Refresh index" );
+		item.addActionListener( ev -> duct.reindex() );
+		return item;
 	}
 
 	private static MenuItem exit( Duct duct ) {
-		MenuItem exit = new MenuItem( "Exit" );
-		exit.addActionListener( ev -> duct.stop() );
-		return exit;
+		MenuItem item = new MenuItem( "Exit" );
+		item.addActionListener( ev -> duct.stop() );
+		return item;
 	}
 
 	/**

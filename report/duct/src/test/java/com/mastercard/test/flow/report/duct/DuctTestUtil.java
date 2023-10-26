@@ -6,15 +6,13 @@ import static java.util.stream.Collectors.toList;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.UncheckedIOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.function.Function;
+import java.util.prefs.BackingStoreException;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,13 +21,14 @@ import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.Entry;
 import com.mastercard.test.flow.report.data.Index;
 import com.mastercard.test.flow.report.data.Meta;
+import com.mastercard.test.flow.report.duct.HttpClient.Response;
 
 /**
  * Utility for exercising {@link Duct}
  */
 class DuctTestUtil {
 
-	private static final String INDEX_TEMPLATE = Duct.resource( "no-node/index.html" );
+	private static final String INDEX_TEMPLATE = resource( "no-node/index.html" );
 	private static final ObjectMapper JSON = new ObjectMapper()
 			.enable( SerializationFeature.INDENT_OUTPUT );
 
@@ -37,11 +36,12 @@ class DuctTestUtil {
 	 * Creates a mock report
 	 *
 	 * @param dir       where to create the rpeort
-	 * @param model     syste model title
+	 * @param model     system model title
 	 * @param test      test title
 	 * @param timestamp report creation time
 	 * @param flows     a sequence of comma-separated tag string, one for each flow
 	 *                  in the report
+	 * @return The directory that was created
 	 */
 	public static Path createReport( Path dir, String model, String test, Instant timestamp,
 			String... flows ) {
@@ -70,7 +70,7 @@ class DuctTestUtil {
 	}
 
 	/**
-	 * Polls for a successful /heartbeat
+	 * Polls for a <code>successful</code> /heartbeat
 	 */
 	static void waitForLife() {
 		long expiry = System.currentTimeMillis() + 5000;
@@ -92,8 +92,18 @@ class DuctTestUtil {
 		while( resp.code != 200 );
 	}
 
+	static void clearSavedIndex() {
+		Duct.PREFS.remove( Duct.SERVED_REPORT_PATHS_PREF );
+		try {
+			Duct.PREFS.flush();
+		}
+		catch( BackingStoreException e ) {
+			throw new IllegalStateException( e );
+		}
+	}
+
 	/**
-	 * Smashes /shutdown until it fails
+	 * Smashes <code>/shutdown</code> until it fails
 	 */
 	static void ensureDeath() {
 		long expiry = System.currentTimeMillis() + 5000;
@@ -116,12 +126,32 @@ class DuctTestUtil {
 	}
 
 	/**
-	 * Issues a <code>/heartbeat</code> request
+	 * Issues a <code>/heartbeat</code> request to 127.0.0.1
 	 *
 	 * @return the response
 	 */
 	static Response<String> heartbeat() {
-		return request( "http://127.0.0.1:2276/heartbeat", "GET", null,
+		return heartbeat( "127.0.0.1" );
+	}
+
+	/**
+	 * Issues a <code>/heartbeat</code> request
+	 *
+	 * @param ip The IP address to request to
+	 * @return the response
+	 */
+	static Response<String> heartbeat( String ip ) {
+		return HttpClient.request( "http://" + ip + ":2276/heartbeat", "GET", null,
+				b -> new String( b, UTF_8 ) );
+	}
+
+	/**
+	 * Gets the report index
+	 *
+	 * @return The report index
+	 */
+	static Response<String> index() {
+		return HttpClient.request( "http://127.0.0.1:2276/list", "GET", null,
 				b -> new String( b, UTF_8 ) );
 	}
 
@@ -131,73 +161,57 @@ class DuctTestUtil {
 	 * @return the response
 	 */
 	static Response<String> shutdown() {
-		return request( "http://127.0.0.1:2276/shutdown", "GET", null,
+		return HttpClient.request( "http://127.0.0.1:2276/shutdown", "GET", null,
 				b -> new String( b, UTF_8 ) );
 	}
 
 	/**
-	 * Does a HTTP request
+	 * Loads a classpath resource
 	 *
-	 * @param method request method
-	 * @param body   request body
-	 * @return response body
+	 * @param name The resource name
+	 * @return resource content
 	 */
-	private static <T> Response<T> request( String url, String method, String body,
-			Function<byte[], T> parse ) {
-		try {
-			HttpURLConnection connection = (HttpURLConnection) new URL( url )
-					.openConnection();
-			connection.setRequestMethod( method );
-			connection.setDoInput( true );
-			connection.setConnectTimeout( 3000 );
-			connection.setReadTimeout( 3000 );
+	static String resource( String name ) {
+		try( InputStream resource = Duct.class.getClassLoader()
+				.getResourceAsStream( name ); ) {
+			return read( resource );
+		}
+		catch( IOException ioe ) {
+			throw new UncheckedIOException( ioe );
+		}
+	}
 
-			if( body != null ) {
-				connection.setDoOutput( true );
-				try( OutputStream out = connection.getOutputStream() ) {
-					out.write( body.getBytes( UTF_8 ) );
-				}
-				catch( IOException ioe ) {
-					throw new UncheckedIOException( ioe );
-				}
-			}
-
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+	private static String read( InputStream is ) {
+		try( ByteArrayOutputStream data = new ByteArrayOutputStream() ) {
 			byte[] buff = new byte[1024];
 			int read = 0;
-
-			try( InputStream in = response( connection ) ) {
-				while( (read = in.read( buff )) != -1 ) {
-					baos.write( buff, 0, read );
-				}
+			while( (read = is.read( buff )) >= 0 ) {
+				data.write( buff, 0, read );
 			}
-
-			return new Response<>( connection.getResponseCode(), parse.apply( baos.toByteArray() ) );
+			return new String( data.toByteArray(), UTF_8 );
 		}
-		catch( IOException e ) {
-			return new Response<>( -1, null );
-		}
-	}
-
-	public static class Response<T> {
-		public int code;
-		public final T body;
-
-		Response( int code, T body ) {
-			this.code = code;
-			this.body = body;
-		}
-
-		@Override
-		public String toString() {
-			return String.format( "rc: %s\n%s", code, body );
+		catch( IOException ioe ) {
+			throw new UncheckedIOException( ioe );
 		}
 	}
 
-	private static InputStream response( HttpURLConnection conn ) throws IOException {
-		if( conn.getResponseCode() < HttpURLConnection.HTTP_BAD_REQUEST ) {
-			return conn.getInputStream();
-		}
-		return conn.getErrorStream();
+	/**
+	 * @param content Some strings
+	 * @return A string that can be trivially copy/pasted into java source
+	 */
+	public static String copypasta( String... content ) {
+		return copypasta( Stream.of( content ) );
+	}
+
+	/**
+	 * @param content Some strings
+	 * @return A string that can be trivially copy/pasted into java source
+	 */
+	public static String copypasta( Stream<String> content ) {
+		return content
+				.map( s -> s.replaceAll( "\r", "" ) )
+				.flatMap( s -> Stream.of( s.split( "\n" ) ) )
+				.map( s -> s.replaceAll( "\"", "'" ) )
+				.collect( Collectors.joining( "\",\n\"", "\"", "\"" ) );
 	}
 }
