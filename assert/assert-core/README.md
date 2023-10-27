@@ -47,6 +47,7 @@ Some aspects of assertion behaviour can be controlled by system properties:
 | `mctf.filter.update` | Supply `true` to update filter values at runtime in the most appropriate interface.Supply `cli` to force use of the command-line interface or `gui` to force use of the graphical interface |
 | `mctf.replay` | The location of a report to replay, or `latest` to replay the most recent local report |
 | `mctf.report.dir` | The path from the artifact directory to the report destination |
+| `mctf.report.serve` | Set to `true` to browse reports on a local web server rather than the filesystem |
 | `mctf.suppress.assertion` | Set to `true` to continue processing a flow in the face of assertion failure |
 | `mctf.suppress.basis` | Set to `true` to process flows whose basis flows have suffered assertion failure |
 | `mctf.suppress.dependency` | Set to `true` to process flows whose dependency flows have suffered errors |
