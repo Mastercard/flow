@@ -5,8 +5,10 @@ import static java.util.stream.Collectors.joining;
 
 import java.awt.Desktop;
 import java.awt.GraphicsEnvironment;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -47,8 +49,13 @@ public class Duct {
 	 * failure-prone things though, so it's nice to have the option of seeing the
 	 * issues when you're wondering why your report is not being served.
 	 */
-	static final boolean NOISY_FAILS = "true"
+	static final boolean NOISY_DEBUG = "true"
 			.equals( System.getProperty( "mctf.duct.noisy" ) );
+
+	/**
+	 * Force the no-gui behaviour even when we're in a desktop environment.
+	 */
+	static final boolean NO_GUI = "true".equals( System.getProperty( "mctf.duct.no_gui" ) );
 
 	/**
 	 * The preference name where we save our index directories
@@ -77,7 +84,7 @@ public class Duct {
 						}
 					}
 					catch( Exception e ) {
-						if( NOISY_FAILS ) {
+						if( NOISY_DEBUG ) {
 							System.err.println( "Failed to browse " + served );
 							e.printStackTrace();
 						}
@@ -103,7 +110,7 @@ public class Duct {
 				}
 			}
 			catch( IOException | URISyntaxException e ) {
-				if( NOISY_FAILS ) {
+				if( NOISY_DEBUG ) {
 					System.err.println( "Failed to browse " + added );
 					e.printStackTrace();
 				}
@@ -122,12 +129,32 @@ public class Duct {
 					// pass the report path on the commandline - the above main method will take
 					// care of adding and browsing it
 					report.toAbsolutePath().toString() );
+			if( NOISY_DEBUG ) {
+				pb.redirectErrorStream( true );
+			}
 			try {
 				// this process will persist after the demise of the current JVM
-				pb.start();
+				Process p = pb.start();
+
+				if( NOISY_DEBUG ) {
+					Thread t = new Thread( () -> {
+						try( InputStreamReader isr = new InputStreamReader( p.getInputStream() );
+								BufferedReader br = new BufferedReader( isr ) ) {
+							String line = null;
+							while( (line = br.readLine()) != null ) {
+								System.out.println( "duct launch stdout : " + line );
+							}
+						}
+						catch( Exception e ) {
+							e.printStackTrace();
+						}
+					}, "stream printer" );
+					t.setDaemon( true );
+					t.start();
+				}
 			}
 			catch( IOException e ) {
-				if( NOISY_FAILS ) {
+				if( NOISY_DEBUG ) {
 					System.err.println( "Failed to launch:\n"
 							+ pb.command().stream().collect( joining( " " ) ) );
 					e.printStackTrace();
@@ -179,9 +206,9 @@ public class Duct {
 		catch( Exception e ) {
 			// A failure on this request is not unexpected - it could just be a signal that
 			// we need to start a new instance of duct
-			if( NOISY_FAILS ) {
+			if( NOISY_DEBUG ) {
 				System.err.println( String.format(
-						"Failed to add via http:\n%s %s\n%s",
+						"Failed to add via http:\n%s %s\n%s\nThis probably isn't a big problem",
 						"http://localhost:" + PORT + "/add",
 						"POST",
 						report.toAbsolutePath().toString() ) );
@@ -233,7 +260,7 @@ public class Duct {
 	 * Constructs a new {@link Duct} instance
 	 */
 	public Duct() {
-		if( GraphicsEnvironment.isHeadless() ) {
+		if( NO_GUI || GraphicsEnvironment.isHeadless() ) {
 			gui = new HeadlessGui();
 		}
 		else {

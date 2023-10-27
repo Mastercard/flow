@@ -44,7 +44,7 @@ class SysOutTest {
 				"System.out.println( \"Serving \" + reportDir );" );
 		accept( "../report/duct/src/main/java/com/mastercard/test/flow/report/duct/"
 				+ "Duct.java",
-				"System.err.println( \"Failed to browse \" + served + \" due to \" + e.getMessage() );" );
+				"System.err.println( \"Failed to browse \" + served );" );
 	}
 
 	private static void accept( String file, String... line ) {

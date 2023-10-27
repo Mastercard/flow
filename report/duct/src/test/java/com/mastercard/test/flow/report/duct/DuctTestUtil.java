@@ -78,7 +78,16 @@ class DuctTestUtil {
 		Response<String> resp;
 		do {
 			if( System.currentTimeMillis() > expiry ) {
-				throw new IllegalStateException( "duct startup failure" );
+				String logs;
+				try {
+					logs = new String( Files.readAllBytes(
+							Duct.INDEX_DIRECTORY.resolve( "log.txt" ) ),
+							UTF_8 );
+				}
+				catch( IOException ioe ) {
+					logs = "Log captured failed! " + ioe.getMessage();
+				}
+				throw new IllegalStateException( "duct startup failure\n" + logs );
 			}
 
 			resp = heartbeat();
