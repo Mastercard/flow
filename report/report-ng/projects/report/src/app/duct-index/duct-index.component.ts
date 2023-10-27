@@ -13,7 +13,8 @@ export class DuctIndexComponent implements OnInit {
 
   constructor(
     private ductService: DuctService,
-    private title: Title) {
+    private title: Title
+  ) {
   }
 
   ngOnInit(): void {

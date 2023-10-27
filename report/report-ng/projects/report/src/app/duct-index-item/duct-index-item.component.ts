@@ -16,7 +16,9 @@ export class DuctIndexItemComponent implements OnInit {
   };
   time: string = "";
 
-  constructor(icons: IconEmbedService) {
+  constructor(
+    icons: IconEmbedService
+  ) {
     icons.register("check_circle_outline", "error_outline", "help_outline", "new_releases");
   }
 
