@@ -144,6 +144,10 @@ public class Duct {
 							while( (line = br.readLine()) != null ) {
 								System.out.println( "duct launch stdout : " + line );
 							}
+
+							System.out.println( "duct stdout ended! Command was:" );
+							System.out.println( pb.command().stream().collect( joining( " " ) ) );
+							System.out.println( "exit code " + p.exitValue() );
 						}
 						catch( Exception e ) {
 							e.printStackTrace();
@@ -195,27 +199,34 @@ public class Duct {
 	 *         failed, perhaps because there <i>was</i> no existing duct instance
 	 */
 	private static URL tryAdd( Path report ) {
-		try {
-			Response<String> res = HttpClient.request(
-					"http://localhost:" + PORT + "/add",
-					"POST",
-					report.toAbsolutePath().toString(),
-					b -> new String( b, UTF_8 ) );
-			return new URL( res.body );
+		Response<String> res = HttpClient.request(
+				"http://localhost:" + PORT + "/add",
+				"POST",
+				report.toAbsolutePath().toString(),
+				b -> new String( b, UTF_8 ) );
+
+		if( res.code == 200 ) {
+			try {
+				return new URL( res.body );
+			}
+			catch( Exception e ) {
+				if( NOISY_DEBUG ) {
+					System.err.println( "Failed to parse '" + res.body + " as a url" );
+					e.printStackTrace();
+				}
+			}
 		}
-		catch( Exception e ) {
+		else if( NOISY_DEBUG ) {
 			// A failure on this request is not unexpected - it could just be a signal that
 			// we need to start a new instance of duct
-			if( NOISY_DEBUG ) {
-				System.err.println( String.format(
-						"Failed to add via http:\n%s %s\n%s\nThis probably isn't a big problem",
-						"http://localhost:" + PORT + "/add",
-						"POST",
-						report.toAbsolutePath().toString() ) );
-				e.printStackTrace();
-			}
-			return null;
+			System.err.println( String.format(
+					"Failed to add via http:\n%s %s\n%s\nThis probably isn't a big problem",
+					"http://localhost:" + PORT + "/add",
+					"POST",
+					report.toAbsolutePath().toString() ) );
+			System.err.println( res.raw );
 		}
+		return null;
 	}
 
 	/**
