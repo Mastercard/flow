@@ -71,8 +71,12 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<systemPropertyVariables>
-						<!-- When testing, we want to see all the gory details if things fail -->
-						<mctf.duct.noisy>true</mctf.duct.noisy>
+						<!-- If you've got test failures, set this to true' -->
+						<mctf.duct.noisy>false</mctf.duct.noisy>
+						<!-- But let's not spam ourselves with browser windows' -->
+						<mctf.suppress.browse>true</mctf.suppress.browse>
+						<!-- Or suffer a systray icon flickering in and out -->
+						<mctf.suppress.duct.gui>true</mctf.suppress.duct.gui>
 					</systemPropertyVariables>
 				</configuration>
 			</plugin>

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.UncheckedIOException;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -28,6 +29,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.mastercard.test.flow.report.QuietFiles;
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.data.Meta;
+import com.mastercard.test.flow.report.duct.HttpClient.Response;
 
 /**
  * Exercises {@link Duct}
@@ -288,7 +290,13 @@ class DuctTest {
 		List<String> nonLoop = Stream.of( InetAddress
 				.getAllByName( localhost.getCanonicalHostName() ) )
 				.filter( a -> !a.isLoopbackAddress() )
-				.map( InetAddress::getHostAddress )
+				.map( addr -> {
+					if( addr instanceof Inet6Address ) {
+						// in URLs, ipv6 addresses need to be in brackets
+						return "[" + addr.getHostAddress() + "]";
+					}
+					return addr.getHostAddress();
+				} )
 				.collect( toList() );
 
 		assertTrue( nonLoop.size() > 0, "Expected at least 1 non-loopback address" );
@@ -297,12 +305,14 @@ class DuctTest {
 		duct.start();
 
 		{ // mapped endpoint behaviour
-			BiConsumer<String, Integer> test = ( addr, code ) -> assertEquals(
-					code,
-					HttpClient.request(
-							"http://" + addr + ":2276/heartbeat", "GET", null,
-							b -> new String( b, UTF_8 ) ).code,
-					"heartbeat endpoint at " + addr );
+			BiConsumer<String, Integer> test = ( addr, code ) -> {
+				String url = "http://" + addr + ":2276/heartbeat";
+				Response<String> res = HttpClient.request( url, "GET", null );
+				assertEquals(
+						code,
+						res.code,
+						"heartbeat endpoint at " + url );
+			};
 
 			test.accept( "127.0.0.1", 200 );
 			test.accept( "localhost", 200 );
@@ -314,8 +324,7 @@ class DuctTest {
 			BiConsumer<String, Integer> test = ( addr, code ) -> assertEquals(
 					code,
 					HttpClient.request(
-							"http://" + addr + ":2276/unmapped_endpoint", "GET", null,
-							b -> new String( b, UTF_8 ) ).code,
+							"http://" + addr + ":2276/unmapped_endpoint", "GET", null ).code,
 					"unmapped_endpoint endpoint at " + addr );
 
 			test.accept( "127.0.0.1", 404 );
@@ -353,9 +362,14 @@ class DuctTest {
 				"    'skip' : 1,",
 				"    'error' : 1",
 				"  },",
-				"  'path' : '/C_home_flowspace_flow_report_duct_target_DuctTest_valid/'",
+				"  'path' : '%maskedroot%_flow_report_duct_target_DuctTest_valid/'",
 				"} ]" ),
-				copypasta( DuctTestUtil.index().body ),
+				copypasta( DuctTestUtil.index().body
+						// the path is absolute, and we obviously can't know where this project is
+						// checked out
+						.replaceFirst(
+								"(\"path\" : \").*(_flow_report_duct_target_DuctTest_valid/\")",
+								"$1%maskedroot%$2" ) ),
 				"the same call added the report to the existing instance" );
 	}
 

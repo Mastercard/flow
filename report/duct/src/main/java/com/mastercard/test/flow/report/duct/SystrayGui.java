@@ -13,7 +13,6 @@ import java.awt.TrayIcon;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Path;
 import java.util.prefs.Preferences;
 
@@ -22,6 +21,8 @@ import javax.swing.JFileChooser;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.mastercard.test.flow.report.Browse;
 
 /**
  * Handles the {@link Duct} graphical user interface - the systray icon and the
@@ -92,14 +93,9 @@ class SystrayGui implements Gui {
 
 	private static MenuItem index( Duct duct ) {
 		MenuItem index = new MenuItem( "Index" );
-		index.addActionListener( ev -> {
-			try {
-				Desktop.getDesktop().browse( new URI( "http://localhost:" + duct.port() ) );
-			}
-			catch( Exception e ) {
-				LOG.error( "Failed to provoke browser", e );
-			}
-		} );
+		index.addActionListener( ev -> Browse.browse(
+				"http://localhost:" + duct.port(),
+				e -> LOG.error( "Failed to provoke browser", e ) ) );
 		return index;
 	}
 
@@ -124,14 +120,8 @@ class SystrayGui implements Gui {
 
 				Search.find( path )
 						.map( duct::add )
-						.forEach( url -> {
-							try {
-								Desktop.getDesktop().browse( url.toURI() );
-							}
-							catch( Exception e ) {
-								LOG.error( "Failed to provoke browser", e );
-							}
-						} );
+						.forEach( url -> Browse.browse( url,
+								e -> LOG.error( "Failed to provoke browser", e ) ) );
 			}
 		} );
 		return add;

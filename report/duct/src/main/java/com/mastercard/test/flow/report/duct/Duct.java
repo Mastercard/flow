@@ -1,15 +1,12 @@
 package com.mastercard.test.flow.report.duct;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
 
-import java.awt.Desktop;
 import java.awt.GraphicsEnvironment;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
@@ -24,16 +21,19 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.prefs.Preferences;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.mastercard.test.flow.report.Browse;
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.Index;
 import com.mastercard.test.flow.report.duct.HttpClient.Response;
+import com.mastercard.test.flow.util.Option;
 
 /**
  * An application that lives in the system tray and serves flow reports.
@@ -43,19 +43,21 @@ public class Duct {
 	/**
 	 * When <code>true</code>, failures will be printed to stderr. This framework
 	 * does not assume that clients use a logging framework, and it tries to keep
-	 * silent on stdout. This class uses slf4j for the bulk of operations, but those
-	 * will be running in a different process to the test. The interaction between
-	 * the test and the duct process (where we can't use slf4j) does a bunch of
-	 * failure-prone things though, so it's nice to have the option of seeing the
+	 * silent on stdout. <i>This</i> class uses slf4j for the bulk of operations,
+	 * but those will be running in a different process to the test. The interaction
+	 * between the test and the duct process (where we can't use slf4j) does a bunch
+	 * of failure-prone things though, so it's nice to have the option of seeing the
 	 * issues when you're wondering why your report is not being served.
 	 */
 	static final boolean NOISY_DEBUG = "true"
 			.equals( System.getProperty( "mctf.duct.noisy" ) );
 
 	/**
-	 * Force the no-gui behaviour even when we're in a desktop environment.
+	 * Allows control over whether a duct gui is shown or not
 	 */
-	static final boolean NO_GUI = "true".equals( System.getProperty( "mctf.duct.no_gui" ) );
+	public static final Option GUI_SUPPRESS = new Option.Builder()
+			.property( "mctf.suppress.duct.gui" )
+			.description( "Supply 'true' to suppress the duct gui" );
 
 	/**
 	 * The preference name where we save our index directories
@@ -77,18 +79,15 @@ public class Duct {
 		Stream.of( args )
 				.map( Paths::get )
 				.map( duct::add )
+				.filter( Objects::nonNull )
 				.forEach( served -> {
-					try {
-						if( Desktop.isDesktopSupported() ) {
-							Desktop.getDesktop().browse( served.toURI() );
-						}
-					}
-					catch( Exception e ) {
-						if( NOISY_DEBUG ) {
-							System.err.println( "Failed to browse " + served );
-							e.printStackTrace();
-						}
-					}
+					Browse.browse( served,
+							e -> {
+								if( NOISY_DEBUG ) {
+									System.err.println( "Failed to browse " + served );
+									e.printStackTrace();
+								}
+							} );
 				} );
 	}
 
@@ -104,17 +103,13 @@ public class Duct {
 		URL added = tryAdd( report );
 		if( added != null ) {
 			// there's an existing instance!
-			try {
-				if( Desktop.isDesktopSupported() ) {
-					Desktop.getDesktop().browse( added.toURI() );
-				}
-			}
-			catch( IOException | URISyntaxException e ) {
-				if( NOISY_DEBUG ) {
-					System.err.println( "Failed to browse " + added );
-					e.printStackTrace();
-				}
-			}
+			Browse.browse( added,
+					e -> {
+						if( NOISY_DEBUG ) {
+							System.err.println( "Failed to browse " + added );
+							e.printStackTrace();
+						}
+					} );
 		}
 		else {
 			// we'll have to spawn our own instance
@@ -168,13 +163,14 @@ public class Duct {
 	}
 
 	/**
-	 * Gets the classpath of the current JVM. Ordinarily you can find the classpath
-	 * just with the <code>java.class.path</code> system property. When running
-	 * tests via maven (a really common use-case for us) <a href=
+	 * Attempts to gets the classpath of the current JVM. You would think that you
+	 * could just use the <code>java.class.path</code> system property, but when
+	 * running tests via maven (a really common use-case for us) <a href=
 	 * "https://cwiki.apache.org/confluence/display/MAVEN/Maven+3.x+Class+Loading">that
 	 * just contains <code>plexus-classworlds.jar</code></a>, which is no use to us.
 	 * Hence we're reduced to this: ascending the classloader chain and pulling out
-	 * any URL that we find.
+	 * any URL that we find. This is all <i>highly</i> platform and VM-dependent
+	 * stuff, it's <i>horribly fragile</i>.
 	 *
 	 * @return The classpath of the current JVM
 	 */
@@ -187,9 +183,16 @@ public class Duct {
 			}
 			cl = cl.getParent();
 		}
-		return urls.stream()
+		String cp = urls.stream()
 				.map( URL::getPath )
 				.collect( joining( File.pathSeparator ) );
+
+		if( cp.isEmpty() ) {
+			// The complicated thing didn't work. Let's try the simple thing!
+			cp = System.getProperty( "java.class.path" );
+		}
+
+		return cp;
 	}
 
 	/**
@@ -202,8 +205,7 @@ public class Duct {
 		Response<String> res = HttpClient.request(
 				"http://localhost:" + PORT + "/add",
 				"POST",
-				report.toAbsolutePath().toString(),
-				b -> new String( b, UTF_8 ) );
+				report.toAbsolutePath().toString() );
 
 		if( res.code == 200 ) {
 			try {
@@ -271,7 +273,7 @@ public class Duct {
 	 * Constructs a new {@link Duct} instance
 	 */
 	public Duct() {
-		if( NO_GUI || GraphicsEnvironment.isHeadless() ) {
+		if( GUI_SUPPRESS.isTrue() || GraphicsEnvironment.isHeadless() ) {
 			gui = new HeadlessGui();
 		}
 		else {

@@ -6,7 +6,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.function.Function;
@@ -18,6 +17,18 @@ class HttpClient {
 
 	private HttpClient() {
 		// no instances
+	}
+
+	/**
+	 * Does a HTTP request
+	 *
+	 * @param url    request URL
+	 * @param method request method
+	 * @param body   request body
+	 * @return The response body string
+	 */
+	static Response<String> request( String url, String method, String body ) {
+		return request( url, method, body, b -> new String( b, UTF_8 ) );
 	}
 
 	/**
@@ -45,9 +56,6 @@ class HttpClient {
 				connection.setDoOutput( true );
 				try( OutputStream out = connection.getOutputStream() ) {
 					out.write( body.getBytes( UTF_8 ) );
-				}
-				catch( IOException ioe ) {
-					throw new UncheckedIOException( ioe );
 				}
 			}
 

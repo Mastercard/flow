@@ -150,8 +150,7 @@ class DuctTestUtil {
 	 * @return the response
 	 */
 	static Response<String> heartbeat( String ip ) {
-		return HttpClient.request( "http://" + ip + ":2276/heartbeat", "GET", null,
-				b -> new String( b, UTF_8 ) );
+		return HttpClient.request( "http://" + ip + ":2276/heartbeat", "GET", null );
 	}
 
 	/**
@@ -160,8 +159,7 @@ class DuctTestUtil {
 	 * @return The report index
 	 */
 	static Response<String> index() {
-		return HttpClient.request( "http://127.0.0.1:2276/list", "GET", null,
-				b -> new String( b, UTF_8 ) );
+		return HttpClient.request( "http://127.0.0.1:2276/list", "GET", null );
 	}
 
 	/**
@@ -170,8 +168,7 @@ class DuctTestUtil {
 	 * @return the response
 	 */
 	static Response<String> shutdown() {
-		return HttpClient.request( "http://127.0.0.1:2276/shutdown", "GET", null,
-				b -> new String( b, UTF_8 ) );
+		return HttpClient.request( "http://127.0.0.1:2276/shutdown", "GET", null );
 	}
 
 	/**

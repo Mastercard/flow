@@ -50,7 +50,9 @@ Some aspects of assertion behaviour can be controlled by system properties:
 | `mctf.report.serve` | Set to `true` to browse reports on a local web server rather than the filesystem |
 | `mctf.suppress.assertion` | Set to `true` to continue processing a flow in the face of assertion failure |
 | `mctf.suppress.basis` | Set to `true` to process flows whose basis flows have suffered assertion failure |
+| `mctf.suppress.browse` | Supply 'true' to suppress attempts to open browsers |
 | `mctf.suppress.dependency` | Set to `true` to process flows whose dependency flows have suffered errors |
+| `mctf.suppress.duct.gui` | Supply 'true' to suppress the duct gui |
 | `mctf.suppress.filter` | Set to `true` to process all flows regardless of filter configuration |
 | `mctf.suppress.system` | Set to `true` to process when the system under test lacks declared dependencies |
 

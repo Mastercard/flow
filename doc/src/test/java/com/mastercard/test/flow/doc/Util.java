@@ -140,6 +140,11 @@ class Util {
 				// so let's not plumb their depths
 				return FileVisitResult.SKIP_SUBTREE;
 			}
+			if( dir.endsWith( "target" )
+					&& Files.list( dir.getParent() ).anyMatch( p -> p.endsWith( "pom.xml" ) ) ) {
+				// we never want to look in the target dir
+				return FileVisitResult.SKIP_SUBTREE;
+			}
 			return super.preVisitDirectory( dir, attrs );
 		}
 

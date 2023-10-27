@@ -5,9 +5,6 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
-import java.awt.Desktop;
-import java.awt.Desktop.Action;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -185,15 +182,7 @@ public class Writer {
 	 * Attempts to open a browser to view the report. Failure is silent.
 	 */
 	public void browse() {
-		if( Desktop.isDesktopSupported()
-				&& Desktop.getDesktop().isSupported( Action.BROWSE ) ) {
-			try {
-				Desktop.getDesktop().browse( root.resolve( INDEX_FILE_NAME ).toUri() );
-			}
-			catch( @SuppressWarnings("unused") IOException e ) {
-				// oh well
-			}
-		}
+		Browse.browse( root.resolve( INDEX_FILE_NAME ).toUri() );
 	}
 
 	/**
