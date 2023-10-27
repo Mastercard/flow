@@ -4,6 +4,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
 
 import java.awt.Desktop;
+import java.awt.GraphicsEnvironment;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -162,10 +163,22 @@ public class Duct {
 		}
 	}
 
-	private final Gui gui = new Gui( this );
+	private final Gui gui;
 	private final Server server = new Server( this, INDEX_DIRECTORY, PORT );
 	private Instant expiry = Instant.now();
 	private Map<Path, ReportSummary> index = new HashMap<>();
+
+	/**
+	 * Constructs a new {@link Duct} instance
+	 */
+	public Duct() {
+		if( GraphicsEnvironment.isHeadless() ) {
+			gui = new HeadlessGui();
+		}
+		else {
+			gui = new SystrayGui( this );
+		}
+	}
 
 	/**
 	 * Starts duct. The GUI will be shown and the server kicked off
