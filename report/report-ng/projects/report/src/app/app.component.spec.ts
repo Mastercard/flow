@@ -1,13 +1,19 @@
 import { TestBed } from '@angular/core/testing';
 import { AppComponent } from './app.component';
+import { DuctService } from './duct.service';
 
 declare var data: any;
 
 describe('AppComponent', () => {
+  let mockDuctService;
   beforeEach(async () => {
+    mockDuctService = jasmine.createSpyObj(['startHeartbeat']);
     await TestBed.configureTestingModule({
       declarations: [
         AppComponent
+      ],
+      providers: [
+        { provide: DuctService, useValue: mockDuctService },
       ],
     }).compileComponents();
   });

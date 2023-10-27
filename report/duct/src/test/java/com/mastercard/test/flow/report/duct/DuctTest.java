@@ -10,10 +10,12 @@ import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -277,9 +279,11 @@ class DuctTest {
 
 	/**
 	 * Shows that requests to non-loopback addresses are 403-rejected
+	 *
+	 * @throws UnknownHostException if we fail to find our own address
 	 */
 	@Test
-	void nonLocal() throws Exception {
+	void nonLocal() throws UnknownHostException {
 		InetAddress localhost = InetAddress.getLocalHost();
 		List<String> nonLoop = Stream.of( InetAddress
 				.getAllByName( localhost.getCanonicalHostName() ) )
@@ -292,17 +296,33 @@ class DuctTest {
 		Duct duct = new Duct();
 		duct.start();
 
-		Stream.of( "127.0.0.1", "localhost" )
-				.forEach( ip -> assertEquals(
-						200,
-						DuctTestUtil.heartbeat( ip ).code,
-						"for " + ip ) );
+		{ // mapped endpoint behaviour
+			BiConsumer<String, Integer> test = ( addr, code ) -> assertEquals(
+					code,
+					HttpClient.request(
+							"http://" + addr + ":2276/heartbeat", "GET", null,
+							b -> new String( b, UTF_8 ) ).code,
+					"heartbeat endpoint at " + addr );
 
-		nonLoop.stream()
-				.forEach( ip -> assertEquals(
-						403,
-						DuctTestUtil.heartbeat( ip ).code,
-						"for " + ip ) );
+			test.accept( "127.0.0.1", 200 );
+			test.accept( "localhost", 200 );
+
+			nonLoop.forEach( addr -> test.accept( addr, 403 ) );
+		}
+
+		{ // unmapped endpoint behaviour
+			BiConsumer<String, Integer> test = ( addr, code ) -> assertEquals(
+					code,
+					HttpClient.request(
+							"http://" + addr + ":2276/unmapped_endpoint", "GET", null,
+							b -> new String( b, UTF_8 ) ).code,
+					"unmapped_endpoint endpoint at " + addr );
+
+			test.accept( "127.0.0.1", 404 );
+			test.accept( "localhost", 404 );
+
+			nonLoop.forEach( addr -> test.accept( addr, 403 ) );
+		}
 	}
 
 	/**

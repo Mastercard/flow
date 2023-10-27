@@ -1,6 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { Report } from '../duct-index/duct-index.component';
 import { IconEmbedService } from '../icon-embed.service';
+import { Report } from '../duct.service';
 
 @Component({
   selector: 'app-duct-index-item',

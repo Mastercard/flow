@@ -12,6 +12,7 @@ import java.awt.SystemTray;
 import java.awt.TrayIcon;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.prefs.Preferences;
@@ -83,6 +84,7 @@ class Gui {
 		menu.add( add( duct ) );
 		menu.add( clearIndex( duct ) );
 		menu.add( reindex( duct ) );
+		menu.add( log() );
 		menu.addSeparator();
 		menu.add( exit( duct ) );
 		return menu;
@@ -146,6 +148,20 @@ class Gui {
 	private static MenuItem reindex( Duct duct ) {
 		MenuItem item = new MenuItem( "Refresh index" );
 		item.addActionListener( ev -> duct.reindex() );
+		return item;
+	}
+
+	private static MenuItem log() {
+		MenuItem item = new MenuItem( "Logs" );
+		item.addActionListener(
+				ev -> {
+					try {
+						Desktop.getDesktop().open( Duct.INDEX_DIRECTORY.toFile() );
+					}
+					catch( IOException e ) {
+						LOG.error( "Failed to open log file", e );
+					}
+				} );
 		return item;
 	}
 
