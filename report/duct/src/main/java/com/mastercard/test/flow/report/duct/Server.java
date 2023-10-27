@@ -11,6 +11,7 @@ import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +37,17 @@ class Server {
 	private static final ObjectMapper JSON = new ObjectMapper()
 			.enable( SerializationFeature.INDENT_OUTPUT );
 
+	private static final Map<String, String> MIME_TYPES;
+	static {
+		Map<String, String> mtm = new HashMap<>();
+		mtm.put( ".css", "text/css" );
+		mtm.put( ".html", "text/html" );
+		mtm.put( ".ico", "image/vnd.microsoft.icon" );
+		mtm.put( ".js", "text/javascript" );
+		mtm.put( ".txt", "text/plain" );
+		MIME_TYPES = Collections.unmodifiableMap( mtm );
+	}
+
 	/**
 	 * Restricts our server to only working with local clients. This application
 	 * will merrily serve up the contents of directories, so we have to be mindful
@@ -44,7 +56,6 @@ class Server {
 	 * localhost
 	 */
 	private static final Filter LOCAL_ORIGIN_ONLY = ( request, response ) -> {
-		LOG.info( "REQUEST TO " + request.pathInfo() );
 		// SECURITY-CRITICAL BEHAVIOUR
 		try {
 			InetAddress addr = InetAddress.getByName( request.ip() );
@@ -155,6 +166,12 @@ class Server {
 
 	private static Route respondWithFileBytes( Path f ) {
 		return ( req, res ) -> {
+
+			MIME_TYPES.entrySet().stream()
+					.filter( e -> f.toString().endsWith( e.getKey() ) )
+					.findFirst()
+					.ifPresent( e -> res.header( "Content-Type", e.getValue() ) );
+
 			byte[] buff = new byte[8192];
 			try( InputStream is = Files.newInputStream( f );
 					OutputStream os = res.raw().getOutputStream(); ) {

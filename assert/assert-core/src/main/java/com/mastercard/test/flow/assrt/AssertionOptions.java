@@ -4,6 +4,7 @@ import java.util.function.Consumer;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.assrt.filter.FilterOptions;
+import com.mastercard.test.flow.report.duct.Duct;
 import com.mastercard.test.flow.util.Option;
 
 /**
@@ -23,6 +24,13 @@ public enum AssertionOptions implements Option {
 	 * written. This is just an alias for {@link FilterOptions#ARTIFACT_DIR}.
 	 */
 	ARTIFACT_DIR(FilterOptions.ARTIFACT_DIR),
+
+	/**
+	 * Controls whether we use {@link Duct} or not
+	 */
+	DUCT(b -> b.property( "mctf.report.serve" )
+			.description( ""
+					+ "Set to `true` to browse reports on a local web server rather than the filesystem" )),
 
 	/**
 	 * Controls {@link Replay} parameters

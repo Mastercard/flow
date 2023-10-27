@@ -16,19 +16,6 @@
 
 	<dependencies>
 
-		<dependency>
-			<!-- REST framework, used to run the services and serve the test report -->
-			<groupId>com.sparkjava</groupId>
-			<artifactId>spark-core</artifactId>
-			<exclusions>
-				<exclusion>
-					<!-- Avoid incompatible slf4j -->
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-api</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-
 		<!-- The test suite can instantiate the application, so obviously it needs 
 			to have the constituent services as dependencies -->
 		<dependency>

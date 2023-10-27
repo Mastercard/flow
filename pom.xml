@@ -469,7 +469,7 @@
 								<!-- Default to the same filters as last time -->
 								<mctf.filter.repeat>true</mctf.filter.repeat>
 								<!-- Causes the report to be presented in a browser -->
-								<mctf.itest.report.serve>true</mctf.itest.report.serve>
+								<mctf.report.serve>true</mctf.report.serve>
 							</systemPropertyVariables>
 						</configuration>
 					</plugin>

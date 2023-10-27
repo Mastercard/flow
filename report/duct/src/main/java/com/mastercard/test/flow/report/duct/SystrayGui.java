@@ -91,7 +91,7 @@ class SystrayGui implements Gui {
 	}
 
 	private static MenuItem index( Duct duct ) {
-		MenuItem index = new MenuItem( "Report index..." );
+		MenuItem index = new MenuItem( "Index" );
 		index.addActionListener( ev -> {
 			try {
 				Desktop.getDesktop().browse( new URI( "http://localhost:" + duct.port() ) );
@@ -104,7 +104,7 @@ class SystrayGui implements Gui {
 	}
 
 	private static MenuItem add( Duct duct ) {
-		MenuItem add = new MenuItem( "Add reports..." );
+		MenuItem add = new MenuItem( "Add..." );
 		add.addActionListener( ev -> {
 			File start = null;
 			try {
@@ -138,7 +138,7 @@ class SystrayGui implements Gui {
 	}
 
 	private static MenuItem clearIndex( Duct duct ) {
-		MenuItem item = new MenuItem( "Clear index" );
+		MenuItem item = new MenuItem( "Clear" );
 		item.addActionListener( ev -> {
 			duct.clearIndex();
 		} );
@@ -146,7 +146,7 @@ class SystrayGui implements Gui {
 	}
 
 	private static MenuItem reindex( Duct duct ) {
-		MenuItem item = new MenuItem( "Refresh index" );
+		MenuItem item = new MenuItem( "Refresh" );
 		item.addActionListener( ev -> duct.reindex() );
 		return item;
 	}

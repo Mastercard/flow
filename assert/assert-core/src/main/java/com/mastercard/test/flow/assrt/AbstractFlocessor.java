@@ -52,6 +52,7 @@ import com.mastercard.test.flow.report.data.InteractionData;
 import com.mastercard.test.flow.report.data.LogEvent;
 import com.mastercard.test.flow.report.data.ResidueData;
 import com.mastercard.test.flow.report.data.TransmissionData;
+import com.mastercard.test.flow.report.duct.Duct;
 import com.mastercard.test.flow.util.Dependencies;
 import com.mastercard.test.flow.util.Flows;
 
@@ -1013,7 +1014,12 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 
 				// also, if appropriate, open a browser to it
 				if( reporting.shouldOpen( error ) ) {
-					report.browse();
+					if( AssertionOptions.DUCT.isTrue() ) {
+						Duct.serve( report.path() );
+					}
+					else {
+						report.browse();
+					}
 				}
 			}
 		}

@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -17,6 +18,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +37,18 @@ import com.mastercard.test.flow.report.duct.HttpClient.Response;
  * An application that lives in the system tray and serves flow reports.
  */
 public class Duct {
+
+	/**
+	 * When <code>true</code>, failures will be printed to stderr. This framework
+	 * does not assume that clients use a logging framework, and it tries to keep
+	 * silent on stdout. This class uses slf4j for the bulk of operations, but those
+	 * will be running in a different process to the test. The interaction between
+	 * the test and the duct process (where we can't use slf4j) does a bunch of
+	 * failure-prone things though, so it's nice to have the option of seeing the
+	 * issues when you're wondering why your report is not being served.
+	 */
+	static final boolean NOISY_FAILS = "true"
+			.equals( System.getProperty( "mctf.duct.noisy" ) );
 
 	/**
 	 * The preference name where we save our index directories
@@ -58,10 +72,15 @@ public class Duct {
 				.map( duct::add )
 				.forEach( served -> {
 					try {
-						Desktop.getDesktop().browse( served.toURI() );
+						if( Desktop.isDesktopSupported() ) {
+							Desktop.getDesktop().browse( served.toURI() );
+						}
 					}
 					catch( Exception e ) {
-						System.err.println( "Failed to browse " + served + " due to " + e.getMessage() );
+						if( NOISY_FAILS ) {
+							System.err.println( "Failed to browse " + served );
+							e.printStackTrace();
+						}
 					}
 				} );
 	}
@@ -79,33 +98,67 @@ public class Duct {
 		if( added != null ) {
 			// there's an existing instance!
 			try {
-				Desktop.getDesktop().browse( added.toURI() );
+				if( Desktop.isDesktopSupported() ) {
+					Desktop.getDesktop().browse( added.toURI() );
+				}
 			}
-			catch( @SuppressWarnings("unused") IOException | URISyntaxException e ) {
-				// oh well, we tried
+			catch( IOException | URISyntaxException e ) {
+				if( NOISY_FAILS ) {
+					System.err.println( "Failed to browse " + added );
+					e.printStackTrace();
+				}
 			}
 		}
 		else {
 			// we'll have to spawn our own instance
+			ProcessBuilder pb = new ProcessBuilder(
+					"java",
+					// re-use the current JVM's classpath. It's running this class, so it should
+					// also have the dependencies we need. The classpath will be bigger than duct
+					// strictly needs, but the cost of that is negligible
+					"-cp", getClassPath(),
+					// invoke this class's main method
+					Duct.class.getName(),
+					// pass the report path on the commandline - the above main method will take
+					// care of adding and browsing it
+					report.toAbsolutePath().toString() );
 			try {
 				// this process will persist after the demise of the current JVM
-				ProcessBuilder pb = new ProcessBuilder(
-						"java",
-						// re-use the current JVM's classpath. It's running this class, so it should
-						// also have the dependencies we need. The classpath will be bigger than duct
-						// strictly needs, but the cost of that is negligible
-						"-cp", System.getProperty( "java.class.path" ),
-						// invoke this class's main method
-						Duct.class.getName(),
-						// pass the report path on the commandline - the above main method will take
-						// care of adding and browsing it
-						report.toAbsolutePath().toString() );
 				pb.start();
 			}
-			catch( @SuppressWarnings("unused") IOException e ) {
-				// oh well, we tried
+			catch( IOException e ) {
+				if( NOISY_FAILS ) {
+					System.err.println( "Failed to launch:\n"
+							+ pb.command().stream().collect( joining( " " ) ) );
+					e.printStackTrace();
+				}
 			}
 		}
+	}
+
+	/**
+	 * Gets the classpath of the current JVM. Ordinarily you can find the classpath
+	 * just with the <code>java.class.path</code> system property. When running
+	 * tests via maven (a really common use-case for us) <a href=
+	 * "https://cwiki.apache.org/confluence/display/MAVEN/Maven+3.x+Class+Loading">that
+	 * just contains <code>plexus-classworlds.jar</code></a>, which is no use to us.
+	 * Hence we're reduced to this: ascending the classloader chain and pulling out
+	 * any URL that we find.
+	 *
+	 * @return The classpath of the current JVM
+	 */
+	static String getClassPath() {
+		List<URL> urls = new ArrayList<>();
+		ClassLoader cl = Duct.class.getClassLoader();
+		while( cl != null ) {
+			if( cl instanceof URLClassLoader ) {
+				Collections.addAll( urls, ((URLClassLoader) cl).getURLs() );
+			}
+			cl = cl.getParent();
+		}
+		return urls.stream()
+				.map( URL::getPath )
+				.collect( joining( File.pathSeparator ) );
 	}
 
 	/**
@@ -123,9 +176,17 @@ public class Duct {
 					b -> new String( b, UTF_8 ) );
 			return new URL( res.body );
 		}
-		catch( @SuppressWarnings("unused") Exception e ) {
+		catch( Exception e ) {
 			// A failure on this request is not unexpected - it could just be a signal that
 			// we need to start a new instance of duct
+			if( NOISY_FAILS ) {
+				System.err.println( String.format(
+						"Failed to add via http:\n%s %s\n%s",
+						"http://localhost:" + PORT + "/add",
+						"POST",
+						report.toAbsolutePath().toString() ) );
+				e.printStackTrace();
+			}
 			return null;
 		}
 	}
