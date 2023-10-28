@@ -77,6 +77,10 @@ public class Browse {
 	@SafeVarargs
 	public static void browse( URI uri, FailureSink... sinks ) {
 		if( SUPPRESS.isTrue() ) {
+			for( FailureSink sink : sinks ) {
+				sink.log( "Browser launch suppressed by system property {}={}",
+						SUPPRESS.property(), SUPPRESS.value() );
+			}
 			return;
 		}
 

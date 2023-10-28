@@ -6,8 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -111,7 +111,7 @@ class DuctTest {
 		expectIndex( "index is empty", duct,
 				"[ ]" );
 
-		URL url = duct.add( VALID_REPORT );
+		String path = duct.add( VALID_REPORT );
 
 		expectIndex( "report in the index", duct,
 				"[ {",
@@ -129,10 +129,10 @@ class DuctTest {
 				"  'path' : '/target_DuctTest_valid/'",
 				"} ]" );
 
-		assertEquals( "http://localhost:2276/target_DuctTest_valid/", url.toString() );
+		assertEquals( "/target_DuctTest_valid/", path );
 
 		expectServedMeta( "The report is being served",
-				url,
+				path,
 				"{",
 				"  'modelTitle' : 'valid',",
 				"  'testTitle' : 'report',",
@@ -151,12 +151,12 @@ class DuctTest {
 		expectIndex( "index is empty", duct,
 				"[ ]" );
 
-		URL not = duct.add( NOT_A_REPORT );
+		String not = duct.add( NOT_A_REPORT );
 
 		assertEquals( null, not,
 				"empty directory ignored" );
 
-		URL bad = duct.add( BAD_INDEX );
+		String bad = duct.add( BAD_INDEX );
 
 		assertEquals( null, bad,
 				"malformed index ignored" );
@@ -214,10 +214,10 @@ class DuctTest {
 				"[ ]" );
 
 		// add the report - it is added to the index immediately
-		URL url = duct.add( VALID_REPORT );
+		String path = duct.add( VALID_REPORT );
 
 		expectServedMeta( "The report is being served",
-				url,
+				path,
 				"{",
 				"  'modelTitle' : 'valid',",
 				"  'testTitle' : 'report',",
@@ -231,7 +231,7 @@ class DuctTest {
 		QuietFiles.write( p, updated.getBytes( UTF_8 ) );
 
 		expectServedMeta( "The update is reflected immediately in the served report",
-				url,
+				path,
 				"{",
 				"  'modelTitle' : 'updated',",
 				"  'testTitle' : 'report',",
@@ -319,9 +319,9 @@ class DuctTest {
 				comment );
 	}
 
-	private static void expectServedMeta( String comment, URL url, String... expect ) {
+	private static void expectServedMeta( String comment, String path, String... expect ) {
 		try {
-			Meta meta = new Reader( url.toURI() ).read().meta;
+			Meta meta = new Reader( new URI( "http://localhost:2276" + path ) ).read().meta;
 			assertEquals(
 					copypasta( expect ),
 					toJson( meta ),

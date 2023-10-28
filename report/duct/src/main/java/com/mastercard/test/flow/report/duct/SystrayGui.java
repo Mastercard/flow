@@ -93,8 +93,7 @@ class SystrayGui implements Gui {
 	private static MenuItem index( Duct duct ) {
 		MenuItem index = new MenuItem( "Index" );
 		index.addActionListener( ev -> Browse.browse(
-				"http://localhost:" + duct.port(),
-				e -> LOG.error( "Failed to provoke browser", e ) ) );
+				"http://localhost:" + duct.port(), LOG::error ) );
 		return index;
 	}
 
@@ -119,8 +118,7 @@ class SystrayGui implements Gui {
 
 				Search.find( path )
 						.map( duct::add )
-						.forEach( url -> Browse.browse( url,
-								e -> LOG.error( "Failed to provoke browser", e ) ) );
+						.forEach( url -> Browse.browse( url, LOG::error ) );
 			}
 		} );
 		return add;

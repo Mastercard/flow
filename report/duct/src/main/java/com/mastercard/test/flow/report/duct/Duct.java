@@ -2,6 +2,7 @@ package com.mastercard.test.flow.report.duct;
 
 import static com.mastercard.test.flow.report.FailureSink.SILENT;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 import java.awt.GraphicsEnvironment;
 import java.io.BufferedReader;
@@ -103,11 +104,12 @@ public class Duct {
 		}
 		else {
 			// we'll have to spawn our own instance
-			ProcessBuilder pb = new ProcessBuilder(
+			ProcessBuilder pb = new ProcessBuilder( Stream.of(
 					"java",
 					// Immediately after launch duct will try to open a browser, so we need to clone
-					// this property in the new JVM
-					Browse.XDG_OPEN_FALLBACK.commandLineOption(),
+					// these browser-opening property in the new JVM
+					Browse.SUPPRESS.commandLineArgument(),
+					Browse.XDG_OPEN_FALLBACK.commandLineArgument(),
 					// re-use the current JVM's classpath. It's running this class, so it should
 					// also have the dependencies we need. The classpath will be bigger than duct
 					// strictly needs, but the cost of that is negligible
@@ -116,7 +118,9 @@ public class Duct {
 					Duct.class.getName(),
 					// pass the report path on the commandline - the above main method will take
 					// care of adding and browsing it
-					report.toAbsolutePath().toString() );
+					report.toAbsolutePath().toString() )
+					.filter( Objects::nonNull )
+					.collect( toList() ) );
 			if( DEBUG != SILENT ) {
 				pb.redirectErrorStream( true );
 			}
@@ -323,9 +327,9 @@ public class Duct {
 	 * Adds a report to be served
 	 *
 	 * @param source The report directory
-	 * @return The served report URL, or <code>null</code> on failure
+	 * @return The served report path, or <code>null</code> on failure
 	 */
-	public URL add( Path source ) {
+	public String add( Path source ) {
 		heartbeat();
 
 		if( !Reader.isReportDir( source ) ) {
@@ -353,7 +357,7 @@ public class Duct {
 					.map( Path::toString )
 					.collect( joining( File.pathSeparator ) ) );
 
-			return new URL( "http://localhost:" + PORT + path );
+			return path;
 		}
 		catch( Exception e ) {
 			LOG.error( "Failed to add {}", source, e );

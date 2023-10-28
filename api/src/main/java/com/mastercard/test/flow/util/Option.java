@@ -129,12 +129,16 @@ public interface Option {
 	}
 
 	/**
-	 * @return The commandline argument to supply to set the current value
+	 * Builds the commandline argument that would set this {@link Option}'s current
+	 * value in a new JVM
+	 *
+	 * @return The commandline argument, or <code>null</code> if this {@link Option}
+	 *         has no value
 	 */
-	default String commandLineOption() {
+	default String commandLineArgument() {
 		return Optional.ofNullable( value() )
 				.map( v -> String.format( "-D%s=%s", property(), v ) )
-				.orElse( "" );
+				.orElse( null );
 	}
 
 	/**
