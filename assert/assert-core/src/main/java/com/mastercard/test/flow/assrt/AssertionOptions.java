@@ -32,16 +32,26 @@ public enum AssertionOptions implements Option {
 	BROWSE_SUPPRESS(Browse.SUPPRESS),
 
 	/**
+	 * Allows the option of a browse-opening fallback. An alias for
+	 * {@link Browse#XDG_OPEN_FALLBACK}
+	 */
+	BROWSE_XDG_OPEN_FALLBACK(Browse.XDG_OPEN_FALLBACK),
+
+	/**
 	 * Controls whether we use {@link Duct} or not
 	 */
 	DUCT(b -> b.property( "mctf.report.serve" )
-			.description( ""
-					+ "Set to `true` to browse reports on a local web server rather than the filesystem" )),
+			.description( "Set to `true` to browse reports on a local web"
+					+ " server rather than the filesystem. You must have the"
+					+ " optional `duct` module on your classpath." )),
 
 	/**
-	 * Allows the duct gui to be avoided. An alias for {@link Duct#GUI_SUPPRESS}
+	 * Allows the {@link Duct} gui to be avoided. An alias for
+	 * {@link Duct#GUI_SUPPRESS}
 	 */
-	DUCT_GUI_SUPPRESS(Duct.GUI_SUPPRESS),
+	DUCT_GUI_SUPPRESS(b -> b
+			.property( "mctf.suppress.duct.gui" )
+			.description( "Supply 'true' to suppress the duct gui" )),
 
 	/**
 	 * Controls {@link Replay} parameters

@@ -176,6 +176,7 @@ class PomData {
 		private final String groupId;
 		private final String artifactId;
 		private final String scope;
+		private final boolean optional;
 
 		/**
 		 * @param xpath How to extract data
@@ -195,6 +196,9 @@ class PomData {
 			scope = Optional.ofNullable( xpath.evaluate( "scope", n ) )
 					.filter( s -> !s.isEmpty() )
 					.orElse( "compile" );
+			optional = Optional.ofNullable( xpath.evaluate( "optional", n ) )
+					.map( "true"::equals )
+					.orElse( false );
 		}
 
 		/**
@@ -223,6 +227,13 @@ class PomData {
 		 */
 		public String scope() {
 			return scope;
+		}
+
+		/**
+		 * @return <code>true</code> of the dependency is optional
+		 */
+		public boolean optional() {
+			return optional;
 		}
 	}
 }

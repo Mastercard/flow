@@ -18,17 +18,36 @@ Viewing flow execution reports by browsing the filesystem is convenient, but you
 Duct is a standalone executable that sits in the system tray and runs an HTTP server to which execution reports can be added.
 It will keep running as along as someone is viewing the index or a served report, and then shut down after 90 seconds of non-use.
 
+## Usage
+
+After [importing the `bom`](../../bom):
+
+```xml
+<dependency>
+  <!-- local report server -->
+  <groupId>com.mastercard.test.flow</groupId>
+  <artifactId>duct</artifactId>
+</dependency>
+```
+
+When running your test, set system property `mctf.report.serve=true` to have reports (if any are produced) viewed via a duct instance rather than the filesystem.
+
 ## GUI
 
 Right-click the system tray icon to:
- * `Duct index` - View duct's index page. Served reports will be listed here
- * `Add report...` - Add a report to be served and open it in the browser
+ * `Index` - View duct's index page. Served reports will be listed here
+ * `Add...` - Choose a directory in which to search (recursively). All reports found will be added to the index and opened in the browser
+ * `Clear` - Removes all served reports
+ * `Logs` - Opens the directory where duct's log file is written
  * `Exit` - Shut duct down.
 
 ## HTTP
 
 Duct's server runs at port `2276`, and offers the following endpoints:
 
- * `/add` - Send a `POST` request where the request body is the absolute path of an execution report. The report will be copied to duct's content directory and the response body will contain the URL to browse it
  * `/heartbeat` - Send a `GET` request to extend duct's lifespan by 90 seconds
+ * `/add` - Send a `POST` request where the request body is the absolute path of an execution report. The report will be added to the index and the response body will contain the path under `http://127.0.0.1:2276` to browse it
+ * `/list` - Send a `GET` request to retrieve a JSON summary of served reports
  * `/shutdown` - Send a `GET` request to shut duct down.
+
+Duct is only accessible on loopback addresses, i.e.: `http://127.0.0.1:2276`, `http://localhost:2276` and `http://[::1]:2276`.

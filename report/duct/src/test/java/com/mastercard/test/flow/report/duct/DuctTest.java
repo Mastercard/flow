@@ -15,6 +15,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,6 +43,7 @@ class DuctTest {
 	 */
 	@BeforeAll
 	static void createReports() {
+		Duct.DEBUG = LoggerFactory.getLogger( "DuctTest_Debug" )::error;
 
 		// clear out our local report dir
 		QuietFiles.recursiveDelete( REPORT_ROOT );

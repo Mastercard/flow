@@ -77,7 +77,7 @@ class HttpClient {
 	}
 
 	/**
-	 * Respoinise details
+	 * Response details
 	 *
 	 * @param <T> parsed body type
 	 */

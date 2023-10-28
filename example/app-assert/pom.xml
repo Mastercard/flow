@@ -27,6 +27,13 @@
 		</dependency>
 
 		<dependency>
+			<!-- report-serving utility -->
+			<groupId>com.mastercard.test.flow</groupId>
+			<artifactId>duct</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
 			<!-- browser interaction driver management -->
 			<groupId>io.github.bonigarcia</groupId>
 			<artifactId>webdrivermanager</artifactId>

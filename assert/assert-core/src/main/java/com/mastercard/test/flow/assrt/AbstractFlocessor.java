@@ -1015,6 +1015,8 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 				// also, if appropriate, open a browser to it
 				if( reporting.shouldOpen( error ) ) {
 					if( AssertionOptions.DUCT.isTrue() ) {
+						// if you've traced a ClassNotFoundException or NoClassDefFoundError to here,
+						// then you've forgotten to add the duct module to your dependencies.
 						Duct.serve( report.path() );
 					}
 					else {

@@ -1,5 +1,6 @@
 package com.mastercard.test.flow.report.duct;
 
+import static com.mastercard.test.flow.report.FailureSink.SILENT;
 import static java.util.stream.Collectors.joining;
 
 import java.awt.GraphicsEnvironment;
@@ -29,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.mastercard.test.flow.report.Browse;
+import com.mastercard.test.flow.report.FailureSink;
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.Index;
@@ -41,16 +43,16 @@ import com.mastercard.test.flow.util.Option;
 public class Duct {
 
 	/**
-	 * When <code>true</code>, failures will be printed to stderr. This framework
-	 * does not assume that clients use a logging framework, and it tries to keep
-	 * silent on stdout. <i>This</i> class uses slf4j for the bulk of operations,
-	 * but those will be running in a different process to the test. The interaction
-	 * between the test and the duct process (where we can't use slf4j) does a bunch
-	 * of failure-prone things though, so it's nice to have the option of seeing the
-	 * issues when you're wondering why your report is not being served.
+	 * Will be supplied with diagnostic data for duct initialisation failures. This
+	 * framework does not assume that clients use a logging framework, and it tries
+	 * to keep silent on stdout. <i>This</i> class uses slf4j for the bulk of
+	 * operations, but those will be running in a different process to the test. The
+	 * interaction between the test and the duct process (where we can't use slf4j)
+	 * does a bunch of failure-prone things though, so it's nice to have the option
+	 * of seeing the issues when you're wondering why your report is not being
+	 * served.
 	 */
-	static final boolean NOISY_DEBUG = "true"
-			.equals( System.getProperty( "mctf.duct.noisy" ) );
+	public static FailureSink DEBUG = SILENT;
 
 	/**
 	 * Allows control over whether a duct gui is shown or not
@@ -81,13 +83,7 @@ public class Duct {
 				.map( duct::add )
 				.filter( Objects::nonNull )
 				.forEach( served -> {
-					Browse.browse( served,
-							e -> {
-								if( NOISY_DEBUG ) {
-									System.err.println( "Failed to browse " + served );
-									e.printStackTrace();
-								}
-							} );
+					Browse.browse( served, DEBUG );
 				} );
 	}
 
@@ -103,18 +99,15 @@ public class Duct {
 		URL added = tryAdd( report );
 		if( added != null ) {
 			// there's an existing instance!
-			Browse.browse( added,
-					e -> {
-						if( NOISY_DEBUG ) {
-							System.err.println( "Failed to browse " + added );
-							e.printStackTrace();
-						}
-					} );
+			Browse.browse( added, DEBUG );
 		}
 		else {
 			// we'll have to spawn our own instance
 			ProcessBuilder pb = new ProcessBuilder(
 					"java",
+					// Immediately after launch duct will try to open a browser, so we need to clone
+					// this property in the new JVM
+					Browse.XDG_OPEN_FALLBACK.commandLineOption(),
 					// re-use the current JVM's classpath. It's running this class, so it should
 					// also have the dependencies we need. The classpath will be bigger than duct
 					// strictly needs, but the cost of that is negligible
@@ -124,25 +117,25 @@ public class Duct {
 					// pass the report path on the commandline - the above main method will take
 					// care of adding and browsing it
 					report.toAbsolutePath().toString() );
-			if( NOISY_DEBUG ) {
+			if( DEBUG != SILENT ) {
 				pb.redirectErrorStream( true );
 			}
 			try {
 				// this process will persist after the demise of the current JVM
 				Process p = pb.start();
 
-				if( NOISY_DEBUG ) {
+				if( DEBUG != SILENT ) {
 					Thread t = new Thread( () -> {
 						try( InputStreamReader isr = new InputStreamReader( p.getInputStream() );
 								BufferedReader br = new BufferedReader( isr ) ) {
 							String line = null;
 							while( (line = br.readLine()) != null ) {
-								System.out.println( "duct launch stdout : " + line );
+								DEBUG.log( "duct launch stdout : {}", line );
 							}
 
-							System.out.println( "duct stdout ended! Command was:" );
-							System.out.println( pb.command().stream().collect( joining( " " ) ) );
-							System.out.println( "exit code " + p.exitValue() );
+							DEBUG.log( "duct stdout ended! Command was:" );
+							DEBUG.log( pb.command().stream().collect( joining( " " ) ) );
+							DEBUG.log( "exit code {}", p.exitValue() );
 						}
 						catch( Exception e ) {
 							e.printStackTrace();
@@ -153,11 +146,9 @@ public class Duct {
 				}
 			}
 			catch( IOException e ) {
-				if( NOISY_DEBUG ) {
-					System.err.println( "Failed to launch:\n"
-							+ pb.command().stream().collect( joining( " " ) ) );
-					e.printStackTrace();
-				}
+				DEBUG.log( "Failed to launch:\n{}",
+						pb.command().stream().collect( joining( " " ) ),
+						e );
 			}
 		}
 	}
@@ -207,28 +198,23 @@ public class Duct {
 				"POST",
 				report.toAbsolutePath().toString() );
 
-		if( res.code == 200 ) {
-			try {
-				return new URL( res.body );
-			}
-			catch( Exception e ) {
-				if( NOISY_DEBUG ) {
-					System.err.println( "Failed to parse '" + res.body + " as a url" );
-					e.printStackTrace();
-				}
-			}
+		if( res.code != 200 ) {
+			DEBUG.log( "Unsuccessful addition response\n:{}", res );
+			return null;
 		}
-		else if( NOISY_DEBUG ) {
-			// A failure on this request is not unexpected - it could just be a signal that
-			// we need to start a new instance of duct
-			System.err.println( String.format(
-					"Failed to add via http:\n%s %s\n%s\nThis probably isn't a big problem",
-					"http://localhost:" + PORT + "/add",
-					"POST",
-					report.toAbsolutePath().toString() ) );
-			System.err.println( res.raw );
+
+		if( !res.body.matches( "[\\w/]+" ) ) {
+			DEBUG.log( "Declining to browse dubious path '{}", res.body );
+			return null;
 		}
-		return null;
+
+		try {
+			return new URL( String.format( "http://localhost:%s/%s", PORT, res.body ) );
+		}
+		catch( Exception e ) {
+			DEBUG.log( "Failed to parse '{}' as a url", res.body, e );
+			return null;
+		}
 	}
 
 	/**

@@ -84,7 +84,6 @@ class SystrayGui implements Gui {
 		menu.add( index( duct ) );
 		menu.add( add( duct ) );
 		menu.add( clearIndex( duct ) );
-		menu.add( reindex( duct ) );
 		menu.add( log() );
 		menu.addSeparator();
 		menu.add( exit( duct ) );
@@ -132,12 +131,6 @@ class SystrayGui implements Gui {
 		item.addActionListener( ev -> {
 			duct.clearIndex();
 		} );
-		return item;
-	}
-
-	private static MenuItem reindex( Duct duct ) {
-		MenuItem item = new MenuItem( "Refresh" );
-		item.addActionListener( ev -> duct.reindex() );
 		return item;
 	}
 

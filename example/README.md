@@ -77,7 +77,6 @@ graph LR
     assert-core --> assert-junit4
     assert-core --> assert-junit5
     assert-filter --> assert-core
-    duct --> assert-core
     message-core --> message-http
     message-core --> message-json
     message-core --> message-sql
@@ -118,6 +117,7 @@ graph LR
   assert-junit5 --> app-assert
   builder --> app-model
   coppice -.-> app-model
+  duct --> app-assert
   message-http --> app-model
   message-json --> app-model
   message-sql --> app-model

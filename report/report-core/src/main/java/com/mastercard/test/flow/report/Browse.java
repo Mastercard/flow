@@ -2,11 +2,9 @@ package com.mastercard.test.flow.report;
 
 import java.awt.Desktop;
 import java.awt.Desktop.Action;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.function.Consumer;
 
 import com.mastercard.test.flow.util.Option;
 
@@ -22,6 +20,14 @@ public class Browse {
 			.property( "mctf.suppress.browse" )
 			.description( "Supply 'true' to suppress attempts to open browsers" );
 
+	/**
+	 * Allows the option of a fallback browser-opening behaviour
+	 */
+	public static final Option XDG_OPEN_FALLBACK = new Option.Builder()
+			.property( "mctf.browse.xdg_open" )
+			.description( "Supply true to try and fall back to `xdg-open` when "
+					+ "java's desktop integration fails" );
+
 	private Browse() {
 		// no instances
 	}
@@ -29,17 +35,17 @@ public class Browse {
 	/**
 	 * Attempts to open a browser to view the supplied target
 	 *
-	 * @param uri      The target
-	 * @param failSink What to do with failures
+	 * @param uri   The target
+	 * @param sinks What to do with failures
 	 */
 	@SafeVarargs
-	public static void browse( String uri, Consumer<Exception>... failSink ) {
+	public static void browse( String uri, FailureSink... sinks ) {
 		try {
-			browse( new URI( uri ), failSink );
+			browse( new URI( uri ), sinks );
 		}
 		catch( URISyntaxException e ) {
-			for( Consumer<Exception> sink : failSink ) {
-				sink.accept( e );
+			for( FailureSink sink : sinks ) {
+				sink.log( "Failed to parse uri from '{}'", uri, e );
 			}
 		}
 	}
@@ -47,17 +53,17 @@ public class Browse {
 	/**
 	 * Attempts to open a browser to view the supplied target
 	 *
-	 * @param url      The target
-	 * @param failSink What to do with failures
+	 * @param url   The target
+	 * @param sinks What to do with failures
 	 */
 	@SafeVarargs
-	public static void browse( URL url, Consumer<Exception>... failSink ) {
+	public static void browse( URL url, FailureSink... sinks ) {
 		try {
-			browse( url.toURI(), failSink );
+			browse( url.toURI(), sinks );
 		}
 		catch( URISyntaxException e ) {
-			for( Consumer<Exception> sink : failSink ) {
-				sink.accept( e );
+			for( FailureSink sink : sinks ) {
+				sink.log( "Failed to extract uri from '{}'", url, e );
 			}
 		}
 	}
@@ -65,11 +71,11 @@ public class Browse {
 	/**
 	 * Attempts to open a browser to view the supplied target
 	 *
-	 * @param uri      The target
-	 * @param failSink What to do with failures
+	 * @param uri   The target
+	 * @param sinks What to do with failures
 	 */
 	@SafeVarargs
-	public static void browse( URI uri, Consumer<Exception>... failSink ) {
+	public static void browse( URI uri, FailureSink... sinks ) {
 		if( SUPPRESS.isTrue() ) {
 			return;
 		}
@@ -79,15 +85,14 @@ public class Browse {
 					&& Desktop.getDesktop().isSupported( Action.BROWSE ) ) {
 				Desktop.getDesktop().browse( uri );
 			}
-			else {
-				// we might be on linux, where the browse action is poorly supported, but this
-				// might work
+			else if( XDG_OPEN_FALLBACK.isTrue() ) {
+				// we might be on linux, where the browse action is poorly supported
 				new ProcessBuilder( "xdg-open", uri.toString() ).start();
 			}
 		}
-		catch( IOException e ) {
-			for( Consumer<Exception> sink : failSink ) {
-				sink.accept( e );
+		catch( Exception e ) {
+			for( FailureSink sink : sinks ) {
+				sink.log( "Failed to browse `{}`", uri, e );
 			}
 		}
 	}

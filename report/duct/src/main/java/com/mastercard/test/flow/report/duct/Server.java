@@ -11,7 +11,6 @@ import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +27,8 @@ import spark.Filter;
 import spark.Route;
 import spark.Service;
 import spark.Spark;
+import spark.resource.ExternalResource;
+import spark.staticfiles.MimeType;
 
 /**
  * Handles the webser functionality
@@ -36,17 +37,6 @@ class Server {
 	private static final Logger LOG = LoggerFactory.getLogger( Server.class );
 	private static final ObjectMapper JSON = new ObjectMapper()
 			.enable( SerializationFeature.INDENT_OUTPUT );
-
-	private static final Map<String, String> MIME_TYPES;
-	static {
-		Map<String, String> mtm = new HashMap<>();
-		mtm.put( ".css", "text/css" );
-		mtm.put( ".html", "text/html" );
-		mtm.put( ".ico", "image/vnd.microsoft.icon" );
-		mtm.put( ".js", "text/javascript" );
-		mtm.put( ".txt", "text/plain" );
-		MIME_TYPES = Collections.unmodifiableMap( mtm );
-	}
 
 	/**
 	 * Restricts our server to only working with local clients. Duct will merrily
@@ -103,16 +93,6 @@ class Server {
 
 		spark.get( "/list",
 				( req, res ) -> duct.index(), JSON::writeValueAsString );
-
-		spark.delete( "/list", ( req, res ) -> {
-			duct.clearIndex();
-			return "Index cleared";
-		} );
-
-		spark.patch( "/list", ( req, res ) -> {
-			duct.reindex();
-			return "Index refreshed";
-		} );
 	}
 
 	/**
@@ -181,7 +161,11 @@ class Server {
 		Path resp = dir.resolve( "res" );
 		if( Files.isDirectory( resp ) ) {
 			try( Stream<Path> resFiles = Files.list( resp ) ) {
-				resFiles.filter( Files::isRegularFile )
+				resFiles
+						.filter( Files::isRegularFile )
+						.filter( f -> f.toString().endsWith( ".js" )
+								|| f.endsWith( "favicon.ico" )
+								|| f.toString().endsWith( ".css" ) )
 						.map( p -> {
 							String getPath = requestPath + "res/" + p.getFileName().toString();
 							LOG.debug( "Routing GET {} to {}", getPath, idxp );
@@ -223,10 +207,8 @@ class Server {
 				return "";
 			}
 
-			MIME_TYPES.entrySet().stream()
-					.filter( e -> f.toString().endsWith( e.getKey() ) )
-					.findFirst()
-					.ifPresent( e -> res.header( "Content-Type", e.getValue() ) );
+			res.header( "Content-Type", MimeType.fromResource(
+					new ExternalResource( f.toString() ) ) );
 
 			byte[] buff = new byte[8192];
 			try( InputStream is = Files.newInputStream( f );

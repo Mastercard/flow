@@ -129,6 +129,15 @@ public interface Option {
 	}
 
 	/**
+	 * @return The commandline argument to supply to set the current value
+	 */
+	default String commandLineOption() {
+		return Optional.ofNullable( value() )
+				.map( v -> String.format( "-D%s=%s", property(), v ) )
+				.orElse( "" );
+	}
+
+	/**
 	 * Use in try-with-resources blocks where you want an {@link Option} to have a
 	 * specific value and then revert to the previous value when the block ends
 	 *

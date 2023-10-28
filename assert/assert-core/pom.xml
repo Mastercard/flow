@@ -23,6 +23,9 @@
 			<groupId>${project.groupId}</groupId>
 			<artifactId>duct</artifactId>
 			<version>${project.version}</version>
+			<!-- duct is a convenience feature that brings in a load of dependencies, so
+			     we're leaving it up to client projects if they want it or not -->
+			<optional>true</optional>
 		</dependency>
 
 		<dependency>
