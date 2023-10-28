@@ -37,6 +37,7 @@ Some aspects of assertion behaviour can be controlled by system properties:
 
 | property | description |
 | -------- | ----------- |
+| `mctf.browse.xdg_open` | Supply true to try and fall back to `xdg-open` when java's desktop integration fails |
 | `mctf.dir` | The path to the dir where assertion artifacts are saved |
 | `mctf.filter.cli.min_width` | The minimum width of the command-line interface |
 | `mctf.filter.exclude` | A comma-separated list of tags values that flows must not have |
