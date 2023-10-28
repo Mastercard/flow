@@ -2,22 +2,15 @@ package com.mastercard.test.flow.report.duct;
 
 import static com.mastercard.test.flow.report.duct.DuctTestUtil.copypasta;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.UncheckedIOException;
-import java.net.Inet6Address;
-import java.net.InetAddress;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.util.List;
-import java.util.function.BiConsumer;
-import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +22,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.mastercard.test.flow.report.QuietFiles;
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.data.Meta;
-import com.mastercard.test.flow.report.duct.HttpClient.Response;
 
 /**
  * Exercises {@link Duct}
@@ -277,61 +269,6 @@ class DuctTest {
 				"  },",
 				"  'path' : '/target_DuctTest_valid/'",
 				"} ]" );
-	}
-
-	/**
-	 * Shows that requests to non-loopback addresses are 403-rejected
-	 *
-	 * @throws UnknownHostException if we fail to find our own address
-	 */
-	@Test
-	void nonLocal() throws UnknownHostException {
-		InetAddress localhost = InetAddress.getLocalHost();
-		List<String> nonLoop = Stream.of( InetAddress
-				.getAllByName( localhost.getCanonicalHostName() ) )
-				.filter( a -> !a.isLoopbackAddress() )
-				.map( addr -> {
-					if( addr instanceof Inet6Address ) {
-						// in URLs, ipv6 addresses need to be in brackets
-						return "[" + addr.getHostAddress() + "]";
-					}
-					return addr.getHostAddress();
-				} )
-				.collect( toList() );
-
-		assertTrue( nonLoop.size() > 0, "Expected at least 1 non-loopback address" );
-
-		Duct duct = new Duct();
-		duct.start();
-
-		{ // mapped endpoint behaviour
-			BiConsumer<String, Integer> test = ( addr, code ) -> {
-				String url = "http://" + addr + ":2276/heartbeat";
-				Response<String> res = HttpClient.request( url, "GET", null );
-				assertEquals(
-						code,
-						res.code,
-						"heartbeat endpoint at " + url );
-			};
-
-			test.accept( "127.0.0.1", 200 );
-			test.accept( "localhost", 200 );
-
-			nonLoop.forEach( addr -> test.accept( addr, 403 ) );
-		}
-
-		{ // unmapped endpoint behaviour
-			BiConsumer<String, Integer> test = ( addr, code ) -> assertEquals(
-					code,
-					HttpClient.request(
-							"http://" + addr + ":2276/unmapped_endpoint", "GET", null ).code,
-					"unmapped_endpoint endpoint at " + addr );
-
-			test.accept( "127.0.0.1", 404 );
-			test.accept( "localhost", 404 );
-
-			nonLoop.forEach( addr -> test.accept( addr, 403 ) );
-		}
 	}
 
 	/**

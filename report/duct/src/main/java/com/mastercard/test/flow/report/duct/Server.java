@@ -1,7 +1,7 @@
 package com.mastercard.test.flow.report.duct;
 
+import static com.mastercard.test.flow.report.Writer.DETAIL_DIR_NAME;
 import static java.util.Collections.emptySet;
-import static java.util.stream.Collectors.toSet;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -22,7 +23,6 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.mastercard.test.flow.report.Writer;
 
 import spark.Filter;
 import spark.Route;
@@ -49,19 +49,17 @@ class Server {
 	}
 
 	/**
-	 * Restricts our server to only working with local clients. This application
-	 * will merrily serve up the contents of directories, so we have to be mindful
-	 * of security issues and avoid providing a data exfiltration route. Hence we're
-	 * going to restrict it so that it only responds to requests coming from
-	 * localhost
+	 * Restricts our server to only working with local clients. Duct will merrily
+	 * serve up the contents of directories, so we have to be mindful of security
+	 * issues and avoid providing a data exfiltration route. Hence we're going to
+	 * restrict it so that it only responds to requests coming from localhost
 	 */
 	private static final Filter LOCAL_ORIGIN_ONLY = ( request, response ) -> {
 		// SECURITY-CRITICAL BEHAVIOUR
 		try {
 			InetAddress addr = InetAddress.getByName( request.ip() );
 			if( !addr.isLoopbackAddress() ) {
-				LOG.warn( "Rejecting non-local request from {} to {}",
-						addr, request.pathInfo() );
+				LOG.warn( "Rejecting non-local request from {} to {}", addr, request.pathInfo() );
 				Spark.halt( 403 );
 			}
 		}
@@ -77,11 +75,10 @@ class Server {
 	private final Map<Path, Set<String>> routes = new HashMap<>();
 
 	/**
-	 * @param duct            The instance to control
-	 * @param servedDirectory The directory to serve
-	 * @param port            The port to serve on
+	 * @param duct The instance to control
+	 * @param port The port to serve on
 	 */
-	Server( Duct duct, Path servedDirectory, int port ) {
+	Server( Duct duct, int port ) {
 		spark = Service.ignite()
 				.port( port );
 
@@ -119,53 +116,112 @@ class Server {
 	}
 
 	/**
-	 * Adds routes to serve the files in the supplied directory
+	 * Starts the server
+	 */
+	void start() {
+		LOG.info( "Starting server" );
+		spark.init();
+		spark.awaitInitialization();
+	}
+
+	/**
+	 * Stops the server
+	 */
+	void stop() {
+		LOG.info( "Stopping server" );
+		spark.stop();
+	}
+
+	/**
+	 * @return The port that the server is running on
+	 */
+	int port() {
+		return spark.port();
+	}
+
+	/**
+	 * Adds routes to serve the files in the supplied directory. The mapping
+	 * behaviour is specific to the report structure:
+	 * <ul>
+	 * <li>An <code>index.html</code> file at the root</li>
+	 * <li>A <code>res</code> directory that already contains all the files it ever
+	 * will</li>
+	 * <li>a <code>detail</code> directory that exists, but there might be more
+	 * details files added to it later.</li>
+	 * </ul>
 	 *
 	 * @param path The base request path
 	 * @param dir  The directory that holds the files
 	 */
 	void map( String path, Path dir ) {
 
-		LOG.info( "Adding {}", dir );
+		LOG.info( "Mapping {}", dir );
+
 		// clear any lingering paths for that directory
 		unmap( dir );
+		Set<String> paths = new TreeSet<>();
 
-		try( Stream<Path> files = Files.walk( dir, 2 ) ) {
-			Set<String> requestPaths = files
-					.filter( p -> !Files.isDirectory( p ) )
-					.map( f -> {
+		String requestPath = path + dir.relativize( dir ).toString().replace( '\\', '/' );
+		Path idxp = dir.resolve( "index.html" );
 
-						// request response just returns the mapped file bytes
-						Route route = respondWithFileBytes( f );
-
-						// map that response to the file path
-						String requestPath = path + dir.relativize( f ).toString().replace( '\\', '/' );
-						LOG.debug( "Routing GET {} for {}", requestPath, f );
-						spark.get( requestPath, route );
-
-						// special case for index.html - map the bare directory path to it as well
-						if( requestPath.endsWith( Writer.INDEX_FILE_NAME ) ) {
-							requestPath = requestPath.substring( 0,
-									requestPath.length() - Writer.INDEX_FILE_NAME.length() );
-							LOG.debug( "Routing GET {} for {}", requestPath, f );
-							spark.get( requestPath, route );
-						}
-
-						return requestPath;
-					} )
-					.collect( toSet() );
-
-			// save these in case the directory changes and we need to unmap them
-			routes.put( dir, requestPaths );
-			LOG.info( "Mapped {} paths under {}", requestPaths.size(), path );
+		if( !Files.exists( idxp ) ) {
+			LOG.warn( "No index found at {}", idxp );
+			return;
 		}
-		catch( IOException ioe ) {
-			LOG.error( "Failed to map contents of " + dir, ioe );
+
+		Route idxr = respondWithFileBytes( idxp );
+		// special treatment for the index: serve it when the directory is requested
+		Stream.of( requestPath, requestPath + "index.html" )
+				.forEach( getPath -> {
+					LOG.info( "Routing GET {} to {}", getPath, idxp );
+					paths.add( getPath );
+					spark.get( getPath, idxr );
+				} );
+
+		Path resp = dir.resolve( "res" );
+		if( Files.isDirectory( resp ) ) {
+			try( Stream<Path> resFiles = Files.list( resp ) ) {
+				resFiles.filter( Files::isRegularFile )
+						.map( p -> {
+							String getPath = requestPath + "res/" + p.getFileName().toString();
+							LOG.debug( "Routing GET {} to {}", getPath, idxp );
+							spark.get( getPath, respondWithFileBytes( p ) );
+							return getPath;
+						} )
+						.forEach( paths::add );
+			}
+			catch( IOException ioe ) {
+				LOG.error( "Failed to map resource directory {}", resp, ioe );
+			}
 		}
+
+		Path detp = dir.resolve( DETAIL_DIR_NAME );
+		if( Files.isDirectory( detp ) ) {
+			String getPath = requestPath + DETAIL_DIR_NAME + "/*";
+			LOG.debug( "Routing GET {} to detail files in {}", getPath, detp );
+			paths.add( getPath );
+			spark.get( getPath, ( req, res ) -> {
+				if( req.splat()[0].matches( "[A-F0-9]{32}.html" ) ) {
+					Path file = dir.resolve( DETAIL_DIR_NAME ).resolve( req.splat()[0] );
+					return respondWithFileBytes( file ).handle( req, res );
+				}
+				LOG.warn( "Rejecting request for non-detail file {}", req.pathInfo() );
+				res.status( 404 );
+				return "";
+			} );
+		}
+
+		// save the mapped paths so we can unmap them later
+		routes.put( dir, paths );
+		LOG.info( "Mapped {} paths under {}", paths.size(), path );
 	}
 
 	private static Route respondWithFileBytes( Path f ) {
 		return ( req, res ) -> {
+			if( !Files.isRegularFile( f ) ) {
+				res.status( 404 );
+				return "";
+			}
 
 			MIME_TYPES.entrySet().stream()
 					.filter( e -> f.toString().endsWith( e.getKey() ) )
@@ -199,29 +255,5 @@ class Server {
 					LOG.debug( "unmapping {}", path );
 					spark.unmap( path );
 				} );
-	}
-
-	/**
-	 * Starts the server
-	 */
-	void start() {
-		LOG.info( "Starting server" );
-		spark.init();
-		spark.awaitInitialization();
-	}
-
-	/**
-	 * Stops the server
-	 */
-	void stop() {
-		LOG.info( "Stopping server" );
-		spark.stop();
-	}
-
-	/**
-	 * @return The port that the server is running on
-	 */
-	int port() {
-		return spark.port();
 	}
 }

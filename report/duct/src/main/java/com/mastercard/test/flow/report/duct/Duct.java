@@ -265,7 +265,7 @@ public class Duct {
 	}
 
 	private final Gui gui;
-	private final Server server = new Server( this, INDEX_DIRECTORY, PORT );
+	private final Server server = new Server( this, PORT );
 	private Instant expiry = Instant.now();
 	private Map<Path, ReportSummary> index = new HashMap<>();
 
