@@ -92,6 +92,9 @@ class DuctTestUtil {
 		while( resp.code != 200 );
 	}
 
+	/**
+	 * Deletes the list of index directories from user prefs
+	 */
 	static void clearSavedIndex() {
 		Duct.PREFS.remove( Duct.SERVED_REPORT_PATHS_PREF );
 		try {

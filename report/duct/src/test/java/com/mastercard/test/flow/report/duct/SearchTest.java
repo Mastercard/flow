@@ -20,6 +20,9 @@ import com.mastercard.test.flow.report.QuietFiles;
 class SearchTest {
 	private static final Path ROOT = Paths.get( "target", "SearchTest", "find" );
 
+	/**
+	 * Creates reports that exercise search behaviour
+	 */
 	@BeforeAll
 	static void createReports() {
 		// create a bunch of reports

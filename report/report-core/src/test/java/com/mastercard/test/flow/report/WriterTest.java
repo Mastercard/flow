@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -74,34 +75,21 @@ class WriterTest {
 		}
 
 		// check file listing of report
-		Assertions.assertEquals( ""
-				+ "  1 x detail/08535047C5991FED96BECB327EAFF8E7.html\n"
-				+ "  1 x detail/0D943F64D05D282F91C856027DF72923.html\n"
-				+ "  1 x detail/4C5FFE22176C7ABC272D95A0E5D62262.html\n"
-				+ "  1 x detail/823B8031950E57346DCE6FFD4BE56F54.html\n"
-				+ "  1 x index.html\n"
-				+ "  1 x res/3rdpartylicenses.txt\n"
-				+ " 27 x res/_digits_.<hash>.js\n"
-				+ "  1 x res/common.<hash>.js\n"
-				+ "  1 x res/favicon.ico\n"
-				+ "  1 x res/main.<hash>.js\n"
-				+ "  1 x res/polyfills.<hash>.js\n"
-				+ "  1 x res/runtime.<hash>.js\n"
-				+ "  1 x res/styles.<hash>.css",
-				Files.walk( dir )
-						.filter( Files::isRegularFile )
-						.map( dir::relativize )
-						.map( String::valueOf )
-						.map( s -> s.replace( '\\', '/' ) )
-						// files produced by the angular build have a content-hash suffix
-						// to avoid cached versions being used
-						.map( s -> s.replaceAll( "\\.[a-f0-9]{16}\\.(js|css)", ".<hash>.$1" ) )
-						.map( s -> s.replaceAll( "(res/)\\d+(\\.<hash>.js)", "$1_digits_$2" ) )
-						.collect( groupingBy( s -> s ) )
-						.entrySet().stream()
-						.sorted( comparing( Entry::getKey ) )
-						.map( e -> String.format( "%3d x %s", e.getValue().size(), e.getKey() ) )
-						.collect( Collectors.joining( "\n" ) ) );
+		Assertions.assertEquals( Copy.pasta(
+				"  1 x detail/08535047C5991FED96BECB327EAFF8E7.html",
+				"  1 x detail/0D943F64D05D282F91C856027DF72923.html",
+				"  1 x detail/4C5FFE22176C7ABC272D95A0E5D62262.html",
+				"  1 x detail/823B8031950E57346DCE6FFD4BE56F54.html",
+				"  1 x index.html",
+				"  1 x res/3rdpartylicenses.txt",
+				" 27 x res/_digits_.<hash>.js",
+				"  1 x res/common.<hash>.js",
+				"  1 x res/favicon.ico",
+				"  1 x res/main.<hash>.js",
+				"  1 x res/polyfills.<hash>.js",
+				"  1 x res/runtime.<hash>.js",
+				"  1 x res/styles.<hash>.css" ),
+				summariseReportFiles( dir ) );
 
 		String detail = new String( Files.readAllBytes( dir.resolve(
 				"detail/4C5FFE22176C7ABC272D95A0E5D62262.html" ) ), UTF_8 );
@@ -170,6 +158,51 @@ class WriterTest {
 						detail.indexOf( "// START_JSON_DATA" ),
 						detail.indexOf( "// END_JSON_DATA" ) + "// END_JSON_DATA".length() )
 						.replaceAll( ":\\d+", ":##" ) );
+	}
+
+	private String summariseReportFiles( Path dir ) throws IOException {
+		return Copy.pasta( Files.walk( dir )
+				.filter( Files::isRegularFile )
+				.map( dir::relativize )
+				.map( String::valueOf )
+				.map( s -> s.replace( '\\', '/' ) )
+				// files produced by the angular build have a content-hash suffix
+				// to avoid cached versions being used
+				.map( s -> s.replaceAll( "\\.[a-f0-9]{16}\\.(js|css)", ".<hash>.$1" ) )
+				.map( s -> s.replaceAll( "(res/)\\d+(\\.<hash>.js)", "$1_digits_$2" ) )
+				.collect( groupingBy( s -> s ) )
+				.entrySet().stream()
+				.sorted( comparing( Entry::getKey ) )
+				.map( e -> String.format( "%3d x %s", e.getValue().size(), e.getKey() ) )
+				.collect( Collectors.joining( "\n" ) ) );
+	}
+
+	/**
+	 * Exercises {@link Writer#writeDuctIndex(Path)}
+	 *
+	 * @throws Exception on error
+	 */
+	@Test
+	void writeDuctIndex() throws Exception {
+
+		Path dir = Paths.get( "target", "WriterTest", "writeDuctIndex" );
+
+		Files.createDirectories( dir );
+
+		Writer.writeDuctIndex( dir );
+
+		// check file listing of report
+		Assertions.assertEquals( Copy.pasta(
+				"  1 x index.html",
+				"  1 x res/3rdpartylicenses.txt",
+				" 27 x res/_digits_.<hash>.js",
+				"  1 x res/common.<hash>.js",
+				"  1 x res/favicon.ico",
+				"  1 x res/main.<hash>.js",
+				"  1 x res/polyfills.<hash>.js",
+				"  1 x res/runtime.<hash>.js",
+				"  1 x res/styles.<hash>.css" ),
+				summariseReportFiles( dir ) );
 	}
 
 	/**

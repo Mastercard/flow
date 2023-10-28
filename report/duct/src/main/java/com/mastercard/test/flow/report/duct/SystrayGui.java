@@ -92,7 +92,7 @@ class SystrayGui implements Gui {
 
 	private static MenuItem index( Duct duct ) {
 		MenuItem index = new MenuItem( "Index" );
-		index.addActionListener( ev -> Browse.browse(
+		index.addActionListener( ev -> Browse.WITH_AWT.to(
 				"http://localhost:" + duct.port(), LOG::error ) );
 		return index;
 	}
@@ -118,7 +118,7 @@ class SystrayGui implements Gui {
 
 				Search.find( path )
 						.map( duct::add )
-						.forEach( url -> Browse.browse( url, LOG::error ) );
+						.forEach( url -> Browse.WITH_AWT.to( url, LOG::error ) );
 			}
 		} );
 		return add;

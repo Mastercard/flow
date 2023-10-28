@@ -85,7 +85,7 @@ public class Duct {
 				.map( duct::add )
 				.filter( Objects::nonNull )
 				.forEach( served -> {
-					Browse.browse( served, DEBUG );
+					Browse.WITH_AWT.to( served, DEBUG );
 				} );
 	}
 
@@ -101,7 +101,7 @@ public class Duct {
 		URL added = tryAdd( report );
 		if( added != null ) {
 			// there's an existing instance!
-			Browse.browse( added, DEBUG );
+			Browse.WITH_AWT.to( added, DEBUG );
 		}
 		else {
 			// we'll have to spawn our own instance

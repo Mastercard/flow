@@ -203,7 +203,7 @@ class DuctTest {
 	/**
 	 * Shows that edits to served reports are reflected after reindexing
 	 *
-	 * @throws InterruptedException
+	 * @throws InterruptedException on error
 	 */
 	@Test
 	void reindex() throws InterruptedException {

@@ -2,6 +2,7 @@ package com.mastercard.test.flow.report;
 
 import java.awt.Desktop;
 import java.awt.Desktop.Action;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -28,8 +29,29 @@ public class Browse {
 			.description( "Supply true to try and fall back to `xdg-open` when "
 					+ "java's desktop integration fails" );
 
-	private Browse() {
-		// no instances
+	/**
+	 * A {@link Browse} implementation that uses AWT's desktop integration in the
+	 * first instance
+	 */
+	public static final Browse WITH_AWT = new Browse(
+			() -> Desktop.isDesktopSupported()
+					&& Desktop.getDesktop().isSupported( Action.BROWSE ),
+			uri -> Desktop.getDesktop().browse( uri ),
+			cmd -> new ProcessBuilder( cmd ).start() );
+
+	private final Support support;
+	private final Trigger trigger;
+	private final Launch launch;
+
+	/**
+	 * @param support is browsing supported
+	 * @param trigger launch a browser
+	 * @param launch  run a commandline
+	 */
+	Browse( Support support, Trigger trigger, Launch launch ) {
+		this.support = support;
+		this.trigger = trigger;
+		this.launch = launch;
 	}
 
 	/**
@@ -39,9 +61,9 @@ public class Browse {
 	 * @param sinks What to do with failures
 	 */
 	@SafeVarargs
-	public static void browse( String uri, FailureSink... sinks ) {
+	public final void to( String uri, FailureSink... sinks ) {
 		try {
-			browse( new URI( uri ), sinks );
+			to( new URI( uri ), sinks );
 		}
 		catch( URISyntaxException e ) {
 			for( FailureSink sink : sinks ) {
@@ -57,9 +79,9 @@ public class Browse {
 	 * @param sinks What to do with failures
 	 */
 	@SafeVarargs
-	public static void browse( URL url, FailureSink... sinks ) {
+	public final void to( URL url, FailureSink... sinks ) {
 		try {
-			browse( url.toURI(), sinks );
+			to( url.toURI(), sinks );
 		}
 		catch( URISyntaxException e ) {
 			for( FailureSink sink : sinks ) {
@@ -75,7 +97,7 @@ public class Browse {
 	 * @param sinks What to do with failures
 	 */
 	@SafeVarargs
-	public static void browse( URI uri, FailureSink... sinks ) {
+	public final void to( URI uri, FailureSink... sinks ) {
 		if( SUPPRESS.isTrue() ) {
 			for( FailureSink sink : sinks ) {
 				sink.log( "Browser launch suppressed by system property {}={}",
@@ -84,20 +106,64 @@ public class Browse {
 			return;
 		}
 
-		try {
-			if( Desktop.isDesktopSupported()
-					&& Desktop.getDesktop().isSupported( Action.BROWSE ) ) {
-				Desktop.getDesktop().browse( uri );
+		if( support.supported() ) {
+			try {
+				trigger.browse( uri );
 			}
-			else if( XDG_OPEN_FALLBACK.isTrue() ) {
+			catch( Exception e ) {
+				for( FailureSink sink : sinks ) {
+					sink.log( "Failed to browse `{}`", uri, e );
+				}
+			}
+		}
+		else if( XDG_OPEN_FALLBACK.isTrue() ) {
+			try {
 				// we might be on linux, where the browse action is poorly supported
-				new ProcessBuilder( "xdg-open", uri.toString() ).start();
+				launch.launch( "xdg-open", uri.toString() );
+			}
+			catch( Exception e ) {
+				for( FailureSink sink : sinks ) {
+					sink.log( "Failed to launch `xdg-open {}`", uri, e );
+				}
 			}
 		}
-		catch( Exception e ) {
-			for( FailureSink sink : sinks ) {
-				sink.log( "Failed to browse `{}`", uri, e );
-			}
-		}
+	}
+
+	/**
+	 * Interface for checking if launching a browser is supported
+	 */
+	interface Support {
+		/**
+		 * Checks browsing support
+		 *
+		 * @return <code>true</code> if we can expect to launch a browser
+		 */
+		boolean supported();
+	}
+
+	/**
+	 * Interface for provoking a browser
+	 */
+	interface Trigger {
+		/**
+		 * Launches a browser to view the supplied URI
+		 *
+		 * @param uri The browse target
+		 * @throws IOException on failure
+		 */
+		void browse( URI uri ) throws IOException;
+	}
+
+	/**
+	 * Interface for executing a command
+	 */
+	interface Launch {
+		/**
+		 * Runs the command in a new process
+		 *
+		 * @param cmd the commandline
+		 * @throws IOException on failure
+		 */
+		void launch( String... cmd ) throws IOException;
 	}
 }
