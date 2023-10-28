@@ -74,13 +74,14 @@ public class Duct {
 	/**
 	 * Application entrypoint
 	 *
-	 * @param args List of report paths (absolute) to serve and browse
+	 * @param args List of report paths to serve and browse
 	 */
-	public static void main( String[] args ) {
+	public static void main( String... args ) {
 		Duct duct = new Duct();
 		duct.start();
 		Stream.of( args )
 				.map( Paths::get )
+				.map( Path::toAbsolutePath )
 				.map( duct::add )
 				.filter( Objects::nonNull )
 				.forEach( served -> {

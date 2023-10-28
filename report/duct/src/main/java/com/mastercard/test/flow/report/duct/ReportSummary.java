@@ -1,6 +1,6 @@
 package com.mastercard.test.flow.report.duct;
 
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mastercard.test.flow.Flow;
@@ -93,16 +93,19 @@ public class ReportSummary {
 			this.error = error;
 		}
 
+		private static final BiFunction<Index, String,
+				Integer> extract = ( idx, tag ) -> (int) idx.entries.stream()
+						.filter( e -> e.tags.contains( tag ) ).count();
+
 		/**
 		 * @param index The index to extract the counts from
 		 */
 		public Counts( Index index ) {
-			Function<String, Integer> counter = tag -> (int) index.entries.stream()
-					.filter( e -> e.tags.contains( tag ) ).count();
-			pass = counter.apply( Writer.PASS_TAG );
-			fail = counter.apply( Writer.FAIL_TAG );
-			skip = counter.apply( Writer.SKIP_TAG );
-			error = counter.apply( Writer.ERROR_TAG );
+			this(
+					extract.apply( index, Writer.PASS_TAG ),
+					extract.apply( index, Writer.FAIL_TAG ),
+					extract.apply( index, Writer.SKIP_TAG ),
+					extract.apply( index, Writer.ERROR_TAG ) );
 		}
 	}
 }

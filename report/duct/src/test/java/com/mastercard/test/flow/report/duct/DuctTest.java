@@ -274,6 +274,40 @@ class DuctTest {
 	}
 
 	/**
+	 * Exercises the main method
+	 */
+	@Test
+	void main() {
+		Duct.main(
+				BAD_INDEX.toString(),
+				NOT_A_REPORT.toString(),
+				VALID_REPORT.toString() );
+
+		assertEquals( copypasta(
+				"[ {",
+				"  'meta' : {",
+				"    'modelTitle' : 'valid',",
+				"    'testTitle' : 'report',",
+				"    'timestamp' : 10000",
+				"  },",
+				"  'counts' : {",
+				"    'pass' : 1,",
+				"    'fail' : 1,",
+				"    'skip' : 1,",
+				"    'error' : 1",
+				"  },",
+				"  'path' : '%maskedroot%_flow_report_duct_target_DuctTest_valid/'",
+				"} ]" ),
+				copypasta( DuctTestUtil.index().body
+						// the path is absolute, and we obviously can't know where this project is
+						// checked out
+						.replaceFirst(
+								"(\"path\" : \").*(_flow_report_duct_target_DuctTest_valid/\")",
+								"$1%maskedroot%$2" ) ),
+				"the same call added the report to the existing instance" );
+	}
+
+	/**
 	 * Exercises the process-launching behaviour of {@link Duct#serve(Path)}
 	 */
 	@Test
