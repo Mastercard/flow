@@ -34,6 +34,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import com.mastercard.test.flow.report.Copy;
+
 /**
  * Encapsulates the nuts and bolts of interacting with the index page so the
  * tests can be more readable
@@ -184,7 +186,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 				.max()
 				.orElse( 0 );
 
-		assertEquals( copypasta( flows ),
+		assertEquals( Copy.pasta( flows ),
 				copypasta( flowItems.stream()
 						.map( e -> printFlow( width, e ) ) ) );
 		return self();
@@ -249,7 +251,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 		trace( "hasTags", (Object[]) expected );
 		WebElement tagSummary = driver.findElement( By.id( "tag_summary" ) );
 		assertEquals(
-				copypasta( expected ),
+				Copy.pasta( expected ),
 				copypasta( Stream.of(
 						tagSummary.findElement( By.tagName( "mat-panel-description" ) )
 								.findElements( By.tagName( "span" ) ).stream()
@@ -406,8 +408,8 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 			Transferable after = cb.getContents( this );
 
 			assertEquals(
-					copypasta( expected ),
-					copypasta( after.getTransferData( DataFlavor.stringFlavor ).toString() ),
+					Copy.pasta( expected ),
+					Copy.pasta( after.getTransferData( DataFlavor.stringFlavor ).toString() ),
 					"mermaid markup" );
 		}
 		catch( Exception e ) {
@@ -477,8 +479,8 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 		String svgSummary = summariseSVG( svg );
 
 		assertEquals(
-				copypasta( expected ),
-				copypasta( svgSummary ),
+				Copy.pasta( expected ),
+				Copy.pasta( svgSummary ),
 				"interaction diagram structure" );
 
 		return self();

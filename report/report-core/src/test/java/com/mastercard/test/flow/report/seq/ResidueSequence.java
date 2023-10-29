@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Assertions;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
+import com.mastercard.test.flow.report.Copy;
+
 /**
  * Encapsulates the nuts and bolts of interacting with the residue tab of the
  * flow detail page page so the tests can be more readable
@@ -31,7 +33,7 @@ public class ResidueSequence extends AbstractSequence<ResidueSequence> {
 	public ResidueSequence hasPanels( String... names ) {
 		trace( "hasPanels", (Object[]) names );
 		Assertions.assertEquals(
-				copypasta( names ),
+				Copy.pasta( names ),
 				copypasta( driver.findElements( By.tagName( "mat-panel-title" ) ).stream()
 						.map( WebElement::getText ) ),
 				"Residue panel names" );
@@ -49,8 +51,8 @@ public class ResidueSequence extends AbstractSequence<ResidueSequence> {
 	public ResidueSequence hasContent( String panel, String... lines ) {
 		trace( "hasContent", panel, lines );
 		Assertions.assertEquals(
-				copypasta( lines ),
-				copypasta( driver.findElements( By.tagName( "mat-expansion-panel" ) ).stream()
+				Copy.pasta( lines ),
+				Copy.pasta( driver.findElements( By.tagName( "mat-expansion-panel" ) ).stream()
 						.filter( e -> panel.equals(
 								e.findElement( By.tagName( "mat-panel-title" ) ).getText() ) )
 						.findFirst()

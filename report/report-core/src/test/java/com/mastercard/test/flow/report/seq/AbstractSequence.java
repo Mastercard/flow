@@ -194,7 +194,7 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 				.flatMap( a -> Stream.of( a.split( "&" ) ) )
 				.sorted();
 
-		assertEquals( copypasta( expected ), copypasta( actual ),
+		assertEquals( Copy.pasta( expected ), copypasta( actual ),
 				"arguments on URL " + current );
 		return self();
 	}
@@ -322,16 +322,8 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 	 * @param content Some strings
 	 * @return A string that can be trivially copy/pasted into java source
 	 */
-	protected static String copypasta( String... content ) {
-		return Copy.pasta( Stream.of( content ) );
-	}
-
-	/**
-	 * @param content Some strings
-	 * @return A string that can be trivially copy/pasted into java source
-	 */
 	protected static String copypasta( Collection<String> content ) {
-		return Copy.pasta( content.stream() );
+		return Copy.pasta( content );
 	}
 
 	/**
