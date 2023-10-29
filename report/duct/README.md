@@ -48,6 +48,6 @@ Duct's server runs at port `2276`, and offers the following endpoints:
  * `/heartbeat` - Send a `GET` request to extend duct's lifespan by 90 seconds
  * `/add` - Send a `POST` request where the request body is the absolute path of an execution report. The report will be added to the index and the response body will contain the path under `http://127.0.0.1:2276` to browse it
  * `/list` - Send a `GET` request to retrieve a JSON summary of served reports
- * `/shutdown` - Send a `GET` request to shut duct down.
+ * `/shutdown` - Send a `POST` request to shut duct down.
 
 Duct is only accessible on loopback addresses, i.e.: `http://127.0.0.1:2276`, `http://localhost:2276` and `http://[::1]:2276`.
