@@ -194,7 +194,7 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 				.flatMap( a -> Stream.of( a.split( "&" ) ) )
 				.sorted();
 
-		assertEquals( Copy.pasta( expected ), copypasta( actual ),
+		assertEquals( Copy.pasta( expected ), Copy.pasta( actual ),
 				"arguments on URL " + current );
 		return self();
 	}
@@ -316,13 +316,5 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 		String name = icon.findElement( By.tagName( "mat-icon" ) )
 				.getAttribute( "svgIcon" );
 		return ICON_SEMANTICS.getOrDefault( name, name );
-	}
-
-	/**
-	 * @param content Some strings
-	 * @return A string that can be trivially copy/pasted into java source
-	 */
-	protected static String copypasta( Stream<String> content ) {
-		return Copy.pasta( content );
 	}
 }

@@ -187,7 +187,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 				.orElse( 0 );
 
 		assertEquals( Copy.pasta( flows ),
-				copypasta( flowItems.stream()
+				Copy.pasta( flowItems.stream()
 						.map( e -> printFlow( width, e ) ) ) );
 		return self();
 	}
@@ -252,7 +252,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 		WebElement tagSummary = driver.findElement( By.id( "tag_summary" ) );
 		assertEquals(
 				Copy.pasta( expected ),
-				copypasta( Stream.of(
+				Copy.pasta( Stream.of(
 						tagSummary.findElement( By.tagName( "mat-panel-description" ) )
 								.findElements( By.tagName( "span" ) ).stream()
 								.map( IndexSequence::spanIconText )

@@ -34,7 +34,7 @@ public class ResidueSequence extends AbstractSequence<ResidueSequence> {
 		trace( "hasPanels", (Object[]) names );
 		Assertions.assertEquals(
 				Copy.pasta( names ),
-				copypasta( driver.findElements( By.tagName( "mat-panel-title" ) ).stream()
+				Copy.pasta( driver.findElements( By.tagName( "mat-panel-title" ) ).stream()
 						.map( WebElement::getText ) ),
 				"Residue panel names" );
 

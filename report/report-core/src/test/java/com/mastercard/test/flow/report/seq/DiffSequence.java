@@ -339,7 +339,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 		trace( "hasChangeList", (Object[]) expected );
 		Assertions.assertEquals(
 				Copy.pasta( expected ),
-				copypasta( driver.findElements( By.tagName( "app-pair-select-item" ) ).stream()
+				Copy.pasta( driver.findElements( By.tagName( "app-pair-select-item" ) ).stream()
 						.map( DiffSequence::flowSelectItemToString ) ) );
 		return this;
 	}
@@ -482,7 +482,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 
 		Assertions.assertEquals(
 				Copy.pasta( expected ),
-				copypasta( driver
+				Copy.pasta( driver
 						.findElement( By.id( "summary" ) )
 						.findElements( By.tagName( "mat-expansion-panel-header" ) ).stream()
 						.map( e -> e.getText().replace( "\n", " " ) )
@@ -513,7 +513,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 
 		assertEquals(
 				Copy.pasta( expected ),
-				copypasta( changes.findElements( By.tagName(
+				Copy.pasta( changes.findElements( By.tagName(
 						"mat-expansion-panel-header" ) ).stream()
 						.map( e -> e.getText().replace( "\n", " " ) ) ) );
 

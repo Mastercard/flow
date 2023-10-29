@@ -42,7 +42,7 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 		WebElement seq = driver.findElement( By.tagName( "app-flow-sequence" ) );
 		Assertions.assertEquals(
 				Copy.pasta( actors ),
-				copypasta( seq.findElements( By.className( "entity" ) ).stream()
+				Copy.pasta( seq.findElements( By.className( "entity" ) ).stream()
 						.map( WebElement::getText ) ),
 				"Sequence diagram actors" );
 		return this;
@@ -60,7 +60,7 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 		int actors = seq.findElements( By.className( "entity" ) ).size();
 		Assertions.assertEquals(
 				Copy.pasta( tx ),
-				copypasta( seq.findElements( By.tagName( "app-seq-action" ) ).stream()
+				Copy.pasta( seq.findElements( By.tagName( "app-seq-action" ) ).stream()
 						.map( asa -> actionText( actors, asa ) ) ),
 				"Sequence diagram transmissions" );
 		return this;
