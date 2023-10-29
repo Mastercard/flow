@@ -52,9 +52,8 @@ class ServerTest {
 			server.awaitStop();
 		}
 
-		assertEquals( "rc: -1\n"
-				+ "Connection refused: connect",
-				HttpClient.request( url, "GET", null ).toString(),
+		assertEquals( -1,
+				HttpClient.request( url, "GET", null ).code,
 				"server is dead!" );
 	}
 
@@ -108,9 +107,8 @@ class ServerTest {
 			server.awaitStop();
 		}
 
-		assertEquals( "rc: -1\n"
-				+ "Connection refused: connect",
-				HttpClient.request( url + "/heartbeat", "GET", null ).toString(),
+		assertEquals( -1,
+				HttpClient.request( url + "/heartbeat", "GET", null ).code,
 				url + "/heartbeat" );
 	}
 
