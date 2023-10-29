@@ -16,8 +16,6 @@ import static com.mastercard.test.flow.example.app.model.ExampleSystem.Unpredict
 import static com.mastercard.test.flow.example.app.model.ExampleSystem.Unpredictables.RNG;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
@@ -63,8 +61,6 @@ class IntegrationTest {
 		}
 	}
 
-	private static Supplier<Path> reportLocation = () -> null;
-
 	/**
 	 * Creates an instance of the application
 	 */
@@ -77,7 +73,6 @@ class IntegrationTest {
 		}
 
 		clusterManager.startCluster();
-
 	}
 
 	/**
@@ -143,10 +138,6 @@ class IntegrationTest {
 					assrt.actual().response( response );
 					LOG.warn( "Complete" );
 				} );
-
-		// we need to know where the report went in order to serve it, but that only
-		// becomes apparent *after* flow processing
-		reportLocation = () -> f.report();
 
 		return f.tests();
 	}

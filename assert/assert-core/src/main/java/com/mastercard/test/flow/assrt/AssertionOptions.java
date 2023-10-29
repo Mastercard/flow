@@ -27,13 +27,14 @@ public enum AssertionOptions implements Option {
 	ARTIFACT_DIR(FilterOptions.ARTIFACT_DIR),
 
 	/**
-	 * Allows browser launches to be avoided. An alias for {@link Browse#SUPPRESS}
+	 * Allows browser launches to be avoided. An alias for
+	 * {@link LocalBrowse#SUPPRESS}
 	 */
 	BROWSE_SUPPRESS(LocalBrowse.SUPPRESS),
 
 	/**
 	 * Allows the option of a browse-opening fallback. An alias for
-	 * {@link Browse#XDG_OPEN_FALLBACK}
+	 * {@link LocalBrowse#XDG_OPEN_FALLBACK}
 	 */
 	BROWSE_XDG_OPEN_FALLBACK(LocalBrowse.XDG_OPEN_FALLBACK),
 

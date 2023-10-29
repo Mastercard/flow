@@ -2,15 +2,10 @@ package com.mastercard.test.flow.report.duct;
 
 import static com.mastercard.test.flow.report.FailureSink.SILENT;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
 
 import java.awt.GraphicsEnvironment;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,7 +14,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,8 +24,8 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mastercard.test.flow.report.LocalBrowse;
 import com.mastercard.test.flow.report.FailureSink;
+import com.mastercard.test.flow.report.LocalBrowse;
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.Index;
@@ -53,7 +47,16 @@ public class Duct {
 	 * of seeing the issues when you're wondering why your report is not being
 	 * served.
 	 */
-	public static FailureSink DEBUG = SILENT;
+	private static FailureSink debug = SILENT;
+
+	/**
+	 * Allows insight into failures of duct launch behaviour
+	 *
+	 * @param sink Will be supplied with duct launch failure diagnostics
+	 */
+	public static void debuggingTo( FailureSink sink ) {
+		debug = sink;
+	}
 
 	/**
 	 * Allows control over whether a duct gui is shown or not
@@ -84,9 +87,7 @@ public class Duct {
 				.map( Path::toAbsolutePath )
 				.map( duct::add )
 				.filter( Objects::nonNull )
-				.forEach( served -> {
-					LocalBrowse.WITH_AWT.to( served, DEBUG );
-				} );
+				.forEach( served -> LocalBrowse.WITH_AWT.to( served, debug ) );
 	}
 
 	/**
@@ -101,94 +102,11 @@ public class Duct {
 		URL added = tryAdd( report );
 		if( added != null ) {
 			// there's an existing instance!
-			LocalBrowse.WITH_AWT.to( added, DEBUG );
+			LocalBrowse.WITH_AWT.to( added, debug );
 		}
 		else {
-			// we'll have to spawn our own instance
-			ProcessBuilder pb = new ProcessBuilder( Stream.of(
-					"java",
-					// Immediately after launch duct will try to open a browser, so we need to clone
-					// these browser-opening property in the new JVM
-					LocalBrowse.SUPPRESS.commandLineArgument(),
-					LocalBrowse.XDG_OPEN_FALLBACK.commandLineArgument(),
-					// re-use the current JVM's classpath. It's running this class, so it should
-					// also have the dependencies we need. The classpath will be bigger than duct
-					// strictly needs, but the cost of that is negligible
-					"-cp", getClassPath(),
-					// invoke this class's main method
-					Duct.class.getName(),
-					// pass the report path on the commandline - the above main method will take
-					// care of adding and browsing it
-					report.toAbsolutePath().toString() )
-					.filter( Objects::nonNull )
-					.collect( toList() ) );
-			if( DEBUG != SILENT ) {
-				pb.redirectErrorStream( true );
-			}
-			try {
-				// this process will persist after the demise of the current JVM
-				Process p = pb.start();
-
-				if( DEBUG != SILENT ) {
-					Thread t = new Thread( () -> {
-						try( InputStreamReader isr = new InputStreamReader( p.getInputStream() );
-								BufferedReader br = new BufferedReader( isr ) ) {
-							String line = null;
-							while( (line = br.readLine()) != null ) {
-								DEBUG.log( "duct launch stdout : {}", line );
-							}
-
-							DEBUG.log( "duct stdout ended! Command was:" );
-							DEBUG.log( pb.command().stream().collect( joining( " " ) ) );
-							DEBUG.log( "exit code {}", p.exitValue() );
-						}
-						catch( Exception e ) {
-							e.printStackTrace();
-						}
-					}, "stream printer" );
-					t.setDaemon( true );
-					t.start();
-				}
-			}
-			catch( IOException e ) {
-				DEBUG.log( "Failed to launch:\n{}",
-						pb.command().stream().collect( joining( " " ) ),
-						e );
-			}
+			Spawn.launchFor( report, debug );
 		}
-	}
-
-	/**
-	 * Attempts to gets the classpath of the current JVM. You would think that you
-	 * could just use the <code>java.class.path</code> system property, but when
-	 * running tests via maven (a really common use-case for us) <a href=
-	 * "https://cwiki.apache.org/confluence/display/MAVEN/Maven+3.x+Class+Loading">that
-	 * just contains <code>plexus-classworlds.jar</code></a>, which is no use to us.
-	 * Hence we're reduced to this: ascending the classloader chain and pulling out
-	 * any URL that we find. This is all <i>highly</i> platform and VM-dependent
-	 * stuff, it's <i>horribly fragile</i>.
-	 *
-	 * @return The classpath of the current JVM
-	 */
-	static String getClassPath() {
-		List<URL> urls = new ArrayList<>();
-		ClassLoader cl = Duct.class.getClassLoader();
-		while( cl != null ) {
-			if( cl instanceof URLClassLoader ) {
-				Collections.addAll( urls, ((URLClassLoader) cl).getURLs() );
-			}
-			cl = cl.getParent();
-		}
-		String cp = urls.stream()
-				.map( URL::getPath )
-				.collect( joining( File.pathSeparator ) );
-
-		if( cp.isEmpty() ) {
-			// The complicated thing didn't work. Let's try the simple thing!
-			cp = System.getProperty( "java.class.path" );
-		}
-
-		return cp;
 	}
 
 	/**
@@ -204,12 +122,12 @@ public class Duct {
 				report.toAbsolutePath().toString() );
 
 		if( res.code != 200 ) {
-			DEBUG.log( "Unsuccessful addition response\n:{}", res );
+			debug.log( "Unsuccessful addition response\n:{}", res );
 			return null;
 		}
 
 		if( !res.body.matches( "[\\w/]+" ) ) {
-			DEBUG.log( "Declining to browse dubious path '{}", res.body );
+			debug.log( "Declining to browse dubious path '{}", res.body );
 			return null;
 		}
 
@@ -217,7 +135,7 @@ public class Duct {
 			return new URL( String.format( "http://localhost:%s/%s", PORT, res.body ) );
 		}
 		catch( Exception e ) {
-			DEBUG.log( "Failed to parse '{}' as a url", res.body, e );
+			debug.log( "Failed to parse '{}' as a url", res.body, e );
 			return null;
 		}
 	}
@@ -342,23 +260,16 @@ public class Duct {
 
 		try {
 			Index idx = new Reader( source ).read();
-			Instant ts = Instant.ofEpochMilli( idx.meta.timestamp );
 
-			String path = String.format( "/%s/%s/%s/",
-					idx.meta.modelTitle.replaceAll( "\\W+", "_" ),
-					idx.meta.testTitle.replaceAll( "\\W+", "_" ),
-					ts.toString().replaceAll( "\\W+", "_" ) );
-
-			path = "/" + source.toString().replaceAll( "\\W+", "_" ) + "/";
-
-			server.map( path, source );
-			index.put( source, new ReportSummary( idx, path ) );
+			String servedPath = String.format( "/%s/", source.toString().replaceAll( "\\W+", "_" ) );
+			server.map( servedPath, source );
+			index.put( source, new ReportSummary( idx, servedPath ) );
 
 			PREFS.put( SERVED_REPORT_PATHS_PREF, index.keySet().stream()
 					.map( Path::toString )
 					.collect( joining( File.pathSeparator ) ) );
 
-			return path;
+			return servedPath;
 		}
 		catch( Exception e ) {
 			LOG.error( "Failed to add {}", source, e );

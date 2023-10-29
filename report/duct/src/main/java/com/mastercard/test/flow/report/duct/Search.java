@@ -25,6 +25,10 @@ class Search {
 	private static final Path SRC_MAIN_JAVA = Paths.get( "src", "main", "java" );
 	private static final Path SRC_TEST_JAVA = Paths.get( "src", "test", "java" );
 
+	private Search() {
+		// no instances
+	}
+
 	/**
 	 * Walks a directory structure to find the reports it contains
 	 *

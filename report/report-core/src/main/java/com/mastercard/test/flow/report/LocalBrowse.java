@@ -130,17 +130,13 @@ public class LocalBrowse {
 	@SafeVarargs
 	public final void to( URI uri, FailureSink... sinks ) {
 		if( SUPPRESS.isTrue() ) {
-			for( FailureSink sink : sinks ) {
-				sink.log( "Browser launch suppressed by system property {}={}",
-						SUPPRESS.property(), SUPPRESS.value() );
-			}
+			logTo( sinks, "Browser launch suppressed by system property {}={}",
+					SUPPRESS.property(), SUPPRESS.value() );
 			return;
 		}
 
 		if( !supported( uri ) ) {
-			for( FailureSink sink : sinks ) {
-				sink.log( "Declining nonlocal uri `{}`", uri );
-			}
+			logTo( sinks, "Declining nonlocal uri `{}`", uri );
 			return;
 		}
 
@@ -149,9 +145,7 @@ public class LocalBrowse {
 				primary.browse( uri );
 			}
 			catch( Exception e ) {
-				for( FailureSink sink : sinks ) {
-					sink.log( "Failed to browse `{}`", uri, e );
-				}
+				logTo( sinks, "Failed to browse `{}`", uri, e );
 			}
 		}
 		else {
@@ -159,22 +153,20 @@ public class LocalBrowse {
 				fallback.browse( uri );
 			}
 			catch( Exception e ) {
-				for( FailureSink sink : sinks ) {
-					sink.log( "Failed to {} via fallback route", uri, e );
-				}
+				logTo( sinks, "Failed to {} via fallback route", uri, e );
 			}
 		}
 	}
 
+	private static void logTo( FailureSink[] sinks, String msg, Object... params ) {
+		for( FailureSink sink : sinks ) {
+			sink.log( msg, params );
+		}
+	}
+
 	private static boolean supported( URI uri ) {
-		if( "file".equals( uri.getScheme() ) ) {
-			return true;
-		}
-		if( "http".equals( uri.getScheme() )
-				&& "localhost".equals( uri.getHost() ) ) {
-			return true;
-		}
-		return false;
+		return "file".equals( uri.getScheme() )
+				|| "http".equals( uri.getScheme() ) && "localhost".equals( uri.getHost() );
 	}
 
 	/**

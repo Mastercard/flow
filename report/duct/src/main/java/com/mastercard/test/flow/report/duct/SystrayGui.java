@@ -126,9 +126,7 @@ class SystrayGui implements Gui {
 
 	private static MenuItem clearIndex( Duct duct ) {
 		MenuItem item = new MenuItem( "Clear" );
-		item.addActionListener( ev -> {
-			duct.clearIndex();
-		} );
+		item.addActionListener( ev -> duct.clearIndex() );
 		return item;
 	}
 

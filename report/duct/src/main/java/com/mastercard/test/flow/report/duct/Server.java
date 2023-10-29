@@ -49,7 +49,10 @@ class Server {
 		try {
 			InetAddress addr = InetAddress.getByName( request.ip() );
 			if( !addr.isLoopbackAddress() ) {
-				LOG.warn( "Rejecting non-local request from {} to {}", addr, request.pathInfo() );
+				if( LOG.isWarnEnabled() ) {
+					LOG.warn( "Rejecting non-local request from {} to {}",
+							addr, request.pathInfo() );
+				}
 				Spark.halt( 403 );
 			}
 		}

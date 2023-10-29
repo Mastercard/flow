@@ -17,6 +17,7 @@ import com.mastercard.test.flow.report.QuietFiles;
 /**
  * Exercises {@link Search}
  */
+@SuppressWarnings("static-method")
 class SearchTest {
 	private static final Path ROOT = Paths.get( "target", "SearchTest", "find" );
 

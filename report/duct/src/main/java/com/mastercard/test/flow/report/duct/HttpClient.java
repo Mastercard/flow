@@ -116,7 +116,7 @@ class HttpClient {
 
 		@Override
 		public String toString() {
-			return String.format( "rc: %s\n%s", code, raw );
+			return "rc: " + code + "\n" + raw;
 		}
 	}
 

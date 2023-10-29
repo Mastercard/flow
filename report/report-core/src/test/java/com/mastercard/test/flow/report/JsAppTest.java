@@ -19,6 +19,9 @@ class JsAppTest {
 	private static final Path dir = Paths.get( "target" )
 			.resolve( JsAppTest.class.getSimpleName() );
 
+	/**
+	 * Deletes the test's working directory
+	 */
 	@BeforeAll
 	static void clean() {
 		QuietFiles.recursiveDelete( dir );

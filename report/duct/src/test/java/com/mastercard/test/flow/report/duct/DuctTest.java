@@ -43,7 +43,7 @@ class DuctTest {
 	 */
 	@BeforeAll
 	static void createReports() {
-		Duct.DEBUG = LoggerFactory.getLogger( "DuctTest_Debug" )::error;
+		Duct.debuggingTo( LoggerFactory.getLogger( "DuctTest_Debug" )::error );
 
 		// clear out our local report dir
 		QuietFiles.recursiveDelete( REPORT_ROOT );
