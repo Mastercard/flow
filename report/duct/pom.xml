@@ -56,13 +56,15 @@
 		<plugins>
 
 			<plugin>
-				<!-- duct, by design, listens on a single known port. This means 
-				     only one instance can be running at a time, which makes it
-				     severely alergic to the multithreaded stuff that pit does -->
 				<groupId>org.pitest</groupId>
 				<artifactId>pitest-maven</artifactId>
 				<configuration>
-					<skip>true</skip>
+					<!-- I'm not saying these *have* to stay where they are, just that 
+					     we shouldn't let them slip down by accident -->
+					<mutationThreshold>80</mutationThreshold>
+					<coverageThreshold>85</coverageThreshold>
+					<!-- pitest minions work in a headless environment so they cannot exercise the GUI -->
+					<excludedClasses>com.mastercard.test.flow.report.duct.SystrayGui</excludedClasses>
 				</configuration>
 			</plugin>
 

@@ -131,13 +131,65 @@ class DuctTest {
 
 		assertEquals( "/target_DuctTest_valid/", path );
 
-		expectServedMeta( "The report is being served",
+		expectServedMeta( duct, "The report is being served",
 				path,
 				"{",
 				"  'modelTitle' : 'valid',",
 				"  'testTitle' : 'report',",
 				"  'timestamp' : 10000",
 				"}" );
+	}
+
+	/**
+	 * Shows that the index of served reports survives a restart
+	 */
+	@Test
+	void persistence() {
+		{
+			Duct duct = new Duct();
+			duct.start();
+
+			expectIndex( "index is empty", duct,
+					"[ ]" );
+
+			duct.add( VALID_REPORT );
+
+			expectIndex( "report in the index", duct,
+					"[ {",
+					"  'meta' : {",
+					"    'modelTitle' : 'valid',",
+					"    'testTitle' : 'report',",
+					"    'timestamp' : 10000",
+					"  },",
+					"  'counts' : {",
+					"    'pass' : 1,",
+					"    'fail' : 1,",
+					"    'skip' : 1,",
+					"    'error' : 1",
+					"  },",
+					"  'path' : '/target_DuctTest_valid/'",
+					"} ]" );
+			duct.stop();
+		}
+		{
+			Duct duct = new Duct();
+			duct.start();
+			expectIndex( "report still in the index", duct,
+					"[ {",
+					"  'meta' : {",
+					"    'modelTitle' : 'valid',",
+					"    'testTitle' : 'report',",
+					"    'timestamp' : 10000",
+					"  },",
+					"  'counts' : {",
+					"    'pass' : 1,",
+					"    'fail' : 1,",
+					"    'skip' : 1,",
+					"    'error' : 1",
+					"  },",
+					"  'path' : '/target_DuctTest_valid/'",
+					"} ]" );
+		}
 	}
 
 	/**
@@ -216,7 +268,7 @@ class DuctTest {
 		// add the report - it is added to the index immediately
 		String path = duct.add( VALID_REPORT );
 
-		expectServedMeta( "The report is being served",
+		expectServedMeta( duct, "The report is being served",
 				path,
 				"{",
 				"  'modelTitle' : 'valid',",
@@ -230,7 +282,7 @@ class DuctTest {
 				.replaceAll( "valid", "updated" );
 		QuietFiles.write( p, updated.getBytes( UTF_8 ) );
 
-		expectServedMeta( "The update is reflected immediately in the served report",
+		expectServedMeta( duct, "The update is reflected immediately in the served report",
 				path,
 				"{",
 				"  'modelTitle' : 'updated',",
@@ -298,46 +350,7 @@ class DuctTest {
 				"  },",
 				"  'path' : '%maskedroot%_flow_report_duct_target_DuctTest_valid/'",
 				"} ]" ),
-				copypasta( DuctTestUtil.index().body
-						// the path is absolute, and we obviously can't know where this project is
-						// checked out
-						.replaceFirst(
-								"(\"path\" : \").*(_flow_report_duct_target_DuctTest_valid/\")",
-								"$1%maskedroot%$2" ) ),
-				"the same call added the report to the existing instance" );
-	}
-
-	/**
-	 * Exercises the process-launching behaviour of {@link Duct#serve(Path)}
-	 */
-	@Test
-	void serve() {
-		Duct.serve( NOT_A_REPORT );
-		DuctTestUtil.waitForLife();
-
-		assertEquals(
-				"[ ]",
-				DuctTestUtil.index().body,
-				"duct is up, but the index is empty" );
-
-		Duct.serve( VALID_REPORT );
-
-		assertEquals( copypasta(
-				"[ {",
-				"  'meta' : {",
-				"    'modelTitle' : 'valid',",
-				"    'testTitle' : 'report',",
-				"    'timestamp' : 10000",
-				"  },",
-				"  'counts' : {",
-				"    'pass' : 1,",
-				"    'fail' : 1,",
-				"    'skip' : 1,",
-				"    'error' : 1",
-				"  },",
-				"  'path' : '%maskedroot%_flow_report_duct_target_DuctTest_valid/'",
-				"} ]" ),
-				copypasta( DuctTestUtil.index().body
+				copypasta( DuctTestUtil.index( Duct.PORT ).body
 						// the path is absolute, and we obviously can't know where this project is
 						// checked out
 						.replaceFirst(
@@ -353,9 +366,9 @@ class DuctTest {
 				comment );
 	}
 
-	private static void expectServedMeta( String comment, String path, String... expect ) {
+	private static void expectServedMeta( Duct duct, String comment, String path, String... expect ) {
 		try {
-			Meta meta = new Reader( new URI( "http://localhost:2276" + path ) ).read().meta;
+			Meta meta = new Reader( new URI( "http://localhost:" + duct.port() + path ) ).read().meta;
 			assertEquals(
 					copypasta( expect ),
 					toJson( meta ),

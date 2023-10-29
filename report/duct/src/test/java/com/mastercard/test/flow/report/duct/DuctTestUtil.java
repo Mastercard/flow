@@ -61,6 +61,7 @@ class DuctTestUtil {
 					.replace( "\r", "" );
 			Files.write( dir.resolve( Writer.INDEX_FILE_NAME ), index.getBytes( UTF_8 ) );
 			Files.createDirectories( dir.resolve( Writer.DETAIL_DIR_NAME ) );
+			Files.createDirectories( dir.resolve( "res" ) );
 
 			return dir;
 		}
@@ -72,7 +73,7 @@ class DuctTestUtil {
 	/**
 	 * Polls for a <code>successful</code> /heartbeat
 	 */
-	static void waitForLife() {
+	static void waitForLife( int port ) {
 		long expiry = System.currentTimeMillis() + 5000;
 
 		Response<String> resp;
@@ -81,7 +82,7 @@ class DuctTestUtil {
 				throw new IllegalStateException( "duct startup failure" );
 			}
 
-			resp = heartbeat();
+			resp = heartbeat( port );
 			try {
 				Thread.sleep( 100 );
 			}
@@ -117,7 +118,7 @@ class DuctTestUtil {
 				throw new IllegalStateException( "duct shutdown failure" );
 			}
 
-			resp = shutdown();
+			resp = shutdown( Duct.PORT );
 			try {
 				Thread.sleep( 100 );
 			}
@@ -133,18 +134,19 @@ class DuctTestUtil {
 	 *
 	 * @return the response
 	 */
-	static Response<String> heartbeat() {
-		return heartbeat( "127.0.0.1" );
+	static Response<String> heartbeat( int port ) {
+		return heartbeat( "127.0.0.1", port );
 	}
 
 	/**
 	 * Issues a <code>/heartbeat</code> request
 	 *
-	 * @param ip The IP address to request to
+	 * @param ip   The IP address to request to
+	 * @param port The port to address to
 	 * @return the response
 	 */
-	static Response<String> heartbeat( String ip ) {
-		return HttpClient.request( "http://" + ip + ":2276/heartbeat", "GET", null );
+	static Response<String> heartbeat( String ip, int port ) {
+		return HttpClient.request( "http://" + ip + ":" + port + "/heartbeat", "GET", null );
 	}
 
 	/**
@@ -152,8 +154,8 @@ class DuctTestUtil {
 	 *
 	 * @return The report index
 	 */
-	static Response<String> index() {
-		return HttpClient.request( "http://127.0.0.1:2276/list", "GET", null );
+	static Response<String> index( int port ) {
+		return HttpClient.request( "http://localhost:" + port + "/list", "GET", null );
 	}
 
 	/**
@@ -161,8 +163,8 @@ class DuctTestUtil {
 	 *
 	 * @return the response
 	 */
-	static Response<String> shutdown() {
-		return HttpClient.request( "http://127.0.0.1:2276/shutdown", "GET", null );
+	static Response<String> shutdown( int port ) {
+		return HttpClient.request( "http://localhost:" + port + "/shutdown", "POST", null );
 	}
 
 	/**

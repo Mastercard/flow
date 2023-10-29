@@ -82,7 +82,7 @@ class Server {
 		spark.get( "/heartbeat",
 				( req, res ) -> "Expiry at " + duct.heartbeat() );
 
-		spark.get( "/shutdown",
+		spark.post( "/shutdown",
 				( req, res ) -> {
 					duct.stop();
 					return "Shutting down";
@@ -103,7 +103,6 @@ class Server {
 	 */
 	void start() {
 		LOG.info( "Starting server" );
-		spark.init();
 		spark.awaitInitialization();
 	}
 
@@ -113,6 +112,14 @@ class Server {
 	void stop() {
 		LOG.info( "Stopping server" );
 		spark.stop();
+	}
+
+	/**
+	 * Stops the server and doesn't return untill it's dead
+	 */
+	void awaitStop() {
+		stop();
+		spark.awaitStop();
 	}
 
 	/**
@@ -225,7 +232,7 @@ class Server {
 				LOG.error( "Failed GET {} {}", req.pathInfo(), f, ioe );
 				res.status( 500 );
 			}
-			return ""; // vestigial, we've already written the body
+			return null; // vestigial, we've already written the body
 		};
 	}
 
