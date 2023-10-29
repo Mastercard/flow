@@ -224,7 +224,7 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 
 		assertEquals(
 				Copy.pasta( expected ),
-				copypasta( actual ),
+				Copy.pasta( actual ),
 				"Message content search hits" );
 		return this;
 	}

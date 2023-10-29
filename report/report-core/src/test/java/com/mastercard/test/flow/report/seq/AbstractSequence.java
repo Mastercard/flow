@@ -322,14 +322,6 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 	 * @param content Some strings
 	 * @return A string that can be trivially copy/pasted into java source
 	 */
-	protected static String copypasta( Collection<String> content ) {
-		return Copy.pasta( content );
-	}
-
-	/**
-	 * @param content Some strings
-	 * @return A string that can be trivially copy/pasted into java source
-	 */
 	protected static String copypasta( Stream<String> content ) {
 		return Copy.pasta( content );
 	}
