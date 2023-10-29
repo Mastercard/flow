@@ -22,7 +22,7 @@ import javax.swing.JFileChooser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mastercard.test.flow.report.Browse;
+import com.mastercard.test.flow.report.LocalBrowse;
 
 /**
  * Handles the {@link Duct} graphical user interface - the systray icon and the
@@ -92,7 +92,7 @@ class SystrayGui implements Gui {
 
 	private static MenuItem index( Duct duct ) {
 		MenuItem index = new MenuItem( "Index" );
-		index.addActionListener( ev -> Browse.WITH_AWT.to(
+		index.addActionListener( ev -> LocalBrowse.WITH_AWT.to(
 				"http://localhost:" + duct.port(), LOG::error ) );
 		return index;
 	}
@@ -118,7 +118,7 @@ class SystrayGui implements Gui {
 
 				Search.find( path )
 						.map( duct::add )
-						.forEach( url -> Browse.WITH_AWT.to( url, LOG::error ) );
+						.forEach( url -> LocalBrowse.WITH_AWT.to( url, LOG::error ) );
 			}
 		} );
 		return add;

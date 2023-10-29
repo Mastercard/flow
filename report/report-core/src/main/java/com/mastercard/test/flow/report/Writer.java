@@ -182,7 +182,7 @@ public class Writer {
 	 * Attempts to open a browser to view the report. Failure is silent.
 	 */
 	public void browse() {
-		Browse.WITH_AWT.to( root.resolve( INDEX_FILE_NAME ).toUri() );
+		LocalBrowse.WITH_AWT.to( root.resolve( INDEX_FILE_NAME ).toUri() );
 	}
 
 	/**

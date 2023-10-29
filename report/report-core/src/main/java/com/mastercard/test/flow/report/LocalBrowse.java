@@ -10,9 +10,10 @@ import java.net.URL;
 import com.mastercard.test.flow.util.Option;
 
 /**
- * Utility for opening a browser on some target
+ * Utility for opening a browser on some local target, either a
+ * <code>file://</code> or a <code>http://localhost</code> url
  */
-public class Browse {
+public class LocalBrowse {
 
 	/**
 	 * Allows control over browser-opening behaviour
@@ -30,28 +31,57 @@ public class Browse {
 					+ "java's desktop integration fails" );
 
 	/**
-	 * A {@link Browse} implementation that uses AWT's desktop integration in the
-	 * first instance
+	 * A {@link LocalBrowse} implementation that uses AWT's desktop integration in
+	 * the first instance, but falls back to <code>xdg-open</code> when AWT's browse
+	 * action is not supported
 	 */
-	public static final Browse WITH_AWT = new Browse(
+	public static final LocalBrowse WITH_AWT = new LocalBrowse(
 			() -> Desktop.isDesktopSupported()
 					&& Desktop.getDesktop().isSupported( Action.BROWSE ),
 			uri -> Desktop.getDesktop().browse( uri ),
-			cmd -> new ProcessBuilder( cmd ).start() );
-
-	private final Support support;
-	private final Trigger trigger;
-	private final Launch launch;
+			uri -> new ProcessBuilder(
+					// we might be on linux where the browse action is poorly supported, but
+					// xdg-open will probably work
+					"xdg-open",
+					// we're issuing commandlines, so belt-and-braces
+					localCommandlineURI( uri ) ).start() );
 
 	/**
-	 * @param support is browsing supported
-	 * @param trigger launch a browser
-	 * @param launch  run a commandline
+	 * Mitigates command injection risk by stripping anything we don't use out of a
+	 * URI. We only retain the scheme, which must be <code>file</code> or
+	 * <code>http</code>, and the path.
+	 *
+	 * @param uri A URI
+	 * @return a file or localhost uri with the same path, but with anything outside
+	 *         of <code>[a-zA-Z-0-9]</code> stripped out
+	 * @throws IllegalArgumentException if the scheme is not <code>file</code> or
+	 *                                  <code>http</code>
 	 */
-	Browse( Support support, Trigger trigger, Launch launch ) {
+	static String localCommandlineURI( URI uri ) {
+		if( "file".equals( uri.getScheme() ) ) {
+			return "file:" + uri.getPath()
+					.replaceAll( "[^\\w/]", "" );
+		}
+		if( "http".equals( uri.getScheme() ) ) {
+			return uri.getScheme() + "://localhost" + uri.getPath()
+					.replaceAll( "[^\\w/]", "" );
+		}
+		throw new IllegalArgumentException( "Unsupported scheme on " + uri );
+	}
+
+	private final Support support;
+	private final Trigger primary;
+	private final Trigger fallback;
+
+	/**
+	 * @param support  is browsing supported
+	 * @param primary  launch a browser
+	 * @param fallback launch a browser via some other means
+	 */
+	LocalBrowse( Support support, Trigger primary, Trigger fallback ) {
 		this.support = support;
-		this.trigger = trigger;
-		this.launch = launch;
+		this.primary = primary;
+		this.fallback = fallback;
 	}
 
 	/**
@@ -106,9 +136,16 @@ public class Browse {
 			return;
 		}
 
+		if( !supported( uri ) ) {
+			for( FailureSink sink : sinks ) {
+				sink.log( "Declining nonlocal uri `{}`", uri );
+			}
+			return;
+		}
+
 		if( support.supported() ) {
 			try {
-				trigger.browse( uri );
+				primary.browse( uri );
 			}
 			catch( Exception e ) {
 				for( FailureSink sink : sinks ) {
@@ -116,17 +153,27 @@ public class Browse {
 				}
 			}
 		}
-		else if( XDG_OPEN_FALLBACK.isTrue() ) {
+		else {
 			try {
-				// we might be on linux, where the browse action is poorly supported
-				launch.launch( "xdg-open", uri.toString() );
+				fallback.browse( uri );
 			}
 			catch( Exception e ) {
 				for( FailureSink sink : sinks ) {
-					sink.log( "Failed to launch `xdg-open {}`", uri, e );
+					sink.log( "Failed to {} via fallback route", uri, e );
 				}
 			}
 		}
+	}
+
+	private static boolean supported( URI uri ) {
+		if( "file".equals( uri.getScheme() ) ) {
+			return true;
+		}
+		if( "http".equals( uri.getScheme() )
+				&& "localhost".equals( uri.getHost() ) ) {
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -152,18 +199,5 @@ public class Browse {
 		 * @throws IOException on failure
 		 */
 		void browse( URI uri ) throws IOException;
-	}
-
-	/**
-	 * Interface for executing a command
-	 */
-	interface Launch {
-		/**
-		 * Runs the command in a new process
-		 *
-		 * @param cmd the commandline
-		 * @throws IOException on failure
-		 */
-		void launch( String... cmd ) throws IOException;
 	}
 }

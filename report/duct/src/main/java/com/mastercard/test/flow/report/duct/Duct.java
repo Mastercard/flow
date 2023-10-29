@@ -30,7 +30,7 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mastercard.test.flow.report.Browse;
+import com.mastercard.test.flow.report.LocalBrowse;
 import com.mastercard.test.flow.report.FailureSink;
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.Writer;
@@ -85,7 +85,7 @@ public class Duct {
 				.map( duct::add )
 				.filter( Objects::nonNull )
 				.forEach( served -> {
-					Browse.WITH_AWT.to( served, DEBUG );
+					LocalBrowse.WITH_AWT.to( served, DEBUG );
 				} );
 	}
 
@@ -101,7 +101,7 @@ public class Duct {
 		URL added = tryAdd( report );
 		if( added != null ) {
 			// there's an existing instance!
-			Browse.WITH_AWT.to( added, DEBUG );
+			LocalBrowse.WITH_AWT.to( added, DEBUG );
 		}
 		else {
 			// we'll have to spawn our own instance
@@ -109,8 +109,8 @@ public class Duct {
 					"java",
 					// Immediately after launch duct will try to open a browser, so we need to clone
 					// these browser-opening property in the new JVM
-					Browse.SUPPRESS.commandLineArgument(),
-					Browse.XDG_OPEN_FALLBACK.commandLineArgument(),
+					LocalBrowse.SUPPRESS.commandLineArgument(),
+					LocalBrowse.XDG_OPEN_FALLBACK.commandLineArgument(),
 					// re-use the current JVM's classpath. It's running this class, so it should
 					// also have the dependencies we need. The classpath will be bigger than duct
 					// strictly needs, but the cost of that is negligible
