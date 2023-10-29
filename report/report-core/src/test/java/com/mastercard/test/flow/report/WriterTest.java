@@ -6,7 +6,9 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,6 +20,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
+import com.github.difflib.DiffUtils;
+import com.github.difflib.patch.AbstractDelta;
+import com.github.difflib.patch.DeltaType;
+import com.github.difflib.patch.Patch;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.builder.Deriver;
@@ -203,6 +209,74 @@ class WriterTest {
 				"  1 x res/runtime.<hash>.js",
 				"  1 x res/styles.<hash>.css" ),
 				summariseReportFiles( dir ) );
+	}
+
+	/**
+	 * Illustrates the effect of the edit we make to the runtime.js file so that all
+	 * javascript files can be hidden away in the <code>res</code> dir
+	 *
+	 * @throws Exception on failure
+	 */
+	@Test
+	void chunkLoadingPath() throws Exception {
+		Path dir = Paths.get( "target", "WriterTest", "chunkLoadingPath" );
+
+		Files.createDirectories( dir );
+		Writer w = writeReport( dir );
+
+		Path runtimeFile = QuietFiles.list( w.path().resolve( "res" ) )
+				.filter( p -> p.getFileName().toString()
+						.matches( "runtime\\.[0-9a-f]+\\.js" ) )
+				.findAny()
+				.orElseThrow( () -> new IllegalStateException(
+						"Failed to find runtime.<hash>.js file in " + w.path() ) );
+
+		// The file that was written in the report
+		String written = new String( QuietFiles.readAllBytes( runtimeFile ), UTF_8 );
+		// The resource that was generated in report-ng
+		String resource = resource( runtimeFile.getFileName().toString() );
+
+		// let's examine the changes that we've made to the runtime file
+		Patch<String> patch = DiffUtils.diffInline( resource, written );
+
+		assertEquals( 1, patch.getDeltas().size(),
+				"edit count" );
+		AbstractDelta<String> delta = patch.getDeltas().get( 0 );
+		assertEquals( DeltaType.INSERT, delta.getType(),
+				"edit type" );
+		assertEquals( "[\"res/\"+]", delta.getTarget().getLines().toString(),
+				"inserted lines count" );
+
+		int context = 15;
+		String before = resource.substring(
+				delta.getSource().getPosition() - context,
+				delta.getSource().getPosition() + context )
+				.replaceAll( "\\d", "#" );
+		String after = written.substring(
+				delta.getTarget().getPosition() - context,
+				delta.getTarget().getPosition() + context
+						+ delta.getTarget().getLines().get( 0 ).length() )
+				.replaceAll( "\\d", "#" );
+
+		assertEquals( "d),[])),a.u=e=>(###===e?\"commo",
+				before, "raw resource runtime snippet" );
+		assertEquals( "d),[])),a.u=e=>\"res/\"+(###===e?\"commo",
+				after, "written runtime snippet" );
+	}
+
+	private static String resource( String name ) {
+		try( InputStream is = WriterTest.class.getResourceAsStream( name );
+				ByteArrayOutputStream os = new ByteArrayOutputStream() ) {
+			byte[] buff = new byte[8192];
+			int read;
+			while( (read = is.read( buff )) != -1 ) {
+				os.write( buff, 0, read );
+			}
+			return new String( os.toByteArray(), UTF_8 );
+		}
+		catch( Exception e ) {
+			throw new IllegalStateException( "Failed to read resource " + name, e );
+		}
 	}
 
 	/**

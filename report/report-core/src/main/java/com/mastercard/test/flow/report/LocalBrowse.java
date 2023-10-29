@@ -36,35 +36,36 @@ public class LocalBrowse {
 	 * action is not supported
 	 */
 	public static final LocalBrowse WITH_AWT = new LocalBrowse(
+			// This works on windows, and I'd hope that it's OK on mac too
 			() -> Desktop.isDesktopSupported()
 					&& Desktop.getDesktop().isSupported( Action.BROWSE ),
 			uri -> Desktop.getDesktop().browse( uri ),
-			uri -> new ProcessBuilder(
-					// we might be on linux where the browse action is poorly supported, but
-					// xdg-open will probably work
-					"xdg-open",
+			// the browse action seems to be poorly supported linux, but
+			// xdg-open will probably work
+			uri -> new ProcessBuilder( "xdg-open",
 					// we're issuing commandlines, so belt-and-braces
 					localCommandlineURI( uri ) ).start() );
 
 	/**
 	 * Mitigates command injection risk by stripping anything we don't use out of a
 	 * URI. We only retain the scheme, which must be <code>file</code> or
-	 * <code>http</code>, and the path.
+	 * <code>http</code>, and the path, which cannot contain anything other that
+	 * <code>[0-9a-zA-Z_/]</code>.
 	 *
 	 * @param uri A URI
 	 * @return a file or localhost uri with the same path, but with anything outside
-	 *         of <code>[a-zA-Z-0-9]</code> stripped out
+	 *         of <code>[0-9a-zA-Z_/]</code> stripped out
 	 * @throws IllegalArgumentException if the scheme is not <code>file</code> or
 	 *                                  <code>http</code>
 	 */
 	static String localCommandlineURI( URI uri ) {
 		if( "file".equals( uri.getScheme() ) ) {
-			return "file:" + uri.getPath()
-					.replaceAll( "[^\\w/]", "" );
+			return uri.getScheme() + ":" + uri.getPath()
+					.replaceAll( "[^0-9a-zA-Z_/]", "" );
 		}
 		if( "http".equals( uri.getScheme() ) ) {
 			return uri.getScheme() + "://localhost" + uri.getPath()
-					.replaceAll( "[^\\w/]", "" );
+					.replaceAll( "[^0-9a-zA-Z_/]", "" );
 		}
 		throw new IllegalArgumentException( "Unsupported scheme on " + uri );
 	}
