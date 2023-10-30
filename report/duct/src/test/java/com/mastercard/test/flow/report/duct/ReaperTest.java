@@ -1,5 +1,6 @@
 package com.mastercard.test.flow.report.duct;
 
+import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -140,6 +141,16 @@ class ReaperTest {
 
 		assertTrue( 1000 < actualSleep && actualSleep < 2000,
 				"sleep duration should be longer than 1 second and shorter than 2, but it was "
+						+ actualSleep + "ms" );
+
+		// check the sleep function directly to confirm it's not sleeping for shorter
+		// than we ask for
+		start = Instant.now();
+		reaper.sleep().accept( Duration.of( 500, MILLIS ) );
+		actualSleep = Duration.between( start, Instant.now() ).toMillis();
+
+		assertTrue( 510 <= actualSleep && actualSleep < 600,
+				"sleep duration should be between 510 and 600, but it was was "
 						+ actualSleep + "ms" );
 	}
 

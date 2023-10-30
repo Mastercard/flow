@@ -66,4 +66,13 @@ class Reaper extends Thread {
 		sleep = s;
 		return this;
 	}
+
+	/**
+	 * For use in unit tests, returns the current sleep function
+	 *
+	 * @return the sleep function
+	 */
+	Consumer<Duration> sleep() {
+		return sleep;
+	}
 }

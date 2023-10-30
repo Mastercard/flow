@@ -76,10 +76,10 @@ public class LocalBrowse {
 
 	/**
 	 * @param support  is browsing supported
-	 * @param primary  launch a browser
+	 * @param primary  launch a browser via the supported means
 	 * @param fallback launch a browser via some other means
 	 */
-	LocalBrowse( Support support, Trigger primary, Trigger fallback ) {
+	public LocalBrowse( Support support, Trigger primary, Trigger fallback ) {
 		this.support = support;
 		this.primary = primary;
 		this.fallback = fallback;
@@ -172,7 +172,7 @@ public class LocalBrowse {
 	/**
 	 * Interface for checking if launching a browser is supported
 	 */
-	interface Support {
+	public interface Support {
 		/**
 		 * Checks browsing support
 		 *
@@ -184,7 +184,7 @@ public class LocalBrowse {
 	/**
 	 * Interface for provoking a browser
 	 */
-	interface Trigger {
+	public interface Trigger {
 		/**
 		 * Launches a browser to view the supplied URI
 		 *
