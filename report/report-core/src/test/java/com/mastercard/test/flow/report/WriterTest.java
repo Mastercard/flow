@@ -258,9 +258,9 @@ class WriterTest {
 						+ delta.getTarget().getLines().get( 0 ).length() )
 				.replaceAll( "\\d", "#" );
 
-		assertEquals( "d),[])),a.u=e=>(###===e?\"commo",
+		assertEquals( "f),[])),a.u=e=>(###===e?\"commo",
 				before, "raw resource runtime snippet" );
-		assertEquals( "d),[])),a.u=e=>\"res/\"+(###===e?\"commo",
+		assertEquals( "f),[])),a.u=e=>\"res/\"+(###===e?\"commo",
 				after, "written runtime snippet" );
 	}
 
