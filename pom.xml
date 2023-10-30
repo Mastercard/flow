@@ -64,7 +64,8 @@
 		     exercise due to living in a headless environment, so... -->
 		<sonar.exclusions>**/example/**/*.java,
 			**/com/mastercard/test/flow/assrt/filter/gui/*.java,
-			**/com/mastercard/test/flow/validation/coppice/**/*.java</sonar.exclusions>
+			**/com/mastercard/test/flow/validation/coppice/**/*.java,
+			**/com/mastercard/test/flow/report/duct/SystrayGui.java</sonar.exclusions>
 	</properties>
 
 	<dependencyManagement>
@@ -400,6 +401,7 @@
 
 		<profile>
 			<!-- Sonar doesn't understand pitest output, so we fall back to jacoco to get test coverage metrics into sonar -->
+			<!-- Looking to exclude a class from coverage? Check out the `sonar.exclusions` property above! -->
 			<id>coverage</id>
 			<build>
 				<plugins>
