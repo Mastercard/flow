@@ -81,7 +81,7 @@ class WriterTest {
 				+ "  1 x detail/823B8031950E57346DCE6FFD4BE56F54.html\n"
 				+ "  1 x index.html\n"
 				+ "  1 x res/3rdpartylicenses.txt\n"
-				+ " 27 x res/_digits_.<hash>.js\n"
+				+ " 28 x res/_digits_.<hash>.js\n"
 				+ "  1 x res/common.<hash>.js\n"
 				+ "  1 x res/favicon.ico\n"
 				+ "  1 x res/main.<hash>.js\n"
