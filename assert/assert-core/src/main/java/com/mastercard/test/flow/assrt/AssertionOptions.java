@@ -4,6 +4,8 @@ import java.util.function.Consumer;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.assrt.filter.FilterOptions;
+import com.mastercard.test.flow.report.LocalBrowse;
+import com.mastercard.test.flow.report.duct.Duct;
 import com.mastercard.test.flow.util.Option;
 
 /**
@@ -23,6 +25,34 @@ public enum AssertionOptions implements Option {
 	 * written. This is just an alias for {@link FilterOptions#ARTIFACT_DIR}.
 	 */
 	ARTIFACT_DIR(FilterOptions.ARTIFACT_DIR),
+
+	/**
+	 * Allows browser launches to be avoided. An alias for
+	 * {@link LocalBrowse#SUPPRESS}
+	 */
+	BROWSE_SUPPRESS(LocalBrowse.SUPPRESS),
+
+	/**
+	 * Allows the option of a browse-opening fallback. An alias for
+	 * {@link LocalBrowse#XDG_OPEN_FALLBACK}
+	 */
+	BROWSE_XDG_OPEN_FALLBACK(LocalBrowse.XDG_OPEN_FALLBACK),
+
+	/**
+	 * Controls whether we use {@link Duct} or not
+	 */
+	DUCT(b -> b.property( "mctf.report.serve" )
+			.description( "Set to `true` to browse reports on a local web"
+					+ " server rather than the filesystem. You must have the"
+					+ " optional `duct` module on your classpath." )),
+
+	/**
+	 * Allows the {@link Duct} gui to be avoided. An alias for
+	 * {@link Duct#GUI_SUPPRESS}
+	 */
+	DUCT_GUI_SUPPRESS(b -> b
+			.property( "mctf.suppress.duct.gui" )
+			.description( "Supply 'true' to suppress the duct gui" )),
 
 	/**
 	 * Controls {@link Replay} parameters

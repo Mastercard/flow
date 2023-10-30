@@ -84,6 +84,7 @@ graph LR
     message-core --> message-web
     message-core --> message-xml
     report-core --> assert-filter
+    report-core --> duct
     report-ng --> report-core
     validation-core --> validation-junit4
     validation-core --> validation-junit5
@@ -116,6 +117,7 @@ graph LR
   assert-junit5 --> app-assert
   builder --> app-model
   coppice -.-> app-model
+  duct --> app-assert
   message-http --> app-model
   message-json --> app-model
   message-sql --> app-model

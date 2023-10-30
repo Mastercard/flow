@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DynamicTest;
@@ -117,15 +118,22 @@ class IconEmbedTest {
 		Matcher injection = ICON_SERVICE_INJECTION_PATTERN.matcher( tsContent );
 		assertTrue( injection.find(), "Failed to find IconEmbedService injection in " + tsFile );
 
-		Pattern registerPattern = Pattern.compile( injection.group( 1 ) + ".register\\((.*?)\\)",
-				Pattern.DOTALL );
+		try {
+			Pattern registerPattern = Pattern.compile( injection.group( 1 ) + ".register\\((.*?)\\)",
+					Pattern.DOTALL );
+			Matcher registration = registerPattern.matcher( tsContent );
+			assertTrue( registration.find(), "Failed to find icon registration call in " + tsFile );
 
-		Matcher registration = registerPattern.matcher( tsContent );
-		assertTrue( registration.find(), "Failed to find icon registration call in " + tsFile );
-
-		Matcher names = Pattern.compile( "\"([a-z_]+)\"" ).matcher( registration.group( 1 ) );
-		while( names.find() ) {
-			registered.add( names.group( 1 ) );
+			Matcher names = Pattern.compile( "\"([a-z_]+)\"" ).matcher( registration.group( 1 ) );
+			while( names.find() ) {
+				registered.add( names.group( 1 ) );
+			}
 		}
+		catch( PatternSyntaxException pse ) {
+			throw new IllegalStateException(
+					"Failed to compile regex with '" + injection.group( 1 ) + "' taken from " + template,
+					pse );
+		}
+
 	}
 }

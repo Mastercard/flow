@@ -4,7 +4,7 @@
 
 	<groupId>com.mastercard.test.flow</groupId>
 	<artifactId>parent</artifactId>
-	<version>1.0.1-SNAPSHOT</version>
+	<version>1.1.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>flow</name>
 	<description>Testing framework</description>
@@ -64,7 +64,8 @@
 		     exercise due to living in a headless environment, so... -->
 		<sonar.exclusions>**/example/**/*.java,
 			**/com/mastercard/test/flow/assrt/filter/gui/*.java,
-			**/com/mastercard/test/flow/validation/coppice/**/*.java</sonar.exclusions>
+			**/com/mastercard/test/flow/validation/coppice/**/*.java,
+			**/com/mastercard/test/flow/report/duct/SystrayGui.java</sonar.exclusions>
 	</properties>
 
 	<dependencyManagement>
@@ -400,6 +401,7 @@
 
 		<profile>
 			<!-- Sonar doesn't understand pitest output, so we fall back to jacoco to get test coverage metrics into sonar -->
+			<!-- Looking to exclude a class from coverage? Check out the `sonar.exclusions` property above! -->
 			<id>coverage</id>
 			<build>
 				<plugins>
@@ -469,7 +471,7 @@
 								<!-- Default to the same filters as last time -->
 								<mctf.filter.repeat>true</mctf.filter.repeat>
 								<!-- Causes the report to be presented in a browser -->
-								<mctf.itest.report.serve>true</mctf.itest.report.serve>
+								<mctf.report.serve>true</mctf.report.serve>
 							</systemPropertyVariables>
 						</configuration>
 					</plugin>

@@ -123,7 +123,7 @@ class JsApp {
 					.orElse( null );
 			if( runtime != null ) {
 				String content = new String( Files.readAllBytes( runtime ), UTF_8 );
-				String fixed = content.replaceAll( "(\\(\\d+===e\\?\"common\":e\\))", "\"res/\" + $1" );
+				String fixed = content.replaceAll( "(\\(\\d+===e\\?\"common\":e\\))", "\"res/\"+$1" );
 				if( fixed.equals( content ) ) {
 					throw new IllegalStateException( "Failed to fix chunk load path" );
 				}

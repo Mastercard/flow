@@ -20,6 +20,8 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
+import com.mastercard.test.flow.report.Copy;
+
 /**
  * Encapsulates the details of interacting with the diff tool
  */
@@ -312,8 +314,8 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 					.append( "\n" );
 		}
 		Assertions.assertEquals(
-				copypasta( lines ),
-				copypasta( sb.toString() ) );
+				Copy.pasta( lines ),
+				Copy.pasta( sb.toString() ) );
 		return this;
 	}
 
@@ -336,8 +338,8 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	public DiffSequence hasChangeList( String... expected ) {
 		trace( "hasChangeList", (Object[]) expected );
 		Assertions.assertEquals(
-				copypasta( expected ),
-				copypasta( driver.findElements( By.tagName( "app-pair-select-item" ) ).stream()
+				Copy.pasta( expected ),
+				Copy.pasta( driver.findElements( By.tagName( "app-pair-select-item" ) ).stream()
 						.map( DiffSequence::flowSelectItemToString ) ) );
 		return this;
 	}
@@ -453,8 +455,8 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 				.collect( joining( "\n" ) );
 
 		Assertions.assertEquals(
-				copypasta( expected ),
-				copypasta( formatted ) );
+				Copy.pasta( expected ),
+				Copy.pasta( formatted ) );
 
 		return this;
 	}
@@ -479,8 +481,8 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 		trace( "summary", (Object[]) expected );
 
 		Assertions.assertEquals(
-				copypasta( expected ),
-				copypasta( driver
+				Copy.pasta( expected ),
+				Copy.pasta( driver
 						.findElement( By.id( "summary" ) )
 						.findElements( By.tagName( "mat-expansion-panel-header" ) ).stream()
 						.map( e -> e.getText().replace( "\n", " " ) )
@@ -510,8 +512,8 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 		WebElement changes = changed.findElement( By.id( "changes" ) );
 
 		assertEquals(
-				copypasta( expected ),
-				copypasta( changes.findElements( By.tagName(
+				Copy.pasta( expected ),
+				Copy.pasta( changes.findElements( By.tagName(
 						"mat-expansion-panel-header" ) ).stream()
 						.map( e -> e.getText().replace( "\n", " " ) ) ) );
 

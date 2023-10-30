@@ -28,6 +28,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatSliderModule } from '@angular/material/slider';
 import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -60,6 +61,9 @@ import { HighlightedTextComponent } from './highlighted-text/highlighted-text.co
 import { TextDiffComponent } from './text-diff/text-diff.component';
 import { SystemDiagramComponent } from './system-diagram/system-diagram.component';
 import { ClipboardModule } from '@angular/cdk/clipboard';
+import { DuctIndexComponent } from './duct-index/duct-index.component';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { DuctIndexItemComponent } from './duct-index-item/duct-index-item.component';
 
 const routes: Routes = [
   { path: "diff", component: ModelDiffComponent },
@@ -103,6 +107,8 @@ const routes: Routes = [
     HighlightedTextComponent,
     TextDiffComponent,
     SystemDiagramComponent,
+    DuctIndexComponent,
+    DuctIndexItemComponent,
   ],
   imports: [
     BrowserAnimationsModule,
@@ -122,10 +128,12 @@ const routes: Routes = [
     MatInputModule,
     MatListModule,
     MatMenuModule,
+    MatPaginatorModule,
     MatProgressBarModule,
     MatRippleModule,
     MatSelectModule,
     MatSidenavModule,
+    MatSliderModule,
     MatTableModule,
     MatTabsModule,
     MatToolbarModule,

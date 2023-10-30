@@ -93,6 +93,7 @@ class ModuleDiagramTest {
 
 		Map<String, List<Link>> links = new HashMap<>();
 		root.visit( pd -> pd.dependencies()
+				.filter( dd -> !dd.optional() )
 				.filter( dd -> artifacts.contains( dd.coords() ) )
 				.filter( dd -> artifacts.contains( pd.coords() ) )
 				.filter( dd -> SCOPES.get( pd.groupId() ).contains( dd.scope() ) )
@@ -101,7 +102,9 @@ class ModuleDiagramTest {
 						.add( new Link(
 								dd.groupId(),
 								dd.artifactId(),
-								"compile".equals( dd.scope() ) ? " --> " : " -.-> ",
+								"compile".equals( dd.scope() )
+										? " --> "
+										: " -.-> ",
 								pd.groupId(),
 								pd.artifactId() ) ) ) );
 

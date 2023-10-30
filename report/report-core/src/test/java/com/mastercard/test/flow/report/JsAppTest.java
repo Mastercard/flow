@@ -7,6 +7,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -15,12 +16,23 @@ import org.junit.jupiter.api.Test;
 @SuppressWarnings("static-method")
 class JsAppTest {
 
+	private static final Path dir = Paths.get( "target" )
+			.resolve( JsAppTest.class.getSimpleName() );
+
+	/**
+	 * Deletes the test's working directory
+	 */
+	@BeforeAll
+	static void clean() {
+		QuietFiles.recursiveDelete( dir );
+	}
+
 	/**
 	 * What happens when the manifest file is not found
 	 */
 	@Test
 	void noManifest() {
-		Path p = Paths.get( "target/noManifest/res" );
+		Path p = dir.resolve( "noManifest/res" );
 		IllegalStateException ise = assertThrows( IllegalStateException.class,
 				() -> new JsApp( "/does/not/exist", p ) );
 		assertEquals( "Failed to extract /does/not/exist/manifest.txt",
@@ -32,7 +44,7 @@ class JsAppTest {
 	 */
 	@Test
 	void emptyManifest() {
-		Path p = Paths.get( "target/emptyManifest/res" );
+		Path p = dir.resolve( "emptyManifest/res" );
 		UncheckedIOException uioe = assertThrows( UncheckedIOException.class,
 				() -> new JsApp( "/JsAppTest/emptyManifest", p ) );
 		assertEquals( "Failed to extract index.html", uioe.getMessage() );
@@ -43,7 +55,7 @@ class JsAppTest {
 	 */
 	@Test
 	void missingManifestEntry() {
-		Path p = Paths.get( "target/missingManifestEntry/res" );
+		Path p = dir.resolve( "missingManifestEntry/res" );
 		IllegalStateException ise = assertThrows( IllegalStateException.class,
 				() -> new JsApp( "/JsAppTest/missingManifestEntry", p ) );
 		assertEquals( "Failed to copy resource /JsAppTest/missingManifestEntry/nosuchfile.txt",
@@ -55,10 +67,10 @@ class JsAppTest {
 	 */
 	@Test
 	void missingIndex() {
-		Path p = Paths.get( "target/missingIndex/res" );
+		Path p = dir.resolve( "missingIndex/res" );
 		IllegalStateException ise = assertThrows( IllegalStateException.class,
 				() -> new JsApp( "/JsAppTest/missingIndex", p ) );
-		assertEquals( "Failed to find index.html in target/missingIndex/res",
+		assertEquals( "Failed to find index.html in target/JsAppTest/missingIndex/res",
 				ise.getMessage().replace( '\\', '/' ) );
 	}
 
@@ -67,11 +79,11 @@ class JsAppTest {
 	 */
 	@Test
 	void malformedIndex() {
-		Path p = Paths.get( "target/malformedIndex/res" );
+		Path p = dir.resolve( "malformedIndex/res" );
 		IllegalArgumentException iae = assertThrows( IllegalArgumentException.class,
 				() -> new JsApp( "/JsAppTest/malformedIndex", p ) );
 		assertEquals( ""
-				+ "Start or end line not found in target/malformedIndex/res/index.html\n"
+				+ "Start or end line not found in target/JsAppTest/malformedIndex/res/index.html\n"
 				+ "This is not a valid index file",
 				iae.getMessage().replace( '\\', '/' ) );
 	}

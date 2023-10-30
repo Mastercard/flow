@@ -16,6 +16,8 @@ import org.junit.jupiter.api.Assertions;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
+import com.mastercard.test.flow.report.Copy;
+
 /**
  * Encapsulates the nuts and bolts of interacting with the flow sequence diagram
  * so the tests can be more readable
@@ -39,8 +41,8 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 		trace( "hasActors", (Object[]) actors );
 		WebElement seq = driver.findElement( By.tagName( "app-flow-sequence" ) );
 		Assertions.assertEquals(
-				copypasta( actors ),
-				copypasta( seq.findElements( By.className( "entity" ) ).stream()
+				Copy.pasta( actors ),
+				Copy.pasta( seq.findElements( By.className( "entity" ) ).stream()
 						.map( WebElement::getText ) ),
 				"Sequence diagram actors" );
 		return this;
@@ -57,8 +59,8 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 		WebElement seq = driver.findElement( By.tagName( "app-flow-sequence" ) );
 		int actors = seq.findElements( By.className( "entity" ) ).size();
 		Assertions.assertEquals(
-				copypasta( tx ),
-				copypasta( seq.findElements( By.tagName( "app-seq-action" ) ).stream()
+				Copy.pasta( tx ),
+				Copy.pasta( seq.findElements( By.tagName( "app-seq-action" ) ).stream()
 						.map( asa -> actionText( actors, asa ) ) ),
 				"Sequence diagram transmissions" );
 		return this;
@@ -156,8 +158,8 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 		}
 
 		Assertions.assertEquals(
-				copypasta( lines ),
-				copypasta( actual ) );
+				Copy.pasta( lines ),
+				Copy.pasta( actual ) );
 		return this;
 	}
 
@@ -221,8 +223,8 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 				.collect( Collectors.toList() );
 
 		assertEquals(
-				copypasta( expected ),
-				copypasta( actual ),
+				Copy.pasta( expected ),
+				Copy.pasta( actual ),
 				"Message content search hits" );
 		return this;
 	}

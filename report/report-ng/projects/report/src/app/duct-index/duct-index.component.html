@@ -1,0 +1,8 @@
+<mat-toolbar>
+    <span>Duct</span>
+</mat-toolbar>
+
+<mat-nav-list>
+    <app-duct-index-item *ngFor="let report of reports" [report]="report">
+    </app-duct-index-item>
+</mat-nav-list>

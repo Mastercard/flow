@@ -149,14 +149,12 @@ public class Reader {
 			if( Files.isDirectory( p ) ) {
 				try( Stream<Path> s = Files.list( p ) ) {
 					Set<Path> contents = s.collect( toSet() );
-					boolean hasIndex = contents.stream()
+					return contents.stream()
 							.anyMatch( f -> Files.isRegularFile( f )
-									&& Writer.INDEX_FILE_NAME.equals( f.getFileName().toString() ) );
-					boolean hasDetailDir = contents.stream()
-							.anyMatch( f -> Files.isDirectory( p )
-									&& Writer.DETAIL_DIR_NAME.equals( f.getFileName().toString() ) );
-
-					return hasIndex && hasDetailDir;
+									&& Writer.INDEX_FILE_NAME.equals( f.getFileName().toString() ) )
+							&& contents.stream()
+									.anyMatch( f -> Files.isDirectory( p )
+											&& Writer.DETAIL_DIR_NAME.equals( f.getFileName().toString() ) );
 				}
 			}
 		}

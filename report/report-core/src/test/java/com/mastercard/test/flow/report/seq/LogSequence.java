@@ -16,6 +16,8 @@ import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
+import com.mastercard.test.flow.report.Copy;
+
 /**
  * Encapsulates the nuts and bolts of interacting with the logs tab of the flow
  * detail page page so the tests can be more readable
@@ -135,8 +137,8 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 	public LogSequence hasMessages( String... lines ) {
 		trace( "hasMessages", (Object[]) lines );
 		Assertions.assertEquals(
-				copypasta( lines ),
-				copypasta( driver.findElements( By.className( "mat-row" ) ).stream()
+				Copy.pasta( lines ),
+				Copy.pasta( driver.findElements( By.className( "mat-row" ) ).stream()
 						.map( r -> r.getText().replace( '\n', ' ' ) ) ) );
 		return this;
 	}

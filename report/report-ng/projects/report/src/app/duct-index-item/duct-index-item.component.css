@@ -1,0 +1,38 @@
+mat-icon {
+    vertical-align: middle;
+}
+
+.time {
+    font-weight: lighter;
+}
+
+.results {
+    font-weight: lighter;
+}
+
+.results {
+    white-space: nowrap;
+}
+
+.pass mat-icon {
+    background-color: rgba(0, 192, 0, 1);
+    color: white;
+    border-radius: 1.5ch;
+}
+
+.fail mat-icon {
+    background-color: rgba(255, 0, 0, 1);
+    color: white;
+    border-radius: 1.5ch;
+}
+
+.skip mat-icon {
+    background-color: rgba(255, 0, 0, 0.5);
+    color: white;
+    border-radius: 1.5ch;
+}
+
+.error mat-icon {
+    color: rgba(255, 0, 0, 1);
+    border-radius: 1.5ch;
+}

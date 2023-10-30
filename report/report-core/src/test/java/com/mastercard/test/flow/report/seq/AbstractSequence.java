@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
@@ -22,6 +21,8 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+
+import com.mastercard.test.flow.report.Copy;
 
 /**
  * Superclass for dealing with testing report pages
@@ -193,7 +194,7 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 				.flatMap( a -> Stream.of( a.split( "&" ) ) )
 				.sorted();
 
-		assertEquals( copypasta( expected ), copypasta( actual ),
+		assertEquals( Copy.pasta( expected ), Copy.pasta( actual ),
 				"arguments on URL " + current );
 		return self();
 	}
@@ -315,33 +316,5 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 		String name = icon.findElement( By.tagName( "mat-icon" ) )
 				.getAttribute( "svgIcon" );
 		return ICON_SEMANTICS.getOrDefault( name, name );
-	}
-
-	/**
-	 * @param content Some strings
-	 * @return A string that can be trivially copy/pasted into java source
-	 */
-	protected static String copypasta( String... content ) {
-		return copypasta( Stream.of( content ) );
-	}
-
-	/**
-	 * @param content Some strings
-	 * @return A string that can be trivially copy/pasted into java source
-	 */
-	protected static String copypasta( Collection<String> content ) {
-		return copypasta( content.stream() );
-	}
-
-	/**
-	 * @param content Some strings
-	 * @return A string that can be trivially copy/pasted into java source
-	 */
-	protected static String copypasta( Stream<String> content ) {
-		return content
-				.map( s -> s.replaceAll( "\r", "" ) )
-				.flatMap( s -> Stream.of( s.split( "\n" ) ) )
-				.map( s -> s.replaceAll( "\"", "'" ) )
-				.collect( Collectors.joining( "\",\n\"", "\"", "\"" ) );
 	}
 }

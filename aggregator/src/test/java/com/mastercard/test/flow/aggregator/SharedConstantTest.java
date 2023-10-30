@@ -1,12 +1,17 @@
 package com.mastercard.test.flow.aggregator;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.Order;
 import com.mastercard.test.flow.builder.Chain;
 import com.mastercard.test.flow.model.LazyModel;
 import com.mastercard.test.flow.report.Writer;
+import com.mastercard.test.flow.report.duct.Duct;
+import com.mastercard.test.flow.util.Option;
 import com.mastercard.test.flow.validation.check.ChainOverlapCheck;
 import com.mastercard.test.flow.validation.check.ReflectiveModelTaggingCheck;
 import com.mastercard.test.flow.validation.check.ResultTagCheck;
@@ -53,5 +58,21 @@ class SharedConstantTest {
 	void lazyModelStrings() {
 		Assertions.assertEquals( LazyModel.MODEL_TAGS_FIELD_NAME,
 				ReflectiveModelTaggingCheck.MODEL_TAGS_FIELD_NAME );
+	}
+
+	/**
+	 * The <code>duct</code> module offers {@link Duct#GUI_SUPPRESS}, and we've got
+	 * an alias for that in {@link AssertionOptions#DUCT_GUI_SUPPRESS} so that it
+	 * gets picked up by the documentation automation. However, <code>duct</code> is
+	 * an <i>optional</i> dependency of <code>assert-core</code>, so we can depend
+	 * on it being available when {@link AssertionOptions} is initialised. Hence we
+	 * have to maintain a static copy of the {@link Option} values.
+	 */
+	@Test
+	void ductSuppressionOption() {
+		assertEquals( Duct.GUI_SUPPRESS.property(), AssertionOptions.DUCT_GUI_SUPPRESS.property(),
+				"property name" );
+		assertEquals( Duct.GUI_SUPPRESS.description(), AssertionOptions.DUCT_GUI_SUPPRESS.description(),
+				"property description" );
 	}
 }
