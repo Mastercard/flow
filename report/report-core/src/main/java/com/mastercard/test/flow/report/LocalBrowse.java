@@ -64,8 +64,10 @@ public class LocalBrowse {
 					.replaceAll( "[^0-9a-zA-Z_/]", "" );
 		}
 		if( "http".equals( uri.getScheme() ) ) {
-			return uri.getScheme() + "://localhost" + uri.getPath()
-					.replaceAll( "[^0-9a-zA-Z_/]", "" );
+			return String.format( "%s://localhost%s%s",
+					uri.getScheme(),
+					uri.getPort() != -1 ? ":" + uri.getPort() : "",
+					uri.getPath().replaceAll( "[^0-9a-zA-Z_/]", "" ) );
 		}
 		throw new IllegalArgumentException( "Unsupported scheme on " + uri );
 	}

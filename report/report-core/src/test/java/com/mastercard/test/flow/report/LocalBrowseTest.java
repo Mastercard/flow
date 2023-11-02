@@ -151,6 +151,9 @@ class LocalBrowseTest {
 		test.accept( "http://localhost/path/to/file", "http://localhost/path/to/file" );
 		test.accept( "http://localhost/path/to/file?query=foo", "http://localhost/path/to/file" );
 		test.accept( "http://localhost/path/to/file#fragment", "http://localhost/path/to/file" );
+		test.accept( "http://localhost:1234/path/to/file", "http://localhost:1234/path/to/file" );
+		test.accept( "http://localhost:1234/path/to/file?query=foo#fragment",
+				"http://localhost:1234/path/to/file" );
 
 		test.accept( "http://remote.com/path/to/file", "http://localhost/path/to/file" );
 

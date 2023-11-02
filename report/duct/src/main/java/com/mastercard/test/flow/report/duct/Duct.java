@@ -87,7 +87,8 @@ public class Duct {
 				.map( Path::toAbsolutePath )
 				.map( duct::add )
 				.filter( Objects::nonNull )
-				.forEach( served -> LocalBrowse.WITH_AWT.to( served, debug ) );
+				.map( path -> "http://localhost:" + PORT + path )
+				.forEach( served -> LocalBrowse.WITH_AWT.to( served, LOG::info ) );
 	}
 
 	/**
