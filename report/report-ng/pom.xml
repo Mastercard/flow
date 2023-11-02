@@ -171,7 +171,7 @@ Build with
 								</goals>
 								<phase>generate-resources</phase>
 								<configuration>
-									<arguments>run build-all</arguments>
+									<arguments>run build</arguments>
 								</configuration>
 							</execution>
 						</executions>
@@ -261,7 +261,7 @@ Build with
 									<executable>yarn</executable>
 									<arguments>
 										<argument>run</argument>
-										<argument>build-all</argument>
+										<argument>build</argument>
 									</arguments>
 								</configuration>
 							</execution>
