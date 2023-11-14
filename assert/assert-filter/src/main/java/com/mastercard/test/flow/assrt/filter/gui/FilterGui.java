@@ -91,8 +91,8 @@ public class FilterGui {
 				try {
 					monitor.wait();
 				}
-				catch( InterruptedException e ) {
-					e.printStackTrace();
+				catch( @SuppressWarnings("unused") InterruptedException e ) {
+					// this is unexpected, but not a problem
 					Thread.currentThread().interrupt();
 				}
 			}

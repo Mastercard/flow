@@ -64,7 +64,9 @@ class SysOutTest {
 				.map( path -> dynamicTest(
 						path.getFileName().toString(),
 						() -> QuietFiles.lines( path )
-								.filter( line -> line.contains( "System.out" ) || line.contains( "System.err" ) )
+								.filter( line -> line.contains( "System.out" )
+										|| line.contains( "System.err" )
+										|| line.contains( "printStackTrace()" ) )
 								.findAny()
 								.map( String::trim )
 								.filter( l -> !accepted.getOrDefault( path, Collections.emptySet() ).contains( l ) )

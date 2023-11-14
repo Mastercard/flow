@@ -297,7 +297,7 @@ public class FilterGuiHarness {
 				guith.join( 5000 );
 			}
 			catch( InterruptedException e ) {
-				e.printStackTrace();
+				throw new IllegalStateException( "unexpected", e );
 			}
 
 			Assertions.assertFalse( guith.isAlive(), "cli thread should have stopped!" );

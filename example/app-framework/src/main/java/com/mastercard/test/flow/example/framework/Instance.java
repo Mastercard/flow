@@ -193,7 +193,7 @@ public class Instance {
 										return Class.forName( n );
 									}
 									catch( Exception e ) {
-										e.printStackTrace();
+										LOG.error( "Failed to resolve service " + n, e );
 										return null;
 									}
 								} )
@@ -228,9 +228,8 @@ public class Instance {
 					}
 				}
 			}
-			catch( InterruptedException e ) {
-				e.printStackTrace();
-				// Restore interrupted state...
+			catch( @SuppressWarnings("unused") InterruptedException e ) {
+				// Restore interrupted state and continue the wait-loop
 				Thread.currentThread().interrupt();
 			}
 		}

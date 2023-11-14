@@ -84,8 +84,8 @@ public class FilterCli {
 				uiPhase = uiPhase.next( line );
 			}
 		}
-		catch( Exception e ) {
-			e.printStackTrace();
+		catch( IOException e ) {
+			throw new UncheckedIOException( "Failed to close terminal", e );
 		}
 	}
 

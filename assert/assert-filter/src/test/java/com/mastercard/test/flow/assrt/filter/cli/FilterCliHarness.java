@@ -107,7 +107,7 @@ class FilterCliHarness {
 				clith.join( 5000 );
 			}
 			catch( InterruptedException e ) {
-				e.printStackTrace();
+				throw new IllegalStateException( "unexpected", e );
 			}
 
 			Assertions.assertFalse( clith.isAlive(), "cli thread should have stopped!" );
