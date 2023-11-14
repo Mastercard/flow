@@ -15,8 +15,11 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
+
+import com.mastercard.test.flow.autodoc.Docs;
 
 import javassist.ClassPool;
 import javassist.NotFoundException;
@@ -73,12 +76,13 @@ class CodeLinkTest {
 	 */
 	@TestFactory
 	Stream<DynamicTest> markdown() throws Exception {
-		return Util.markdownFiles()
+		return Docs.markdownFiles()
 				.map( mdFile -> dynamicTest( mdFile.toString(),
-						() -> Util.insert( mdFile,
+						() -> Docs.insert( mdFile,
 								START,
 								existing -> refresh( mdFile.getParent(), existing ),
-								END ) ) );
+								END,
+								Assertions::assertEquals ) ) );
 	}
 
 	private static String refresh( Path dir, String content ) {
@@ -109,7 +113,7 @@ class CodeLinkTest {
 			search = ref.substring( searchIdx + 1 );
 		}
 
-		Path src = Util.javaSourceFileFor( classNameFragment );
+		Path src = Docs.javaSourceFileFor( classNameFragment );
 
 		String lineFragment = "";
 
@@ -142,7 +146,7 @@ class CodeLinkTest {
 								.map( i -> "\n  " + i + ": " + srcLines[i - 1] )
 								.collect( joining() ) );
 			}
-			return Util.lineFragment( candidates.iterator().next() );
+			return Docs.lineFragment( candidates.iterator().next() );
 		}
 		catch( IOException e ) {
 			throw new IllegalArgumentException( "Failed to find line numbers for '" + ref + "'", e );
@@ -225,7 +229,7 @@ class CodeLinkTest {
 			}
 
 			// now we can make a nice link fragment to point to the method API information
-			return Util.lineFragment(
+			return Docs.lineFragment(
 					// line numbers are 1-based, indices are 0-based
 					firstDeclarationLine + 1,
 					lastDeclarationLineIndex + 1 );

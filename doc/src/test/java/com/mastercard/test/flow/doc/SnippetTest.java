@@ -1,6 +1,5 @@
 package com.mastercard.test.flow.doc;
 
-import static com.mastercard.test.flow.doc.Util.lineFragment;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
@@ -20,8 +19,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
+
+import com.mastercard.test.flow.autodoc.Docs;
 
 /**
  * <p>
@@ -83,18 +85,19 @@ class SnippetTest {
 	 */
 	@TestFactory
 	Stream<DynamicTest> markdown() throws Exception {
-		return Util.markdownFiles()
+		return Docs.markdownFiles()
 				.map( mdFile -> dynamicTest( mdFile.toString(),
-						() -> Util.insert( mdFile,
+						() -> Docs.insert( mdFile,
 								MD_START,
 								existing -> refresh( mdFile.getParent(), existing ),
-								MD_END ) ) );
+								MD_END,
+								Assertions::assertEquals ) ) );
 	}
 
 	private String refresh( Path dir, String existing ) {
 		Matcher m = MD_SNIPPET_DESCRIPTOR.matcher( existing );
 		if( m.find() ) {
-			Path src = Util.sourceFileFor( m.group( 1 ) );
+			Path src = Docs.sourceFileFor( m.group( 1 ) );
 			Snippet e = extract( src, m.group( 2 ) );
 			return String.format( ""
 					+ "%s\n"
@@ -217,7 +220,7 @@ class SnippetTest {
 			return String.format( "[%s](%s%s)",
 					text,
 					from.relativize( file ).toString().replace( '\\', '/' ),
-					lineFragment( startLine, endLine - 1 ) );
+					Docs.lineFragment( startLine, endLine - 1 ) );
 		}
 	}
 

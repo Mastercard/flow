@@ -9,9 +9,12 @@ import java.nio.file.Paths;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicContainer;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
+
+import com.mastercard.test.flow.autodoc.Docs;
 
 /**
  * This test ensures that the interlinks between module readmes accurately
@@ -37,10 +40,11 @@ class ReadmeInterlinkTest {
 
 	private DynamicContainer fromPom( PomData pom ) {
 		DynamicTest readme = dynamicTest( "title", () -> {
-			Util.insert( pom.dirPath().resolve( "README.md" ),
+			Docs.insert( pom.dirPath().resolve( "README.md" ),
 					TITLE_START,
 					existing -> compliant( existing, pom ) ? existing : title( pom ),
-					TITLE_END );
+					TITLE_END,
+					Assertions::assertEquals );
 		} );
 		return dynamicContainer( pom.artifactId(),
 				Stream.concat( Stream.of( readme ),

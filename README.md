@@ -24,6 +24,7 @@ Testing framework
  * [bom](bom) Bill of materials
  * [aggregator](aggregator) Aggregates build artifacts
  * [example](example) Service constellation to exercise the flow framework
+ * [autodoc](autodoc) Documentation automation
  * [doc](doc) Documentation resources
 
 <!-- title end -->

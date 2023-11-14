@@ -1,4 +1,4 @@
-package com.mastercard.test.flow.doc;
+package com.mastercard.test.flow.autodoc;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
@@ -23,20 +23,23 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Assertions;
-
 /**
- * Utilities for working with markdown documents
+ * Utilities for inspecting files in the project and working with markdown
+ * documents
  */
-class Util {
+public class Docs {
 
 	private static final Map<String, List<Path>> FILES_CACHE = new HashMap<>();
+
+	private Docs() {
+		// no instances
+	}
 
 	/**
 	 * @param line The line number
 	 * @return A link fragment to highlight that line number
 	 */
-	static String lineFragment( int line ) {
+	public static String lineFragment( int line ) {
 		// Bitbucket links will be broken pending
 		// https://jira.atlassian.com/browse/BSERV-13422
 		return String.format( "#L%s,%s", line, line );
@@ -47,7 +50,7 @@ class Util {
 	 * @param to   The higher line number
 	 * @return A link fragment to highlight that line range
 	 */
-	static String lineFragment( int from, int to ) {
+	public static String lineFragment( int from, int to ) {
 		// Bitbucket links will be broken pending
 		// https://jira.atlassian.com/browse/BSERV-13422
 		return String.format( "#L%s-L%s,%s-%s", from, to, from, to );
@@ -56,7 +59,7 @@ class Util {
 	/**
 	 * @return A stream of all markdown files in the project
 	 */
-	static Stream<Path> markdownFiles() {
+	public static Stream<Path> markdownFiles() {
 		return files( "markdown", ".md",
 				".git", "node_modules", "src/main/java", "src/test/java" );
 	}
@@ -64,7 +67,7 @@ class Util {
 	/**
 	 * @return A stream of all java source files in the project
 	 */
-	static Stream<Path> javaFiles() {
+	public static Stream<Path> javaFiles() {
 		return files( "java", ".java",
 				".git", "node_modules" );
 	}
@@ -72,7 +75,7 @@ class Util {
 	/**
 	 * @return A stream of all XML files in the project
 	 */
-	static Stream<Path> xmlFiles() {
+	public static Stream<Path> xmlFiles() {
 		return files( "xml", ".xml",
 				".git", "node_modules" );
 	}
@@ -80,7 +83,7 @@ class Util {
 	/**
 	 * @return A stream of all component HTML templates in the project
 	 */
-	static Stream<Path> componentTemplateFiles() {
+	public static Stream<Path> componentTemplateFiles() {
 		return files( "component_template", ".component.html",
 				".git", "node_modules" );
 	}
@@ -88,7 +91,7 @@ class Util {
 	/**
 	 * @return A stream of all typescript files in the project
 	 */
-	static Stream<Path> typescriptFiles() {
+	public static Stream<Path> typescriptFiles() {
 		return files( "typescript", ".ts",
 				".git", "node_modules" );
 	}
@@ -100,7 +103,7 @@ class Util {
 	 * @return A stream of all files in the project with the given suffix that do
 	 *         not have an ignored pattern in their paths
 	 */
-	private static Stream<Path> files( String cacheKey, String suffix, String... ignore ) {
+	public static Stream<Path> files( String cacheKey, String suffix, String... ignore ) {
 		if( !FILES_CACHE.containsKey( cacheKey ) ) {
 			try {
 				SuffixForager sh = new SuffixForager( suffix, ignore );
@@ -168,13 +171,15 @@ class Util {
 	 * Regenerates a section of a file and throws a failed comparison test if the
 	 * file was altered by that act.
 	 *
-	 * @param path    The file to operate on
-	 * @param start   The line at which to insert the content
-	 * @param content How to mutate the existing content of the section
-	 * @param end     The line at which the content ends
+	 * @param path      The file to operate on
+	 * @param start     The line at which to insert the content
+	 * @param content   How to mutate the existing content of the section
+	 * @param end       The line at which the content ends
+	 * @param assertion How to assert equality
 	 * @throws Exception IO failure
 	 */
-	static void insert( Path path, String start, UnaryOperator<String> content, String end )
+	public static void insert( Path path, String start, UnaryOperator<String> content, String end,
+			Assert assertion )
 			throws Exception {
 
 		String existing = "";
@@ -220,7 +225,7 @@ class Util {
 		String newContent = regenerated.stream().collect( Collectors.joining( "\n" ) );
 		Files.write( path, newContent.getBytes( UTF_8 ) );
 
-		Assertions.assertEquals( existing, newContent,
+		assertion.assertEquals( existing, newContent,
 				path + " has been updated and needs to be committed to git" );
 	}
 
@@ -229,7 +234,7 @@ class Util {
 	 *                 file path
 	 * @return The full path to that source file
 	 */
-	static Path sourceFileFor( String fragment ) {
+	public static Path sourceFileFor( String fragment ) {
 		if( fragment.endsWith( ".xml" ) ) {
 			return xmlSourceFileFor( fragment );
 		}
@@ -241,7 +246,7 @@ class Util {
 	 *                     unambiguously find the referenced file
 	 * @return The full path to the XML file
 	 */
-	static Path xmlSourceFileFor( String pathFragment ) {
+	public static Path xmlSourceFileFor( String pathFragment ) {
 		List<Path> matches = xmlFiles()
 				.filter( p -> p.toString().replace( '\\', '/' ).contains( pathFragment ) )
 				.collect( toList() );
@@ -260,7 +265,7 @@ class Util {
 	 *                          unambiguously find the class source file
 	 * @return The source file
 	 */
-	static Path javaSourceFileFor( String classNameFragment ) {
+	public static Path javaSourceFileFor( String classNameFragment ) {
 		boolean exactMatch = false;
 		String cnf = classNameFragment;
 		if( cnf.endsWith( "!" ) ) {

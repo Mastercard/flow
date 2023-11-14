@@ -35,6 +35,7 @@
 		<module>bom</module>
 		<module>aggregator</module>
 		<module>example</module>
+		<module>autodoc</module>
 		<module>doc</module>
 	</modules>
 

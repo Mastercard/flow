@@ -15,7 +15,10 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import com.mastercard.test.flow.autodoc.Docs;
 
 /**
  * Ensures that the project diagram in the main readme accurately reflects the
@@ -60,10 +63,11 @@ class ModuleDiagramTest {
 	 */
 	@Test
 	void framework() throws Exception {
-		Util.insert( Paths.get( "../README.md" ),
+		Docs.insert( Paths.get( "../README.md" ),
 				"<!-- start_module_diagram:framework -->",
 				s -> diagram( "TB", false, "com.mastercard.test.flow" ),
-				"<!-- end_module_diagram -->" );
+				"<!-- end_module_diagram -->",
+				Assertions::assertEquals );
 	}
 
 	/**
@@ -73,12 +77,13 @@ class ModuleDiagramTest {
 	 */
 	@Test
 	void example() throws Exception {
-		Util.insert( Paths.get( "../example/README.md" ),
+		Docs.insert( Paths.get( "../example/README.md" ),
 				"<!-- start_module_diagram:example -->",
 				s -> diagram( "LR", true,
 						"com.mastercard.test.flow",
 						"com.mastercard.test.flow.example" ),
-				"<!-- end_module_diagram -->" );
+				"<!-- end_module_diagram -->",
+				Assertions::assertEquals );
 	}
 
 	private static String diagram( String orientation, boolean intergroupLinks, String... groupIDs ) {

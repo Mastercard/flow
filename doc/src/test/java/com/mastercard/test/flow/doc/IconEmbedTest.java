@@ -16,6 +16,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
+import com.mastercard.test.flow.autodoc.Docs;
 import com.mastercard.test.flow.report.QuietFiles;
 
 /**
@@ -59,7 +60,7 @@ class IconEmbedTest {
 	 */
 	@TestFactory
 	Stream<DynamicTest> icons() {
-		return Util.componentTemplateFiles()
+		return Docs.componentTemplateFiles()
 				.map( path -> dynamicTest( path.getFileName().toString(),
 						() -> {
 							Set<String> registered = new TreeSet<>();
@@ -95,7 +96,7 @@ class IconEmbedTest {
 
 	private Set<String> embeddedIcons() {
 		if( embeddedIcons.isEmpty() ) {
-			Path iconServiceSource = Util.typescriptFiles()
+			Path iconServiceSource = Docs.typescriptFiles()
 					.filter( p -> ICON_SERVICE_NAME.equals( p.getFileName().toString() ) )
 					.findFirst()
 					.orElseThrow( () -> new IllegalStateException(

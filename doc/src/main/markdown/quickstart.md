@@ -65,7 +65,7 @@ Add a dependency:
 
 <!-- snippet start -->
 
-<!-- doc/pom.xml:build -->
+<!-- /doc/pom.xml:build -->
 
 ```xml
 <dependency>
@@ -112,7 +112,7 @@ For our purposes the [`Text` message type][txt.Text] is appropriate, so we add a
 
 <!-- snippet start -->
 
-<!-- doc/pom.xml:message -->
+<!-- /doc/pom.xml:message -->
 
 ```xml
 <dependency>
@@ -198,7 +198,7 @@ To package flows together we'll need:
 
 <!-- snippet start -->
 
-<!-- doc/pom.xml:model -->
+<!-- /doc/pom.xml:model -->
 
 ```xml
 <dependency>
@@ -244,7 +244,7 @@ To use these, add a dependency:
 
 <!-- snippet start -->
 
-<!-- doc/pom.xml:validation -->
+<!-- /doc/pom.xml:validation -->
 
 ```xml
 <dependency>
@@ -289,7 +289,7 @@ Add a dependency:
 
 <!-- snippet start -->
 
-<!-- doc/pom.xml:assertion -->
+<!-- /doc/pom.xml:assertion -->
 
 ```xml
 <dependency>

@@ -108,6 +108,13 @@
 		<!-- snippet-end:assertion -->
 
 		<dependency>
+			<!-- documentation automation -->
+			<groupId>${project.groupId}</groupId>
+			<artifactId>autodoc</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
 			<!-- testing -->
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter</artifactId>
@@ -144,6 +151,7 @@
 					<skip>true</skip>
 				</configuration>
 			</plugin>
+
 		</plugins>
 	</build>
 

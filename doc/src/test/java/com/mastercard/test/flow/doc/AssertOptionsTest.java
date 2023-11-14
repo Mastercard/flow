@@ -9,10 +9,12 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.filter.FilterOptions;
+import com.mastercard.test.flow.autodoc.Docs;
 import com.mastercard.test.flow.util.Option;
 
 /**
@@ -47,10 +49,11 @@ class AssertOptionsTest {
 					o.property(), o.description() ) );
 		}
 
-		Util.insert( Paths.get( "../assert/assert-core/README.md" ),
+		Docs.insert( Paths.get( "../assert/assert-core/README.md" ),
 				"<!-- start_property_table -->",
 				c -> table.stream().collect( joining( "\n" ) ),
-				"<!-- end_property_table -->" );
+				"<!-- end_property_table -->",
+				Assertions::assertEquals );
 	}
 
 	/**
@@ -69,10 +72,11 @@ class AssertOptionsTest {
 					o.property(), o.description() ) );
 		}
 
-		Util.insert( Paths.get( "../assert/assert-filter/README.md" ),
+		Docs.insert( Paths.get( "../assert/assert-filter/README.md" ),
 				"<!-- start_property_table -->",
 				c -> table.stream().collect( joining( "\n" ) ),
-				"<!-- end_property_table -->" );
+				"<!-- end_property_table -->",
+				Assertions::assertEquals );
 	}
 
 }

@@ -16,6 +16,7 @@ import org.junit.jupiter.api.TestFactory;
 
 import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.filter.FilterOptions;
+import com.mastercard.test.flow.autodoc.Docs;
 import com.mastercard.test.flow.report.QuietFiles;
 
 /**
@@ -37,7 +38,7 @@ class PropertyTest {
 		Stream.of( AssertionOptions.values() ).forEach( o -> validProperties.add( o.property() ) );
 		Stream.of( FilterOptions.values() ).forEach( o -> validProperties.add( o.property() ) );
 
-		return Util.markdownFiles()
+		return Docs.markdownFiles()
 				.map( mdFile -> dynamicTest(
 						mdFile.toString(),
 						() -> checkProperties( mdFile, validProperties ) ) );

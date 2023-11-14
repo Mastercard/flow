@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
 
+import com.mastercard.test.flow.autodoc.Docs;
 import com.mastercard.test.flow.report.QuietFiles;
 
 /**
@@ -65,7 +66,7 @@ class DependencyTest {
 		Set<String> used = new TreeSet<>();
 
 		return Stream.concat(
-				Util.markdownFiles()
+				Docs.markdownFiles()
 						.filter( p -> !EXCLUDED.contains( p ) )
 						.map( path -> dynamicTest( path.toString(), () -> {
 							String content = new String( QuietFiles.readAllBytes( path ), UTF_8 );

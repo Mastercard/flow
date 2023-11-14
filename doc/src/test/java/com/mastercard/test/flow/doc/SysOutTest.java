@@ -16,6 +16,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
+import com.mastercard.test.flow.autodoc.Docs;
 import com.mastercard.test.flow.report.QuietFiles;
 
 /**
@@ -58,7 +59,7 @@ class SysOutTest {
 	 */
 	@TestFactory
 	Stream<DynamicTest> sysScan() {
-		return Util.javaFiles()
+		return Docs.javaFiles()
 				.filter( p -> !(SysOutTest.class.getSimpleName() + ".java")
 						.equals( p.getFileName().toString() ) )
 				.map( path -> dynamicTest(
