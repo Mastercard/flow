@@ -13,10 +13,12 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
 import com.mastercard.test.flow.autodoc.Docs;
+import com.mastercard.test.flow.autodoc.Docs.Host;
 import com.mastercard.test.flow.report.QuietFiles;
 
 /**
@@ -52,6 +54,8 @@ class IconEmbedTest {
 
 	private static Set<String> embeddedIcons = new TreeSet<>();
 
+	private static Docs docs = new Docs( "..", Host.GITHUB, Assertions::assertEquals );
+
 	/**
 	 * Checks that all mat-icon invocation in our angular templates use an embedded
 	 * SVG that actually exists in the icon service
@@ -60,7 +64,7 @@ class IconEmbedTest {
 	 */
 	@TestFactory
 	Stream<DynamicTest> icons() {
-		return Docs.componentTemplateFiles()
+		return docs.componentTemplateFiles()
 				.map( path -> dynamicTest( path.getFileName().toString(),
 						() -> {
 							Set<String> registered = new TreeSet<>();
@@ -96,7 +100,7 @@ class IconEmbedTest {
 
 	private Set<String> embeddedIcons() {
 		if( embeddedIcons.isEmpty() ) {
-			Path iconServiceSource = Docs.typescriptFiles()
+			Path iconServiceSource = docs.typescriptFiles()
 					.filter( p -> ICON_SERVICE_NAME.equals( p.getFileName().toString() ) )
 					.findFirst()
 					.orElseThrow( () -> new IllegalStateException(

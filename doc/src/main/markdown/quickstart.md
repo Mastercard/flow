@@ -54,7 +54,7 @@ public static String getGreetingResponse( String input ) {
 	return output;
 }
 ```
-[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/BenSys.java#L15-L23,15-23)
+[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/BenSys.java#L15-L23)
 
 <!-- snippet end -->
 
@@ -74,7 +74,7 @@ Add a dependency:
 	<artifactId>builder</artifactId>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L34-L38,34-38)
+[Snippet context](../../../pom.xml#L34-L38)
 
 <!-- snippet end -->
 
@@ -89,7 +89,7 @@ enum Actors implements Actor {
 	AVA, BEN,
 }
 ```
-[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/Actors.java#L10-L12,10-12)
+[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/Actors.java#L10-L12)
 
 <!-- snippet end -->
 
@@ -121,7 +121,7 @@ For our purposes the [`Text` message type][txt.Text] is appropriate, so we add a
 	<artifactId>message-text</artifactId>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L42-L46,42-46)
+[Snippet context](../../../pom.xml#L42-L46)
 
 <!-- snippet end -->
 
@@ -145,7 +145,7 @@ private Flow polite = Creator.build( flow -> flow
 				.request( new Text( "Hello Ben, how are you today?" ) )
 				.response( new Text( "I am well, thanks for asking." ) ) ) );
 ```
-[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/Greetings.java#L21-L29,21-29)
+[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/Greetings.java#L21-L29)
 
 <!-- snippet end -->
 
@@ -180,7 +180,7 @@ private Flow rude = Deriver.build( polite, flow -> flow
 				i -> i.request().set( ", .*", ", I profoundly despise you!" ),
 				i -> i.response().set( ".+", "The feeling is mutual!" ) ) );
 ```
-[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/Greetings.java#L33-L40,33-40)
+[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/Greetings.java#L33-L40)
 
 <!-- snippet end -->
 
@@ -207,7 +207,7 @@ To package flows together we'll need:
 	<artifactId>model</artifactId>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L60-L64,60-64)
+[Snippet context](../../../pom.xml#L60-L64)
 
 <!-- snippet end -->
 
@@ -224,7 +224,7 @@ public Greetings() {
 	members( flatten( polite, rude ) );
 }
 ```
-[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/Greetings.java#L44-L48,44-48)
+[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/Greetings.java#L44-L48)
 
 <!-- snippet end -->
 
@@ -254,7 +254,7 @@ To use these, add a dependency:
 	<scope>test</scope>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L93-L98,93-98)
+[Snippet context](../../../pom.xml#L93-L98)
 
 <!-- snippet end -->
 
@@ -273,7 +273,7 @@ Stream<DynamicNode> checks() {
 			.tests();
 }
 ```
-[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/ValidationTest.java#L21-L27,21-27)
+[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/ValidationTest.java#L21-L27)
 
 <!-- snippet end -->
 
@@ -299,7 +299,7 @@ Add a dependency:
 	<scope>test</scope>
 </dependency>
 ```
-[Snippet context](../../../pom.xml#L102-L107,102-107)
+[Snippet context](../../../pom.xml#L102-L107)
 
 <!-- snippet end -->
 
@@ -324,7 +324,7 @@ Stream<DynamicNode> tests() {
 			.tests();
 }
 ```
-[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/AssertionTest.java#L24-L36,24-36)
+[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/AssertionTest.java#L24-L36)
 
 <!-- snippet end -->
 

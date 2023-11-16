@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
 import com.mastercard.test.flow.autodoc.Docs;
+import com.mastercard.test.flow.autodoc.Docs.Host;
 import com.mastercard.test.flow.autodoc.RelativeLink;
 
 /**
@@ -31,9 +32,12 @@ class LinkTest {
 	 */
 	@TestFactory
 	Stream<DynamicTest> markdown() {
-		return Docs.markdownFiles()
-				.map( mdFile -> dynamicTest( mdFile.toString(),
-						() -> RelativeLink.check( mdFile, Assertions::assertEquals ) ) );
+		Docs docs = new Docs( "..", Host.GITHUB, Assertions::assertEquals );
+		RelativeLink link = new RelativeLink( docs );
+		return docs.markdownFiles()
+				.map( mdFile -> dynamicTest(
+						mdFile.toString(),
+						() -> link.check( mdFile ) ) );
 	}
 	// snippet-end:relative_link_usage
 }

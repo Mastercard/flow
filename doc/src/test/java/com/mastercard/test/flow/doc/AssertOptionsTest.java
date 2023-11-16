@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.filter.FilterOptions;
 import com.mastercard.test.flow.autodoc.Docs;
+import com.mastercard.test.flow.autodoc.Docs.Host;
 import com.mastercard.test.flow.util.Option;
 
 /**
@@ -23,6 +24,7 @@ import com.mastercard.test.flow.util.Option;
  */
 @SuppressWarnings("static-method")
 class AssertOptionsTest {
+	private static Docs docs = new Docs( "..", Host.GITHUB, Assertions::assertEquals );
 
 	/**
 	 * Keeps the system property table in the assert-core readme fresh
@@ -49,11 +51,10 @@ class AssertOptionsTest {
 					o.property(), o.description() ) );
 		}
 
-		Docs.insert( Paths.get( "../assert/assert-core/README.md" ),
+		docs.insert( Paths.get( "../assert/assert-core/README.md" ),
 				"<!-- start_property_table -->",
 				c -> table.stream().collect( joining( "\n" ) ),
-				"<!-- end_property_table -->",
-				Assertions::assertEquals );
+				"<!-- end_property_table -->" );
 	}
 
 	/**
@@ -72,11 +73,10 @@ class AssertOptionsTest {
 					o.property(), o.description() ) );
 		}
 
-		Docs.insert( Paths.get( "../assert/assert-filter/README.md" ),
+		docs.insert( Paths.get( "../assert/assert-filter/README.md" ),
 				"<!-- start_property_table -->",
 				c -> table.stream().collect( joining( "\n" ) ),
-				"<!-- end_property_table -->",
-				Assertions::assertEquals );
+				"<!-- end_property_table -->" );
 	}
 
 }

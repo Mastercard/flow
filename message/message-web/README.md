@@ -56,7 +56,7 @@ public static WebSequence directHistogram() {
 					.replace( "web_ui_url", "not asserted" ) );
 }
 ```
-[Snippet context](../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Messages.java#L348-L372,348-372)
+[Snippet context](../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Messages.java#L348-L372)
 
 <!-- snippet end -->
 
@@ -89,7 +89,7 @@ public static WebSequence results() {
 					.replace( "page_source", "not asserted" ) );
 }
 ```
-[Snippet context](../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Messages.java#L376-L396,376-396)
+[Snippet context](../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Messages.java#L376-L396)
 
 <!-- snippet end -->
 
@@ -108,7 +108,7 @@ The parameter maps are updated in the `hello` flow, like so:
 				"characters", "aeiou",
 				"results", "  e = 2\n  o = 1" ) )
 ```
-[Snippet context](../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Web.java#L54-L59,54-59)
+[Snippet context](../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/Web.java#L54-L59)
 
 <!-- snippet end -->
 
@@ -138,7 +138,7 @@ if( assrt.expected().request() instanceof WebSequence
 	response = results.process( driver );
 }
 ```
-[Snippet context](../../example/app-itest/src/test/java/com/mastercard/test/flow/example/app/itest/IntegrationTest.java#L114-L125,114-125)
+[Snippet context](../../example/app-itest/src/test/java/com/mastercard/test/flow/example/app/itest/IntegrationTest.java#L114-L125)
 
 <!-- snippet end -->
 

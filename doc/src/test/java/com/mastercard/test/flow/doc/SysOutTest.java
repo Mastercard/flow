@@ -13,10 +13,12 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
 import com.mastercard.test.flow.autodoc.Docs;
+import com.mastercard.test.flow.autodoc.Docs.Host;
 import com.mastercard.test.flow.report.QuietFiles;
 
 /**
@@ -26,6 +28,7 @@ import com.mastercard.test.flow.report.QuietFiles;
  */
 @SuppressWarnings("static-method")
 class SysOutTest {
+	private static Docs docs = new Docs( "..", Host.GITHUB, Assertions::assertEquals );
 
 	private static final Map<Path, Set<String>> accepted = new HashMap<>();
 	static {
@@ -59,7 +62,7 @@ class SysOutTest {
 	 */
 	@TestFactory
 	Stream<DynamicTest> sysScan() {
-		return Docs.javaFiles()
+		return docs.javaFiles()
 				.filter( p -> !(SysOutTest.class.getSimpleName() + ".java")
 						.equals( p.getFileName().toString() ) )
 				.map( path -> dynamicTest(

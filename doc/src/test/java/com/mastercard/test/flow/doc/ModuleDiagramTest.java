@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.mastercard.test.flow.autodoc.Docs;
+import com.mastercard.test.flow.autodoc.Docs.Host;
 
 /**
  * Ensures that the project diagram in the main readme accurately reflects the
@@ -30,6 +31,7 @@ import com.mastercard.test.flow.autodoc.Docs;
 @SuppressWarnings("static-method")
 class ModuleDiagramTest {
 
+	private static Docs docs = new Docs( "..", Host.GITHUB, Assertions::assertEquals );
 	/**
 	 * Projects that aren't really interesting but that stink up the diagram with
 	 * all their links
@@ -63,11 +65,10 @@ class ModuleDiagramTest {
 	 */
 	@Test
 	void framework() throws Exception {
-		Docs.insert( Paths.get( "../README.md" ),
+		docs.insert( Paths.get( "../README.md" ),
 				"<!-- start_module_diagram:framework -->",
 				s -> diagram( "TB", false, "com.mastercard.test.flow" ),
-				"<!-- end_module_diagram -->",
-				Assertions::assertEquals );
+				"<!-- end_module_diagram -->" );
 	}
 
 	/**
@@ -77,13 +78,12 @@ class ModuleDiagramTest {
 	 */
 	@Test
 	void example() throws Exception {
-		Docs.insert( Paths.get( "../example/README.md" ),
+		docs.insert( Paths.get( "../example/README.md" ),
 				"<!-- start_module_diagram:example -->",
 				s -> diagram( "LR", true,
 						"com.mastercard.test.flow",
 						"com.mastercard.test.flow.example" ),
-				"<!-- end_module_diagram -->",
-				Assertions::assertEquals );
+				"<!-- end_module_diagram -->" );
 	}
 
 	private static String diagram( String orientation, boolean intergroupLinks, String... groupIDs ) {

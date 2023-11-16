@@ -15,6 +15,7 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
 import com.mastercard.test.flow.autodoc.Docs;
+import com.mastercard.test.flow.autodoc.Docs.Host;
 
 /**
  * This test ensures that the interlinks between module readmes accurately
@@ -24,6 +25,7 @@ class ReadmeInterlinkTest {
 
 	private static final String TITLE_START = "<!-- title start -->";
 	private static final String TITLE_END = "<!-- title end -->";
+	private static Docs docs = new Docs( "..", Host.GITHUB, Assertions::assertEquals );
 
 	/**
 	 * Spiders over the pom structure and regenerates the title sections of
@@ -40,11 +42,10 @@ class ReadmeInterlinkTest {
 
 	private DynamicContainer fromPom( PomData pom ) {
 		DynamicTest readme = dynamicTest( "title", () -> {
-			Docs.insert( pom.dirPath().resolve( "README.md" ),
+			docs.insert( pom.dirPath().resolve( "README.md" ),
 					TITLE_START,
 					existing -> compliant( existing, pom ) ? existing : title( pom ),
-					TITLE_END,
-					Assertions::assertEquals );
+					TITLE_END );
 		} );
 		return dynamicContainer( pom.artifactId(),
 				Stream.concat( Stream.of( readme ),

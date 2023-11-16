@@ -33,11 +33,14 @@ Use it in a test like so:
  */
 @TestFactory
 Stream<DynamicTest> markdown() {
-	return Docs.markdownFiles()
-			.map( mdFile -> dynamicTest( mdFile.toString(),
-					() -> RelativeLink.check( mdFile, Assertions::assertEquals ) ) );
+	Docs docs = new Docs( "..", Host.GITHUB, Assertions::assertEquals );
+	RelativeLink link = new RelativeLink( docs );
+	return docs.markdownFiles()
+			.map( mdFile -> dynamicTest(
+					mdFile.toString(),
+					() -> link.check( mdFile ) ) );
 }
 ```
-[Snippet context](../doc/src/test/java/com/mastercard/test/flow/doc/LinkTest.java#L26-L37,26-37)
+[Snippet context](../doc/src/test/java/com/mastercard/test/flow/doc/LinkTest.java#L27-L41)
 
 <!-- snippet end -->

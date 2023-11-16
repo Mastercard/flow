@@ -31,18 +31,71 @@ public class Docs {
 
 	private static final Map<String, List<Path>> FILES_CACHE = new HashMap<>();
 
-	private Docs() {
-		// no instances
+	private final Path root;
+	private final Host host;
+	private final Assert assrt;
+
+	/**
+	 * Allows control over how line number link fragments are formatted.
+	 */
+	public enum Host {
+		/**
+		 * Creates line links that work on github
+		 */
+		GITHUB("#L%s", "#L%s-L%s"),
+		/**
+		 * Creates line links that work on bitbucket stash
+		 */
+		BITBUCKET("#%s", "#%s-%s");
+
+		private final String lineFormat;
+		private final String rangeFormat;
+
+		Host( String lineFormat, String rangeFormat ) {
+			this.lineFormat = lineFormat;
+			this.rangeFormat = rangeFormat;
+		}
+
+		/**
+		 * Creates a link fragment for a single line
+		 *
+		 * @param line The line number
+		 * @return a link fragment that should result in that line being highlighted
+		 */
+		public String lineFragment( int line ) {
+			return String.format( lineFormat, line );
+		}
+
+		/**
+		 * Creats a link fragment for a line range
+		 *
+		 * @param start The line number of the start of the range (inclusive)
+		 * @param end   The line number of the end of the range (inclusive)
+		 * @return a link fragment that should result in that line range being
+		 *         highlighted
+		 */
+		public String rangeFragment( int start, int end ) {
+			return String.format( rangeFormat, start, end );
+		}
+	}
+
+	/**
+	 * @param root  The project root path
+	 * @param host  Where the documents will be hosted
+	 * @param assrt How to assert object equality
+	 */
+	public Docs( String root, Host host, Assert assrt ) {
+		this.root = Paths.get( root );
+		this.host = host;
+		this.assrt = assrt;
 	}
 
 	/**
 	 * @param line The line number
 	 * @return A link fragment to highlight that line number
 	 */
-	public static String lineFragment( int line ) {
-		// Bitbucket links will be broken pending
-		// https://jira.atlassian.com/browse/BSERV-13422
-		return String.format( "#L%s,%s", line, line );
+	public String lineFragment( int line ) {
+		return host.lineFragment( line );
 	}
 
 	/**
@@ -50,16 +103,25 @@ public class Docs {
 	 * @param to   The higher line number
 	 * @return A link fragment to highlight that line range
 	 */
-	public static String lineFragment( int from, int to ) {
-		// Bitbucket links will be broken pending
-		// https://jira.atlassian.com/browse/BSERV-13422
-		return String.format( "#L%s-L%s,%s-%s", from, to, from, to );
+	public String lineFragment( int from, int to ) {
+		return host.rangeFragment( from, to );
+	}
+
+	/**
+	 * Checks that two objects are equal
+	 *
+	 * @param expected    What we expect to find
+	 * @param actual      What we actually find
+	 * @param description A human-readable description for the assertion
+	 */
+	public void assertEquals( Object expected, Object actual, String description ) {
+		assrt.assertEquals( expected, actual, description );
 	}
 
 	/**
 	 * @return A stream of all markdown files in the project
 	 */
-	public static Stream<Path> markdownFiles() {
+	public Stream<Path> markdownFiles() {
 		return files( "markdown", ".md",
 				".git", "node_modules", "src/main/java", "src/test/java" );
 	}
@@ -67,7 +129,7 @@ public class Docs {
 	/**
 	 * @return A stream of all java source files in the project
 	 */
-	public static Stream<Path> javaFiles() {
+	public Stream<Path> javaFiles() {
 		return files( "java", ".java",
 				".git", "node_modules" );
 	}
@@ -75,7 +137,7 @@ public class Docs {
 	/**
 	 * @return A stream of all XML files in the project
 	 */
-	public static Stream<Path> xmlFiles() {
+	public Stream<Path> xmlFiles() {
 		return files( "xml", ".xml",
 				".git", "node_modules" );
 	}
@@ -83,7 +145,7 @@ public class Docs {
 	/**
 	 * @return A stream of all component HTML templates in the project
 	 */
-	public static Stream<Path> componentTemplateFiles() {
+	public Stream<Path> componentTemplateFiles() {
 		return files( "component_template", ".component.html",
 				".git", "node_modules" );
 	}
@@ -91,7 +153,7 @@ public class Docs {
 	/**
 	 * @return A stream of all typescript files in the project
 	 */
-	public static Stream<Path> typescriptFiles() {
+	public Stream<Path> typescriptFiles() {
 		return files( "typescript", ".ts",
 				".git", "node_modules" );
 	}
@@ -103,11 +165,11 @@ public class Docs {
 	 * @return A stream of all files in the project with the given suffix that do
 	 *         not have an ignored pattern in their paths
 	 */
-	public static Stream<Path> files( String cacheKey, String suffix, String... ignore ) {
+	public Stream<Path> files( String cacheKey, String suffix, String... ignore ) {
 		if( !FILES_CACHE.containsKey( cacheKey ) ) {
 			try {
 				SuffixForager sh = new SuffixForager( suffix, ignore );
-				Files.walkFileTree( Paths.get( ".." ), sh );
+				Files.walkFileTree( root, sh );
 				FILES_CACHE.put( cacheKey, sh.files() );
 			}
 			catch( IOException ioe ) {
@@ -171,15 +233,13 @@ public class Docs {
 	 * Regenerates a section of a file and throws a failed comparison test if the
 	 * file was altered by that act.
 	 *
-	 * @param path      The file to operate on
-	 * @param start     The line at which to insert the content
-	 * @param content   How to mutate the existing content of the section
-	 * @param end       The line at which the content ends
-	 * @param assertion How to assert equality
+	 * @param path    The file to operate on
+	 * @param start   The line at which to insert the content
+	 * @param content How to mutate the existing content of the section
+	 * @param end     The line at which the content ends
 	 * @throws Exception IO failure
 	 */
-	public static void insert( Path path, String start, UnaryOperator<String> content, String end,
-			Assert assertion )
+	public void insert( Path path, String start, UnaryOperator<String> content, String end )
 			throws Exception {
 
 		String existing = "";
@@ -225,7 +285,7 @@ public class Docs {
 		String newContent = regenerated.stream().collect( Collectors.joining( "\n" ) );
 		Files.write( path, newContent.getBytes( UTF_8 ) );
 
-		assertion.assertEquals( existing, newContent,
+		assrt.assertEquals( existing, newContent,
 				path + " has been updated and needs to be committed to git" );
 	}
 
@@ -234,7 +294,7 @@ public class Docs {
 	 *                 file path
 	 * @return The full path to that source file
 	 */
-	public static Path sourceFileFor( String fragment ) {
+	public Path sourceFileFor( String fragment ) {
 		if( fragment.endsWith( ".xml" ) ) {
 			return xmlSourceFileFor( fragment );
 		}
@@ -246,7 +306,7 @@ public class Docs {
 	 *                     unambiguously find the referenced file
 	 * @return The full path to the XML file
 	 */
-	public static Path xmlSourceFileFor( String pathFragment ) {
+	public Path xmlSourceFileFor( String pathFragment ) {
 		List<Path> matches = xmlFiles()
 				.filter( p -> p.toString().replace( '\\', '/' ).contains( pathFragment ) )
 				.collect( toList() );
@@ -265,7 +325,7 @@ public class Docs {
 	 *                          unambiguously find the class source file
 	 * @return The source file
 	 */
-	public static Path javaSourceFileFor( String classNameFragment ) {
+	public Path javaSourceFileFor( String classNameFragment ) {
 		boolean exactMatch = false;
 		String cnf = classNameFragment;
 		if( cnf.endsWith( "!" ) ) {

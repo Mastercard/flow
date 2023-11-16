@@ -11,12 +11,14 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
 import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.filter.FilterOptions;
 import com.mastercard.test.flow.autodoc.Docs;
+import com.mastercard.test.flow.autodoc.Docs.Host;
 import com.mastercard.test.flow.report.QuietFiles;
 
 /**
@@ -27,6 +29,7 @@ import com.mastercard.test.flow.report.QuietFiles;
 class PropertyTest {
 
 	private static final Pattern PROPERTY = Pattern.compile( "(mctf\\.[a-z._]+)" );
+	private static Docs docs = new Docs( "..", Host.GITHUB, Assertions::assertEquals );
 
 	/**
 	 * @return per-file tests that throw a wobbler if we find an invalid property
@@ -38,7 +41,7 @@ class PropertyTest {
 		Stream.of( AssertionOptions.values() ).forEach( o -> validProperties.add( o.property() ) );
 		Stream.of( FilterOptions.values() ).forEach( o -> validProperties.add( o.property() ) );
 
-		return Docs.markdownFiles()
+		return docs.markdownFiles()
 				.map( mdFile -> dynamicTest(
 						mdFile.toString(),
 						() -> checkProperties( mdFile, validProperties ) ) );

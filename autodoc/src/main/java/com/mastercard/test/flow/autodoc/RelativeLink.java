@@ -15,8 +15,13 @@ public class RelativeLink {
 	private static final Pattern STD_LINK = Pattern.compile( "\\[.*?\\]\\((.*?)\\)" );
 	private static final Pattern REF_LINK = Pattern.compile( "^\\[.*?\\]: (.*)$" );
 
-	private RelativeLink() {
-		// no instances
+	private final Docs docs;
+
+	/**
+	 * @param docs How to work with the documents in the project
+	 */
+	public RelativeLink( Docs docs ) {
+		this.docs = docs;
 	}
 
 	/**
@@ -28,10 +33,9 @@ public class RelativeLink {
 	 * <li>The destination is a regular file
 	 * </ul>
 	 *
-	 * @param file  A markdown file path
-	 * @param assrt How to check test expectations
+	 * @param file A markdown file path
 	 */
-	public static void check( Path file, Assert assrt ) {
+	public void check( Path file ) {
 		try( Stream<String> lines = Files.lines( file ) ) {
 			lines.flatMap( line -> Stream.of( STD_LINK.matcher( line ), REF_LINK.matcher( line ) ) )
 					.forEach(
@@ -42,14 +46,14 @@ public class RelativeLink {
 												.toAbsolutePath()
 												.resolve( mtch.group( 1 ).replaceAll( "#.*", "" ) );
 
-										assrt.assertEquals(
+										docs.assertEquals(
 												true,
 												Files.exists( destination ),
 												String.format( "Bad link:\n%s\nin\n%s", destination, mtch.group() ) );
 
 										if( Files.isDirectory( destination ) ) {
 											try {
-												assrt.assertEquals(
+												docs.assertEquals(
 														true,
 														Files.list( destination )
 																.anyMatch( f -> "README.md".equals( f.getFileName().toString() ) ),
@@ -63,7 +67,7 @@ public class RelativeLink {
 											}
 										}
 										else {
-											assrt.assertEquals(
+											docs.assertEquals(
 													true,
 													Files.isRegularFile( destination ),
 													String.format( "Bad file link:\n%s\nfrom\n%s", destination,

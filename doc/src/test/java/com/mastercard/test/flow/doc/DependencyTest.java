@@ -23,6 +23,7 @@ import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
 
 import com.mastercard.test.flow.autodoc.Docs;
+import com.mastercard.test.flow.autodoc.Docs.Host;
 import com.mastercard.test.flow.report.QuietFiles;
 
 /**
@@ -35,6 +36,7 @@ class DependencyTest {
 	private static Pattern GRP = Pattern.compile( "<groupId>(.*)</groupId>" );
 	private static Pattern RTF = Pattern.compile( "<artifactId>(.*)</artifactId>" );
 	private static Pattern VRS = Pattern.compile( "<version>(.*)</version>" );
+	private static Docs docs = new Docs( "..", Host.GITHUB, Assertions::assertEquals );
 
 	/**
 	 * These files contain dependency declarations that aren't so trivially
@@ -66,7 +68,7 @@ class DependencyTest {
 		Set<String> used = new TreeSet<>();
 
 		return Stream.concat(
-				Docs.markdownFiles()
+				docs.markdownFiles()
 						.filter( p -> !EXCLUDED.contains( p ) )
 						.map( path -> dynamicTest( path.toString(), () -> {
 							String content = new String( QuietFiles.readAllBytes( path ), UTF_8 );

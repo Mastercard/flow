@@ -24,6 +24,7 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
 import com.mastercard.test.flow.autodoc.Docs;
+import com.mastercard.test.flow.autodoc.Docs.Host;
 
 /**
  * <p>
@@ -64,6 +65,10 @@ class SnippetTest {
 	private static final String MD_START = "<!-- snippet start -->";
 	private static final String MD_END = "<!-- snippet end -->";
 	private static final Pattern MD_SNIPPET_DESCRIPTOR = Pattern.compile( "<!-- (.*):(.*) -->" );
+	/**
+	 * How to work with documents
+	 */
+	static Docs docs = new Docs( "..", Host.GITHUB, Assertions::assertEquals );
 
 	private static final Map<String, Delimiter> SOURCE_DELIMITERS;
 	static {
@@ -85,19 +90,18 @@ class SnippetTest {
 	 */
 	@TestFactory
 	Stream<DynamicTest> markdown() throws Exception {
-		return Docs.markdownFiles()
+		return docs.markdownFiles()
 				.map( mdFile -> dynamicTest( mdFile.toString(),
-						() -> Docs.insert( mdFile,
+						() -> docs.insert( mdFile,
 								MD_START,
 								existing -> refresh( mdFile.getParent(), existing ),
-								MD_END,
-								Assertions::assertEquals ) ) );
+								MD_END ) ) );
 	}
 
 	private String refresh( Path dir, String existing ) {
 		Matcher m = MD_SNIPPET_DESCRIPTOR.matcher( existing );
 		if( m.find() ) {
-			Path src = Docs.sourceFileFor( m.group( 1 ) );
+			Path src = docs.sourceFileFor( m.group( 1 ) );
 			Snippet e = extract( src, m.group( 2 ) );
 			return String.format( ""
 					+ "%s\n"
@@ -220,7 +224,7 @@ class SnippetTest {
 			return String.format( "[%s](%s%s)",
 					text,
 					from.relativize( file ).toString().replace( '\\', '/' ),
-					Docs.lineFragment( startLine, endLine - 1 ) );
+					docs.lineFragment( startLine, endLine - 1 ) );
 		}
 	}
 

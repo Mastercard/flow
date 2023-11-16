@@ -44,7 +44,7 @@ Calling [`blockForUpdates()`][Filter!.blockForUpdates()] on a `Filter` instance 
 
 <!-- code_link_start -->
 
-[Filter!.blockForUpdates()]: src/main/java/com/mastercard/test/flow/assrt/filter/Filter.java#L158-L171,158-171
+[Filter!.blockForUpdates()]: src/main/java/com/mastercard/test/flow/assrt/filter/Filter.java#L158-L171
 
 <!-- code_link_end -->
 
@@ -59,7 +59,7 @@ Calling [`load()`][Filter!.load()] on a filter (when system property `mctf.filte
 
 <!-- code_link_start -->
 
-[Filter!.save()]: src/main/java/com/mastercard/test/flow/assrt/filter/Filter.java#L182-L188,182-188
-[Filter!.load()]: src/main/java/com/mastercard/test/flow/assrt/filter/Filter.java#L128-L142,128-142
+[Filter!.save()]: src/main/java/com/mastercard/test/flow/assrt/filter/Filter.java#L182-L188
+[Filter!.load()]: src/main/java/com/mastercard/test/flow/assrt/filter/Filter.java#L128-L142
 
 <!-- code_link_end -->
