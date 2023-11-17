@@ -92,3 +92,60 @@ same name get in the way, end the classname with `!` to signal
 that you're looking for an exact match. e.g.: if you're trying to link to
 `Foo` but the search also turns up `FooBar` then use
 link reference `Foo!`
+
+## Snippets
+
+This check copies sections of source code into your documentation. Use it by:
+ 1. Marking up the snippet source with comments
+ 1. Adding the snippet destination in your markdown
+ 1. Adding a test to enforce the markdown content
+
+Running the test will copy the snippet content into the markdown and raise a test failure if that made any changes to the document.
+
+### Source
+
+Surround the snippet content in the source file with comments like so:
+
+```java
+// snippet-start:my-snippet-name
+... interesting content...
+// snippet-end:my-snippet-name
+```
+
+### Destination
+
+Add comments of the form:
+
+<pre><code>&lt;!-- snippet start --&gt;
+&lt;!-- MyClassName:my-snippet-name --&gt;
+&lt;!-- snippet end --&gt;</code></pre>
+
+in your markdown where you want the snippet to be inserted.
+
+### Test
+
+Add a test like so:
+
+<!-- snippet start -->
+
+<!-- SnippetTest:snippets-usage -->
+
+```java
+/**
+ * Checks that code snippets in readmes are up-to-date
+ *
+ * @return per-file test instances
+ */
+@TestFactory
+Stream<DynamicTest> markdown() {
+	Docs docs = new Docs( "..", Host.GITHUB, Assertions::assertEquals );
+	Snippets snippets = new Snippets( docs );
+	return docs.markdownFiles()
+			.map( mdFile -> dynamicTest(
+					mdFile.toString(),
+					() -> snippets.check( mdFile ) ) );
+}
+```
+[Snippet context](../doc/src/test/java/com/mastercard/test/flow/doc/SnippetTest.java#L22-L35)
+
+<!-- snippet end -->
