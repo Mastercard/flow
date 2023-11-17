@@ -91,6 +91,15 @@ public class Docs {
 	}
 
 	/**
+	 * Gets the project root
+	 *
+	 * @return The project root directory
+	 */
+	public Path root() {
+		return root;
+	}
+
+	/**
 	 * @param line The line number
 	 * @return A link fragment to highlight that line number
 	 */
@@ -237,56 +246,58 @@ public class Docs {
 	 * @param start   The line at which to insert the content
 	 * @param content How to mutate the existing content of the section
 	 * @param end     The line at which the content ends
-	 * @throws Exception IO failure
 	 */
-	public void insert( Path path, String start, UnaryOperator<String> content, String end )
-			throws Exception {
-
-		String existing = "";
-		if( Files.exists( path ) ) {
-			existing = new String( Files.readAllBytes( path ), UTF_8 );
-		}
-		List<String> regenerated = new ArrayList<>();
-
-		Iterator<String> exi = Arrays.asList( existing.split( "\n", -1 ) ).iterator();
-		while( exi.hasNext() ) {
-			boolean found = false;
-			while( exi.hasNext() && !found ) {
-				String line = exi.next();
-				if( line.trim().equals( start ) ) {
-					found = true;
-					break;
-				}
-				regenerated.add( line );
+	public void insert( Path path, String start, UnaryOperator<String> content, String end ) {
+		try {
+			String existing = "";
+			if( Files.exists( path ) ) {
+				existing = new String( Files.readAllBytes( path ), UTF_8 );
 			}
-			if( found ) {
-				StringBuilder existingContent = new StringBuilder();
-				boolean endFound = false;
-				while( exi.hasNext() && !endFound ) {
+			List<String> regenerated = new ArrayList<>();
+
+			Iterator<String> exi = Arrays.asList( existing.split( "\n", -1 ) ).iterator();
+			while( exi.hasNext() ) {
+				boolean found = false;
+				while( exi.hasNext() && !found ) {
 					String line = exi.next();
-					if( line.trim().equals( end ) ) {
-						endFound = true;
+					if( line.trim().equals( start ) ) {
+						found = true;
+						break;
 					}
-					else {
-						existingContent.append( line ).append( "\n" );
-					}
+					regenerated.add( line );
 				}
+				if( found ) {
+					StringBuilder existingContent = new StringBuilder();
+					boolean endFound = false;
+					while( exi.hasNext() && !endFound ) {
+						String line = exi.next();
+						if( line.trim().equals( end ) ) {
+							endFound = true;
+						}
+						else {
+							existingContent.append( line ).append( "\n" );
+						}
+					}
 
-				// add the new content
-				regenerated.add( start );
-				regenerated.add( "" );
-				regenerated.add( content.apply( existingContent.toString().trim() ) );
-				regenerated.add( "" );
-				regenerated.add( end );
+					// add the new content
+					regenerated.add( start );
+					regenerated.add( "" );
+					regenerated.add( content.apply( existingContent.toString().trim() ) );
+					regenerated.add( "" );
+					regenerated.add( end );
+				}
 			}
+
+			// write the file
+			String newContent = regenerated.stream().collect( Collectors.joining( "\n" ) );
+			Files.write( path, newContent.getBytes( UTF_8 ) );
+
+			assrt.assertEquals( existing, newContent,
+					path + " has been updated and needs to be committed to git" );
 		}
-
-		// write the file
-		String newContent = regenerated.stream().collect( Collectors.joining( "\n" ) );
-		Files.write( path, newContent.getBytes( UTF_8 ) );
-
-		assrt.assertEquals( existing, newContent,
-				path + " has been updated and needs to be committed to git" );
+		catch( IOException ioe ) {
+			throw new UncheckedIOException( "Failed to insert content in " + path, ioe );
+		}
 	}
 
 	/**

@@ -13,12 +13,7 @@ import com.mastercard.test.flow.autodoc.Docs.Host;
 import com.mastercard.test.flow.autodoc.RelativeLink;
 
 /**
- * Checks the validity of relative links in markdown files. A link is valid if
- * either:
- * <ul>
- * <li>The destination is a directory that contains a README.md file</li>
- * <li>The destination is a regular file</li>
- * </ul>
+ * Applies {@link RelativeLink} to the documents in this project
  */
 @SuppressWarnings("static-method")
 class LinkTest {

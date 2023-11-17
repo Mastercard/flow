@@ -8,7 +8,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
- * Checks the validity of relative links in markdown documents.
+ * Checks the validity of relative links in markdown documents. A link is valid
+ * if it points to a regular file or to a directory that contains a
+ * <code>README.md</code> file.
  */
 public class RelativeLink {
 
