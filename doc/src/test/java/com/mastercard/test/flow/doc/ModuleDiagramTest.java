@@ -1,18 +1,22 @@
 
 package com.mastercard.test.flow.doc;
 
+import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toSet;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -62,7 +66,7 @@ class ModuleDiagramTest {
 	void framework() throws Exception {
 		Util.insert( Paths.get( "../README.md" ),
 				"<!-- start_module_diagram:framework -->",
-				s -> diagram( "TB", false, "com.mastercard.test.flow" ),
+				s -> diagram( "TB", "com.mastercard.test.flow" ),
 				"<!-- end_module_diagram -->" );
 	}
 
@@ -75,22 +79,28 @@ class ModuleDiagramTest {
 	void example() throws Exception {
 		Util.insert( Paths.get( "../example/README.md" ),
 				"<!-- start_module_diagram:example -->",
-				s -> diagram( "LR", true,
+				s -> diagram( "LR",
 						"com.mastercard.test.flow",
 						"com.mastercard.test.flow.example" ),
 				"<!-- end_module_diagram -->" );
 	}
 
-	private static String diagram( String orientation, boolean intergroupLinks, String... groupIDs ) {
+	private static String diagram( String orientation, String... groupIDs ) {
+		Arrays.sort( groupIDs );
 		PomData root = new PomData( null, Paths.get( "../pom.xml" ) );
 
 		Set<String> artifacts = new HashSet<>();
 		root.visit( pd -> artifacts.add( pd.coords() ) );
 		artifacts.removeAll( OCCULTED );
 
-		Map<String, List<PomData>> groups = new TreeMap<>();
-		root.visit( pd -> groups.computeIfAbsent( pd.groupId(), g -> new ArrayList<>() ).add( pd ) );
+		// from groupId to list of artifacts in that group
+		Map<String, Set<PomData>> groups = new TreeMap<>();
+		root.visit( pd -> groups
+				.computeIfAbsent( pd.groupId(), g -> new TreeSet<>( comparing( PomData::artifactId ) ) )
+				.add( pd ) );
+		groups.keySet().removeIf( g -> Arrays.binarySearch( groupIDs, g ) < 0 );
 
+		// from artifact coordinate to list of dependents of that artifact
 		Map<String, List<Link>> links = new HashMap<>();
 		root.visit( pd -> pd.dependencies()
 				.filter( dd -> !dd.optional() )
@@ -108,28 +118,36 @@ class ModuleDiagramTest {
 								pd.groupId(),
 								pd.artifactId() ) ) ) );
 
+		// remove links that don't fit in the requested groups
+		links.values().forEach( ll -> ll.removeIf( l -> !l.within( groupIDs ) ) );
+
+		// remove artifacts with no dependencies (e.g.: parent poms
+		groups.values().forEach( arts -> arts.removeIf(
+				pd -> !links.values().stream()
+						.map( ll -> ll.stream()
+								.filter( l -> l.involves( pd ) )
+								.findAny() )
+						.filter( Optional::isPresent )
+						.map( Optional::get )
+						.findAny().isPresent() ) );
+
 		StringBuilder mermaid = new StringBuilder( "```mermaid\ngraph " )
 				.append( orientation )
 				.append( "\n" );
 
-		for( String groupID : groupIDs ) {
-			mermaid.append( "  subgraph " ).append( groupID ).append( "\n" );
-			groups.get( groupID )
-					.stream()
-					.sorted( Comparator.comparing( PomData::artifactId ) )
-					.forEach( pom -> links.getOrDefault( pom.coords(), Collections.emptyList() ).stream()
-							.filter( Link::intraGroup )
-							.forEach( l -> mermaid.append( "  " ).append( l ) ) );
+		groups.forEach( ( groupId, pomdatas ) -> {
+			mermaid.append( "  subgraph " ).append( groupId ).append( "\n" );
+			pomdatas.stream()
+					.sorted( comparing( PomData::artifactId ) )
+					.forEach( pd -> mermaid.append( "    " ).append( pd.artifactId() ).append( "\n" ) );
 			mermaid.append( "  end\n" );
-		}
+		} );
 
-		if( intergroupLinks ) {
-			links.values().stream()
-					.flatMap( List::stream )
-					.sorted( Comparator.comparing( Link::fromArtifactId ) )
-					.filter( l -> !l.intraGroup() )
-					.forEach( l -> mermaid.append( l ) );
-		}
+		links.values().stream()
+				.flatMap( List::stream )
+				.sorted( Comparator.comparing( Link::fromArtifactId ) )
+
+				.forEach( l -> mermaid.append( l ) );
 
 		mermaid.append( "```" );
 		return mermaid.toString();
@@ -152,8 +170,22 @@ class ModuleDiagramTest {
 			this.toArtifact = toArtifact;
 		}
 
-		public boolean intraGroup() {
-			return fromGroup.equals( toGroup );
+		/**
+		 * @param pd An artifact
+		 * @return <code>true</code> if this link involves that artifact
+		 */
+		public boolean involves( PomData pd ) {
+			return fromGroup.equals( pd.groupId() ) && fromArtifact.equals( pd.artifactId() )
+					|| toGroup.equals( pd.groupId() ) && toArtifact.equals( pd.artifactId() );
+		}
+
+		/**
+		 * @param groupIds A set of groupIds
+		 * @return <code>true</code> if this link involves only those groupIds
+		 */
+		public boolean within( String... groupIds ) {
+			return Arrays.binarySearch( groupIds, fromGroup ) >= 0
+					&& Arrays.binarySearch( groupIds, toGroup ) >= 0;
 		}
 
 		public String fromArtifactId() {

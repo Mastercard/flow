@@ -69,61 +69,93 @@ graph TD
 ```mermaid
 graph LR
   subgraph com.mastercard.test.flow
-    api --> message-core
-    api --> builder
-    api --> model
-    api --> validation-core
-    api --> report-core
-    assert-core --> assert-junit4
-    assert-core --> assert-junit5
-    assert-filter --> assert-core
-    message-core --> message-http
-    message-core --> message-json
-    message-core --> message-sql
-    message-core --> message-text
-    message-core --> message-web
-    message-core --> message-xml
-    report-core --> assert-filter
-    report-core --> duct
-    report-ng --> report-core
-    validation-core --> validation-junit4
-    validation-core --> validation-junit5
-    validation-core --> coppice
+    api
+    assert-core
+    assert-filter
+    assert-junit4
+    assert-junit5
+    builder
+    coppice
+    duct
+    message-core
+    message-http
+    message-json
+    message-sql
+    message-text
+    message-web
+    message-xml
+    model
+    report-core
+    report-ng
+    validation-core
+    validation-junit4
+    validation-junit5
   end
   subgraph com.mastercard.test.flow.example
-    app-api --> app-web-ui
-    app-api --> app-ui
-    app-api --> app-core
-    app-api --> app-histogram
-    app-api --> app-queue
-    app-api --> app-store
-    app-api --> app-model
-    app-assert -.-> app-web-ui
-    app-assert -.-> app-ui
-    app-assert -.-> app-core
-    app-assert -.-> app-histogram
-    app-assert -.-> app-queue
-    app-assert -.-> app-store
-    app-assert -.-> app-itest
-    app-core --> app-itest
-    app-framework --> app-api
-    app-histogram --> app-itest
-    app-model --> app-assert
-    app-queue --> app-itest
-    app-store --> app-itest
-    app-ui --> app-itest
-    app-web-ui --> app-itest
+    app-api
+    app-assert
+    app-core
+    app-framework
+    app-histogram
+    app-itest
+    app-model
+    app-queue
+    app-store
+    app-ui
+    app-web-ui
   end
+  api --> message-core
+  api --> builder
+  api --> model
+  api --> validation-core
+  api --> report-core
+  app-api --> app-web-ui
+  app-api --> app-ui
+  app-api --> app-core
+  app-api --> app-histogram
+  app-api --> app-queue
+  app-api --> app-store
+  app-api --> app-model
+  app-assert -.-> app-web-ui
+  app-assert -.-> app-ui
+  app-assert -.-> app-core
+  app-assert -.-> app-histogram
+  app-assert -.-> app-queue
+  app-assert -.-> app-store
+  app-assert -.-> app-itest
+  app-core --> app-itest
+  app-framework --> app-api
+  app-histogram --> app-itest
+  app-model --> app-assert
+  app-queue --> app-itest
+  app-store --> app-itest
+  app-ui --> app-itest
+  app-web-ui --> app-itest
+  assert-core --> assert-junit4
+  assert-core --> assert-junit5
+  assert-filter --> assert-core
   assert-junit5 --> app-assert
   builder --> app-model
   coppice -.-> app-model
   duct --> app-assert
+  message-core --> message-http
+  message-core --> message-json
+  message-core --> message-sql
+  message-core --> message-text
+  message-core --> message-web
+  message-core --> message-xml
   message-http --> app-model
   message-json --> app-model
   message-sql --> app-model
   message-text --> app-model
   message-web --> app-model
   model --> app-model
+  report-core --> assert-filter
+  report-core --> duct
+  report-ng --> report-core
+  validation-core --> validation-junit4
+  validation-core --> validation-junit5
+  validation-core --> coppice
   validation-junit5 -.-> app-model
 ```
 
