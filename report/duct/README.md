@@ -27,6 +27,7 @@ After [importing the `bom`](../../bom):
   <!-- local report server -->
   <groupId>com.mastercard.test.flow</groupId>
   <artifactId>duct</artifactId>
+  <scope>test</scope>
 </dependency>
 ```
 
