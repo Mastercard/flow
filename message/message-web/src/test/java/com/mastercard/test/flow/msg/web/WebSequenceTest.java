@@ -151,9 +151,9 @@ class WebSequenceTest {
 		UncheckedIOException uioe = assertThrows( UncheckedIOException.class,
 				() -> ws.peer( badBytes ) );
 		assertEquals( "Failed to parse '{]' ([123, 93])", uioe.getMessage() );
-		assertEquals( "Unexpected close marker ']': expected '}' "
-				+ "(for Object starting at [Source: (byte[])\"{]\"; line: 1, column: 1])\n"
-				+ " at [Source: (byte[])\"{]\"; line: 1, column: 3]",
+		assertEquals( ""
+				+ "Unexpected close marker ']': expected '}' (for Object starting at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 1])\n"
+				+ " at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 3]",
 				uioe.getCause().getMessage() );
 	}
 
