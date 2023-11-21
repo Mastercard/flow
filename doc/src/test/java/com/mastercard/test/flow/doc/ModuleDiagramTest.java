@@ -2,13 +2,12 @@
 package com.mastercard.test.flow.doc;
 
 import static java.util.Comparator.comparing;
+import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toSet;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -17,6 +16,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -66,7 +68,7 @@ class ModuleDiagramTest {
 	void framework() throws Exception {
 		Util.insert( Paths.get( "../README.md" ),
 				"<!-- start_module_diagram:framework -->",
-				s -> diagram( "TB", "com.mastercard.test.flow" ),
+				s -> diagram( "TB", l -> l.isTo( "com.mastercard.test.flow" ), s ),
 				"<!-- end_module_diagram -->" );
 	}
 
@@ -79,14 +81,12 @@ class ModuleDiagramTest {
 	void example() throws Exception {
 		Util.insert( Paths.get( "../example/README.md" ),
 				"<!-- start_module_diagram:example -->",
-				s -> diagram( "LR",
-						"com.mastercard.test.flow",
-						"com.mastercard.test.flow.example" ),
+				s -> diagram( "LR", l -> l.isTo( "com.mastercard.test.flow.example" ), s ),
 				"<!-- end_module_diagram -->" );
 	}
 
-	private static String diagram( String orientation, String... groupIDs ) {
-		Arrays.sort( groupIDs );
+	private static String diagram( String orientation, Predicate<Link> inclusion, String existing ) {
+
 		PomData root = new PomData( null, Paths.get( "../pom.xml" ) );
 
 		Set<String> artifacts = new HashSet<>();
@@ -98,7 +98,6 @@ class ModuleDiagramTest {
 		root.visit( pd -> groups
 				.computeIfAbsent( pd.groupId(), g -> new TreeSet<>( comparing( PomData::artifactId ) ) )
 				.add( pd ) );
-		groups.keySet().removeIf( g -> Arrays.binarySearch( groupIDs, g ) < 0 );
 
 		// from artifact coordinate to list of dependents of that artifact
 		Map<String, List<Link>> links = new HashMap<>();
@@ -118,18 +117,34 @@ class ModuleDiagramTest {
 								pd.groupId(),
 								pd.artifactId() ) ) ) );
 
-		// remove links that don't fit in the requested groups
-		links.values().forEach( ll -> ll.removeIf( l -> !l.within( groupIDs ) ) );
+		// remove links that don't fit in the requested diagram
+		links.values().forEach( ll -> ll.removeIf( l -> !inclusion.test( l ) ) );
+
+		Set<String> existingLinks = extractLinks( existing );
+		Set<String> desiredLinks = links.values().stream()
+				.flatMap( List::stream )
+				.map( Link::toString )
+				.collect( toCollection( TreeSet::new ) );
+		if( existingLinks.equals( desiredLinks ) ) {
+			// The existing diagram has all the links we want to show, so let's leave it as
+			// it is
+			return existing;
+			// This allows us to make manual edits for reasons of layout while still
+			// ensuring the dependency structure is correct
+		}
+
+		// The existing diagram is not accurate, so overwrite it with one that is
 
 		// remove artifacts with no dependencies (e.g.: parent poms
-		groups.values().forEach( arts -> arts.removeIf(
-				pd -> !links.values().stream()
+		groups.values().forEach( arts -> arts
+				.removeIf( pd -> !links.values().stream()
 						.map( ll -> ll.stream()
 								.filter( l -> l.involves( pd ) )
 								.findAny() )
 						.filter( Optional::isPresent )
 						.map( Optional::get )
 						.findAny().isPresent() ) );
+		groups.values().removeIf( Set::isEmpty );
 
 		StringBuilder mermaid = new StringBuilder( "```mermaid\ngraph " )
 				.append( orientation )
@@ -143,14 +158,20 @@ class ModuleDiagramTest {
 			mermaid.append( "  end\n" );
 		} );
 
-		links.values().stream()
-				.flatMap( List::stream )
-				.sorted( Comparator.comparing( Link::fromArtifactId ) )
-
-				.forEach( l -> mermaid.append( l ) );
+		desiredLinks.stream()
+				.forEach( l -> mermaid.append( "  " ).append( l ).append( "\n" ) );
 
 		mermaid.append( "```" );
 		return mermaid.toString();
+	}
+
+	private static final Set<String> extractLinks( String mermaid ) {
+		Set<String> links = new TreeSet<>();
+		Matcher m = Pattern.compile( "\\S+ -\\.?-> \\S+" ).matcher( mermaid );
+		while( m.find() ) {
+			links.add( m.group() );
+		}
+		return links;
 	}
 
 	private static class Link {
@@ -179,13 +200,8 @@ class ModuleDiagramTest {
 					|| toGroup.equals( pd.groupId() ) && toArtifact.equals( pd.artifactId() );
 		}
 
-		/**
-		 * @param groupIds A set of groupIds
-		 * @return <code>true</code> if this link involves only those groupIds
-		 */
-		public boolean within( String... groupIds ) {
-			return Arrays.binarySearch( groupIds, fromGroup ) >= 0
-					&& Arrays.binarySearch( groupIds, toGroup ) >= 0;
+		public boolean isTo( String g ) {
+			return toGroup.equals( g );
 		}
 
 		public String fromArtifactId() {
@@ -194,7 +210,7 @@ class ModuleDiagramTest {
 
 		@Override
 		public String toString() {
-			return "  " + fromArtifact + type + toArtifact + "\n";
+			return fromArtifact + type + toArtifact;
 		}
 	}
 }
