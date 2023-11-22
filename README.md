@@ -50,27 +50,48 @@ These tests produce a rich execution report, [for example](https://mastercard.gi
 ```mermaid
 graph TB
   subgraph com.mastercard.test.flow
-    api --> message-core
-    api --> builder
-    api --> model
-    api --> validation-core
-    api --> report-core
-    assert-core --> assert-junit4
-    assert-core --> assert-junit5
-    assert-filter --> assert-core
-    message-core --> message-http
-    message-core --> message-json
-    message-core --> message-sql
-    message-core --> message-text
-    message-core --> message-web
-    message-core --> message-xml
-    report-core --> assert-filter
-    report-core --> duct
-    report-ng --> report-core
-    validation-core --> validation-junit4
-    validation-core --> validation-junit5
-    validation-core --> coppice
+    api
+    assert-core
+    assert-filter
+    assert-junit4
+    assert-junit5
+    builder
+    coppice
+    duct
+    message-core
+    message-http
+    message-json
+    message-sql
+    message-text
+    message-web
+    message-xml
+    model
+    report-core
+    report-ng
+    validation-core
+    validation-junit4
+    validation-junit5
   end
+  api --> message-core
+  api --> builder
+  api --> model
+  api --> validation-core
+  api --> report-core
+  assert-core --> assert-junit4
+  assert-core --> assert-junit5
+  assert-filter --> assert-core
+  message-core --> message-http
+  message-core --> message-json
+  message-core --> message-sql
+  message-core --> message-text
+  message-core --> message-web
+  message-core --> message-xml
+  report-core --> assert-filter
+  report-core --> duct
+  report-ng --> report-core
+  validation-core --> validation-junit4
+  validation-core --> validation-junit5
+  validation-core --> coppice
 ```
 
 <!-- end_module_diagram -->
