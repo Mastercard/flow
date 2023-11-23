@@ -69,36 +69,36 @@ graph TD
 ```mermaid
 graph LR
   subgraph core
-    builder[<a href='../builder'>builder</a>]
-    model[<a href='../model'>model</a>]
+    builder[<a href='/Mastercard/flow/tree/main/builder'>builder</a>]
+    model[<a href='/Mastercard/flow/tree/main/model'>model</a>]
   end
   subgraph message
-    message-http[<a href='../message/message-http'>message-http</a>]
-    message-json[<a href='../message/message-json'>message-json</a>]
-    message-sql[<a href='../message/message-sql'>message-sql</a>]
-    message-text[<a href='../message/message-text'>message-text</a>]
-    message-web[<a href='../message/message-web'>message-web</a>]
+    message-http[<a href='/Mastercard/flow/tree/main/message/message-http'>message-http</a>]
+    message-json[<a href='/Mastercard/flow/tree/main/message/message-json'>message-json</a>]
+    message-sql[<a href='/Mastercard/flow/tree/main/message/message-sql'>message-sql</a>]
+    message-text[<a href='/Mastercard/flow/tree/main/message/message-text'>message-text</a>]
+    message-web[<a href='/Mastercard/flow/tree/main/message/message-web'>message-web</a>]
   end
   subgraph validation
-    validation-junit5[<a href='../validation/validation-junit5'>validation-junit5</a>]
-    coppice[<a href='../validation/coppice'>coppice</a>]
+    validation-junit5[<a href='/Mastercard/flow/tree/main/validation/validation-junit5'>validation-junit5</a>]
+    coppice[<a href='/Mastercard/flow/tree/main/validation/coppice'>coppice</a>]
   end
   subgraph assert
-    assert-junit5[<a href='../assert/assert-junit5'>assert-junit5</a>]
-    duct[<a href='../report/duct'>duct</a>]
+    assert-junit5[<a href='/Mastercard/flow/tree/main/assert/assert-junit5'>assert-junit5</a>]
+    duct[<a href='/Mastercard/flow/tree/main/report/duct'>duct</a>]
   end
   subgraph example
-    app-api[<a href='app-api'>app-api</a>]
-    app-assert[<a href='app-assert'>app-assert</a>]
-    app-core[<a href='app-core'>app-core</a>]
-    app-framework[<a href='app-framework'>app-framework</a>]
-    app-histogram[<a href='app-histogram'>app-histogram</a>]
-    app-itest[<a href='app-itest'>app-itest</a>]
-    app-model[<a href='app-model'>app-model</a>]
-    app-queue[<a href='app-queue'>app-queue</a>]
-    app-store[<a href='app-store'>app-store</a>]
-    app-ui[<a href='app-ui'>app-ui</a>]
-    app-web-ui[<a href='app-web-ui'>app-web-ui</a>]
+    app-api[<a href='/Mastercard/flow/tree/main/example/app-api'>app-api</a>]
+    app-assert[<a href='/Mastercard/flow/tree/main/example/app-assert'>app-assert</a>]
+    app-core[<a href='/Mastercard/flow/tree/main/example/app-core'>app-core</a>]
+    app-framework[<a href='/Mastercard/flow/tree/main/example/app-framework'>app-framework</a>]
+    app-histogram[<a href='/Mastercard/flow/tree/main/example/app-histogram'>app-histogram</a>]
+    app-itest[<a href='/Mastercard/flow/tree/main/example/app-itest'>app-itest</a>]
+    app-model[<a href='/Mastercard/flow/tree/main/example/app-model'>app-model</a>]
+    app-queue[<a href='/Mastercard/flow/tree/main/example/app-queue'>app-queue</a>]
+    app-store[<a href='/Mastercard/flow/tree/main/example/app-store'>app-store</a>]
+    app-ui[<a href='/Mastercard/flow/tree/main/example/app-ui'>app-ui</a>]
+    app-web-ui[<a href='/Mastercard/flow/tree/main/example/app-web-ui'>app-web-ui</a>]
   end
   app-api --> app-web-ui
   app-api --> app-ui

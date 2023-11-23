@@ -70,7 +70,7 @@ class ModuleDiagramTest {
 		Path path = Paths.get( "../README.md" );
 		Util.insert( path,
 				"<!-- start_module_diagram:framework -->",
-				s -> diagram( path, "TB", l -> l.isTo( "com.mastercard.test.flow" ), s ),
+				s -> diagram( "TB", l -> l.isTo( "com.mastercard.test.flow" ), s ),
 				"<!-- end_module_diagram -->" );
 	}
 
@@ -84,11 +84,11 @@ class ModuleDiagramTest {
 		Path path = Paths.get( "../example/README.md" );
 		Util.insert( path,
 				"<!-- start_module_diagram:example -->",
-				s -> diagram( path, "LR", l -> l.isTo( "com.mastercard.test.flow.example" ), s ),
+				s -> diagram( "LR", l -> l.isTo( "com.mastercard.test.flow.example" ), s ),
 				"<!-- end_module_diagram -->" );
 	}
 
-	private static String diagram( Path docPath, String orientation, Predicate<Link> inclusion,
+	private static String diagram( String orientation, Predicate<Link> inclusion,
 			String existing ) {
 
 		PomData root = new PomData( null, Paths.get( "../pom.xml" ) );
@@ -138,7 +138,7 @@ class ModuleDiagramTest {
 		Set<String> existingModules = extractModules( existing );
 		Set<String> desiredModules = groups.values().stream()
 				.flatMap( Set::stream )
-				.map( pd -> moduleLink( docPath, pd ) )
+				.map( pd -> moduleLink( root.dirPath(), pd ) )
 				.collect( toCollection( TreeSet::new ) );
 		Set<String> existingLinks = extractLinks( existing );
 		Set<String> desiredLinks = links.values().stream()
@@ -164,7 +164,7 @@ class ModuleDiagramTest {
 			pomdatas.stream()
 					.sorted( comparing( PomData::artifactId ) )
 					.forEach( pd -> mermaid
-							.append( "    " ).append( moduleLink( docPath, pd ) ).append( "\n" ) );
+							.append( "    " ).append( moduleLink( root.dirPath(), pd ) ).append( "\n" ) );
 			mermaid.append( "  end\n" );
 		} );
 
@@ -175,10 +175,10 @@ class ModuleDiagramTest {
 		return mermaid.toString();
 	}
 
-	private static final String moduleLink( Path docPath, PomData pom ) {
-		return String.format( "%s[<a href='%s'>%s</a>]",
+	private static final String moduleLink( Path root, PomData pom ) {
+		return String.format( "%s[<a href='/Mastercard/flow/tree/main/%s'>%s</a>]",
 				pom.artifactId(),
-				docPath.getParent().relativize( pom.dirPath() ).toString().replace( '\\', '/' ),
+				root.relativize( pom.dirPath() ).toString().replace( '\\', '/' ),
 				pom.artifactId() );
 	}
 
