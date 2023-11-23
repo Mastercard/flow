@@ -5,6 +5,7 @@ import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toSet;
 
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -66,7 +67,8 @@ class ModuleDiagramTest {
 	 */
 	@Test
 	void framework() throws Exception {
-		Util.insert( Paths.get( "../README.md" ),
+		Path path = Paths.get( "../README.md" );
+		Util.insert( path,
 				"<!-- start_module_diagram:framework -->",
 				s -> diagram( "TB", l -> l.isTo( "com.mastercard.test.flow" ), s ),
 				"<!-- end_module_diagram -->" );
@@ -79,13 +81,15 @@ class ModuleDiagramTest {
 	 */
 	@Test
 	void example() throws Exception {
-		Util.insert( Paths.get( "../example/README.md" ),
+		Path path = Paths.get( "../example/README.md" );
+		Util.insert( path,
 				"<!-- start_module_diagram:example -->",
 				s -> diagram( "LR", l -> l.isTo( "com.mastercard.test.flow.example" ), s ),
 				"<!-- end_module_diagram -->" );
 	}
 
-	private static String diagram( String orientation, Predicate<Link> inclusion, String existing ) {
+	private static String diagram( String orientation, Predicate<Link> inclusion,
+			String existing ) {
 
 		PomData root = new PomData( null, Paths.get( "../pom.xml" ) );
 
@@ -120,21 +124,6 @@ class ModuleDiagramTest {
 		// remove links that don't fit in the requested diagram
 		links.values().forEach( ll -> ll.removeIf( l -> !inclusion.test( l ) ) );
 
-		Set<String> existingLinks = extractLinks( existing );
-		Set<String> desiredLinks = links.values().stream()
-				.flatMap( List::stream )
-				.map( Link::toString )
-				.collect( toCollection( TreeSet::new ) );
-		if( existingLinks.equals( desiredLinks ) ) {
-			// The existing diagram has all the links we want to show, so let's leave it as
-			// it is
-			return existing;
-			// This allows us to make manual edits for reasons of layout while still
-			// ensuring the dependency structure is correct
-		}
-
-		// The existing diagram is not accurate, so overwrite it with one that is
-
 		// remove artifacts with no dependencies (e.g.: parent poms
 		groups.values().forEach( arts -> arts
 				.removeIf( pd -> !links.values().stream()
@@ -146,6 +135,26 @@ class ModuleDiagramTest {
 						.findAny().isPresent() ) );
 		groups.values().removeIf( Set::isEmpty );
 
+		Set<String> existingModules = extractModules( existing );
+		Set<String> desiredModules = groups.values().stream()
+				.flatMap( Set::stream )
+				.map( pd -> moduleLink( root.dirPath(), pd ) )
+				.collect( toCollection( TreeSet::new ) );
+		Set<String> existingLinks = extractLinks( existing );
+		Set<String> desiredLinks = links.values().stream()
+				.flatMap( List::stream )
+				.map( Link::toString )
+				.collect( toCollection( TreeSet::new ) );
+		if( existingModules.equals( desiredModules ) && existingLinks.equals( desiredLinks ) ) {
+			// The existing diagram has all the modules and links we want to show, so let's
+			// leave it as it is
+			return existing;
+			// This allows us to make manual edits for reasons of layout while still
+			// ensuring the dependency structure is correct
+		}
+
+		// The existing diagram is not accurate, so overwrite it with one that is
+
 		StringBuilder mermaid = new StringBuilder( "```mermaid\ngraph " )
 				.append( orientation )
 				.append( "\n" );
@@ -154,7 +163,8 @@ class ModuleDiagramTest {
 			mermaid.append( "  subgraph " ).append( groupId ).append( "\n" );
 			pomdatas.stream()
 					.sorted( comparing( PomData::artifactId ) )
-					.forEach( pd -> mermaid.append( "    " ).append( pd.artifactId() ).append( "\n" ) );
+					.forEach( pd -> mermaid
+							.append( "    " ).append( moduleLink( root.dirPath(), pd ) ).append( "\n" ) );
 			mermaid.append( "  end\n" );
 		} );
 
@@ -163,6 +173,22 @@ class ModuleDiagramTest {
 
 		mermaid.append( "```" );
 		return mermaid.toString();
+	}
+
+	private static final String moduleLink( Path root, PomData pom ) {
+		return String.format( "%s[<a href='https://github.com/Mastercard/flow/tree/main/%s'>%s</a>]",
+				pom.artifactId(),
+				root.relativize( pom.dirPath() ).toString().replace( '\\', '/' ),
+				pom.artifactId() );
+	}
+
+	private static final Set<String> extractModules( String mermaid ) {
+		Set<String> modules = new TreeSet<>();
+		Matcher m = Pattern.compile( "\\S+\\[<a href='\\S+'>\\S+</a>\\]" ).matcher( mermaid );
+		while( m.find() ) {
+			modules.add( m.group() );
+		}
+		return modules;
 	}
 
 	private static final Set<String> extractLinks( String mermaid ) {
