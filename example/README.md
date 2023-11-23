@@ -67,39 +67,38 @@ graph TD
 <!-- start_module_diagram:example -->
 
 ```mermaid
-
 graph LR
   subgraph core
-    builder
-    model
+    builder[<a href='../builder'>builder</a>]
+    model[<a href='../model'>model</a>]
   end
   subgraph message
-    message-http
-    message-json
-    message-sql
-    message-text
-    message-web
+    message-http[<a href='../message/message-http'>message-http</a>]
+    message-json[<a href='../message/message-json'>message-json</a>]
+    message-sql[<a href='../message/message-sql'>message-sql</a>]
+    message-text[<a href='../message/message-text'>message-text</a>]
+    message-web[<a href='../message/message-web'>message-web</a>]
   end
   subgraph validation
-    validation-junit5
-    coppice
+    validation-junit5[<a href='../validation/validation-junit5'>validation-junit5</a>]
+    coppice[<a href='../validation/coppice'>coppice</a>]
   end
   subgraph assert
-    assert-junit5
-    duct
+    assert-junit5[<a href='../assert/assert-junit5'>assert-junit5</a>]
+    duct[<a href='../report/duct'>duct</a>]
   end
   subgraph example
-    app-api
-    app-assert
-    app-core
-    app-framework
-    app-histogram
-    app-itest
-    app-model
-    app-queue
-    app-store
-    app-ui
-    app-web-ui
+    app-api[<a href='app-api'>app-api</a>]
+    app-assert[<a href='app-assert'>app-assert</a>]
+    app-core[<a href='app-core'>app-core</a>]
+    app-framework[<a href='app-framework'>app-framework</a>]
+    app-histogram[<a href='app-histogram'>app-histogram</a>]
+    app-itest[<a href='app-itest'>app-itest</a>]
+    app-model[<a href='app-model'>app-model</a>]
+    app-queue[<a href='app-queue'>app-queue</a>]
+    app-store[<a href='app-store'>app-store</a>]
+    app-ui[<a href='app-ui'>app-ui</a>]
+    app-web-ui[<a href='app-web-ui'>app-web-ui</a>]
   end
   app-api --> app-web-ui
   app-api --> app-ui
