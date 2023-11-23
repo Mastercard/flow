@@ -176,7 +176,7 @@ class ModuleDiagramTest {
 	}
 
 	private static final String moduleLink( Path root, PomData pom ) {
-		return String.format( "%s[<a href='/Mastercard/flow/tree/main/%s'>%s</a>]",
+		return String.format( "%s[<a href='https://github.com/Mastercard/flow/tree/main/%s'>%s</a>]",
 				pom.artifactId(),
 				root.relativize( pom.dirPath() ).toString().replace( '\\', '/' ),
 				pom.artifactId() );
