@@ -241,7 +241,7 @@
 					<!-- `mvn javadoc:javadoc` to generate target/site/apidocs in each module -->
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-javadoc-plugin</artifactId>
-					<version>3.6.2</version>
+					<version>3.6.3</version>
 				</plugin>
 
 				<plugin>
