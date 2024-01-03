@@ -3,7 +3,7 @@
 
 # message-text
 
-Freeform text Message
+Freeform text messages
 
 [![javadoc](https://javadoc.io/badge2/com.mastercard.test.flow/message-text/javadoc.svg)](https://javadoc.io/doc/com.mastercard.test.flow/message-text)
 

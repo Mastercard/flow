@@ -8,7 +8,7 @@
 	</parent>
 	<artifactId>message-text</artifactId>
 	<packaging>jar</packaging>
-	<description>Freeform text Message</description>
+	<description>Freeform text messages</description>
 
 	<dependencies>
 		<dependency>

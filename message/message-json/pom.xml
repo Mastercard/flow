@@ -8,7 +8,7 @@
 	</parent>
 	<artifactId>message-json</artifactId>
 	<packaging>jar</packaging>
-	<description>JavaScript Object Notation Messages</description>
+	<description>JavaScript Object Notation messages</description>
 
 	<dependencies>
 		<dependency>
