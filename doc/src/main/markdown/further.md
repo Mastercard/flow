@@ -325,6 +325,8 @@ For an example of this usage, see the [`ExampleSystemTest.hashes()`][ExampleSyst
 
 This test will fail if the expected hash values are not updated as the system model is changed, so the change reviewer can look at the diff on this test to see at a glance which parts of the system have been impacted by a change.
 
+Note that [field-masking operations can be supplied][MessageHash.hashing(Actor,Include,Consumer)] when you specify your message hashes - this allows you remove or overwrite dynamic fields in your model to achieve consistent hashing results.
+
 ### Report diff tool
 
 The flow framework uses an inheritance mechanism (deriving a new flow from an existing one) to effectively compress the set of test data that we use to exercise a tested system. This compression makes it easier to make sweeping changes to test data with small edits to the flow construction code, but by the same token it can be difficult to understand the impact of those small changes.
@@ -338,6 +340,7 @@ Full instructions for using the diff tool are provided [here](../../../../report
 
 [MessageHash]: ../../../../validation/validation-core/src/main/java/com/mastercard/test/flow/validation/MessageHash.java
 [ExampleSystemTest]: ../../../../example/app-model/src/test/java/com/mastercard/test/flow/example/app/model/ExampleSystemTest.java
+[MessageHash.hashing(Actor,Include,Consumer)]: ../../../../validation/validation-core/src/main/java/com/mastercard/test/flow/validation/MessageHash.java#L140-L154,140-154
 
 <!-- code_link_end -->
 

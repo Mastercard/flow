@@ -1,12 +1,19 @@
 package com.mastercard.test.flow.validation;
 
+import static com.mastercard.test.flow.validation.MessageHash.Include.REQUESTS;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
@@ -18,6 +25,7 @@ import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.Model;
+import com.mastercard.test.flow.util.Bytes;
 import com.mastercard.test.flow.validation.MessageHash.Include;
 
 /**
@@ -125,6 +133,29 @@ class MessageHashTest {
 				"D41D8CD98F00B204E9800998ECF8427E 0001 0 B",
 				"RESPONSES <-- CHE",
 				"8D777F385D3DFEC8815D20F7496026DC 0001 4 B" );
+	}
+
+	/**
+	 * Showing that when masking operations are requested, they are applied to a
+	 * child of the messages in the model
+	 *
+	 * @throws NoSuchAlgorithmException This would be surprising
+	 */
+	@Test
+	void masking() throws NoSuchAlgorithmException {
+
+		String expectedHashedContent = "child of 'request' with updates {dynamic field=static value}";
+		int expectedLength = expectedHashedContent.length();
+		MessageDigest digest = MessageDigest.getInstance( "MD5" );
+		String expectedHash = Bytes.toHex( digest.digest( expectedHashedContent.getBytes( UTF_8 ) ) );
+
+		MessageHash masking = new MessageHash( Assertions::assertEquals )
+				.hashing( BEN, REQUESTS, m -> m.set( "dynamic field", "static value" ) );
+
+		masking.expect( model(
+				flow( ntr( AVA, "request", BEN, "response" ) ) ),
+				"REQUESTS --> BEN",
+				expectedHash + " 0001 " + expectedLength + " B" );
 	}
 
 	/**
@@ -270,6 +301,28 @@ class MessageHashTest {
 	private static Message msg( String content ) {
 		Message msg = mock( Message.class );
 		when( msg.content() ).thenReturn( content.getBytes( UTF_8 ) );
+
+		Map<String, String> childUpdates = new TreeMap<>();
+		Message child = mock( Message.class );
+
+		doAnswer( inv -> {
+			childUpdates.put( inv.getArgument( 0 ), inv.getArgument( 1 ) );
+			return null;
+		} )
+				.when( child )
+				.set( any(), any() );
+
+		when( child.content() )
+				.thenAnswer( inv -> {
+					String s = String.format(
+							"child of '%s' with updates %s",
+							content, childUpdates );
+					System.out.println( s );
+					return s.getBytes( UTF_8 );
+				} );
+
+		when( msg.child() ).thenReturn( child );
+
 		return msg;
 	}
 }
