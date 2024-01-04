@@ -8,7 +8,7 @@
 	</parent>
 	<artifactId>message-xml</artifactId>
 	<packaging>jar</packaging>
-	<description>Extensible Markup Language Messages</description>
+	<description>Extensible Markup Language messages</description>
 
 	<dependencies>
 		<dependency>

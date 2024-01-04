@@ -8,7 +8,7 @@
 	</parent>
 	<artifactId>message-http</artifactId>
 	<packaging>jar</packaging>
-	<description>HypterText Transfer Protocol messages</description>
+	<description>HyperText Transfer Protocol messages</description>
 
 	<dependencies>
 		<dependency>
