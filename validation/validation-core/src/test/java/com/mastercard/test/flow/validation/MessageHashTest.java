@@ -144,7 +144,7 @@ class MessageHashTest {
 	@Test
 	void masking() throws NoSuchAlgorithmException {
 
-		String expectedHashedContent = "child of 'request' with updates {dynamic field=static value}";
+		String expectedHashedContent = "child of 'hash this!' with updates {dynamic field=static value}";
 		int expectedLength = expectedHashedContent.length();
 		MessageDigest digest = MessageDigest.getInstance( "MD5" );
 		String expectedHash = Bytes.toHex( digest.digest( expectedHashedContent.getBytes( UTF_8 ) ) );
@@ -153,7 +153,8 @@ class MessageHashTest {
 				.hashing( BEN, REQUESTS, m -> m.set( "dynamic field", "static value" ) );
 
 		masking.expect( model(
-				flow( ntr( AVA, "request", BEN, "response" ) ) ),
+				flow( ntr( AVA, "hash this!", BEN, "but not this" ) ),
+				flow( ntr( BEN, "or this", CHE, "and definitley not this" ) ) ),
 				"REQUESTS --> BEN",
 				expectedHash + " 0001 " + expectedLength + " B" );
 	}
