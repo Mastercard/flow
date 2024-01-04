@@ -318,7 +318,6 @@ class MessageHashTest {
 					String s = String.format(
 							"child of '%s' with updates %s",
 							content, childUpdates );
-					System.out.println( s );
 					return s.getBytes( UTF_8 );
 				} );
 
