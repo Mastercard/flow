@@ -348,13 +348,13 @@ class DuctTest {
 				"    'skip' : 1,",
 				"    'error' : 1",
 				"  },",
-				"  'path' : '%maskedroot%_flow_report_duct_target_DuctTest_valid/'",
+				"  'path' : '%maskedroot%_report_duct_target_DuctTest_valid/'",
 				"} ]" ),
 				copypasta( DuctTestUtil.index( Duct.PORT ).body
 						// the path is absolute, and we obviously can't know where this project is
 						// checked out
 						.replaceFirst(
-								"(\"path\" : \").*(_flow_report_duct_target_DuctTest_valid/\")",
+								"(\"path\" : \").*(_report_duct_target_DuctTest_valid/\")",
 								"$1%maskedroot%$2" ) ),
 				"the same call added the report to the existing instance" );
 	}
