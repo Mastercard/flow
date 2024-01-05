@@ -1,3 +1,18 @@
+<a name="v1.1.2"></a>
+# [v1.1.2](https://github.com/Mastercard/flow/releases/tag/v1.1.2) - 05 Jan 2024
+
+<!-- Release notes generated using configuration in .github/release.yml at v1.1.2 -->
+
+## What's Changed
+### Other Changes
+* Release build fix by [@therealryan](https://github.com/therealryan) in https://github.com/Mastercard/flow/pull/679
+
+
+**Full Changelog**: https://github.com/Mastercard/flow/compare/v1.1.1...v1.1.2
+
+[Changes][v1.1.2]
+
+
 <a name="v1.1.1"></a>
 # [v1.1.1](https://github.com/Mastercard/flow/releases/tag/v1.1.1) - 05 Jan 2024
 
@@ -720,6 +735,7 @@
 [Changes][v0.0.3]
 
 
+[v1.1.2]: https://github.com/Mastercard/flow/compare/v1.1.1...v1.1.2
 [v1.1.1]: https://github.com/Mastercard/flow/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/Mastercard/flow/compare/v1.0.0...v1.1.0
 [v1.0.0]: https://github.com/Mastercard/flow/compare/v0.0.16...v1.0.0
