@@ -39,13 +39,13 @@ jobs:
       run: mvn -B -Dnode=system package
 
     - name: Save flow execution reports
-      uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # v4.0.0
+      uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
       with:
         name: flow_execution_reports
         path: 'example/**/target/mctf/latest'
 
     - name: Save angular coverage reports
-      uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # v4.0.0
+      uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
       with:
         name: angular_coverage
         path: 'report/report-ng/coverage'
