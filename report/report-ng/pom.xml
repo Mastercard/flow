@@ -123,7 +123,7 @@ Build with
 
 		<profile>
 			<id>node-local</id>
-			<!-- Use this profile if you *don't* have node and yarn installed on your 
+			<!-- Use this profile if you *don't* have node and npm installed on your 
 				system. Maven will create a local installation (in your home directory) of 
 				the tools it needs -->
 			<activation>
@@ -143,31 +143,30 @@ Build with
 						<artifactId>frontend-maven-plugin</artifactId>
 						<configuration>
 							<nodeVersion>v14.15.1</nodeVersion>
-							<yarnVersion>v1.22.17</yarnVersion>
 							<installDirectory>${user.home}/.node</installDirectory>
 						</configuration>
 						<executions>
 							<execution>
 								<id>install node and npm</id>
 								<goals>
-									<goal>install-node-and-yarn</goal>
+									<goal>install-node-and-npm</goal>
 								</goals>
 								<phase>initialize</phase>
 							</execution>
 							<execution>
-								<id>yarn install</id>
+								<id>npm install</id>
 								<goals>
-									<goal>yarn</goal>
+									<goal>npm</goal>
 								</goals>
 								<phase>initialize</phase>
 								<configuration>
-									<arguments>install --mutex network</arguments>
+									<arguments>install</arguments>
 								</configuration>
 							</execution>
 							<execution>
-								<id>yarn run build</id>
+								<id>npm run build</id>
 								<goals>
-									<goal>yarn</goal>
+									<goal>npm</goal>
 								</goals>
 								<phase>generate-resources</phase>
 								<configuration>
@@ -196,18 +195,17 @@ Build with
 						<artifactId>frontend-maven-plugin</artifactId>
 						<configuration>
 							<nodeVersion>v14.15.1</nodeVersion>
-							<yarnVersion>v1.22.17</yarnVersion>
 							<installDirectory>${user.home}/.node</installDirectory>
 						</configuration>
 						<executions>
 							<execution>
-								<id>yarn run test</id>
+								<id>npm run test</id>
 								<goals>
-									<goal>yarn</goal>
+									<goal>npm</goal>
 								</goals>
 								<phase>test</phase>
 								<configuration>
-									<arguments>test</arguments>
+									<arguments>run test</arguments>
 								</configuration>
 							</execution>
 						</executions>
@@ -218,7 +216,7 @@ Build with
 
 		<profile>
 			<id>node-system</id>
-			<!-- Use this profile if you *do* have node and yarn installed, and you'd 
+			<!-- Use this profile if you *do* have node and npm installed, and you'd 
 				prefer to use those -->
 			<activation>
 				<property>
@@ -237,28 +235,26 @@ Build with
 						<artifactId>exec-maven-plugin</artifactId>
 						<executions>
 							<execution>
-								<id>yarn install</id>
+								<id>npm install</id>
 								<goals>
 									<goal>exec</goal>
 								</goals>
 								<phase>initialize</phase>
 								<configuration>
-									<executable>yarn</executable>
+									<executable>npm</executable>
 									<arguments>
 										<argument>install</argument>
-										<argument>--mutex</argument>
-										<argument>network</argument>
 									</arguments>
 								</configuration>
 							</execution>
 							<execution>
-								<id>yarn run build</id>
+								<id>npm run build</id>
 								<goals>
 									<goal>exec</goal>
 								</goals>
 								<phase>generate-resources</phase>
 								<configuration>
-									<executable>yarn</executable>
+									<executable>npm</executable>
 									<arguments>
 										<argument>run</argument>
 										<argument>build</argument>
@@ -286,14 +282,15 @@ Build with
 						<artifactId>exec-maven-plugin</artifactId>
 						<executions>
 							<execution>
-								<id>yarn run test</id>
+								<id>npm run test</id>
 								<goals>
 									<goal>exec</goal>
 								</goals>
 								<phase>test</phase>
 								<configuration>
-									<executable>yarn</executable>
+									<executable>npm</executable>
 									<arguments>
+										<argument>run</argument>
 										<argument>test</argument>
 									</arguments>
 								</configuration>
