@@ -16,11 +16,6 @@ jobs:
     env:
       LANG: en_GB
     steps:
-    - name: Harden Runner
-      uses: step-security/harden-runner@eb238b55efaa70779f274895e782ed17c84f2895 # v2.6.1
-      with:
-        egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
     - name: Set up JDK 8
@@ -61,11 +56,6 @@ jobs:
     continue-on-error: true
     concurrency: pages_branch
     steps:
-    - name: Harden Runner
-      uses: step-security/harden-runner@eb238b55efaa70779f274895e782ed17c84f2895 # v2.6.1
-      with:
-        egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-
     - name: Checkout
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
