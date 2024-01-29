@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           ref: main
-      - uses: rhysd/changelog-from-release/action@ce14e29aaf6ccba000120b741292eabe1d7ea485 # v3.7.1
+      - uses: rhysd/changelog-from-release/action@f2daf5ee230a1fff1bec36729e4240a28c8ad008 # v3.7.2
         with:
           file: CHANGELOG.md
           github_token: ${{ secrets.GITHUB_TOKEN }}
