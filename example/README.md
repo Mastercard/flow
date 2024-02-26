@@ -69,36 +69,36 @@ graph TD
 ```mermaid
 graph LR
   subgraph core
-    builder[<a href='https://github.com/Mastercard/flow/tree/main/builder'>builder</a>]
-    model[<a href='https://github.com/Mastercard/flow/tree/main/model'>model</a>]
+    builder[builder]
+    model[model]
   end
   subgraph message
-    message-http[<a href='https://github.com/Mastercard/flow/tree/main/message/message-http'>message-http</a>]
-    message-json[<a href='https://github.com/Mastercard/flow/tree/main/message/message-json'>message-json</a>]
-    message-sql[<a href='https://github.com/Mastercard/flow/tree/main/message/message-sql'>message-sql</a>]
-    message-text[<a href='https://github.com/Mastercard/flow/tree/main/message/message-text'>message-text</a>]
-    message-web[<a href='https://github.com/Mastercard/flow/tree/main/message/message-web'>message-web</a>]
+    message-http[message-http]
+    message-json[message-json]
+    message-sql[message-sql]
+    message-text[message-text]
+    message-web[message-web]
   end
   subgraph validation
-    validation-junit5[<a href='https://github.com/Mastercard/flow/tree/main/validation/validation-junit5'>validation-junit5</a>]
-    coppice[<a href='https://github.com/Mastercard/flow/tree/main/validation/coppice'>coppice</a>]
+    validation-junit5[validation-junit5]
+    coppice[coppice]
   end
   subgraph assert
-    assert-junit5[<a href='https://github.com/Mastercard/flow/tree/main/assert/assert-junit5'>assert-junit5</a>]
-    duct[<a href='https://github.com/Mastercard/flow/tree/main/report/duct'>duct</a>]
+    assert-junit5[assert-junit5]
+    duct[duct]
   end
   subgraph example
-    app-api[<a href='https://github.com/Mastercard/flow/tree/main/example/app-api'>app-api</a>]
-    app-assert[<a href='https://github.com/Mastercard/flow/tree/main/example/app-assert'>app-assert</a>]
-    app-core[<a href='https://github.com/Mastercard/flow/tree/main/example/app-core'>app-core</a>]
-    app-framework[<a href='https://github.com/Mastercard/flow/tree/main/example/app-framework'>app-framework</a>]
-    app-histogram[<a href='https://github.com/Mastercard/flow/tree/main/example/app-histogram'>app-histogram</a>]
-    app-itest[<a href='https://github.com/Mastercard/flow/tree/main/example/app-itest'>app-itest</a>]
-    app-model[<a href='https://github.com/Mastercard/flow/tree/main/example/app-model'>app-model</a>]
-    app-queue[<a href='https://github.com/Mastercard/flow/tree/main/example/app-queue'>app-queue</a>]
-    app-store[<a href='https://github.com/Mastercard/flow/tree/main/example/app-store'>app-store</a>]
-    app-ui[<a href='https://github.com/Mastercard/flow/tree/main/example/app-ui'>app-ui</a>]
-    app-web-ui[<a href='https://github.com/Mastercard/flow/tree/main/example/app-web-ui'>app-web-ui</a>]
+    app-api[app-api]
+    app-assert[app-assert]
+    app-core[app-core]
+    app-framework[app-framework]
+    app-histogram[app-histogram]
+    app-itest[app-itest]
+    app-model[app-model]
+    app-queue[app-queue]
+    app-store[app-store]
+    app-ui[app-ui]
+    app-web-ui[app-web-ui]
   end
   app-api --> app-web-ui
   app-api --> app-ui
