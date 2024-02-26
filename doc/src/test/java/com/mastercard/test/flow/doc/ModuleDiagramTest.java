@@ -175,16 +175,30 @@ class ModuleDiagramTest {
 		return mermaid.toString();
 	}
 
+	/**
+	 * Pending https://github.com/orgs/community/discussions/106690
+	 */
+	private static boolean RENDER_LINKS = false;
+
 	private static final String moduleLink( Path root, PomData pom ) {
-		return String.format( "%s[<a href='https://github.com/Mastercard/flow/tree/main/%s'>%s</a>]",
-				pom.artifactId(),
-				root.relativize( pom.dirPath() ).toString().replace( '\\', '/' ),
-				pom.artifactId() );
+		if( RENDER_LINKS ) {
+			return String.format( "%s[<a href='https://github.com/Mastercard/flow/tree/main/%s'>%s</a>]",
+					pom.artifactId(),
+					root.relativize( pom.dirPath() ).toString().replace( '\\', '/' ),
+					pom.artifactId() );
+		}
+		return String.format( "%s[%s]", pom.artifactId(), pom.artifactId() );
 	}
 
 	private static final Set<String> extractModules( String mermaid ) {
 		Set<String> modules = new TreeSet<>();
-		Matcher m = Pattern.compile( "\\S+\\[<a href='\\S+'>\\S+</a>\\]" ).matcher( mermaid );
+		Matcher m;
+		if( RENDER_LINKS ) {
+			m = Pattern.compile( "\\S+\\[<a href='\\S+'>\\S+</a>\\]" ).matcher( mermaid );
+		}
+		else {
+			m = Pattern.compile( "\\S+\\[\\S+\\]" ).matcher( mermaid );
+		}
 		while( m.find() ) {
 			modules.add( m.group() );
 		}
