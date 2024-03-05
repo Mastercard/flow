@@ -42,9 +42,10 @@ public class StoreImp implements Store {
 		catch( NoSuchAlgorithmException e ) {
 			throw new IllegalStateException( e );
 		}
-		DB.update( db, "INSERT INTO item ( id, data, hash ) VALUES ( ?, ?, ? ) "
+		int rows = DB.update( db, "INSERT INTO item ( id, data, hash ) VALUES ( ?, ?, ? ) "
 				+ "ON DUPLICATE KEY UPDATE data = ?, hash = ?",
 				key, data, hash, data, hash );
+		LOG.info( "Updated {} rows", rows );
 	}
 
 	@Override
@@ -74,7 +75,8 @@ public class StoreImp implements Store {
 	public String delete( String key ) {
 		LOG.info( "Deleting {}", key );
 		String value = retrieve( key );
-		DB.update( db, "DELETE FROM item WHERE id = ?", key );
+		int rows = DB.update( db, "DELETE FROM item WHERE id = ?", key );
+		LOG.info( "Deleted {} rows", rows );
 		return value;
 	}
 
