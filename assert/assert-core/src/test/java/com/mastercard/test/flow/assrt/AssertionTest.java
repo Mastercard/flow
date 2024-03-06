@@ -114,15 +114,15 @@ class AssertionTest {
 		tf.execute();
 
 		assertEquals( copypasta(
-				"COMPARE abc []",
+				"COMPARE abcde []",
 				"com.mastercard.test.flow.assrt.TestModel.abcde(TestModel.java:_) A->B [] request",
 				" | A request to B | A request to B |",
 				"",
-				"COMPARE abc []",
+				"COMPARE abcde []",
 				"com.mastercard.test.flow.assrt.TestModel.abcde(TestModel.java:_) D->E [] request",
 				" | D request to E | D request to E |",
 				"",
-				"COMPARE abc []",
+				"COMPARE abcde []",
 				"com.mastercard.test.flow.assrt.TestModel.abcde(TestModel.java:_) A->B [] response",
 				" | B response to A | B response to A |" ),
 				copypasta( tf.events() ) );

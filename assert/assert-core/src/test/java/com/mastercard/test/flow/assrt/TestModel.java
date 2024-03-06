@@ -62,32 +62,26 @@ public class TestModel {
 	 * @return A model with a single flow, calling from A to B to C to D to E
 	 */
 	public static Model abcde() {
-		Flow abc = Creator.build( flow -> flow
-				.meta( data -> data
-						.description( "abc" ) )
-				.call( a -> a
-						.from( Actors.A )
-						.to( Actors.B )
-						.request( new Text( "A request to B" ) )
-						.call( b -> b
-								.to( Actors.C )
-								.request( new Text( "B request to C" ) )
-								.call( c -> c
-										.to( Actors.D )
-										.request( new Text( "C request to D" ) )
-										.call( d -> d
-												.to( Actors.E )
-												.request( new Text( "D request to E" ) )
-												.response( new Text( "E response to D" ) ) )
-										.response( new Text( "D response to C" ) ) )
-								.response( new Text( "C response to B" ) ) )
-						.response( new Text( "B response to A" ) ) ) );
+		Flow abc = abc().flows().findFirst().get();
 
-		return new Mdl().withFlows( abc );
+		Flow abcde = Deriver.build( abc, flow -> flow
+				.meta( data -> data
+						.description( "abcde" ) )
+				.addCall( i -> i.responder() == Actors.C, c -> c
+						.to( Actors.D )
+						.request( new Text( "C request to D" ) )
+						.call( d -> d
+								.to( Actors.E )
+								.request( new Text( "D request to E" ) )
+								.response( new Text( "E response to D" ) ) )
+						.response( new Text( "D response to C" ) ) ) );
+
+		return new Mdl().withFlows( abcde );
 	}
 
 	/**
-	 * @return A model with a single flow, calling from A to B to C
+	 * @return A model with a two flows, both calling from A to B to C, and one
+	 *         being a child of the other
 	 */
 	public static Model abcWithChild() {
 		Flow abc = Creator.build( flow -> flow
