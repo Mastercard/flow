@@ -10,6 +10,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -38,6 +39,10 @@ public class Result extends AbstractMessage<Result> {
 	 * Field address to use to update the column list
 	 */
 	public static final String COLUMNS = "columns";
+	/**
+	 * Field address to use to update the affected row count
+	 */
+	public static final String ROW_COUNT = "row_count";
 	private static final Pattern ROW_COL_PTRN = Pattern.compile(
 			"(\\d+):(\\d+)" );
 
@@ -53,7 +58,8 @@ public class Result extends AbstractMessage<Result> {
 	public Result( String... columns ) {
 		this( () -> new ResultSetStructure(
 				new ArrayList<>( Arrays.asList( columns ) ),
-				new ArrayList<>() ) );
+				new ArrayList<>(),
+				null ) );
 	}
 
 	private Result( byte[] bytes ) {
@@ -87,6 +93,13 @@ public class Result extends AbstractMessage<Result> {
 				data.columns.clear();
 				Stream.of( String.valueOf( update.value() ).split( "," ) )
 						.forEach( data.columns::add );
+			}
+			else if( ROW_COUNT.equals( update.field() ) ) {
+				data.affectedRowCount = Optional.ofNullable( update.value() )
+						.map( String::valueOf )
+						.filter( s -> s.matches( "\\d+" ) )
+						.map( Integer::valueOf )
+						.orElse( null );
 			}
 			else if( update.field().matches( "\\d+" ) ) {
 				// whole-row operations
@@ -181,6 +194,10 @@ public class Result extends AbstractMessage<Result> {
 			return new ArrayList<>( data.columns );
 		}
 
+		if( ROW_COUNT.equals( field ) ) {
+			return data.affectedRowCount;
+		}
+
 		if( field.matches( "\\d+" ) ) {
 			int row = Integer.parseInt( field );
 			if( data.maps.size() > row ) {
@@ -218,10 +235,21 @@ public class Result extends AbstractMessage<Result> {
 				.collect( toList() );
 	}
 
+	/**
+	 * @return The number of affected rows, or <code>null</code> if this message
+	 *         does not model the result of a data manipulation query
+	 */
+	public Integer affectedRowCount() {
+		return data().affectedRowCount;
+	}
+
 	@Override
 	protected String asHuman() {
 		StringBuilder sb = new StringBuilder();
 		ResultSetStructure data = data();
+		if( data.affectedRowCount != null ) {
+			return String.format( "%s affected rows", data.affectedRowCount );
+		}
 		String colfmt = "%" + data.columns.stream()
 				.mapToInt( String::length )
 				.max().orElse( 0 ) + "s";
@@ -271,11 +299,16 @@ public class Result extends AbstractMessage<Result> {
 		@JsonProperty("rows")
 		private final List<List<TypedKVP<Integer>>> rows;
 
+		@JsonProperty("affected_row_count")
+		Integer affectedRowCount;
+
 		public ResultSetStructure(
 				@JsonProperty("columns") List<String> columns,
-				@JsonProperty("rows") List<List<TypedKVP<Integer>>> rows ) {
+				@JsonProperty("rows") List<List<TypedKVP<Integer>>> rows,
+				@JsonProperty("affected_row_count") Integer affectedRowCount ) {
 			this.columns = columns;
 			this.rows = rows;
+			this.affectedRowCount = affectedRowCount;
 
 			maps = new ArrayList<>();
 			rows.forEach( row -> {
