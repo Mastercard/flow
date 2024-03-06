@@ -39,6 +39,11 @@ class ListenerTest {
 					}
 
 					@Override
+					public void dependencies() {
+						events.add( "dependencies" );
+					}
+
+					@Override
 					public void ordering() {
 						events.add( "ordering" );
 					}
@@ -88,6 +93,7 @@ class ListenerTest {
 
 		assertEquals( copypasta(
 				"filtering",
+				"dependencies",
 				"ordering",
 				"flow : abc []",
 				"context : TestContext",

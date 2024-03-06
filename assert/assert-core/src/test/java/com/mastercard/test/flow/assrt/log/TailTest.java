@@ -30,7 +30,7 @@ class TailTest {
 	}
 
 	private static final Tail LOG_TAIL = new Tail( LOG_PATH,
-			"^(?<level>[A-Z]+) (?<time>\\d+) (?<source>[a-z]+)" );
+			"^(?<level>[A-Z]+) \\[\\w+\\] (?<time>\\d+) (?<source>[a-z]+)" );
 
 	/**
 	 * Exercises extracting content from a file that grows as {@link Flow}s are
@@ -41,44 +41,44 @@ class TailTest {
 		Flow a = new Flw( "a []" );
 		Flow b = new Flw( "b []" );
 
-		log( "INFO 001 foosrc This line is before the tail started" );
+		log( "INFO [main] 001 foosrc This line is before the tail started" );
 
 		LOG_TAIL.start( a );
 
-		log( "INFO 002 foosrc This line is after the tail started",
-				"WARN 003 barsrc there's about to be some multline content!",
+		log( "INFO [main] 002 foosrc This line is after the tail started",
+				"WARN [thread1] 003 barsrc there's about to be some multline content!",
 				"    Here is content from the previous line's event!",
 				"    and there's more!",
-				"INFO 004 foosrc here's another event" );
+				"INFO [thread2] 004 foosrc here's another event" );
 
 		LOG_TAIL.start( b );
 
 		log( "    here is more content from the previous event!",
-				"TRACE 005 bazsrc This event will be shared by both flows" );
+				"TRACE [thread1] 005 bazsrc This event will be shared by both flows" );
 
 		Stream<LogEvent> ae = LOG_TAIL.end( a );
 
-		log( "TRACE 006 bazsrc This event is just for b" );
+		log( "TRACE [main] 006 bazsrc This event is just for b" );
 
 		Stream<LogEvent> be = LOG_TAIL.end( b );
 
-		log( "ERROR 007 bazsrc No-one sees this one" );
+		log( "ERROR [main] 007 bazsrc No-one sees this one" );
 
 		Assertions.assertEquals( ""
-				+ "INFO/foosrc/002/This line is after the tail started\n"
-				+ "WARN/barsrc/003/there's about to be some multline content!\n"
+				+ "INFO/foosrc/002/[main]   This line is after the tail started\n"
+				+ "WARN/barsrc/003/[thread1]   there's about to be some multline content!\n"
 				+ "    Here is content from the previous line's event!\n"
 				+ "    and there's more!\n"
-				+ "INFO/foosrc/004/here's another event\n"
+				+ "INFO/foosrc/004/[thread2]   here's another event\n"
 				+ "    here is more content from the previous event!\n"
-				+ "TRACE/bazsrc/005/This event will be shared by both flows",
+				+ "TRACE/bazsrc/005/[thread1]   This event will be shared by both flows",
 				ae.map( e -> String.format( "%s/%s/%s/%s", e.level, e.source, e.time, e.message ) )
 						.collect( Collectors.joining( "\n" ) ) );
 
 		Assertions.assertEquals( ""
 				+ "?/?/?/    here is more content from the previous event!\n"
-				+ "TRACE/bazsrc/005/This event will be shared by both flows\n"
-				+ "TRACE/bazsrc/006/This event is just for b",
+				+ "TRACE/bazsrc/005/[thread1]   This event will be shared by both flows\n"
+				+ "TRACE/bazsrc/006/[main]   This event is just for b",
 				be.map( e -> String.format( "%s/%s/%s/%s", e.level, e.source, e.time, e.message ) )
 						.collect( Collectors.joining( "\n" ) ) );
 	}

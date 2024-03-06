@@ -59,7 +59,29 @@ public class TestModel {
 	}
 
 	/**
-	 * @return A model with a single flow, calling from A to B to C
+	 * @return A model with a single flow, calling from A to B to C to D to E
+	 */
+	public static Model abcde() {
+		Flow abc = abc().flows().findFirst().get();
+
+		Flow abcde = Deriver.build( abc, flow -> flow
+				.meta( data -> data
+						.description( "abcde" ) )
+				.addCall( i -> i.responder() == Actors.C, c -> c
+						.to( Actors.D )
+						.request( new Text( "C request to D" ) )
+						.call( d -> d
+								.to( Actors.E )
+								.request( new Text( "D request to E" ) )
+								.response( new Text( "E response to D" ) ) )
+						.response( new Text( "D response to C" ) ) ) );
+
+		return new Mdl().withFlows( abcde );
+	}
+
+	/**
+	 * @return A model with a two flows, both calling from A to B to C, and one
+	 *         being a child of the other
 	 */
 	public static Model abcWithChild() {
 		Flow abc = Creator.build( flow -> flow

@@ -4,6 +4,8 @@ package com.mastercard.test.flow.assrt;
 import static com.mastercard.test.flow.assrt.AbstractFlocessorTest.copypasta;
 import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
 import static com.mastercard.test.flow.assrt.TestModel.Actors.C;
+import static com.mastercard.test.flow.assrt.TestModel.Actors.D;
+import static com.mastercard.test.flow.assrt.TestModel.Actors.E;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -90,12 +92,12 @@ class AssertionTest {
 	}
 
 	/**
-	 * Adding assertions on the grandchild of the entrypoint
+	 * Adding assertions on distant descendants of the entrypoint
 	 */
 	@Test
-	void assertGrandchild() {
-		TestFlocessor tf = new TestFlocessor( "assertGrandchild", TestModel.abc() )
-				.system( State.LESS, B, C )
+	void assertDescendant() {
+		TestFlocessor tf = new TestFlocessor( "assertDescendant", TestModel.abcde() )
+				.system( State.LESS, B, C, D, E )
 				.behaviour( asrt -> {
 					// everything goes well at the entrypoint
 					asrt.actual()
@@ -105,23 +107,23 @@ class AssertionTest {
 					// and we've got a window into the system internals, so we can add intra-system
 					// assertions too
 					asrt.assertDownstream()
-							.filter( a -> a.expected().responder() == C )
+							.filter( a -> a.expected().responder() == E )
 							.forEach( a -> a.actual().request( a.expected().request().content() ) );
 				} );
 
 		tf.execute();
 
 		assertEquals( copypasta(
-				"COMPARE abc []",
-				"com.mastercard.test.flow.assrt.TestModel.abc(TestModel.java:_) A->B [] request",
+				"COMPARE abcde []",
+				"com.mastercard.test.flow.assrt.TestModel.abcde(TestModel.java:_) A->B [] request",
 				" | A request to B | A request to B |",
 				"",
-				"COMPARE abc []",
-				"com.mastercard.test.flow.assrt.TestModel.abc(TestModel.java:_) B->C [] request",
-				" | B request to C | B request to C |",
+				"COMPARE abcde []",
+				"com.mastercard.test.flow.assrt.TestModel.abcde(TestModel.java:_) D->E [] request",
+				" | D request to E | D request to E |",
 				"",
-				"COMPARE abc []",
-				"com.mastercard.test.flow.assrt.TestModel.abc(TestModel.java:_) A->B [] response",
+				"COMPARE abcde []",
+				"com.mastercard.test.flow.assrt.TestModel.abcde(TestModel.java:_) A->B [] response",
 				" | B response to A | B response to A |" ),
 				copypasta( tf.events() ) );
 	}
