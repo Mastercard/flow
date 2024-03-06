@@ -67,6 +67,7 @@ class AbstractFlocessorTest {
 		assertSame( tf, tf.applicators() );
 		assertSame( tf, tf.checkers() );
 		assertSame( tf, tf.logs( null ) );
+		assertSame( tf, tf.autonomous() );
 	}
 
 	/**
