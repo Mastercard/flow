@@ -143,7 +143,7 @@ Build with
 						<artifactId>frontend-maven-plugin</artifactId>
 						<configuration>
 							<nodeVersion>v14.15.1</nodeVersion>
-							<installDirectory>${user.home}/.node</installDirectory>
+							<installDirectory>target</installDirectory>
 						</configuration>
 						<executions>
 							<execution>
@@ -195,7 +195,7 @@ Build with
 						<artifactId>frontend-maven-plugin</artifactId>
 						<configuration>
 							<nodeVersion>v14.15.1</nodeVersion>
-							<installDirectory>${user.home}/.node</installDirectory>
+							<installDirectory>target</installDirectory>
 						</configuration>
 						<executions>
 							<execution>
