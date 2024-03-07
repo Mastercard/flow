@@ -232,9 +232,15 @@ class ReaderTest {
 
 		assertNull( Reader.mostRecent( ws.toString(), p -> true ) );
 
+		// we fully accept that it's lame to sleep in tests, but some filesystems don't
+		// have great resolution on the file modification times and we really need these
+		// reports to be clearly distinguishable on that basis
 		WriterTest.writeReport( ws.resolve( "first" ) );
+		Thread.sleep( 1000 );
 		WriterTest.writeReport( ws.resolve( "second" ) );
+		Thread.sleep( 1000 );
 		WriterTest.writeReport( ws.resolve( "third" ) );
+		Thread.sleep( 1000 );
 		WriterTest.writeReport( ws.resolve( "fourth" ) );
 
 		// render one report unrecognisable

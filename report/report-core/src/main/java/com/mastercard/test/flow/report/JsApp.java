@@ -140,15 +140,13 @@ class JsApp {
 	 *
 	 * @param payload     The data to insert into the index {@link Template}
 	 * @param destination Where to write the populated index file to
-	 * @return <code>this</code>
 	 */
-	public JsApp write( Object payload, Path destination ) {
+	public void write( Object payload, Path destination ) {
 		QuietFiles.createDirectories( destination.getParent() );
 		QuietFiles.write( destination, indexTemplate.insert(
 				payload,
 				destination.getParent().relativize( originalIndexPath.getParent() ) )
 				.getBytes( UTF_8 ) );
-		return this;
 	}
 
 	private static void copy( InputStream in, FileOutputStream out ) throws IOException {
