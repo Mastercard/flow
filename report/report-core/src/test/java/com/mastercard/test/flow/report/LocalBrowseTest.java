@@ -139,7 +139,6 @@ class LocalBrowseTest {
 				throw new IllegalArgumentException( "bad uri " + in, e );
 			}
 			catch( Exception e ) {
-				e.printStackTrace();
 				assertEquals( out, e.getMessage(), "for bad input " + in );
 			}
 		};
