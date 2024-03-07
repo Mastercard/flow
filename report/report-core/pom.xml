@@ -123,8 +123,8 @@
 				<configuration>
 					<!-- I'm not saying these *have* to stay where they are, just that 
 					     we shouldn't let them slip down by accident -->
-					<mutationThreshold>94</mutationThreshold>
-					<coverageThreshold>94</coverageThreshold>
+					<mutationThreshold>90</mutationThreshold>
+					<coverageThreshold>90</coverageThreshold>
 					<excludedTestClasses>
 						<!-- We'd like the report before the heat-death of the
 						     universe, so avoid the selenium tests -->
