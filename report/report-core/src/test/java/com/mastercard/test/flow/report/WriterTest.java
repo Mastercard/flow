@@ -88,7 +88,7 @@ class WriterTest {
 				"  1 x detail/823B8031950E57346DCE6FFD4BE56F54.html",
 				"  1 x index.html",
 				"  1 x res/3rdpartylicenses.txt",
-				" 30 x res/_digits_.<hash>.js",
+				" 31 x res/_digits_.<hash>.js",
 				"  1 x res/common.<hash>.js",
 				"  1 x res/favicon.ico",
 				"  1 x res/main.<hash>.js",
@@ -201,7 +201,7 @@ class WriterTest {
 		Assertions.assertEquals( Copy.pasta(
 				"  1 x index.html",
 				"  1 x res/3rdpartylicenses.txt",
-				" 30 x res/_digits_.<hash>.js",
+				" 31 x res/_digits_.<hash>.js",
 				"  1 x res/common.<hash>.js",
 				"  1 x res/favicon.ico",
 				"  1 x res/main.<hash>.js",
