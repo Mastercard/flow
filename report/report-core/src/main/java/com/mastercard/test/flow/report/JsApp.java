@@ -123,7 +123,7 @@ class JsApp {
 					.orElse( null );
 			if( runtime != null ) {
 				String content = new String( Files.readAllBytes( runtime ), UTF_8 );
-				String fixed = content.replaceAll( "(\\(\\d+===e\\?\"common\":e\\))", "\"res/\" + $1" );
+				String fixed = content.replaceAll( "(\\(\\d+===e\\?\"common\":e\\))", "\"res/\"+$1" );
 				if( fixed.equals( content ) ) {
 					throw new IllegalStateException( "Failed to fix chunk load path" );
 				}
@@ -140,15 +140,13 @@ class JsApp {
 	 *
 	 * @param payload     The data to insert into the index {@link Template}
 	 * @param destination Where to write the populated index file to
-	 * @return <code>this</code>
 	 */
-	public JsApp write( Object payload, Path destination ) {
+	public void write( Object payload, Path destination ) {
 		QuietFiles.createDirectories( destination.getParent() );
 		QuietFiles.write( destination, indexTemplate.insert(
 				payload,
 				destination.getParent().relativize( originalIndexPath.getParent() ) )
 				.getBytes( UTF_8 ) );
-		return this;
 	}
 
 	private static void copy( InputStream in, FileOutputStream out ) throws IOException {

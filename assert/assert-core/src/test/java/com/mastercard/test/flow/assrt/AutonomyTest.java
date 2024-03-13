@@ -33,6 +33,11 @@ class AutonomyTest {
 		if( auton != null ) {
 			tf.autonomous( auton );
 		}
+		else {
+			// show that calls to autonomous overwrites the previous call
+			tf.autonomous( Actors.B );
+			tf.autonomous();
+		}
 
 		tf.execute();
 

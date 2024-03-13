@@ -66,6 +66,12 @@ class ResultTest {
 				+ "    def : h\n"
 				+ " longer : i",
 				res.asHuman() );
+
+		res.set( Result.ROW_COUNT, 8 );
+
+		assertEquals( "8 affected rows",
+				res.asHuman(),
+				"A row count will override any result rows" );
 	}
 
 	/**
@@ -103,6 +109,25 @@ class ResultTest {
 				.set( "2", AbstractMessage.DELETE )
 				.set( "3", AbstractMessage.DELETE )
 				.set( "4.5", AbstractMessage.DELETE );
+
+		assertEquals( ""
+				+ " --- Row 0 ---\n"
+				+ "    abc : abc value\n"
+				+ "    def : null\n"
+				+ " longer : null\n"
+				+ " --- Row 1 ---\n"
+				+ "    abc : null\n"
+				+ "    def : null\n"
+				+ " longer : null",
+				res.asHuman() );
+
+		res.set( Result.ROW_COUNT, "8" );
+
+		assertEquals( "8 affected rows",
+				res.asHuman(),
+				"A row count will override any result rows" );
+
+		res.set( Result.ROW_COUNT, null );
 
 		assertEquals( ""
 				+ " --- Row 0 ---\n"
@@ -168,6 +193,19 @@ class ResultTest {
 				+ " ijk : null",
 				res.asHuman() );
 
+		res.set( Result.ROW_COUNT, "not valid" );
+
+		assertEquals( ""
+				+ " --- Row 0 ---\n"
+				+ " ghi : a\n"
+				+ " ijk : b\n"
+				+ " --- Row 1 ---\n"
+				+ " ghi : c\n"
+				+ " ijk : null",
+				res.asHuman(),
+				"The invalid row count has been ignored" );
+		assertEquals( null, res.affectedRowCount() );
+
 		Object o = new Object();
 		IllegalArgumentException iae = assertThrows( IllegalArgumentException.class,
 				() -> res.set( "0:0", o ) );
@@ -215,6 +253,12 @@ class ResultTest {
 		assertEquals( null, res.get( "3" ) );
 
 		assertEquals( "[{abc=a}, {def=b}, {longer=c}]", res.get().toString() );
+
+		assertEquals( null, res.get( Result.ROW_COUNT ) );
+
+		res.set( Result.ROW_COUNT, "8" );
+
+		assertEquals( 8, res.get( Result.ROW_COUNT ) );
 	}
 
 	/**

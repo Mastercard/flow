@@ -1,6 +1,7 @@
 
 package com.mastercard.test.flow.example.app.itest;
 
+import static com.mastercard.test.flow.assrt.Reporting.ALWAYS;
 import static com.mastercard.test.flow.assrt.Reporting.FAILURES;
 import static com.mastercard.test.flow.example.app.model.ExampleSystem.Actors.CORE;
 import static com.mastercard.test.flow.example.app.model.ExampleSystem.Actors.DB;
@@ -14,12 +15,7 @@ import static com.mastercard.test.flow.example.app.model.ExampleSystem.Unpredict
 import static com.mastercard.test.flow.example.app.model.ExampleSystem.Unpredictables.HOST;
 import static com.mastercard.test.flow.example.app.model.ExampleSystem.Unpredictables.RNG;
 
-import java.awt.Desktop;
-import java.awt.Desktop.Action;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
@@ -47,8 +43,6 @@ import com.mastercard.test.flow.example.app.model.ExampleSystem.Actors;
 import com.mastercard.test.flow.msg.http.HttpReq;
 import com.mastercard.test.flow.msg.web.WebSequence;
 
-import spark.Service;
-
 /**
  * Spins up a complete instance of the application and compares its behaviour
  * against our model
@@ -67,8 +61,6 @@ class IntegrationTest {
 		}
 	}
 
-	private static Supplier<Path> reportLocation = () -> null;
-
 	/**
 	 * Creates an instance of the application
 	 */
@@ -81,7 +73,6 @@ class IntegrationTest {
 		}
 
 		clusterManager.startCluster();
-
 	}
 
 	/**
@@ -91,40 +82,7 @@ class IntegrationTest {
 	 */
 	@AfterAll
 	public static void stopApp() throws Exception {
-
 		clusterManager.stopCluster();
-
-		if( "true".equals( System.getProperty( "mctf.itest.report.serve" ) ) ) {
-			// serve the report
-			String reportDir = reportLocation.get().toString();
-			System.out.println( "Serving " + reportDir );
-			Service service = Service.ignite()
-					.port( 0 )
-					.externalStaticFileLocation( reportDir );
-			service.staticFiles.header( "Access-Control-Allow-Origin", "*" );
-			service.init();
-			service.awaitInitialization();
-
-			// open the browser
-			URI uri = new URI( "http://localhost:" + service.port() );
-			if( Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported( Action.BROWSE ) ) {
-				System.out.println( "Opening browser to " + uri );
-				Desktop.getDesktop().browse( uri );
-			}
-			else {
-				System.out.println( "Open your browser to " + uri );
-			}
-
-			// wait it till the human is done with it
-			System.out.println( "Hit enter to shutdown the server" );
-			// noinspection ResultOfMethodCallIgnored
-			System.in.read();
-
-			// shut it down
-			service.stop();
-			service.awaitStop();
-			System.out.println( "Shutdown complete" );
-		}
 	}
 
 	/**
@@ -133,7 +91,7 @@ class IntegrationTest {
 	@TestFactory
 	Stream<DynamicNode> flows() {
 		Flocessor f = new Flocessor( "Integration test", ExampleSystem.MODEL )
-				.reporting( FAILURES )
+				.reporting( AssertionOptions.DUCT.isTrue() ? ALWAYS : FAILURES )
 				.system( State.FUL, WEB_UI, UI, CORE, QUEUE, HISTOGRAM, STORE, DB )
 				.masking( BORING, CLOCK, HOST, RNG )
 				.logs( Util.LOG_CAPTURE )
@@ -180,10 +138,6 @@ class IntegrationTest {
 					assrt.actual().response( response );
 					LOG.warn( "Complete" );
 				} );
-
-		// we need to know where the report went in order to serve it, but that only
-		// becomes apparent *after* flow processing
-		reportLocation = () -> f.report();
 
 		return f.tests();
 	}

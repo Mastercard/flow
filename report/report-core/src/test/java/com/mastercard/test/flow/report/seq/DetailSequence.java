@@ -11,6 +11,8 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
+import com.mastercard.test.flow.report.Copy;
+
 /**
  * Encapsulates the nuts and bolts of interacting with the detail page so the
  * tests can be more readable
@@ -52,8 +54,8 @@ public class DetailSequence extends AbstractSequence<DetailSequence> {
 		trace( "hasHeader", (Object[]) header );
 		WebElement h = driver.findElement( By.tagName( "mat-toolbar" ) );
 		Assertions.assertEquals(
-				copypasta( header ),
-				copypasta( h.getText() ),
+				Copy.pasta( header ),
+				Copy.pasta( h.getText() ),
 				"Header content" );
 		return this;
 	}

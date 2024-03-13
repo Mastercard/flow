@@ -152,7 +152,7 @@ public class MessageHash {
 			Predicate<Interaction> interaction,
 			Function<Interaction, Stream<Message>> messages,
 			Function<Message, byte[]> content ) {
-		hashes.add( new Hash( name, flows, interaction, messages ) );
+		hashes.add( new Hash( name, flows, interaction, messages, content ) );
 		return this;
 	}
 
@@ -179,6 +179,29 @@ public class MessageHash {
 				i -> i.responder() == responder,
 				messages,
 				Message::content );
+	}
+
+	/**
+	 * Adds a comparison to hash requests to and/or responses from a particular
+	 * {@link Actor}, while masking out dynamic fields that should not be included
+	 * in the hash.
+	 *
+	 * @param responder The actor
+	 * @param messages  The message type of interest
+	 * @param mask      How to mask out fields that should not be included in the
+	 *                  hash
+	 * @return <code>this</code>
+	 */
+	public MessageHash hashing( Actor responder, Include messages, Consumer<Message> mask ) {
+		return hashing( messages.name() + " " + messages.actorInfix + " " + responder.name(),
+				f -> true,
+				i -> i.responder() == responder,
+				messages,
+				m -> {
+					Message child = m.child();
+					mask.accept( child );
+					return child.content();
+				} );
 	}
 
 	/**
@@ -226,13 +249,15 @@ public class MessageHash {
 		public final Predicate<Flow> flows;
 		public final Predicate<Interaction> interaction;
 		public final Function<Interaction, Stream<Message>> messages;
+		public final Function<Message, byte[]> content;
 
 		public Hash( String name, Predicate<Flow> flows, Predicate<Interaction> interaction,
-				Function<Interaction, Stream<Message>> messages ) {
+				Function<Interaction, Stream<Message>> messages, Function<Message, byte[]> content ) {
 			this.name = name;
 			this.flows = flows;
 			this.interaction = interaction;
 			this.messages = messages;
+			this.content = content;
 		}
 
 		public void compute( Model model,
@@ -248,7 +273,7 @@ public class MessageHash {
 					.flatMap( Flows::interactions )
 					.filter( interaction )
 					.flatMap( messages )
-					.map( Message::content )
+					.map( content )
 					.mapToInt( b -> {
 						byte[] h = digest.digest( b );
 						for( int i = 0; i < h.length; i++ ) {

@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
-import { Flow, Index, isFlow, isIndex } from './types';
+import { DuctFlag, Flow, Index, isDuctFlag, isFlow, isIndex } from './types';
+import { DuctService } from './duct.service';
 
 // global variable defined by inline script element in index.html
 // declaration makes it available to typescript code
@@ -18,8 +19,11 @@ declare var data: any;
 export class AppComponent {
   flow?: Flow;
   index?: Index;
+  duct?: DuctFlag;
   error: boolean = false;
   error_data?: any;
+
+  constructor(private ductService: DuctService) { }
 
   ngOnInit(): void {
     if (isIndex(data)) {
@@ -28,9 +32,15 @@ export class AppComponent {
     else if (isFlow(data)) {
       this.flow = data;
     }
+    else if (isDuctFlag(data)) {
+      this.duct = data;
+    }
     else {
       this.error = true;
       this.error_data = data;
     }
+
+    this.ductService.startHeartbeat();
   }
+
 }

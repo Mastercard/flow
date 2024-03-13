@@ -3,7 +3,7 @@
 
 # message-xml
 
-Extensible Markup Language Messages
+Extensible Markup Language messages
 
 [![javadoc](https://javadoc.io/badge2/com.mastercard.test.flow/message-xml/javadoc.svg)](https://javadoc.io/doc/com.mastercard.test.flow/message-xml)
 

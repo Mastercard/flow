@@ -159,9 +159,10 @@ class QueryTest {
 						PreparedStatement ps = mock( PreparedStatement.class );
 						when( c.prepareStatement( anyString() ) ).thenReturn( ps );
 
-						if( sql.startsWith( "SELECT" ) ) {
+						Result r = (Result) ntr.response();
+						if( r.affectedRowCount() == null ) {
+							// for SELECT queries
 
-							Result r = (Result) ntr.response();
 							Deque<Map<String, Object>> rows = new ArrayDeque<>( r.get() );
 
 							AtomicReference<Map<String, Object>> current = new AtomicReference<>();
@@ -176,6 +177,11 @@ class QueryTest {
 
 							when( rs.getObject( anyString() ) )
 									.then( i -> current.get().get( i.getArgument( 0 ) ) );
+						}
+						else {
+							// for UPDATE queries
+							when( ps.executeUpdate() )
+									.thenReturn( r.affectedRowCount() );
 						}
 
 						verifies.add( () -> {

@@ -32,7 +32,7 @@ Testing framework
 
 This project provides a framework in which the flow of data in a system can be modelled.
 This model can then be used to drive testing, both of the complete system and of subsystems in isolation.
-These tests produce a rich execution report, [for example](https://mastercard.github.io/flow/execution/latest/example/app-itest/target/mctf/latest/index.html).
+These tests produce a rich execution report, [for example](https://mastercard.github.io/flow/execution/latest/app-itest/target/mctf/latest/index.html).
 
 [This document describes the motivations for this approach](doc/src/main/markdown/motivation/index.md).
 
@@ -50,26 +50,48 @@ These tests produce a rich execution report, [for example](https://mastercard.gi
 ```mermaid
 graph TB
   subgraph com.mastercard.test.flow
-    api --> message-core
-    api --> builder
-    api --> model
-    api --> validation-core
-    api --> report-core
-    assert-core --> assert-junit4
-    assert-core --> assert-junit5
-    assert-filter --> assert-core
-    message-core --> message-http
-    message-core --> message-json
-    message-core --> message-sql
-    message-core --> message-text
-    message-core --> message-web
-    message-core --> message-xml
-    report-core --> assert-filter
-    report-ng --> report-core
-    validation-core --> validation-junit4
-    validation-core --> validation-junit5
-    validation-core --> coppice
+    api[<a href='https://github.com/Mastercard/flow/tree/main/api'>api</a>]
+    assert-core[<a href='https://github.com/Mastercard/flow/tree/main/assert/assert-core'>assert-core</a>]
+    assert-filter[<a href='https://github.com/Mastercard/flow/tree/main/assert/assert-filter'>assert-filter</a>]
+    assert-junit4[<a href='https://github.com/Mastercard/flow/tree/main/assert/assert-junit4'>assert-junit4</a>]
+    assert-junit5[<a href='https://github.com/Mastercard/flow/tree/main/assert/assert-junit5'>assert-junit5</a>]
+    builder[<a href='https://github.com/Mastercard/flow/tree/main/builder'>builder</a>]
+    coppice[<a href='https://github.com/Mastercard/flow/tree/main/validation/coppice'>coppice</a>]
+    duct[<a href='https://github.com/Mastercard/flow/tree/main/report/duct'>duct</a>]
+    message-core[<a href='https://github.com/Mastercard/flow/tree/main/message/message-core'>message-core</a>]
+    message-http[<a href='https://github.com/Mastercard/flow/tree/main/message/message-http'>message-http</a>]
+    message-json[<a href='https://github.com/Mastercard/flow/tree/main/message/message-json'>message-json</a>]
+    message-sql[<a href='https://github.com/Mastercard/flow/tree/main/message/message-sql'>message-sql</a>]
+    message-text[<a href='https://github.com/Mastercard/flow/tree/main/message/message-text'>message-text</a>]
+    message-web[<a href='https://github.com/Mastercard/flow/tree/main/message/message-web'>message-web</a>]
+    message-xml[<a href='https://github.com/Mastercard/flow/tree/main/message/message-xml'>message-xml</a>]
+    model[<a href='https://github.com/Mastercard/flow/tree/main/model'>model</a>]
+    report-core[<a href='https://github.com/Mastercard/flow/tree/main/report/report-core'>report-core</a>]
+    report-ng[<a href='https://github.com/Mastercard/flow/tree/main/report/report-ng'>report-ng</a>]
+    validation-core[<a href='https://github.com/Mastercard/flow/tree/main/validation/validation-core'>validation-core</a>]
+    validation-junit4[<a href='https://github.com/Mastercard/flow/tree/main/validation/validation-junit4'>validation-junit4</a>]
+    validation-junit5[<a href='https://github.com/Mastercard/flow/tree/main/validation/validation-junit5'>validation-junit5</a>]
   end
+  api --> message-core
+  api --> builder
+  api --> model
+  api --> validation-core
+  api --> report-core
+  assert-core --> assert-junit4
+  assert-core --> assert-junit5
+  assert-filter --> assert-core
+  message-core --> message-http
+  message-core --> message-json
+  message-core --> message-sql
+  message-core --> message-text
+  message-core --> message-web
+  message-core --> message-xml
+  report-core --> assert-filter
+  report-core --> duct
+  report-ng --> report-core
+  validation-core --> validation-junit4
+  validation-core --> validation-junit5
+  validation-core --> coppice
 ```
 
 <!-- end_module_diagram -->

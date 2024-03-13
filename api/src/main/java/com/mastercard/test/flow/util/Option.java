@@ -129,6 +129,19 @@ public interface Option {
 	}
 
 	/**
+	 * Builds the commandline argument that would set this {@link Option}'s current
+	 * value in a new JVM
+	 *
+	 * @return The commandline argument, or <code>null</code> if this {@link Option}
+	 *         has no value
+	 */
+	default String commandLineArgument() {
+		return Optional.ofNullable( value() )
+				.map( v -> String.format( "-D%s=%s", property(), v ) )
+				.orElse( null );
+	}
+
+	/**
 	 * Use in try-with-resources blocks where you want an {@link Option} to have a
 	 * specific value and then revert to the previous value when the block ends
 	 *

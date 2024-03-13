@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.mastercard.test.flow</groupId>
+		<artifactId>report</artifactId>
+		<version>1.1.5-SNAPSHOT</version>
+	</parent>
+	<artifactId>duct</artifactId>
+	<packaging>jar</packaging>
+	<description>Report server</description>
+
+	<dependencies>
+
+		<dependency>
+			<!-- REST framework, used to serve the test reports -->
+			<groupId>com.sparkjava</groupId>
+			<artifactId>spark-core</artifactId>
+			<exclusions>
+				<exclusion>
+					<!-- Avoid incompatible slf4j -->
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-api</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<!-- report parsing -->
+			<groupId>${project.groupId}</groupId>
+			<artifactId>report-core</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<!-- Logging support -->
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+		<plugins>
+
+			<plugin>
+				<groupId>org.pitest</groupId>
+				<artifactId>pitest-maven</artifactId>
+				<configuration>
+					<!-- The stuff in this module is particularly hard on pitest - we've
+					     got guis, http servers, weird-looking logging, and stuff that has
+					     to live on a single known port.
+					     The end result is that we get really different mutation testing
+					     results depending on the host system, so hunting them is difficult,
+					     so these scores are fairly lax -->
+					<!-- I'm not saying these *have* to stay where they are, just that 
+					     we shouldn't let them slip down by accident -->
+					<mutationThreshold>75</mutationThreshold>
+					<coverageThreshold>85</coverageThreshold>
+					<!-- pitest minions work in a headless environment so they cannot exercise the GUI -->
+					<excludedClasses>com.mastercard.test.flow.report.duct.SystrayGui</excludedClasses>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<systemPropertyVariables>
+						<!-- If you've got test failures, set this to true' -->
+						<mctf.duct.noisy>false</mctf.duct.noisy>
+						<!-- But let's not spam ourselves with browser windows' -->
+						<mctf.suppress.browse>true</mctf.suppress.browse>
+						<!-- Or suffer a systray icon flickering in and out -->
+						<mctf.suppress.duct.gui>true</mctf.suppress.duct.gui>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
+
+		</plugins>
+	</build>
+
+</project>

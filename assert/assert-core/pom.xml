@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>assert</artifactId>
-		<version>0.0.17-SNAPSHOT</version>
+		<version>1.1.5-SNAPSHOT</version>
 	</parent>
 	<artifactId>assert-core</artifactId>
 	<packaging>jar</packaging>
@@ -16,6 +16,16 @@
 			<groupId>${project.groupId}</groupId>
 			<artifactId>assert-filter</artifactId>
 			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<!-- report serving -->
+			<groupId>${project.groupId}</groupId>
+			<artifactId>duct</artifactId>
+			<version>${project.version}</version>
+			<!-- duct is a convenience feature that brings in a load of dependencies, so
+			     we're leaving it up to client projects if they want it or not -->
+			<optional>true</optional>
 		</dependency>
 
 		<dependency>

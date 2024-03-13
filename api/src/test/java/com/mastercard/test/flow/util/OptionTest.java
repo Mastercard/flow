@@ -196,4 +196,19 @@ class OptionTest {
 		Assertions.assertEquals( "property", b.property() );
 		Assertions.assertEquals( "default", b.defaultValue() );
 	}
+
+	/**
+	 * Exercises {@link Option#commandLineArgument()}
+	 */
+	@Test
+	void commandLineArgument() {
+		try( Temporary t = TSTOPT.temporarily( "abc" ) ) {
+			assertEquals( "-Dtstopt=abc", TSTOPT.commandLineArgument() );
+		}
+
+		try( Temporary t = TSTOPT.temporarily( null ) ) {
+			assertEquals( null, TSTOPT.commandLineArgument() );
+		}
+	}
+
 }

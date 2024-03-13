@@ -1,0 +1,29 @@
+<mat-list-item>
+    <a mat-list-item href="{{report.path}}" class="content">
+        <span class="time">
+            {{time}}
+        </span>
+        &nbsp;
+        <span class="title">
+            {{report.meta.modelTitle}} &nbsp;|&nbsp; {{report.meta.testTitle}}
+        </span>
+    </a>
+    <span class="results">
+        <span class="pass" *ngIf="report.counts.pass>0">
+            <mat-icon svgIcon="check_circle_outline"></mat-icon>
+            {{report.counts.pass}}
+        </span>
+        <span class="fail" *ngIf="report.counts.fail">
+            <mat-icon svgIcon="error_outline"></mat-icon>
+            {{report.counts.fail}}
+        </span>
+        <span class="skip" *ngIf="report.counts.skip>0">
+            <mat-icon svgIcon="help_outline"></mat-icon>
+            {{report.counts.skip}}
+        </span>
+        <span class="error" *ngIf="report.counts.error>0">
+            <mat-icon svgIcon="new_releases"></mat-icon>
+            {{report.counts.error}}
+        </span>
+    </span>
+</mat-list-item>

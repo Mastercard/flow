@@ -54,7 +54,7 @@ export interface Meta {
  * @param data A data structure
  * @returns  true if the data has title and timestamp members
  */
-function isMeta(data: any): data is Meta {
+export function isMeta(data: any): data is Meta {
   return data
     && data.modelTitle != null
     && typeof data.modelTitle === 'string'
@@ -430,6 +430,25 @@ export function residueAsserted(residue: Residue): boolean {
 
 export function residueAssertionPassed(residue: Residue): boolean {
   return (residue.masked.actual ?? '') === (residue.masked.expect ?? '');
+}
+
+/**
+ * Populated onto the index page of duct
+ */
+export interface DuctFlag {
+  type: "duct";
+}
+
+/**
+ * Type guard to turn arbitrary data into our DuctFlag type
+ * @param data A data structure
+ * @returns true if the data matches the DuctFlag structure
+ */
+export function isDuctFlag(data: any): data is DuctFlag {
+  return data
+    && data.type
+    && typeof (data.type) === 'string'
+    && data.type === 'duct';
 }
 
 export const empty_message: Message = {

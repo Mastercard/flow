@@ -68,54 +68,64 @@ graph TD
 
 ```mermaid
 graph LR
-  subgraph com.mastercard.test.flow
-    api --> message-core
-    api --> builder
-    api --> model
-    api --> validation-core
-    api --> report-core
-    assert-core --> assert-junit4
-    assert-core --> assert-junit5
-    assert-filter --> assert-core
-    message-core --> message-http
-    message-core --> message-json
-    message-core --> message-sql
-    message-core --> message-text
-    message-core --> message-web
-    message-core --> message-xml
-    report-core --> assert-filter
-    report-ng --> report-core
-    validation-core --> validation-junit4
-    validation-core --> validation-junit5
-    validation-core --> coppice
+  subgraph core
+    builder[<a href='https://github.com/Mastercard/flow/tree/main/builder'>builder</a>]
+    model[<a href='https://github.com/Mastercard/flow/tree/main/model'>model</a>]
   end
-  subgraph com.mastercard.test.flow.example
-    app-api --> app-web-ui
-    app-api --> app-ui
-    app-api --> app-core
-    app-api --> app-histogram
-    app-api --> app-queue
-    app-api --> app-store
-    app-api --> app-model
-    app-assert -.-> app-web-ui
-    app-assert -.-> app-ui
-    app-assert -.-> app-core
-    app-assert -.-> app-histogram
-    app-assert -.-> app-queue
-    app-assert -.-> app-store
-    app-assert -.-> app-itest
-    app-core --> app-itest
-    app-framework --> app-api
-    app-histogram --> app-itest
-    app-model --> app-assert
-    app-queue --> app-itest
-    app-store --> app-itest
-    app-ui --> app-itest
-    app-web-ui --> app-itest
+  subgraph message
+    message-http[<a href='https://github.com/Mastercard/flow/tree/main/message/message-http'>message-http</a>]
+    message-json[<a href='https://github.com/Mastercard/flow/tree/main/message/message-json'>message-json</a>]
+    message-sql[<a href='https://github.com/Mastercard/flow/tree/main/message/message-sql'>message-sql</a>]
+    message-text[<a href='https://github.com/Mastercard/flow/tree/main/message/message-text'>message-text</a>]
+    message-web[<a href='https://github.com/Mastercard/flow/tree/main/message/message-web'>message-web</a>]
   end
+  subgraph validation
+    validation-junit5[<a href='https://github.com/Mastercard/flow/tree/main/validation/validation-junit5'>validation-junit5</a>]
+    coppice[<a href='https://github.com/Mastercard/flow/tree/main/validation/coppice'>coppice</a>]
+  end
+  subgraph assert
+    assert-junit5[<a href='https://github.com/Mastercard/flow/tree/main/assert/assert-junit5'>assert-junit5</a>]
+    duct[<a href='https://github.com/Mastercard/flow/tree/main/report/duct'>duct</a>]
+  end
+  subgraph example
+    app-api[<a href='https://github.com/Mastercard/flow/tree/main/example/app-api'>app-api</a>]
+    app-assert[<a href='https://github.com/Mastercard/flow/tree/main/example/app-assert'>app-assert</a>]
+    app-core[<a href='https://github.com/Mastercard/flow/tree/main/example/app-core'>app-core</a>]
+    app-framework[<a href='https://github.com/Mastercard/flow/tree/main/example/app-framework'>app-framework</a>]
+    app-histogram[<a href='https://github.com/Mastercard/flow/tree/main/example/app-histogram'>app-histogram</a>]
+    app-itest[<a href='https://github.com/Mastercard/flow/tree/main/example/app-itest'>app-itest</a>]
+    app-model[<a href='https://github.com/Mastercard/flow/tree/main/example/app-model'>app-model</a>]
+    app-queue[<a href='https://github.com/Mastercard/flow/tree/main/example/app-queue'>app-queue</a>]
+    app-store[<a href='https://github.com/Mastercard/flow/tree/main/example/app-store'>app-store</a>]
+    app-ui[<a href='https://github.com/Mastercard/flow/tree/main/example/app-ui'>app-ui</a>]
+    app-web-ui[<a href='https://github.com/Mastercard/flow/tree/main/example/app-web-ui'>app-web-ui</a>]
+  end
+  app-api --> app-web-ui
+  app-api --> app-ui
+  app-api --> app-core
+  app-api --> app-histogram
+  app-api --> app-queue
+  app-api --> app-store
+  app-api --> app-model
+  app-assert -.-> app-web-ui
+  app-assert -.-> app-ui
+  app-assert -.-> app-core
+  app-assert -.-> app-histogram
+  app-assert -.-> app-queue
+  app-assert -.-> app-store
+  app-assert -.-> app-itest
+  app-core --> app-itest
+  app-framework --> app-api
+  app-histogram --> app-itest
+  app-model --> app-assert
+  app-queue --> app-itest
+  app-store --> app-itest
+  app-ui --> app-itest
+  app-web-ui --> app-itest
   assert-junit5 --> app-assert
   builder --> app-model
   coppice -.-> app-model
+  duct --> app-assert
   message-http --> app-model
   message-json --> app-model
   message-sql --> app-model
@@ -123,6 +133,11 @@ graph LR
   message-web --> app-model
   model --> app-model
   validation-junit5 -.-> app-model
+
+  %% keeps subgraphs positioned correctly
+  core ~~~ message
+  message ~~~ validation
+  validation ~~~ assert
 ```
 
 <!-- end_module_diagram -->

@@ -109,7 +109,7 @@ public class Deferred extends EagerModel {
 												.call( e -> e
 														.to( Actors.DB )
 														.request( dbInsert( deferredId, text ) )
-														.response( new Result( "1" ) ) )
+														.response( new Result().set( Result.ROW_COUNT, 1 ) ) )
 												.response( httpRes( null ) ) )
 										.response( textRes( deferredId ) ) )
 								.response( coreRes(
@@ -195,7 +195,7 @@ public class Deferred extends EagerModel {
 										.to( Actors.DB )
 										.tags( add( "put" ) )
 										.request( dbInsert( deferredId, countText ) )
-										.response( new Result() ) )
+										.response( new Result().set( Result.ROW_COUNT, 1 ) ) )
 								.response( httpRes( null ) ) )
 						.response( httpRes( null ) ) )
 				.residue( new DBItems()
@@ -233,7 +233,7 @@ public class Deferred extends EagerModel {
 						.call( b -> b.to( Actors.DB )
 								.tags( add( "delete" ) )
 								.request( dbDelete( deferredId ) )
-								.response( new Result() ) )
+								.response( new Result().set( Result.ROW_COUNT, 1 ) ) )
 						.response( textRes( countText ) ) )
 				.update( UI,
 						rq( METHOD, "POST" ),

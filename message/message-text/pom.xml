@@ -4,11 +4,11 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>message</artifactId>
-		<version>0.0.17-SNAPSHOT</version>
+		<version>1.1.5-SNAPSHOT</version>
 	</parent>
 	<artifactId>message-text</artifactId>
 	<packaging>jar</packaging>
-	<description>Freeform text Message</description>
+	<description>Freeform text messages</description>
 
 	<dependencies>
 		<dependency>

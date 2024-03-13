@@ -4,7 +4,7 @@
 
 	<groupId>com.mastercard.test.flow</groupId>
 	<artifactId>parent</artifactId>
-	<version>0.0.17-SNAPSHOT</version>
+	<version>1.1.5-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>flow</name>
 	<description>Testing framework</description>
@@ -64,7 +64,8 @@
 		     exercise due to living in a headless environment, so... -->
 		<sonar.exclusions>**/example/**/*.java,
 			**/com/mastercard/test/flow/assrt/filter/gui/*.java,
-			**/com/mastercard/test/flow/validation/coppice/**/*.java</sonar.exclusions>
+			**/com/mastercard/test/flow/validation/coppice/**/*.java,
+			**/com/mastercard/test/flow/report/duct/SystrayGui.java</sonar.exclusions>
 	</properties>
 
 	<dependencyManagement>
@@ -74,7 +75,7 @@
 				<!-- JSON support -->
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-databind</artifactId>
-				<version>2.15.2</version>
+				<version>2.16.2</version>
 			</dependency>
 
 			<dependency>
@@ -88,7 +89,7 @@
 				<!-- testing -->
 				<groupId>org.junit</groupId>
 				<artifactId>junit-bom</artifactId>
-				<version>5.10.0</version>
+				<version>5.10.2</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -133,7 +134,7 @@
 			     provides automatic management of the drivers for that -->
 				<groupId>io.github.bonigarcia</groupId>
 				<artifactId>webdrivermanager</artifactId>
-				<version>5.5.3</version>
+				<version>5.7.0</version>
 			</dependency>
 
 			<dependency>
@@ -154,7 +155,7 @@
 				<!-- Logging support -->
 				<groupId>org.slf4j</groupId>
 				<artifactId>slf4j-simple</artifactId>
-				<version>2.0.9</version>
+				<version>2.0.12</version>
 			</dependency>
 
 		</dependencies>
@@ -168,7 +169,7 @@
 					<!-- junit5 support -->
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>
-					<version>3.1.2</version>
+					<version>3.2.5</version>
 				</plugin>
 
 				<plugin>
@@ -215,7 +216,7 @@
 					     a `mvn test-compile` invocation -->
 					<groupId>org.pitest</groupId>
 					<artifactId>pitest-maven</artifactId>
-					<version>1.15.0</version>
+					<version>1.15.8</version>
 					<configuration>
 						<timestampedReports>false</timestampedReports>
 						<exportLineCoverage>true</exportLineCoverage>
@@ -229,7 +230,7 @@
 						<dependency>
 							<groupId>org.pitest</groupId>
 							<artifactId>pitest-junit5-plugin</artifactId>
-							<version>1.2.0</version>
+							<version>1.2.1</version>
 						</dependency>
 					</dependencies>
 				</plugin>
@@ -240,21 +241,21 @@
 					<!-- `mvn javadoc:javadoc` to generate target/site/apidocs in each module -->
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-javadoc-plugin</artifactId>
-					<version>3.6.0</version>
+					<version>3.6.3</version>
 				</plugin>
 
 				<plugin>
 					<!-- Building the report apps without tools installed -->
 					<groupId>com.github.eirslett</groupId>
 					<artifactId>frontend-maven-plugin</artifactId>
-					<version>1.14.0</version>
+					<version>1.15.0</version>
 				</plugin>
 
 				<plugin>
 					<!-- building the report apps with installed tools -->
 					<groupId>org.codehaus.mojo</groupId>
 					<artifactId>exec-maven-plugin</artifactId>
-					<version>3.1.0</version>
+					<version>3.2.0</version>
 				</plugin>
 
 				<plugin>
@@ -400,13 +401,14 @@
 
 		<profile>
 			<!-- Sonar doesn't understand pitest output, so we fall back to jacoco to get test coverage metrics into sonar -->
+			<!-- Looking to exclude a class from coverage? Check out the `sonar.exclusions` property above! -->
 			<id>coverage</id>
 			<build>
 				<plugins>
 					<plugin>
 						<groupId>org.jacoco</groupId>
 						<artifactId>jacoco-maven-plugin</artifactId>
-						<version>0.8.10</version>
+						<version>0.8.11</version>
 						<executions>
 							<execution>
 								<id>prepare-agent</id>
@@ -469,7 +471,7 @@
 								<!-- Default to the same filters as last time -->
 								<mctf.filter.repeat>true</mctf.filter.repeat>
 								<!-- Causes the report to be presented in a browser -->
-								<mctf.itest.report.serve>true</mctf.itest.report.serve>
+								<mctf.report.serve>true</mctf.report.serve>
 							</systemPropertyVariables>
 						</configuration>
 					</plugin>

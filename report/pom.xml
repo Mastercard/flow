@@ -4,12 +4,13 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>parent</artifactId>
-		<version>0.0.17-SNAPSHOT</version>
+		<version>1.1.5-SNAPSHOT</version>
 	</parent>
 	<artifactId>report</artifactId>
 	<packaging>pom</packaging>
 	<description>Visualising assertion results</description>
 	<modules>
+		<module>duct</module>
 		<module>report-core</module>
 		<module>report-ng</module>
 	</modules>
