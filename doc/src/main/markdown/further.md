@@ -334,7 +334,7 @@ The flow framework uses an inheritance mechanism (deriving a new flow from an ex
 The model-diff tooling provided in every execution report seeks to mitigate this difficulty.
 When supplied with the URLs of two execution reports the tool will download all flow data and display and summarise the changes between the two system models.
 
-Full instructions for using the diff tool are provided [here](../../../../report/README.md).
+Full instructions for using the diff tool are provided [here](../../../../report/README.md), and a worked example is shown in [#567](https://github.com/Mastercard/flow/pull/567).
 
 <!-- code_link_start -->
 
