@@ -246,16 +246,31 @@ class MessageHashTest {
 				MessageHash.humanReadableByteCount( in ),
 				"for " + in );
 
+		test.accept( -1L, "-1 B" );
 		test.accept( 0L, "0 B" );
 		test.accept( 1L, "1 B" );
 		test.accept( 512L, "512 B" );
-		test.accept( 1023L, "1023 B" );
-		test.accept( 1024L, "1.0 KiB" );
-		test.accept( 1075L, "1.0 KiB" );
-		test.accept( 1076L, "1.1 KiB" );
-		test.accept( 1048524L, "1023.9 KiB" );
-		test.accept( 1048525L, "1.0 MiB" ); // 1 byte less than 1024*1024
-		test.accept( 1048576L, "1.0 MiB" ); // exactly 1024*1024
+
+		long oneKiB = 1024L;
+		test.accept( oneKiB - 1, "1023 B" );
+		test.accept( oneKiB, "1.0 KiB" );
+		test.accept( oneKiB + 51, "1.0 KiB" );
+		test.accept( oneKiB + 52, "1.1 KiB" );
+
+		long oneMiB = 1024L * 1024L;
+		test.accept( oneMiB - 52, "1023.9 KiB" );
+		test.accept( oneMiB - 51, "1.0 MiB" );
+		test.accept( oneMiB, "1.0 MiB" );
+		test.accept( oneMiB + 53247, "1.0 MiB" );
+		test.accept( oneMiB + 53248, "1.1 MiB" );
+
+		long oneGiB = 1024L * 1024L * 1024L;
+		test.accept( oneGiB - 52429, "1023.9 MiB" );
+		test.accept( oneGiB - 52428, "1.0 GiB" );
+		test.accept( oneGiB, "1.0 GiB" );
+		test.accept( oneGiB + 54525951, "1.0 GiB" );
+		test.accept( oneGiB + 54525952, "1.1 GiB" );
+
 		long accum = 1;
 		test.accept( accum, "1 B" );
 		accum *= 1024 * 1.5;
@@ -268,10 +283,11 @@ class MessageHashTest {
 		test.accept( accum, "5.1 TiB" );
 		accum *= 1024 * 1.5;
 		test.accept( accum, "7.6 PiB" );
-		accum *= 1024 * 1.5;
-		test.accept( accum, "8.0 EiB" );
+		accum *= 1024 * 0.75;
+		test.accept( accum, "5.7 EiB" );
 
-		test.accept( -1076L, "-1.1 KiB" );
+		test.accept( Long.MAX_VALUE, "8.0 EiB" );
+		test.accept( Long.MIN_VALUE, "-8.0 EiB" );
 	}
 
 	private static Model model( Flow... flows ) {
