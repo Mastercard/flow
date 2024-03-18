@@ -153,7 +153,7 @@ class WebSequenceTest {
 		assertEquals( "Failed to parse '{]' ([123, 93])", uioe.getMessage() );
 		assertEquals( ""
 				+ "Unexpected close marker ']': expected '}' (for Object starting at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 1])\n"
-				+ " at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 3]",
+				+ " at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 2]",
 				uioe.getCause().getMessage() );
 	}
 
