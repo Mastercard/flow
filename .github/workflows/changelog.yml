@@ -9,7 +9,7 @@ jobs:
     name: Update changelog
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
         with:
           ref: main
       - uses: rhysd/changelog-from-release/action@f2daf5ee230a1fff1bec36729e4240a28c8ad008 # v3.7.2
