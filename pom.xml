@@ -126,7 +126,7 @@
 				<!-- web browser automation -->
 				<groupId>org.seleniumhq.selenium</groupId>
 				<artifactId>selenium-java</artifactId>
-				<version>4.13.0</version>
+				<version>4.20.0</version>
 			</dependency>
 
 			<dependency>
