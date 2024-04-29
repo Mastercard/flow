@@ -36,13 +36,13 @@ jobs:
       run: mvn -B -Paggregate -Dnode=system test org.pitest:pitest-maven:mutationCoverage package
 
     - name: Save aggregated mutation report
-      uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
+      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
       with:
         name: mutation_report
         path: aggregator/target/pit-reports
 
     - name: Save project mutation reports
-      uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
+      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
       if:  ${{ failure() }}
       with:
         name: project_mutation_reports
