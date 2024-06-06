@@ -1,6 +1,7 @@
 package com.mastercard.test.flow.builder;
 
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import com.mastercard.test.flow.Dependency;
 import com.mastercard.test.flow.Flow;
@@ -57,11 +58,36 @@ public class Deriver extends Builder<Deriver> {
 	 * @return <code>this</code>
 	 */
 	public Deriver inheritDependencies( Flow oldDep, Flow newDep ) {
+		return inheritDependencies( d -> d.source().flow() == oldDep, newDep );
+	}
+
+	/**
+	 * <p>
+	 * Imports all dependencies from the basis {@link Flow}. The {@link Dependency}
+	 * endpoint {@link Flow}s will be updated:
+	 * </p>
+	 * <ul>
+	 * <li>{@link Dependency#source()} updated per the arguments to this method</li>
+	 * <li>{@link Dependency#sink()} updated to the flow under construction</li>
+	 * </ul>
+	 * <p>
+	 * All other aspects of the imported {@link Dependency} will remain the same.
+	 * </p>
+	 *
+	 * @param newDep The {@link Flow} upon which this {@link Flow} will depend in
+	 *               the same way as the basis {@link Flow} did
+	 * @return <code>this</code>
+	 */
+	public Deriver inheritDependencies( Flow newDep ) {
+		return inheritDependencies( d -> true, newDep );
+	}
+
+	private Deriver inheritDependencies( Predicate<Dependency> target, Flow newSource ) {
 		flow.basis().dependencies()
-				.filter( d -> d.source().flow() == oldDep )
+				.filter( target )
 				.map( MutableDependency::new )
 				.map( d -> d
-						.source( s -> s.flow( newDep ) )
+						.source( s -> s.flow( newSource ) )
 						.sink( s -> s.flow( SELF ) ) )
 				.forEach( flow::dependency );
 		return this;

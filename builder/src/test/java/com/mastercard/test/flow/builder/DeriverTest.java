@@ -8,7 +8,9 @@ import static com.mastercard.test.flow.builder.mock.Actrs.DAN;
 import static com.mastercard.test.flow.builder.mock.Actrs.EFA;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
+import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.mastercard.test.flow.Context;
+import com.mastercard.test.flow.Dependency;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.Residue;
@@ -214,19 +217,55 @@ class DeriverTest extends BuilderTest {
 				"value", "VALUE" );
 
 		Flow derivedSource = Deriver.build( originalSource );
-		Flow derivedSink = Deriver.build( originalSink,
-				flw -> flw.inheritDependencies( originalSource, derivedSource )
-						.meta( data -> data.description( "inherit" ) ) );
 
-		assertEquals( 1, derivedSink.dependencies().count() );
-		assertMutatingDependency( "data", derivedSink.dependencies().iterator().next(),
-				derivedSource,
-				"Msg[Child^2 of 'Efa can hook you up. Tell her 'bloop' so she knows I sent you']",
-				"<response bloop location>",
-				derivedSink,
-				"Msg[Child^2 of 'I need brie, Ben says to say 'bloop'' {<request bloop location>=retrived value of '<response bloop location>'}]",
-				"<request bloop location>",
-				"value", "VALUE" );
+		// Using the two-arg inheritDependencies allows you to target a specific
+		// dependency relationships
+		{
+			Flow derivedSink = Deriver.build( originalSink,
+					flw -> flw.inheritDependencies( originalSource, derivedSource )
+							.meta( data -> data.description( "inherit" ) ) );
+
+			assertEquals( 1, derivedSink.dependencies().count(),
+					"only one of the two available deps copied" );
+			Iterator<Dependency> deps = derivedSink.dependencies().iterator();
+
+			assertMutatingDependency( "data", deps.next(),
+					derivedSource,
+					"Msg[Child^2 of 'Efa can hook you up. Tell her 'bloop' so she knows I sent you']",
+					"<response bloop location>",
+					derivedSink,
+					"Msg[Child^2 of 'I need brie, Ben says to say 'bloop'' {<request bloop location>=retrived value of '<response bloop location>'}]",
+					"<request bloop location>",
+					"value", "VALUE" );
+
+			assertFalse( deps.hasNext() );
+		}
+
+		// using the 1-arg inheritDependencies will bring over every dependency
+		{
+			Flow derivedSink = Deriver.build( originalSink,
+					flw -> flw.inheritDependencies( derivedSource )
+							.meta( data -> data.description( "inherit" ) ) );
+
+			assertEquals( 2, derivedSink.dependencies().count(),
+					"Both dependencies copied" );
+			Iterator<Dependency> deps = derivedSink.dependencies().iterator();
+
+			assertMutatingDependency( "data", deps.next(),
+					derivedSource,
+					"Msg[Child^2 of 'Efa can hook you up. Tell her 'bloop' so she knows I sent you']",
+					"<response bloop location>",
+					derivedSink,
+					"Msg[Child^2 of 'I need brie, Ben says to say 'bloop'' {<request bloop location>=retrived value of '<response bloop location>'}]",
+					"<request bloop location>",
+					"value", "VALUE" );
+
+			assertDependency( "order", deps.next(),
+					derivedSource, null, null,
+					derivedSink, null, null );
+
+			assertFalse( deps.hasNext() );
+		}
 	}
 
 	/**
