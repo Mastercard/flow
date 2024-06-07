@@ -58,7 +58,7 @@ class PomData {
 					.orElseGet( () -> parent.groupId() );
 			version = Optional.of( xpath.evaluate( "/project/version", doc ) )
 					.filter( s -> !s.isEmpty() )
-					.orElse( "${project.version}" );
+					.orElseGet( () -> parent.version() );
 			packaging = xpath.evaluate( "/project/packaging", doc );
 			name = xpath.evaluate( "/project/name", doc );
 			description = xpath.evaluate( "/project/description", doc );

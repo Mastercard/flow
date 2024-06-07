@@ -44,7 +44,11 @@ class BomTest {
 						+ "\t\t\t\t<artifactId>%s</artifactId>\n"
 						+ "\t\t\t\t<version>%s</version>\n"
 						+ "\t\t\t</dependency>",
-						artifact.groupId(), artifact.artifactId(), artifact.version() ) )
+						artifact.groupId()
+								.replace( bom.groupId(), "${project.groupId}" ),
+						artifact.artifactId(),
+						artifact.version()
+								.replace( bom.version(), "${project.version}" ) ) )
 				.collect( joining(
 						"\n\n",
 						""
@@ -63,7 +67,11 @@ class BomTest {
 						+ "\t\t\t\t<artifactId>%s</artifactId>\n"
 						+ "\t\t\t\t<version>%s</version>\n"
 						+ "\t\t\t</dependency>",
-						dep.groupId(), dep.artifactId(), dep.version() ) )
+						dep.groupId()
+								.replace( bom.groupId(), "${project.groupId}" ),
+						dep.artifactId(),
+						dep.version()
+								.replace( bom.version(), "${project.version}" ) ) )
 				.collect( joining(
 						"\n\n",
 						""
