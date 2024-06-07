@@ -80,7 +80,7 @@ class ReadmeInterlinkTest {
 			.collect( toSet() );
 
 	private static String javadocBadge( PomData pom ) {
-		if( "jar".equals( pom.getPackaging() ) && !NO_JAVADOC.contains( pom.artifactId() ) ) {
+		if( "jar".equals( pom.packaging() ) && !NO_JAVADOC.contains( pom.artifactId() ) ) {
 			return String.format( ""
 					+ "["
 					+ "![javadoc](https://javadoc.io/badge2/%s/%s/javadoc.svg)"

@@ -20,20 +20,10 @@
 		<module>message-xml</module>
 	</modules>
 
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>api</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-
-		</dependencies>
-	</dependencyManagement>
-
 	<build>
 		<pluginManagement>
 			<plugins>
+
 				<plugin>
 					<!-- provides and enforces formatting -->
 					<groupId>net.revelc.code.formatter</groupId>

@@ -30,11 +30,13 @@ class PomData {
 	private final Path dirPath;
 	private final String groupId;
 	private final String artifactId;
+	private final String version;
 	private final String packaging;
 	private final String name;
 	private final String description;
 	private final List<PomData> modules;
 	private final List<DepData> dependencies;
+	private final List<DepData> dependencyManagement;
 
 	/**
 	 * @param parent The parent pom, or <code>null</code>
@@ -54,6 +56,9 @@ class PomData {
 			groupId = Optional.ofNullable( xpath.evaluate( "/project/groupId", doc ) )
 					.filter( s -> !s.isEmpty() )
 					.orElseGet( () -> parent.groupId() );
+			version = Optional.of( xpath.evaluate( "/project/version", doc ) )
+					.filter( s -> !s.isEmpty() )
+					.orElse( "${project.version}" );
 			packaging = xpath.evaluate( "/project/packaging", doc );
 			name = xpath.evaluate( "/project/name", doc );
 			description = xpath.evaluate( "/project/description", doc );
@@ -74,6 +79,14 @@ class PomData {
 
 			for( int i = 0; i < dnl.getLength(); i++ ) {
 				dependencies.add( new DepData( xpath, dnl.item( i ), this ) );
+			}
+
+			dependencyManagement = new ArrayList<>();
+			NodeList dpnl = (NodeList) xpath.evaluate(
+					"/project/dependencyManagement/dependencies/dependency", doc,
+					XPathConstants.NODESET );
+			for( int i = 0; i < dpnl.getLength(); i++ ) {
+				dependencyManagement.add( new DepData( xpath, dpnl.item( i ), this ) );
 			}
 		}
 		catch( ParserConfigurationException
@@ -113,9 +126,16 @@ class PomData {
 	}
 
 	/**
+	 * @return The project's version string
+	 */
+	public String version() {
+		return version;
+	}
+
+	/**
 	 * @return The project's packaging value
 	 */
-	public String getPackaging() {
+	public String packaging() {
 		return packaging;
 	}
 
@@ -138,6 +158,13 @@ class PomData {
 	 */
 	public Stream<DepData> dependencies() {
 		return dependencies.stream();
+	}
+
+	/**
+	 * @return managed dependencies
+	 */
+	public Stream<DepData> dependencyManagement() {
+		return dependencyManagement.stream();
 	}
 
 	/**
@@ -175,6 +202,7 @@ class PomData {
 	public static class DepData {
 		private final String groupId;
 		private final String artifactId;
+		private final String version;
 		private final String scope;
 		private final boolean optional;
 
@@ -193,6 +221,7 @@ class PomData {
 				groupId = gd;
 			}
 			artifactId = xpath.evaluate( "artifactId", n );
+			version = xpath.evaluate( "version", n );
 			scope = Optional.ofNullable( xpath.evaluate( "scope", n ) )
 					.filter( s -> !s.isEmpty() )
 					.orElse( "compile" );
@@ -213,6 +242,13 @@ class PomData {
 		 */
 		public String artifactId() {
 			return artifactId;
+		}
+
+		/**
+		 * @return The dependency version string
+		 */
+		public String version() {
+			return version;
 		}
 
 		/**
