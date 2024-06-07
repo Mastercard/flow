@@ -12,10 +12,33 @@
 
 	<dependencyManagement>
 		<dependencies>
-
 			<dependency>
 				<groupId>${project.groupId}</groupId>
 				<artifactId>api</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>assert-core</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>assert-filter</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>assert-junit4</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>assert-junit5</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 
@@ -27,19 +50,19 @@
 
 			<dependency>
 				<groupId>${project.groupId}</groupId>
+				<artifactId>coppice</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>duct</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
 				<artifactId>message-core</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>message-text</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>message-json</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 
@@ -51,7 +74,19 @@
 
 			<dependency>
 				<groupId>${project.groupId}</groupId>
+				<artifactId>message-json</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
 				<artifactId>message-sql</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>message-text</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 
@@ -75,6 +110,18 @@
 
 			<dependency>
 				<groupId>${project.groupId}</groupId>
+				<artifactId>report-core</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>report-ng</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
 				<artifactId>validation-core</artifactId>
 				<version>${project.version}</version>
 			</dependency>
@@ -90,43 +137,6 @@
 				<artifactId>validation-junit5</artifactId>
 				<version>${project.version}</version>
 			</dependency>
-
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>coppice</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>report-core</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>assert-filter</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>assert-core</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>assert-junit4</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>assert-junit5</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-
 		</dependencies>
 	</dependencyManagement>
 </project>
