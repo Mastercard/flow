@@ -246,6 +246,54 @@ class FlowPanelTest {
 	}
 
 	/**
+	 * Shows how flows can be moved between the enabled and disabled set by
+	 * double-clicking
+	 */
+	@Test
+	void doubleClick() {
+
+		Mdl mdl = new Mdl().withFlows(
+				"bcd []",
+				"fga []",
+				"jkl []",
+				"mne []" );
+
+		new FilterGuiHarness()
+				.buildFlows()
+				.doubleClick( FlowList.ENABLED, "jkl | " )
+				.expect( "before",
+						"┌─ avail… ─┐┌┈┈┈┐┌─ inclu… ─┐┌─ disable… ─┐┌┈┈┈┐┌─ enabled_flo… ─┐╔═════╗",
+						"│          │┊ _ ┊│          ││  jkl |     │┊ _ ┊│  bcd |         │║     ║",
+						"│          │└┈┈┈┘└──────────┘│            │┊   ┊│  fga |         │║     ║",
+						"│          │     ┌┈┈┈┈┈┈┈┈┈┈┐│            │└┈┈┈┘│  mne |         │║     ║",
+						"│          │     ┊    _     ┊│            │┌┈┈┈┐│                │║     ║",
+						"│          │     └┈┈┈┈┈┈┈┈┈┈┘│            │┊   ┊│                │║ Run ║",
+						"│          │┌┈┈┈┐┌─ exclu… ─┐│            │┊ _ ┊│                │║     ║",
+						"│          │┊ _ ┊│          ││            │┊   ┊│                │║     ║",
+						"└──────────┘└┈┈┈┘└──────────┘└────────────┘└┈┈┈┘└────────────────┘║     ║",
+						"┌┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┐╔═══════════════════════════════════╗║     ║",
+						"┊           Reset           ┊║               Reset               ║║     ║",
+						"└┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┘╚═══════════════════════════════════╝╚═════╝" )
+				.doubleClick( FlowList.DISABLED, "jkl | " )
+				.doubleClick( FlowList.ENABLED, "bcd | " )
+				.expect( "after",
+						"┌─ avail… ─┐┌┈┈┈┐┌─ inclu… ─┐┌─ disable… ─┐┌┈┈┈┐┌─ enabled_flo… ─┐╔═════╗",
+						"│          │┊ _ ┊│          ││  bcd |     │┊ _ ┊│  fga |         │║     ║",
+						"│          │└┈┈┈┘└──────────┘│            │┊   ┊│  jkl |         │║     ║",
+						"│          │     ┌┈┈┈┈┈┈┈┈┈┈┐│            │└┈┈┈┘│  mne |         │║     ║",
+						"│          │     ┊    _     ┊│            │┌┈┈┈┐│                │║     ║",
+						"│          │     └┈┈┈┈┈┈┈┈┈┈┘│            │┊   ┊│                │║ Run ║",
+						"│          │┌┈┈┈┐┌─ exclu… ─┐│            │┊ _ ┊│                │║     ║",
+						"│          │┊ _ ┊│          ││            │┊   ┊│                │║     ║",
+						"└──────────┘└┈┈┈┘└──────────┘└────────────┘└┈┈┈┘└────────────────┘║     ║",
+						"┌┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┐╔═══════════════════════════════════╗║     ║",
+						"┊           Reset           ┊║               Reset               ║║     ║",
+						"└┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┘╚═══════════════════════════════════╝╚═════╝" )
+				.close()
+				.on( mdl );
+	}
+
+	/**
 	 * Shows how the filter input shuffles the tag and flow lists
 	 */
 	@Test

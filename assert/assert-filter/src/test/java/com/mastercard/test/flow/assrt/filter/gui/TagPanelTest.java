@@ -154,6 +154,54 @@ class TagPanelTest {
 	}
 
 	/**
+	 * Shows that tags can be moved between sets by double-clicking
+	 */
+	@Test
+	void doubleClick() {
+		Mdl mdl = new Mdl().withFlows(
+				"first [foo, bar]",
+				"second [bar, baz]",
+				"third [baz, oof]" );
+
+		new FilterGuiHarness()
+				.selectTags( TagList.AVAILABLE, "bar" )
+				.moveTo( TagList.INCLUDED )
+				.selectTags( TagList.AVAILABLE, "oof" )
+				.moveTo( TagList.EXCLUDED )
+				.expect( "before",
+						"┌─ avail… ─┐┌┈┈┈┐┌─ inclu… ─┐╔═══════╗┌┈┈┈┈┈┐",
+						"│  baz     │┊ _ ┊│  bar     │║       ║┊     ┊",
+						"│  foo     │└┈┈┈┘└──────────┘║       ║┊     ┊",
+						"│          │     ┌┈┈┈┈┈┈┈┈┈┈┐║       ║┊     ┊",
+						"│          │     ┊    _     ┊║       ║┊     ┊",
+						"│          │     └┈┈┈┈┈┈┈┈┈┈┘║ Build ║┊ Run ┊",
+						"│          │┌┈┈┈┐┌─ exclu… ─┐║       ║┊     ┊",
+						"│          │┊ _ ┊│  oof     │║       ║┊     ┊",
+						"└──────────┘└┈┈┈┘└──────────┘║       ║┊     ┊",
+						"╔═══════════════════════════╗║       ║┊     ┊",
+						"║           Reset           ║║       ║┊     ┊",
+						"╚═══════════════════════════╝╚═══════╝└┈┈┈┈┈┘" )
+				.doubleClick( TagList.AVAILABLE, "baz" )
+				.doubleClick( TagList.INCLUDED, "bar" )
+				.doubleClick( TagList.EXCLUDED, "oof" )
+				.expect( "after",
+						"┌─ avail… ─┐┌┈┈┈┐┌─ inclu… ─┐╔═══════╗┌┈┈┈┈┈┐",
+						"│  bar     │┊ _ ┊│  baz     │║       ║┊     ┊",
+						"│  foo     │└┈┈┈┘└──────────┘║       ║┊     ┊",
+						"│  oof     │     ┌┈┈┈┈┈┈┈┈┈┈┐║       ║┊     ┊",
+						"│          │     ┊    _     ┊║       ║┊     ┊",
+						"│          │     └┈┈┈┈┈┈┈┈┈┈┘║ Build ║┊ Run ┊",
+						"│          │┌┈┈┈┐┌─ exclu… ─┐║       ║┊     ┊",
+						"│          │┊ _ ┊│          │║       ║┊     ┊",
+						"└──────────┘└┈┈┈┘└──────────┘║       ║┊     ┊",
+						"╔═══════════════════════════╗║       ║┊     ┊",
+						"║           Reset           ║║       ║┊     ┊",
+						"╚═══════════════════════════╝╚═══════╝└┈┈┈┈┈┘" )
+				.close()
+				.on( mdl );
+	}
+
+	/**
 	 * Exercises the tag reset button
 	 */
 	@Test

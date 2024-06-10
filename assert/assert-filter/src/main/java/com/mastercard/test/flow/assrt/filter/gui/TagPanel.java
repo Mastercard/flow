@@ -10,12 +10,15 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -39,7 +42,10 @@ class TagPanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
 
-	private final transient Filter filter;
+	/**
+	 * The {@link Filter} being manipulated by this widget
+	 */
+	final transient Filter filter;
 
 	private final JList<String> availableTags = new JList<>();
 	private final JList<String> includedTags = new JList<>();
@@ -60,7 +66,10 @@ class TagPanel extends JPanel {
 	 */
 	transient Predicate<String> tagLimit = t -> true;
 
-	private transient Runnable updateListener = () -> {
+	/**
+	 * Invoked when the {@link Filter} changes
+	 */
+	transient Runnable updateListener = () -> {
 		// no-op
 	};
 
@@ -119,6 +128,8 @@ class TagPanel extends JPanel {
 			avin.setEnabled( !availableTags.isSelectionEmpty() || !includedTags.isSelectionEmpty() );
 			avex.setEnabled( !availableTags.isSelectionEmpty() || !excludedTags.isSelectionEmpty() );
 		} );
+		setDoubleClickAction( availableTags, Set::add, null );
+
 		includedTags.addListSelectionListener( lse -> {
 			if( !clearing.get() ) {
 				clearing.set( true );
@@ -129,6 +140,8 @@ class TagPanel extends JPanel {
 			avin.setEnabled( !availableTags.isSelectionEmpty() || !includedTags.isSelectionEmpty() );
 			inex.setEnabled( !includedTags.isSelectionEmpty() || !excludedTags.isSelectionEmpty() );
 		} );
+		setDoubleClickAction( includedTags, Set::remove, null );
+
 		excludedTags.addListSelectionListener( lse -> {
 			if( !clearing.get() ) {
 				clearing.set( true );
@@ -139,6 +152,7 @@ class TagPanel extends JPanel {
 			avex.setEnabled( !availableTags.isSelectionEmpty() || !excludedTags.isSelectionEmpty() );
 			inex.setEnabled( !includedTags.isSelectionEmpty() || !excludedTags.isSelectionEmpty() );
 		} );
+		setDoubleClickAction( excludedTags, null, Set::remove );
 
 		avin.setToolTipText( SWAP_SELECTED_TAGS );
 		avin.addActionListener( ac -> {
@@ -244,6 +258,35 @@ class TagPanel extends JPanel {
 		add( reset, gbc );
 
 		refresh();
+	}
+
+	private void setDoubleClickAction( JList<String> list,
+			BiConsumer<Set<String>, String> includeAction,
+			BiConsumer<Set<String>, String> excludeAction ) {
+		list.addMouseListener( new MouseAdapter() {
+			@Override
+			public void mouseClicked( MouseEvent e ) {
+				if( e.getClickCount() == 2 ) {
+					String item = list.getModel().getElementAt(
+							list.locationToIndex( e.getPoint() ) );
+
+					if( includeAction != null ) {
+						Set<String> s = filter.includedTags();
+						includeAction.accept( s, item );
+						filter.includedTags( s );
+					}
+
+					if( excludeAction != null ) {
+						Set<String> s = filter.excludedTags();
+						excludeAction.accept( s, item );
+						filter.excludedTags( s );
+					}
+
+					updateListener.run();
+					refresh();
+				}
+			}
+		} );
 	}
 
 	/**

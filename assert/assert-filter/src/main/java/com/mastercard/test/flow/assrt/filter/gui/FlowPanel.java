@@ -11,14 +11,18 @@ import java.awt.Component;
 import java.awt.Font;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -43,7 +47,10 @@ class FlowPanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
 
-	private final transient Filter filter;
+	/**
+	 * The {@link Filter} that is maniupated by this widget
+	 */
+	final transient Filter filter;
 
 	/**
 	 * Map from list content to flow
@@ -81,6 +88,10 @@ class FlowPanel extends JPanel {
 		}
 		return d;
 	};
+
+	/**
+	 * Invoked when the {@link Filter} changes
+	 */
 	private transient Runnable updateListener = () -> {
 		// no-op
 	};
@@ -125,6 +136,13 @@ class FlowPanel extends JPanel {
 			include.setEnabled( !enabledFlows.isSelectionEmpty() || !disabledFlows.isSelectionEmpty() );
 			exclude.setEnabled( !enabledFlows.isSelectionEmpty() );
 		} );
+		setDoubleClickAction( enabledFlows, ( set, index ) -> {
+			if( set.isEmpty() ) {
+				listedFlows.values().forEach( f -> set.add( f.index ) );
+			}
+			set.remove( index );
+		} );
+
 		disabledFlows.addListSelectionListener( lse -> {
 			if( !clearing.get() ) {
 				clearing.set( true );
@@ -134,6 +152,7 @@ class FlowPanel extends JPanel {
 			include.setEnabled( !enabledFlows.isSelectionEmpty() || !disabledFlows.isSelectionEmpty() );
 			exclude.setEnabled( !enabledFlows.isSelectionEmpty() );
 		} );
+		setDoubleClickAction( disabledFlows, Set::add );
 
 		include.setToolTipText( "Enable selected flows" );
 		include.addActionListener( ac -> {
@@ -224,6 +243,29 @@ class FlowPanel extends JPanel {
 				.weightx( 1 ).weighty( 0 )
 				.get() );
 
+	}
+
+	private void setDoubleClickAction( JList<String> list,
+			BiConsumer<Set<Integer>, Integer> action ) {
+		list.addMouseListener( new MouseAdapter() {
+			@Override
+			public void mouseClicked( MouseEvent e ) {
+				if( e.getClickCount() == 2 ) {
+					Optional.of( e.getPoint() )
+							.map( list::locationToIndex )
+							.map( list.getModel()::getElementAt )
+							.map( listedFlows::get )
+							.map( ifl -> ifl.index )
+							.ifPresent( idx -> {
+								Set<Integer> indices = filter.indices();
+								action.accept( indices, idx );
+								filter.indices( indices );
+								updateListener.run();
+								refresh();
+							} );
+				}
+			}
+		} );
 	}
 
 	/**
