@@ -122,6 +122,20 @@ public class FilterGuiHarness {
 	}
 
 	/**
+	 * Double-clicks on a list item
+	 *
+	 * @param in  The list that the item resides in
+	 * @param tag The item to double-click
+	 * @return <code>this</code>
+	 */
+	public FilterGuiHarness doubleClick( TagList in, String tag ) {
+		interactions.add( ( f, m ) -> {
+			f.list( in.widgetName ).item( tag ).doubleClick();
+		} );
+		return this;
+	}
+
+	/**
 	 * Clicks one of the tags swap buttons
 	 *
 	 * @param to The list that we want to swap to
@@ -185,6 +199,20 @@ public class FilterGuiHarness {
 				.selectItems( Stream.of( flows )
 						.map( FilterGuiHarness::toRendered )
 						.toArray( String[]::new ) ) );
+		return this;
+	}
+
+	/**
+	 * Double-clicks on a list item
+	 *
+	 * @param in   The list that the item resides in
+	 * @param flow The item to double-click
+	 * @return <code>this</code>
+	 */
+	public FilterGuiHarness doubleClick( FlowList in, String flow ) {
+		interactions.add( ( f, m ) -> {
+			f.list( in.widgetName ).item( FilterGuiHarness.toRendered( flow ) ).doubleClick();
+		} );
 		return this;
 	}
 

@@ -10,6 +10,8 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -119,6 +121,19 @@ class TagPanel extends JPanel {
 			avin.setEnabled( !availableTags.isSelectionEmpty() || !includedTags.isSelectionEmpty() );
 			avex.setEnabled( !availableTags.isSelectionEmpty() || !excludedTags.isSelectionEmpty() );
 		} );
+		availableTags.addMouseListener( new MouseAdapter() {
+			@Override
+			public void mouseClicked( MouseEvent e ) {
+				if( e.getClickCount() == 2 ) {
+					int index = availableTags.locationToIndex( e.getPoint() );
+					Set<String> s = filter.includedTags();
+					s.add( availableTags.getModel().getElementAt( index ) );
+					filter.includedTags( s );
+					updateListener.run();
+					refresh();
+				}
+			}
+		} );
 		includedTags.addListSelectionListener( lse -> {
 			if( !clearing.get() ) {
 				clearing.set( true );
@@ -129,6 +144,19 @@ class TagPanel extends JPanel {
 			avin.setEnabled( !availableTags.isSelectionEmpty() || !includedTags.isSelectionEmpty() );
 			inex.setEnabled( !includedTags.isSelectionEmpty() || !excludedTags.isSelectionEmpty() );
 		} );
+		includedTags.addMouseListener( new MouseAdapter() {
+			@Override
+			public void mouseClicked( MouseEvent e ) {
+				if( e.getClickCount() == 2 ) {
+					int index = includedTags.locationToIndex( e.getPoint() );
+					Set<String> s = filter.includedTags();
+					s.remove( includedTags.getModel().getElementAt( index ) );
+					filter.includedTags( s );
+					updateListener.run();
+					refresh();
+				}
+			}
+		} );
 		excludedTags.addListSelectionListener( lse -> {
 			if( !clearing.get() ) {
 				clearing.set( true );
@@ -138,6 +166,19 @@ class TagPanel extends JPanel {
 			}
 			avex.setEnabled( !availableTags.isSelectionEmpty() || !excludedTags.isSelectionEmpty() );
 			inex.setEnabled( !includedTags.isSelectionEmpty() || !excludedTags.isSelectionEmpty() );
+		} );
+		excludedTags.addMouseListener( new MouseAdapter() {
+			@Override
+			public void mouseClicked( MouseEvent e ) {
+				if( e.getClickCount() == 2 ) {
+					int index = excludedTags.locationToIndex( e.getPoint() );
+					Set<String> s = filter.excludedTags();
+					s.remove( excludedTags.getModel().getElementAt( index ) );
+					filter.excludedTags( s );
+					updateListener.run();
+					refresh();
+				}
+			}
 		} );
 
 		avin.setToolTipText( SWAP_SELECTED_TAGS );

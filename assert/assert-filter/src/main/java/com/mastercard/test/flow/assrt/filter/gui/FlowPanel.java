@@ -11,11 +11,14 @@ import java.awt.Component;
 import java.awt.Font;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -125,6 +128,27 @@ class FlowPanel extends JPanel {
 			include.setEnabled( !enabledFlows.isSelectionEmpty() || !disabledFlows.isSelectionEmpty() );
 			exclude.setEnabled( !enabledFlows.isSelectionEmpty() );
 		} );
+		enabledFlows.addMouseListener( new MouseAdapter() {
+			@Override
+			public void mouseClicked( MouseEvent e ) {
+				if( e.getClickCount() == 2 ) {
+					Optional.of( enabledFlows )
+							.map( list -> list.locationToIndex( e.getPoint() ) )
+							.map( index -> enabledFlows.getModel().getElementAt( index ) )
+							.map( value -> listedFlows.get( value ) )
+							.ifPresent( flow -> {
+								Set<Integer> indices = filter.indices();
+								if( indices.isEmpty() ) {
+									listedFlows.values().forEach( f -> indices.add( f.index ) );
+								}
+								indices.remove( flow.index );
+								filter.indices( indices );
+								updateListener.run();
+								refresh();
+							} );
+				}
+			}
+		} );
 		disabledFlows.addListSelectionListener( lse -> {
 			if( !clearing.get() ) {
 				clearing.set( true );
@@ -133,6 +157,24 @@ class FlowPanel extends JPanel {
 			}
 			include.setEnabled( !enabledFlows.isSelectionEmpty() || !disabledFlows.isSelectionEmpty() );
 			exclude.setEnabled( !enabledFlows.isSelectionEmpty() );
+		} );
+		disabledFlows.addMouseListener( new MouseAdapter() {
+			@Override
+			public void mouseClicked( MouseEvent e ) {
+				if( e.getClickCount() == 2 ) {
+					Optional.of( disabledFlows )
+							.map( list -> list.locationToIndex( e.getPoint() ) )
+							.map( index -> disabledFlows.getModel().getElementAt( index ) )
+							.map( value -> listedFlows.get( value ) )
+							.ifPresent( flow -> {
+								Set<Integer> indices = filter.indices();
+								indices.add( flow.index );
+								filter.indices( indices );
+								updateListener.run();
+								refresh();
+							} );
+				}
+			}
 		} );
 
 		include.setToolTipText( "Enable selected flows" );

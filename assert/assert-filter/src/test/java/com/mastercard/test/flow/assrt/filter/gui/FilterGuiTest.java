@@ -7,7 +7,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+import com.mastercard.test.flow.assrt.filter.Filter;
 import com.mastercard.test.flow.assrt.filter.gui.FilterGuiHarness.FlowList;
 import com.mastercard.test.flow.assrt.filter.gui.FilterGuiHarness.TagList;
 import com.mastercard.test.flow.assrt.filter.mock.Mdl;
@@ -233,5 +235,21 @@ class FilterGuiTest {
 				.on( mdl )
 				.expectFilterResults(
 						"fourth [bar, foo]" );
+	}
+
+	/**
+	 * Throws up a gui instance for you to fiddle with for manual testing
+	 */
+	@Test()
+	@EnabledIfSystemProperty(named = "manual", matches = "true")
+	void manual() {
+		Mdl mdl = new Mdl().withFlows(
+				"first [foo, bar]",
+				"second [bar, baz]",
+				"third [baz, oof]",
+				"fourth [foo, bar]" );
+		Filter filter = new Filter( mdl );
+		FilterGui gui = new FilterGui( filter );
+		gui.blockForInput();
 	}
 }
