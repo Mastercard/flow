@@ -4,7 +4,7 @@ import { DetailComponent } from './detail.component';
 import { BasisFetchService } from '../basis-fetch.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatListModule } from '@angular/material/list';
-import { DiffType, Display, LogEvent, Options, empty_flow, empty_interaction } from '../types';
+import { DiffType, Display, LogEvent, Options, Residue, empty_flow, empty_interaction } from '../types';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,6 +25,8 @@ describe('DetailComponent', () => {
         DetailComponent,
 
         StubLogView,
+        StubContextView,
+        StubResidueView,
         StubFlowSequence,
         StubTransmission,
         StubMarkdown,
@@ -129,6 +131,22 @@ function testTabs(component: DetailComponent, fixture: ComponentFixture<DetailCo
 })
 class StubLogView {
   @Input() logs: LogEvent[] = [];
+}
+
+@Component({
+  selector: 'app-context-view',
+  template: ''
+})
+class StubContextView {
+  @Input() context: any = {};
+}
+
+@Component({
+  selector: 'app-residue-view',
+  template: ''
+})
+class StubResidueView {
+  @Input() residues: Residue[] = [];
 }
 
 @Component({

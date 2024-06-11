@@ -95,7 +95,7 @@ export class BasisFetchService {
       let tagMatch = intersectionSize(action.tags, e.tags);
       if (tagMatch > bestTagMatch) {
         bestIdx = idx;
-        bestTagMatch = tagMatch;
+        bestTagMatch = tagMatch; 
       }
     }
 
