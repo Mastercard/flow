@@ -247,7 +247,7 @@ class WriterTest {
 		assertEquals( "[\"res/\"+]", delta.getTarget().getLines().toString(),
 				"inserted lines count" );
 
-		int context = 15;
+		int context = 14;
 		String before = resource.substring(
 				delta.getSource().getPosition() - context,
 				delta.getSource().getPosition() + context )
@@ -258,9 +258,9 @@ class WriterTest {
 						+ delta.getTarget().getLines().get( 0 ).length() )
 				.replaceAll( "\\d", "#" );
 
-		assertEquals( "f),[])),a.u=e=>(###===e?\"commo",
+		assertEquals( "),[])),a.u=e=>(###===e?\"comm",
 				before, "raw resource runtime snippet" );
-		assertEquals( "f),[])),a.u=e=>\"res/\"+(###===e?\"commo",
+		assertEquals( "),[])),a.u=e=>\"res/\"+(###===e?\"comm",
 				after, "written runtime snippet" );
 	}
 

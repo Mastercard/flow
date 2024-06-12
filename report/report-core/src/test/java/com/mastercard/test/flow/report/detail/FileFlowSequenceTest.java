@@ -26,6 +26,8 @@ class FileFlowSequenceTest extends AbstractFlowSequenceTest {
 						" BEN request       [e    ]",
 						"   CHE request     [e    ]",
 						"   CHE response    [e ap ] 100%",
+						"   CHE request     [e    ]",
+						"   CHE response    [e    ]",
 						" BEN response      [e a f] 100%" );
 	}
 
@@ -39,7 +41,7 @@ class FileFlowSequenceTest extends AbstractFlowSequenceTest {
 		FlowSequence fseq = dseq.flow().onTransmission( "BEN response" );
 
 		fseq.onBasis()
-				.hasUrlArgs( "display=Basis", "msg=3" )
+				.hasUrlArgs( "display=Basis", "msg=5" )
 				.hasMessage(
 						"1 + Sorry Ava, no brie today" );
 	}

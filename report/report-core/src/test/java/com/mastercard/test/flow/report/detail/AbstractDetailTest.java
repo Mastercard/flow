@@ -116,9 +116,14 @@ abstract class AbstractDetailTest {
 				.prerequisite( problem )
 				.prerequisite( confirmation )
 				.context( GroupState.class, gs -> gs.che().guilt( "undeniable" ) )
-				.update( i -> i.responder() == CHE, i -> i.response()
-						.set( ".+", "No, I'm worried about her dairy consumption.\n"
+				.update( i -> i.responder() == CHE, i -> i
+						.tags( Tags.add( "denial" ) )
+						.response().set( ".+", "No, I'm worried about her dairy consumption.\n"
 								+ "I'm cutting you both off" ) )
+				.addCall( i -> i.responder() == BEN, 1, a -> a
+						.to( CHE ).tags( Tags.add( "confirmation" ) )
+						.request( new Text( "She's an adult, she can have cheese if she wants to!" ) )
+						.response( new Text( "Feel free to shop elsewhere." ) ) )
 				.update( i -> i.responder() == BEN, i -> i.response()
 						.set( ".+", "Sorry Ava, no brie today" ) )
 				.residue( GroupState.class, gs -> {

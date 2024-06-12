@@ -26,6 +26,8 @@ class ServedFlowSequenceTest extends AbstractFlowSequenceTest {
 						" BEN request       [eb   ]",
 						"   CHE request     [eb   ]",
 						"   CHE response    [ebap ] 100%",
+						"   CHE request     [eb   ]",
+						"   CHE response    [eb   ]",
 						" BEN response      [eba f] 100%" );
 	}
 
@@ -39,7 +41,7 @@ class ServedFlowSequenceTest extends AbstractFlowSequenceTest {
 		FlowSequence fseq = dseq.flow().onTransmission( "BEN response" );
 
 		fseq.onBasis()
-				.hasUrlArgs( "display=Basis", "msg=3" )
+				.hasUrlArgs( "display=Basis", "msg=5" )
 				.hasMessage(
 						"1 - Hi Ava! Here is your brie",
 						"1 + Sorry Ava, no brie today" );

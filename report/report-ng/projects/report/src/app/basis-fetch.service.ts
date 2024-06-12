@@ -38,18 +38,22 @@ export class BasisFetchService {
         // extract the json content
         let s = page.indexOf(this.start);
         let e = page.indexOf(this.end, s);
-        if (s != undefined && e != undefined) {
-          // parse it
-          let json = page.substring(s + this.start.length, e);
-          let data = JSON.parse(json);
-          if (isFlow(data)) {
-            // save the flow
-            this.basis = toSequence(data);
-            // notify listeners
-            this.callbacks.forEach(cb => cb());
-          }
-          else {
-            console.error("This isn't a flow!", data);
+        if (s != -1 && e != -1) {
+          try {
+            // parse it
+            let json = page.substring(s + this.start.length, e);
+            let data = JSON.parse(json);
+            if (isFlow(data)) {
+              // save the flow
+              this.basis = toSequence(data);
+              // notify listeners
+              this.callbacks.forEach(cb => cb());
+            }
+            else {
+              console.error("This isn't a flow!", data);
+            }
+          } catch (e) {
+            console.error("Failed to parse!", e);
           }
         }
         else {
@@ -89,13 +93,13 @@ export class BasisFetchService {
 
     // now try and find the closest tag match
     let bestIdx = -1;
-    let bestTagMatch = -1;
+    let bestTagMatch = 2;
     for (let idx = 0; idx < possibles.length; idx++) {
       const e = possibles[idx];
-      let tagMatch = intersectionSize(action.tags, e.tags);
-      if (tagMatch > bestTagMatch) {
+      let tagMatch = setDistance(action.tags, e.tags);
+      if (tagMatch < bestTagMatch) {
         bestIdx = idx;
-        bestTagMatch = tagMatch; 
+        bestTagMatch = tagMatch;
       }
     }
 
@@ -104,6 +108,25 @@ export class BasisFetchService {
 
 }
 
-function intersectionSize(a: string[], b: string[]) {
-  return a.filter(b.includes).length;
+/**
+ * Computes a normalised distance metric between two sets
+ * @param a The first set
+ * @param b  The second set
+ * @returns A distance metric, ranging from 0 if the sets are identical to 1 if they are disjoint
+ */
+export function setDistance(a: string[], b: string[]) {
+  let union = new Set(a);
+  b.forEach(e => union.add(e));
+
+  if (union.size == 0) {
+    return 0;
+  }
+
+  let left = new Set(a);
+  b.forEach(e => left.delete(e));
+  let right = new Set(b);
+  a.forEach(e => right.delete(e));
+
+  let diffSize = left.size + right.size;
+  return diffSize / union.size;
 }

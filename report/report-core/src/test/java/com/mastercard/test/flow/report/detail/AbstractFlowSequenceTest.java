@@ -26,17 +26,17 @@ abstract class AbstractFlowSequenceTest extends AbstractDetailTest {
 				.onTransmission( "BEN response" );
 
 		fseq.onExpected()
-				.hasUrlArgs( "display=Expected", "msg=3" )
+				.hasUrlArgs( "display=Expected", "msg=5" )
 				.hasMessage(
 						"Sorry Ava, no brie today" );
 
 		fseq.onActual()
-				.hasUrlArgs( "msg=3" ) // Actual is the default, no arg required
+				.hasUrlArgs( "msg=5" ) // Actual is the default, no arg required
 				.hasMessage(
 						"Sorry Ava, no brie today, or ever." );
 
 		fseq.onDiff()
-				.hasUrlArgs( "display=Diff", "msg=3" )
+				.hasUrlArgs( "display=Diff", "msg=5" )
 				.hasMessage(
 						"1 - Sorry Ava, no brie today",
 						"1 + Sorry Ava, no brie today, or ever." );
@@ -61,7 +61,7 @@ abstract class AbstractFlowSequenceTest extends AbstractDetailTest {
 		fseq.toggleSearch()
 				.search( "brie" )
 				.hasUrlArgs(
-						"msg=3",
+						"msg=5",
 						"search=brie" )
 				.hasSearchHits(
 						"BEN request : expected",
@@ -74,7 +74,7 @@ abstract class AbstractFlowSequenceTest extends AbstractDetailTest {
 		fseq.toggleSearch()
 				.search( "or" )
 				.hasUrlArgs(
-						"msg=3",
+						"msg=5",
 						"search=or" )
 				.hasSearchHits(
 						"CHE response : expected actual",

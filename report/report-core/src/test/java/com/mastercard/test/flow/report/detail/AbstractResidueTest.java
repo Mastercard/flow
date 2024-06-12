@@ -20,7 +20,7 @@ abstract class AbstractResidueTest extends AbstractDetailTest {
 	@Test
 	void residue() {
 		dseq.residue()
-				.hasUrlArgs( "msg=3", "tab=2" )
+				.hasUrlArgs( "msg=5", "tab=2" )
 				.hasPanels( "Psychological state" )
 				.hasContent( "Psychological state",
 						"Model",
