@@ -26,6 +26,7 @@ describe('IndexComponent', () => {
         StubMenu,
         StubFlowFilter,
         StubTagSummary,
+        StubSystemDiagram,
       ],
       providers: [
         { provide: IndexDataService, useValue: mockIndexData },
@@ -68,4 +69,10 @@ class StubFlowFilter {
 })
 class StubTagSummary {
   @Input() entries: Entry[] = [];
+}
+@Component({
+  selector: 'app-system-diagram',
+  template: ''
+})
+class StubSystemDiagram {
 }

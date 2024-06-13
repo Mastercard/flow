@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { DuctIndexComponent } from './duct-index.component';
 import { DuctService } from '../duct.service';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatListModule } from '@angular/material/list';
 
 describe('DuctIndexComponent', () => {
   let component: DuctIndexComponent;
@@ -14,6 +16,10 @@ describe('DuctIndexComponent', () => {
       declarations: [DuctIndexComponent],
       providers: [
         { provide: DuctService, useValue: mockDuctService },
+      ],
+      imports: [
+        MatToolbarModule,
+        MatListModule
       ],
     })
       .compileComponents();
