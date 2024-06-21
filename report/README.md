@@ -52,7 +52,8 @@ The model diff tool is accessible via the hamburger menu on the top-left
 
 ### Model Diff
 
-The model diff tool shows the differences between two system models. This is useful as an aid to a change review process.
+The model diff tool shows the differences between two system models.
+This is useful as an aid to a change review process - there's a worked example in [#567](https://github.com/Mastercard/flow/pull/567).
 
 #### Source data
 
