@@ -5,8 +5,10 @@ import java.awt.GraphicsEnvironment;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import com.mastercard.test.flow.Flow;
+import com.mastercard.test.flow.assrt.filter.Filter;
 import com.mastercard.test.flow.assrt.filter.FilterOptions;
 import com.mastercard.test.flow.assrt.filter.mock.Mdl;
 
@@ -320,5 +322,21 @@ class FilterCliTest extends AbstractFilterTest {
 				.expectResults(
 						"second flow [bar, baz]",
 						"third flow [baz, oof]" );
+	}
+
+	/**
+	 * Throws up a cli instance for you to fiddle with for manual testing
+	 */
+	@Test()
+	@EnabledIfSystemProperty(named = "manual", matches = "true")
+	void manual() {
+		Mdl mdl = new Mdl().withFlows(
+				"first [foo, bar]",
+				"second [bar, baz]",
+				"third [baz, oof]",
+				"fourth [foo, bar]" );
+		Filter filter = new Filter( mdl );
+		FilterCli cli = new FilterCli( filter );
+		cli.blockForInput();
 	}
 }

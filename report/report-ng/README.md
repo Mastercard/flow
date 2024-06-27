@@ -48,6 +48,64 @@ Examples of such structures can be found in the `target/report` directory of the
 The unit tests can be run with `ng test`. By default the tests are run in interactive mode.
 If you just want to run them all once without seeing them then run `ng test --browsers ChromeHeadless --watch=false`
 
+<details>
+<summary>Angular component structure</summary>
+<!-- start_component_structure -->
+
+```mermaid
+graph LR
+  app --> detail
+  app --> duct-index
+  app --> index-route
+  change-analysis --> flow-nav-list
+  change-analysis --> tag
+  change-view --> flow-nav-list
+  change-view --> pair-select-item
+  change-view --> text-diff
+  detail --> context-view
+  detail --> flow-sequence
+  detail --> log-view
+  detail --> residue-view
+  detail --> transmission
+  detail --> view-options
+  duct-index --> duct-index-item
+  flow-filter --> tag-filter
+  flow-nav-item --> tag
+  flow-nav-list --> flow-nav-item
+  flow-sequence --> msg-search-input
+  flow-sequence --> seq-action
+  flow-sequence --> seq-note
+  flow-sequence --> seq-section
+  index --> flow-filter
+  index --> flow-nav-list
+  index --> menu
+  index --> system-diagram
+  index --> tag-summary
+  index-route --> index
+  index-route --> model-diff
+  model-diff --> change-analysis
+  model-diff --> change-view
+  model-diff --> flow-filter
+  model-diff --> menu
+  model-diff --> model-diff-data-source
+  model-diff --> paired-flow-list
+  model-diff --> unpaired-flow-list
+  msg-view --> hexdump
+  msg-view --> highlighted-text
+  pair-select-item --> tag
+  paired-flow-list --> flow-nav-list
+  residue-view --> text-diff
+  seq-section --> seq-action
+  seq-section --> seq-note
+  tag-summary --> tag
+  transmission --> msg-view
+  transmission --> text-diff
+  unpaired-flow-list --> flow-nav-list
+```
+
+<!-- end_component_structure -->
+</details>
+
 ### Java
 
 The artifacts generated from the angular application are packages in `target/classes`. You might have to explicitly add this directory as a source folder in your IDE build path configuration to avoid failures in downstream projects.
