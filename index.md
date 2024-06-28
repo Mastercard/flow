@@ -238,6 +238,10 @@ Test quality metrics for framework packages.
 			 <th><code>angular_component_structure</code></th>
 			<td><a href="mutation/latest/mutation_report/index.html">mutation</a></td>
 		</tr>
+		<tr> <th><code>2024-06-28T09:52:25</code></th>
+			 <th><code>angular_component_structure</code></th>
+			<td><a href="mutation/1719568345/mutation_report/index.html">mutation</a></td>
+		</tr>
 		<tr> <th><code>2024-06-28T09:16:44</code></th>
 			 <th><code>angular_component_structure</code></th>
 			<td><a href="mutation/1719566204/mutation_report/index.html">mutation</a></td>
@@ -313,10 +317,6 @@ Test quality metrics for framework packages.
 		<tr> <th><code>2024-06-13T12:06:27</code></th>
 			 <th><code>dependabot/npm_and_yarn/report/report-ng/braces-3.0.3</code></th>
 			<td><a href="mutation/1718280387/mutation_report/index.html">mutation</a></td>
-		</tr>
-		<tr> <th><code>2024-06-12T16:47:01</code></th>
-			 <th><code>basis_cerrelation_fix</code></th>
-			<td><a href="mutation/1718210821/mutation_report/index.html">mutation</a></td>
 		</tr>
 	</tbody>
 </table>
