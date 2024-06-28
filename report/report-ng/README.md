@@ -59,37 +59,37 @@ graph LR
   app --> index-route
   change-analysis --> flow-nav-list
   change-analysis --> tag
-  change-view --> flow-nav-list
-  change-view --> pair-select-item
   change-view --> text-diff
+  change-view --> pair-select-item
+  change-view --> flow-nav-list
   detail --> context-view
   detail --> flow-sequence
   detail --> log-view
-  detail --> residue-view
-  detail --> transmission
   detail --> view-options
+  detail --> transmission
+  detail --> residue-view
   duct-index --> duct-index-item
   flow-filter --> tag-filter
   flow-nav-item --> tag
   flow-nav-list --> flow-nav-item
   flow-sequence --> msg-search-input
   flow-sequence --> seq-action
-  flow-sequence --> seq-note
   flow-sequence --> seq-section
-  index --> flow-filter
-  index --> flow-nav-list
-  index --> menu
+  flow-sequence --> seq-note
   index --> system-diagram
   index --> tag-summary
+  index --> flow-nav-list
+  index --> menu
+  index --> flow-filter
   index-route --> index
   index-route --> model-diff
-  model-diff --> change-analysis
-  model-diff --> change-view
-  model-diff --> flow-filter
   model-diff --> menu
-  model-diff --> model-diff-data-source
+  model-diff --> flow-filter
+  model-diff --> change-view
   model-diff --> paired-flow-list
   model-diff --> unpaired-flow-list
+  model-diff --> change-analysis
+  model-diff --> model-diff-data-source
   msg-view --> hexdump
   msg-view --> highlighted-text
   pair-select-item --> tag

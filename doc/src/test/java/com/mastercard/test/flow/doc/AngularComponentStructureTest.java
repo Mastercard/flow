@@ -5,7 +5,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -29,7 +31,9 @@ class AngularComponentStructureTest {
 
 	/**
 	 * Spiders over the component HTML files and regenerates the structure diagram
-	 * in the readme. If the file is changed by that then the test fails.
+	 * in the readme. If the file is changed by that then the test fails. Note that
+	 * you are free to manually re-order the graphs links to get a better layout -
+	 * this test only cares that the set of links in the diagram is correct.
 	 *
 	 * @throws Exception on IO failure
 	 */
@@ -43,6 +47,7 @@ class AngularComponentStructureTest {
 		extractUsages( "app", html, usage, toExplore );
 
 		// manually add the routed components - these links are not apparent in the html
+		// and I don't want to get into parsing them out of the app.module.ts file
 		addUsage( "index-route", "model-diff", usage, toExplore );
 		addUsage( "index-route", "index", usage, toExplore );
 
@@ -54,17 +59,13 @@ class AngularComponentStructureTest {
 			extractUsages( component, html, usage, toExplore );
 		}
 
-		StringBuilder mermaid = new StringBuilder( "```mermaid\ngraph LR" );
-		usage.forEach( ( source, sinks ) -> sinks.forEach( sink -> mermaid
-				.append( "\n  " )
-				.append( source )
-				.append( " --> " )
-				.append( sink ) ) );
-		mermaid.append( "\n```" );
+		Set<String> pairs = new TreeSet<>();
+		usage.forEach( ( source, sinks ) -> sinks.forEach( sink -> pairs.add(
+				source + " --> " + sink ) ) );
 
 		Util.insert( MODULE_ROOT.resolve( "README.md" ),
 				"<!-- start_component_structure -->",
-				existing -> mermaid.toString(),
+				existing -> regenerate( existing, pairs ),
 				"<!-- end_component_structure -->" );
 	}
 
@@ -82,4 +83,24 @@ class AngularComponentStructureTest {
 		toExplore.add( used );
 	}
 
+	private static String regenerate( String existing, Set<String> usages ) {
+		List<String> existingUsages = new ArrayList<>();
+		Matcher eup = Pattern.compile( "\\S+ --> \\S+" ).matcher( existing );
+		while( eup.find() ) {
+			existingUsages.add( eup.group() );
+		}
+
+		StringBuilder mermaid = new StringBuilder( "```mermaid\ngraph LR" );
+		for( String u : existingUsages ) {
+			if( usages.remove( u ) ) {
+				mermaid.append( "\n  " ).append( u );
+			}
+		}
+		for( String u : usages ) {
+			mermaid.append( "\n  " ).append( u );
+		}
+		mermaid.append( "\n```" );
+
+		return mermaid.toString();
+	}
 }
