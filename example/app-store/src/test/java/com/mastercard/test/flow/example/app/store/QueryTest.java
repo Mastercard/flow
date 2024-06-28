@@ -149,6 +149,7 @@ class QueryTest {
 				.filter( i -> i.responder() == DB )
 				.forEach( ntr -> {
 					List<Object> bv = new ArrayList<>();
+					((Query) ntr.request()).get( bv );
 
 					try {
 						Connection c = mock( Connection.class );
