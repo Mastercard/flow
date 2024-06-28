@@ -238,6 +238,10 @@ Test quality metrics for framework packages.
 			 <th><code>angular_component_structure</code></th>
 			<td><a href="mutation/latest/mutation_report/index.html">mutation</a></td>
 		</tr>
+		<tr> <th><code>2024-06-28T09:16:44</code></th>
+			 <th><code>angular_component_structure</code></th>
+			<td><a href="mutation/1719566204/mutation_report/index.html">mutation</a></td>
+		</tr>
 		<tr> <th><code>2024-06-27T16:04:11</code></th>
 			 <th><code>angular_component_structure</code></th>
 			<td><a href="mutation/1719504251/mutation_report/index.html">mutation</a></td>
@@ -313,10 +317,6 @@ Test quality metrics for framework packages.
 		<tr> <th><code>2024-06-12T16:47:01</code></th>
 			 <th><code>basis_cerrelation_fix</code></th>
 			<td><a href="mutation/1718210821/mutation_report/index.html">mutation</a></td>
-		</tr>
-		<tr> <th><code>2024-06-10T15:12:18</code></th>
-			 <th><code>main</code></th>
-			<td><a href="mutation/1718032338/mutation_report/index.html">mutation</a></td>
 		</tr>
 	</tbody>
 </table>
