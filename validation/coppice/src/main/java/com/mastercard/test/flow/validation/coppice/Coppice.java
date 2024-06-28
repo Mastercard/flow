@@ -171,7 +171,7 @@ public class Coppice {
 		flowList.withFilterListener( f -> actualHierarchy.filter( "name", f ) );
 
 		frame = new JFrame( "Coppice" );
-		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
+		frame.setDefaultCloseOperation( WindowConstants.EXIT_ON_CLOSE );
 
 		frame.getContentPane().setLayout( new BorderLayout() );
 

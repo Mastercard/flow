@@ -61,7 +61,7 @@ class ServerTest {
 	 * Exercises the static endpoints
 	 */
 	@Test
-	void endpoints() throws Exception {
+	void endpoints() {
 		Duct duct = Mockito.mock( Duct.class );
 		when( duct.heartbeat() )
 				.thenReturn( Instant.EPOCH );

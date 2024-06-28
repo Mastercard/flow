@@ -16,8 +16,12 @@ import com.mastercard.test.flow.doc.PomData.DepData;
  * Ensures that our Bill of Materials pom contains all of the artifacts in this
  * project
  */
+@SuppressWarnings("static-method")
 class BomTest {
 
+	/**
+	 * Checks that the BoM includes all modules
+	 */
 	@Test
 	void check() {
 		PomData root = new PomData( null, Paths.get( "..", "pom.xml" ) );
