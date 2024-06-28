@@ -92,7 +92,7 @@ class FlowPanel extends JPanel {
 	/**
 	 * Invoked when the {@link Filter} changes
 	 */
-	private transient Runnable updateListener = () -> {
+	transient Runnable updateListener = () -> {
 		// no-op
 	};
 

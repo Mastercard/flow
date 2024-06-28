@@ -72,6 +72,8 @@ class DuctTestUtil {
 
 	/**
 	 * Polls for a <code>successful</code> /heartbeat
+	 *
+	 * @param port The local port to send to
 	 */
 	static void waitForLife( int port ) {
 		long expiry = System.currentTimeMillis() + 5000;
@@ -132,6 +134,7 @@ class DuctTestUtil {
 	/**
 	 * Issues a <code>/heartbeat</code> request to 127.0.0.1
 	 *
+	 * @param port The local port to send to
 	 * @return the response
 	 */
 	static Response<String> heartbeat( int port ) {
@@ -152,6 +155,7 @@ class DuctTestUtil {
 	/**
 	 * Gets the report index
 	 *
+	 * @param port The local port to send to
 	 * @return The report index
 	 */
 	static Response<String> index( int port ) {
@@ -161,6 +165,7 @@ class DuctTestUtil {
 	/**
 	 * Issues a <code>/shutdown</code> request
 	 *
+	 * @param port The local port to send to
 	 * @return the response
 	 */
 	static Response<String> shutdown( int port ) {

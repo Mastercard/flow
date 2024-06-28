@@ -244,10 +244,6 @@ class ModuleDiagramTest {
 			return toGroup.equals( g );
 		}
 
-		public String fromArtifactId() {
-			return fromArtifact;
-		}
-
 		@Override
 		public String toString() {
 			return fromArtifact + type + toArtifact;
