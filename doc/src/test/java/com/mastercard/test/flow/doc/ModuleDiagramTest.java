@@ -178,7 +178,7 @@ class ModuleDiagramTest {
 	/**
 	 * Tracking https://github.com/orgs/community/discussions/106690
 	 */
-	private static boolean RENDER_LINKS = true;
+	private static final boolean RENDER_LINKS = true;
 
 	private static final String moduleLink( Path root, PomData pom ) {
 		if( RENDER_LINKS ) {
