@@ -134,7 +134,7 @@
 			     provides automatic management of the drivers for that -->
 				<groupId>io.github.bonigarcia</groupId>
 				<artifactId>webdrivermanager</artifactId>
-				<version>5.8.0</version>
+				<version>5.9.1</version>
 			</dependency>
 
 			<dependency>
