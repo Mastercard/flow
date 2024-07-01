@@ -235,8 +235,12 @@ Test quality metrics for framework packages.
 <table>
 	<tbody>
 		<tr> <th><code>latest</code></th>
-			 <th><code>dependabot/maven/org.junit-junit-bom-5.10.3</code></th>
+			 <th><code>dependabot/maven/io.github.bonigarcia-webdrivermanager-5.9.1</code></th>
 			<td><a href="mutation/latest/mutation_report/index.html">mutation</a></td>
+		</tr>
+		<tr> <th><code>2024-07-01T01:00:22</code></th>
+			 <th><code>dependabot/maven/io.github.bonigarcia-webdrivermanager-5.9.1</code></th>
+			<td><a href="mutation/1719795622/mutation_report/index.html">mutation</a></td>
 		</tr>
 		<tr> <th><code>2024-07-01T00:59:54</code></th>
 			 <th><code>dependabot/maven/org.junit-junit-bom-5.10.3</code></th>
@@ -313,10 +317,6 @@ Test quality metrics for framework packages.
 		<tr> <th><code>2024-06-17T00:56:10</code></th>
 			 <th><code>dependabot/maven/org.apache.maven.plugins-maven-release-plugin-3.1.0</code></th>
 			<td><a href="mutation/1718585770/mutation_report/index.html">mutation</a></td>
-		</tr>
-		<tr> <th><code>2024-06-17T00:55:32</code></th>
-			 <th><code>dependabot/maven/org.apache.maven.plugins-maven-surefire-plugin-3.3.0</code></th>
-			<td><a href="mutation/1718585732/mutation_report/index.html">mutation</a></td>
 		</tr>
 	</tbody>
 </table>
