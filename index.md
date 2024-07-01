@@ -238,6 +238,10 @@ Test quality metrics for framework packages.
 			 <th><code>main</code></th>
 			<td><a href="mutation/latest/mutation_report/index.html">mutation</a></td>
 		</tr>
+		<tr> <th><code>2024-07-01T07:26:11</code></th>
+			 <th><code>main</code></th>
+			<td><a href="mutation/1719818771/mutation_report/index.html">mutation</a></td>
+		</tr>
 		<tr> <th><code>2024-07-01T07:25:52</code></th>
 			 <th><code>main</code></th>
 			<td><a href="mutation/1719818752/mutation_report/index.html">mutation</a></td>
@@ -313,10 +317,6 @@ Test quality metrics for framework packages.
 		<tr> <th><code>2024-06-17T07:21:17</code></th>
 			 <th><code>main</code></th>
 			<td><a href="mutation/1718608877/mutation_report/index.html">mutation</a></td>
-		</tr>
-		<tr> <th><code>2024-06-17T01:25:11</code></th>
-			 <th><code>dependabot/github_actions/actions/checkout-4.1.7</code></th>
-			<td><a href="mutation/1718587511/mutation_report/index.html">mutation</a></td>
 		</tr>
 	</tbody>
 </table>
