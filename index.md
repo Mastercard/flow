@@ -235,8 +235,12 @@ Test quality metrics for framework packages.
 <table>
 	<tbody>
 		<tr> <th><code>latest</code></th>
-			 <th><code>dependabot/github_actions/github/codeql-action-3.25.11</code></th>
+			 <th><code>dependabot/maven/org.junit-junit-bom-5.10.3</code></th>
 			<td><a href="mutation/latest/mutation_report/index.html">mutation</a></td>
+		</tr>
+		<tr> <th><code>2024-07-01T00:59:54</code></th>
+			 <th><code>dependabot/maven/org.junit-junit-bom-5.10.3</code></th>
+			<td><a href="mutation/1719795594/mutation_report/index.html">mutation</a></td>
 		</tr>
 		<tr> <th><code>2024-07-01T00:26:20</code></th>
 			 <th><code>dependabot/github_actions/github/codeql-action-3.25.11</code></th>
@@ -313,10 +317,6 @@ Test quality metrics for framework packages.
 		<tr> <th><code>2024-06-17T00:55:32</code></th>
 			 <th><code>dependabot/maven/org.apache.maven.plugins-maven-surefire-plugin-3.3.0</code></th>
 			<td><a href="mutation/1718585732/mutation_report/index.html">mutation</a></td>
-		</tr>
-		<tr> <th><code>2024-06-13T12:22:38</code></th>
-			 <th><code>main</code></th>
-			<td><a href="mutation/1718281358/mutation_report/index.html">mutation</a></td>
 		</tr>
 	</tbody>
 </table>
