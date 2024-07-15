@@ -235,8 +235,12 @@ Test quality metrics for framework packages.
 <table>
 	<tbody>
 		<tr> <th><code>latest</code></th>
-			 <th><code>dependabot/github_actions/github/codeql-action-3.25.12</code></th>
+			 <th><code>main</code></th>
 			<td><a href="mutation/latest/mutation_report/index.html">mutation</a></td>
+		</tr>
+		<tr> <th><code>2024-07-15T07:37:51</code></th>
+			 <th><code>main</code></th>
+			<td><a href="mutation/1721029071/mutation_report/index.html">mutation</a></td>
 		</tr>
 		<tr> <th><code>2024-07-15T07:29:22</code></th>
 			 <th><code>dependabot/github_actions/github/codeql-action-3.25.12</code></th>
@@ -313,10 +317,6 @@ Test quality metrics for framework packages.
 		<tr> <th><code>2024-07-01T01:00:22</code></th>
 			 <th><code>dependabot/maven/io.github.bonigarcia-webdrivermanager-5.9.1</code></th>
 			<td><a href="mutation/1719795622/mutation_report/index.html">mutation</a></td>
-		</tr>
-		<tr> <th><code>2024-07-01T00:59:54</code></th>
-			 <th><code>dependabot/maven/org.junit-junit-bom-5.10.3</code></th>
-			<td><a href="mutation/1719795594/mutation_report/index.html">mutation</a></td>
 		</tr>
 	</tbody>
 </table>

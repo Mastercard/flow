@@ -1,1 +1,0 @@
-dependabot/maven/org.junit-junit-bom-5.10.3
