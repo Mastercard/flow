@@ -1,0 +1,1 @@
+dependabot/maven/org.apache.maven.plugins-maven-surefire-plugin-3.3.1
