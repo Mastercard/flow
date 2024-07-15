@@ -238,6 +238,10 @@ Test quality metrics for framework packages.
 			 <th><code>main</code></th>
 			<td><a href="mutation/latest/mutation_report/index.html">mutation</a></td>
 		</tr>
+		<tr> <th><code>2024-07-15T07:39:47</code></th>
+			 <th><code>main</code></th>
+			<td><a href="mutation/1721029187/mutation_report/index.html">mutation</a></td>
+		</tr>
 		<tr> <th><code>2024-07-15T07:37:51</code></th>
 			 <th><code>main</code></th>
 			<td><a href="mutation/1721029071/mutation_report/index.html">mutation</a></td>
@@ -313,10 +317,6 @@ Test quality metrics for framework packages.
 		<tr> <th><code>2024-07-01T01:16:55</code></th>
 			 <th><code>dependabot/npm_and_yarn/report/report-ng/types/node-20.14.9</code></th>
 			<td><a href="mutation/1719796615/mutation_report/index.html">mutation</a></td>
-		</tr>
-		<tr> <th><code>2024-07-01T01:00:22</code></th>
-			 <th><code>dependabot/maven/io.github.bonigarcia-webdrivermanager-5.9.1</code></th>
-			<td><a href="mutation/1719795622/mutation_report/index.html">mutation</a></td>
 		</tr>
 	</tbody>
 </table>
