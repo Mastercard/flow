@@ -1,1 +1,0 @@
-angular_component_structure
