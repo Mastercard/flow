@@ -14,7 +14,7 @@ These reports are the result of comparing a unified model of system behaviour ag
 <table>
 	<tbody>
 		<tr> <th><code>latest</code></th>
-			 <th><code>dependabot/npm_and_yarn/report/report-ng/jasmine-core-5.2.0</code></th>
+			 <th><code>main</code></th>
 			<td><a href="execution/latest/app-core/target/mctf/latest/index.html">app-core</a></td>
 			<td><a href="execution/latest/app-histogram/target/mctf/latest/index.html">app-histogram</a></td>
 			<td><a href="execution/latest/app-itest/target/mctf/latest/index.html">app-itest</a></td>
@@ -22,6 +22,16 @@ These reports are the result of comparing a unified model of system behaviour ag
 			<td><a href="execution/latest/app-store/target/mctf/latest/index.html">app-store</a></td>
 			<td><a href="execution/latest/app-ui/target/mctf/latest/index.html">app-ui</a></td>
 			<td><a href="execution/latest/app-web-ui/target/mctf/latest/index.html">app-web-ui</a></td>
+		</tr>
+		<tr> <th><code>2024-07-22T14:41:43</code></th>
+			 <th><code>main</code></th>
+			<td><a href="execution/1721659303/app-core/target/mctf/latest/index.html">app-core</a></td>
+			<td><a href="execution/1721659303/app-histogram/target/mctf/latest/index.html">app-histogram</a></td>
+			<td><a href="execution/1721659303/app-itest/target/mctf/latest/index.html">app-itest</a></td>
+			<td><a href="execution/1721659303/app-queue/target/mctf/latest/index.html">app-queue</a></td>
+			<td><a href="execution/1721659303/app-store/target/mctf/latest/index.html">app-store</a></td>
+			<td><a href="execution/1721659303/app-ui/target/mctf/latest/index.html">app-ui</a></td>
+			<td><a href="execution/1721659303/app-web-ui/target/mctf/latest/index.html">app-web-ui</a></td>
 		</tr>
 		<tr> <th><code>2024-07-22T14:37:17</code></th>
 			 <th><code>dependabot/npm_and_yarn/report/report-ng/jasmine-core-5.2.0</code></th>
@@ -213,16 +223,6 @@ These reports are the result of comparing a unified model of system behaviour ag
 			<td><a href="execution/1721005672/app-ui/target/mctf/latest/index.html">app-ui</a></td>
 			<td><a href="execution/1721005672/app-web-ui/target/mctf/latest/index.html">app-web-ui</a></td>
 		</tr>
-		<tr> <th><code>2024-07-15T00:14:55</code></th>
-			 <th><code>dependabot/npm_and_yarn/report/report-ng/babel/core-7.24.8</code></th>
-			<td><a href="execution/1721002495/app-core/target/mctf/latest/index.html">app-core</a></td>
-			<td><a href="execution/1721002495/app-histogram/target/mctf/latest/index.html">app-histogram</a></td>
-			<td><a href="execution/1721002495/app-itest/target/mctf/latest/index.html">app-itest</a></td>
-			<td><a href="execution/1721002495/app-queue/target/mctf/latest/index.html">app-queue</a></td>
-			<td><a href="execution/1721002495/app-store/target/mctf/latest/index.html">app-store</a></td>
-			<td><a href="execution/1721002495/app-ui/target/mctf/latest/index.html">app-ui</a></td>
-			<td><a href="execution/1721002495/app-web-ui/target/mctf/latest/index.html">app-web-ui</a></td>
-		</tr>
 	</tbody>
 </table>
 <!-- end:execution -->
@@ -330,8 +330,12 @@ Test coverage for the report application.
 <table>
 	<tbody>
 		<tr> <th><code>latest</code></th>
-			 <th><code>dependabot/npm_and_yarn/report/report-ng/jasmine-core-5.2.0</code></th>
+			 <th><code>main</code></th>
 			<td><a href="ng_coverage/latest/report/index.html">ng_coverage</a></td>
+		</tr>
+		<tr> <th><code>2024-07-22T14:41:43</code></th>
+			 <th><code>main</code></th>
+			<td><a href="ng_coverage/1721659303/report/index.html">ng_coverage</a></td>
 		</tr>
 		<tr> <th><code>2024-07-22T14:37:17</code></th>
 			 <th><code>dependabot/npm_and_yarn/report/report-ng/jasmine-core-5.2.0</code></th>
@@ -408,10 +412,6 @@ Test coverage for the report application.
 		<tr> <th><code>2024-07-15T01:07:52</code></th>
 			 <th><code>dependabot/maven/org.apache.maven.plugins-maven-surefire-plugin-3.3.1</code></th>
 			<td><a href="ng_coverage/1721005672/report/index.html">ng_coverage</a></td>
-		</tr>
-		<tr> <th><code>2024-07-15T00:14:55</code></th>
-			 <th><code>dependabot/npm_and_yarn/report/report-ng/babel/core-7.24.8</code></th>
-			<td><a href="ng_coverage/1721002495/report/index.html">ng_coverage</a></td>
 		</tr>
 	</tbody>
 </table>
