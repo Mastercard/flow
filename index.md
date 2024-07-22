@@ -235,8 +235,12 @@ Test quality metrics for framework packages.
 <table>
 	<tbody>
 		<tr> <th><code>latest</code></th>
-			 <th><code>main</code></th>
+			 <th><code>dependabot/npm_and_yarn/report/report-ng/jasmine-core-5.2.0</code></th>
 			<td><a href="mutation/latest/mutation_report/index.html">mutation</a></td>
+		</tr>
+		<tr> <th><code>2024-07-22T14:48:48</code></th>
+			 <th><code>dependabot/npm_and_yarn/report/report-ng/jasmine-core-5.2.0</code></th>
+			<td><a href="mutation/1721659728/mutation_report/index.html">mutation</a></td>
 		</tr>
 		<tr> <th><code>2024-07-22T14:46:08</code></th>
 			 <th><code>main</code></th>
@@ -313,10 +317,6 @@ Test quality metrics for framework packages.
 		<tr> <th><code>2024-07-15T01:14:03</code></th>
 			 <th><code>dependabot/github_actions/actions/setup-node-4.0.3</code></th>
 			<td><a href="mutation/1721006043/mutation_report/index.html">mutation</a></td>
-		</tr>
-		<tr> <th><code>2024-07-15T01:13:36</code></th>
-			 <th><code>dependabot/maven/org.apache.maven.plugins-maven-surefire-plugin-3.3.1</code></th>
-			<td><a href="mutation/1721006016/mutation_report/index.html">mutation</a></td>
 		</tr>
 	</tbody>
 </table>
