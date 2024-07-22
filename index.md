@@ -235,8 +235,12 @@ Test quality metrics for framework packages.
 <table>
 	<tbody>
 		<tr> <th><code>latest</code></th>
-			 <th><code>dependabot/maven/org.apache.maven.plugins-maven-javadoc-plugin-3.8.0</code></th>
+			 <th><code>dependabot/github_actions/github/codeql-action-3.25.13</code></th>
 			<td><a href="mutation/latest/mutation_report/index.html">mutation</a></td>
+		</tr>
+		<tr> <th><code>2024-07-22T01:03:23</code></th>
+			 <th><code>dependabot/github_actions/github/codeql-action-3.25.13</code></th>
+			<td><a href="mutation/1721610203/mutation_report/index.html">mutation</a></td>
 		</tr>
 		<tr> <th><code>2024-07-22T00:25:42</code></th>
 			 <th><code>dependabot/maven/org.apache.maven.plugins-maven-javadoc-plugin-3.8.0</code></th>
@@ -313,10 +317,6 @@ Test quality metrics for framework packages.
 		<tr> <th><code>2024-07-08T00:59:09</code></th>
 			 <th><code>dependabot/npm_and_yarn/report/report-ng/types/node-20.14.10</code></th>
 			<td><a href="mutation/1720400349/mutation_report/index.html">mutation</a></td>
-		</tr>
-		<tr> <th><code>2024-07-01T07:27:25</code></th>
-			 <th><code>main</code></th>
-			<td><a href="mutation/1719818845/mutation_report/index.html">mutation</a></td>
 		</tr>
 	</tbody>
 </table>
