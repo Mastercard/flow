@@ -1,0 +1,1 @@
+dependabot/npm_and_yarn/report/report-ng/babel/core-7.24.9
