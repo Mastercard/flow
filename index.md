@@ -238,6 +238,10 @@ Test quality metrics for framework packages.
 			 <th><code>main</code></th>
 			<td><a href="mutation/latest/mutation_report/index.html">mutation</a></td>
 		</tr>
+		<tr> <th><code>2024-07-29T07:19:08</code></th>
+			 <th><code>main</code></th>
+			<td><a href="mutation/1722237548/mutation_report/index.html">mutation</a></td>
+		</tr>
 		<tr> <th><code>2024-07-29T07:18:49</code></th>
 			 <th><code>main</code></th>
 			<td><a href="mutation/1722237529/mutation_report/index.html">mutation</a></td>
@@ -313,10 +317,6 @@ Test quality metrics for framework packages.
 		<tr> <th><code>2024-07-22T00:25:42</code></th>
 			 <th><code>dependabot/maven/org.apache.maven.plugins-maven-javadoc-plugin-3.8.0</code></th>
 			<td><a href="mutation/1721607942/mutation_report/index.html">mutation</a></td>
-		</tr>
-		<tr> <th><code>2024-07-15T07:59:59</code></th>
-			 <th><code>main</code></th>
-			<td><a href="mutation/1721030399/mutation_report/index.html">mutation</a></td>
 		</tr>
 	</tbody>
 </table>
