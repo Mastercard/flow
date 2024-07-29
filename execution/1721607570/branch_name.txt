@@ -1,1 +1,0 @@
-dependabot/maven/org.apache.maven.plugins-maven-javadoc-plugin-3.8.0
