@@ -14,7 +14,7 @@ These reports are the result of comparing a unified model of system behaviour ag
 <table>
 	<tbody>
 		<tr> <th><code>latest</code></th>
-			 <th><code>dependabot/npm_and_yarn/report/report-ng/babel/core-7.25.2</code></th>
+			 <th><code>dependabot/npm_and_yarn/report/report-ng/types/node-22.1.0</code></th>
 			<td><a href="execution/latest/app-core/target/mctf/latest/index.html">app-core</a></td>
 			<td><a href="execution/latest/app-histogram/target/mctf/latest/index.html">app-histogram</a></td>
 			<td><a href="execution/latest/app-itest/target/mctf/latest/index.html">app-itest</a></td>
@@ -22,6 +22,16 @@ These reports are the result of comparing a unified model of system behaviour ag
 			<td><a href="execution/latest/app-store/target/mctf/latest/index.html">app-store</a></td>
 			<td><a href="execution/latest/app-ui/target/mctf/latest/index.html">app-ui</a></td>
 			<td><a href="execution/latest/app-web-ui/target/mctf/latest/index.html">app-web-ui</a></td>
+		</tr>
+		<tr> <th><code>2024-08-05T00:53:09</code></th>
+			 <th><code>dependabot/npm_and_yarn/report/report-ng/types/node-22.1.0</code></th>
+			<td><a href="execution/1722819189/app-core/target/mctf/latest/index.html">app-core</a></td>
+			<td><a href="execution/1722819189/app-histogram/target/mctf/latest/index.html">app-histogram</a></td>
+			<td><a href="execution/1722819189/app-itest/target/mctf/latest/index.html">app-itest</a></td>
+			<td><a href="execution/1722819189/app-queue/target/mctf/latest/index.html">app-queue</a></td>
+			<td><a href="execution/1722819189/app-store/target/mctf/latest/index.html">app-store</a></td>
+			<td><a href="execution/1722819189/app-ui/target/mctf/latest/index.html">app-ui</a></td>
+			<td><a href="execution/1722819189/app-web-ui/target/mctf/latest/index.html">app-web-ui</a></td>
 		</tr>
 		<tr> <th><code>2024-08-05T00:52:29</code></th>
 			 <th><code>dependabot/npm_and_yarn/report/report-ng/babel/core-7.25.2</code></th>
@@ -213,16 +223,6 @@ These reports are the result of comparing a unified model of system behaviour ag
 			<td><a href="execution/1721610065/app-ui/target/mctf/latest/index.html">app-ui</a></td>
 			<td><a href="execution/1721610065/app-web-ui/target/mctf/latest/index.html">app-web-ui</a></td>
 		</tr>
-		<tr> <th><code>2024-07-22T01:00:43</code></th>
-			 <th><code>dependabot/npm_and_yarn/report/report-ng/zone.js-0.14.8</code></th>
-			<td><a href="execution/1721610043/app-core/target/mctf/latest/index.html">app-core</a></td>
-			<td><a href="execution/1721610043/app-histogram/target/mctf/latest/index.html">app-histogram</a></td>
-			<td><a href="execution/1721610043/app-itest/target/mctf/latest/index.html">app-itest</a></td>
-			<td><a href="execution/1721610043/app-queue/target/mctf/latest/index.html">app-queue</a></td>
-			<td><a href="execution/1721610043/app-store/target/mctf/latest/index.html">app-store</a></td>
-			<td><a href="execution/1721610043/app-ui/target/mctf/latest/index.html">app-ui</a></td>
-			<td><a href="execution/1721610043/app-web-ui/target/mctf/latest/index.html">app-web-ui</a></td>
-		</tr>
 	</tbody>
 </table>
 <!-- end:execution -->
@@ -330,8 +330,12 @@ Test coverage for the report application.
 <table>
 	<tbody>
 		<tr> <th><code>latest</code></th>
-			 <th><code>dependabot/npm_and_yarn/report/report-ng/babel/core-7.25.2</code></th>
+			 <th><code>dependabot/npm_and_yarn/report/report-ng/types/node-22.1.0</code></th>
 			<td><a href="ng_coverage/latest/report/index.html">ng_coverage</a></td>
+		</tr>
+		<tr> <th><code>2024-08-05T00:53:09</code></th>
+			 <th><code>dependabot/npm_and_yarn/report/report-ng/types/node-22.1.0</code></th>
+			<td><a href="ng_coverage/1722819189/report/index.html">ng_coverage</a></td>
 		</tr>
 		<tr> <th><code>2024-08-05T00:52:29</code></th>
 			 <th><code>dependabot/npm_and_yarn/report/report-ng/babel/core-7.25.2</code></th>
@@ -408,10 +412,6 @@ Test coverage for the report application.
 		<tr> <th><code>2024-07-22T01:01:05</code></th>
 			 <th><code>dependabot/npm_and_yarn/report/report-ng/babel/core-7.24.9</code></th>
 			<td><a href="ng_coverage/1721610065/report/index.html">ng_coverage</a></td>
-		</tr>
-		<tr> <th><code>2024-07-22T01:00:43</code></th>
-			 <th><code>dependabot/npm_and_yarn/report/report-ng/zone.js-0.14.8</code></th>
-			<td><a href="ng_coverage/1721610043/report/index.html">ng_coverage</a></td>
 		</tr>
 	</tbody>
 </table>
