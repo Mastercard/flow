@@ -235,8 +235,12 @@ Test quality metrics for framework packages.
 <table>
 	<tbody>
 		<tr> <th><code>latest</code></th>
-			 <th><code>main</code></th>
+			 <th><code>dependabot/github_actions/actions/upload-artifact-4.3.5</code></th>
 			<td><a href="mutation/latest/mutation_report/index.html">mutation</a></td>
+		</tr>
+		<tr> <th><code>2024-08-05T00:16:00</code></th>
+			 <th><code>dependabot/github_actions/actions/upload-artifact-4.3.5</code></th>
+			<td><a href="mutation/1722816960/mutation_report/index.html">mutation</a></td>
 		</tr>
 		<tr> <th><code>2024-07-29T07:19:26</code></th>
 			 <th><code>main</code></th>
@@ -313,10 +317,6 @@ Test quality metrics for framework packages.
 		<tr> <th><code>2024-07-22T01:04:45</code></th>
 			 <th><code>dependabot/npm_and_yarn/report/report-ng/jasmine-core-5.2.0</code></th>
 			<td><a href="mutation/1721610285/mutation_report/index.html">mutation</a></td>
-		</tr>
-		<tr> <th><code>2024-07-22T01:03:23</code></th>
-			 <th><code>dependabot/github_actions/github/codeql-action-3.25.13</code></th>
-			<td><a href="mutation/1721610203/mutation_report/index.html">mutation</a></td>
 		</tr>
 	</tbody>
 </table>
