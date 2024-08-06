@@ -8,6 +8,7 @@ Implementations of the Message interface
 
 
  * [../flow](https://github.com/Mastercard/flow) Testing framework
+ * [message-bytes](message-bytes) Raw byte array messages
  * [message-core](message-core) Message implementation utilities
  * [message-http](message-http) HyperText Transfer Protocol messages
  * [message-json](message-json) JavaScript Object Notation messages
