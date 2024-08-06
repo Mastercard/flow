@@ -58,6 +58,7 @@ graph TB
     builder[<a href='https://github.com/Mastercard/flow/tree/main/builder'>builder</a>]
     coppice[<a href='https://github.com/Mastercard/flow/tree/main/validation/coppice'>coppice</a>]
     duct[<a href='https://github.com/Mastercard/flow/tree/main/report/duct'>duct</a>]
+    message-bytes[<a href='https://github.com/Mastercard/flow/tree/main/message/message-bytes'>message-bytes</a>]
     message-core[<a href='https://github.com/Mastercard/flow/tree/main/message/message-core'>message-core</a>]
     message-http[<a href='https://github.com/Mastercard/flow/tree/main/message/message-http'>message-http</a>]
     message-json[<a href='https://github.com/Mastercard/flow/tree/main/message/message-json'>message-json</a>]
@@ -72,14 +73,15 @@ graph TB
     validation-junit4[<a href='https://github.com/Mastercard/flow/tree/main/validation/validation-junit4'>validation-junit4</a>]
     validation-junit5[<a href='https://github.com/Mastercard/flow/tree/main/validation/validation-junit5'>validation-junit5</a>]
   end
-  api --> message-core
   api --> builder
+  api --> message-core
   api --> model
-  api --> validation-core
   api --> report-core
+  api --> validation-core
   assert-core --> assert-junit4
   assert-core --> assert-junit5
   assert-filter --> assert-core
+  message-core --> message-bytes
   message-core --> message-http
   message-core --> message-json
   message-core --> message-sql
@@ -89,9 +91,9 @@ graph TB
   report-core --> assert-filter
   report-core --> duct
   report-ng --> report-core
+  validation-core --> coppice
   validation-core --> validation-junit4
   validation-core --> validation-junit5
-  validation-core --> coppice
 ```
 
 <!-- end_module_diagram -->

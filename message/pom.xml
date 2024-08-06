@@ -11,6 +11,7 @@
 	<description>Implementations of the Message interface</description>
 
 	<modules>
+		<module>message-bytes</module>
 		<module>message-core</module>
 		<module>message-http</module>
 		<module>message-json</module>
