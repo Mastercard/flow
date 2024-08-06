@@ -73,11 +73,11 @@ graph TB
     validation-junit4[<a href='https://github.com/Mastercard/flow/tree/main/validation/validation-junit4'>validation-junit4</a>]
     validation-junit5[<a href='https://github.com/Mastercard/flow/tree/main/validation/validation-junit5'>validation-junit5</a>]
   end
-  api --> builder
   api --> message-core
+  api --> builder
   api --> model
-  api --> report-core
   api --> validation-core
+  api --> report-core
   assert-core --> assert-junit4
   assert-core --> assert-junit5
   assert-filter --> assert-core
@@ -91,9 +91,9 @@ graph TB
   report-core --> assert-filter
   report-core --> duct
   report-ng --> report-core
-  validation-core --> coppice
   validation-core --> validation-junit4
   validation-core --> validation-junit5
+  validation-core --> coppice
 ```
 
 <!-- end_module_diagram -->
