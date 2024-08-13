@@ -107,6 +107,7 @@ class DependencyTest {
 							+ "com.mastercard.test.flow:assert-junit5\n"
 							+ "com.mastercard.test.flow:builder\n"
 							+ "com.mastercard.test.flow:duct\n"
+							+ "com.mastercard.test.flow:message-bytes\n"
 							+ "com.mastercard.test.flow:message-core\n"
 							+ "com.mastercard.test.flow:message-http\n"
 							+ "com.mastercard.test.flow:message-json\n"

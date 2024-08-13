@@ -58,6 +58,7 @@ graph TB
     builder[<a href='https://github.com/Mastercard/flow/tree/main/builder'>builder</a>]
     coppice[<a href='https://github.com/Mastercard/flow/tree/main/validation/coppice'>coppice</a>]
     duct[<a href='https://github.com/Mastercard/flow/tree/main/report/duct'>duct</a>]
+    message-bytes[<a href='https://github.com/Mastercard/flow/tree/main/message/message-bytes'>message-bytes</a>]
     message-core[<a href='https://github.com/Mastercard/flow/tree/main/message/message-core'>message-core</a>]
     message-http[<a href='https://github.com/Mastercard/flow/tree/main/message/message-http'>message-http</a>]
     message-json[<a href='https://github.com/Mastercard/flow/tree/main/message/message-json'>message-json</a>]
@@ -80,6 +81,7 @@ graph TB
   assert-core --> assert-junit4
   assert-core --> assert-junit5
   assert-filter --> assert-core
+  message-core --> message-bytes
   message-core --> message-http
   message-core --> message-json
   message-core --> message-sql

@@ -62,6 +62,12 @@
 
 			<dependency>
 				<groupId>${project.groupId}</groupId>
+				<artifactId>message-bytes</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
 				<artifactId>message-core</artifactId>
 				<version>${project.version}</version>
 			</dependency>
