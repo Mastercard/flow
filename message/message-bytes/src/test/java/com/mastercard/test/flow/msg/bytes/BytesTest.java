@@ -44,7 +44,7 @@ class BytesTest {
 	}
 
 	/**
-	 * Shows that a defensive copy is taken by the constructor
+	 * Shows that a defensive copy is taken by the constructor and accessors
 	 */
 	@Test
 	void defence() {
@@ -52,6 +52,13 @@ class BytesTest {
 		Message msg = new Bytes( bytes );
 		for( int i = 0; i < bytes.length; i++ ) {
 			bytes[i] = 0;
+		}
+
+		assertEquals( "00010203040506070809", toHex( msg.content() ) );
+
+		byte[] extracted = (byte[]) msg.get( "5.." );
+		for( int i = 0; i < extracted.length; i++ ) {
+			extracted[i] = 0;
 		}
 
 		assertEquals( "00010203040506070809", toHex( msg.content() ) );
@@ -188,6 +195,7 @@ class BytesTest {
 		test.accept( "6..", "06070809" );
 		test.accept( "..", "00010203040506070809" );
 		test.accept( "8..12", "0809" );
+		test.accept( "11..15", "" );
 	}
 
 	/**
