@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 
@@ -107,21 +106,21 @@ class BytesTest {
 	void badRange() {
 		Bytes msg = new Bytes();
 
-		Consumer<String> test = in -> {
+		BiConsumer<String, String> test = ( in, out ) -> {
 			IllegalArgumentException iae = assertThrows(
 					IllegalArgumentException.class,
 					() -> msg.set( in, null ),
 					"for " + in );
 			assertEquals(
-					"'" + in + "' is not a valid range",
+					out,
 					iae.getMessage(),
 					"for " + in );
 		};
 
-		test.accept( null );
-		test.accept( "" );
-		test.accept( "foo" );
-		test.accept( "2..1" );
+		test.accept( null, "index range must be non-null" );
+		test.accept( "", "'' is not a valid range" );
+		test.accept( "foo", "'foo' is not a valid range" );
+		test.accept( "2..1", "range indices must be in 'a..b' order, where a<=b" );
 	}
 
 	/**

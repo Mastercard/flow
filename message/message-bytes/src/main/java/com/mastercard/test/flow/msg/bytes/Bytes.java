@@ -139,20 +139,17 @@ public class Bytes extends AbstractMessage<Bytes> {
 		 */
 		Range( String s ) {
 			if( s == null ) {
-				throw new IllegalArgumentException( "'" + s + "' is not a valid range" );
+				throw new IllegalArgumentException( "index range must be non-null" );
 			}
 
 			Matcher im = INDEX_PATTERN.matcher( s );
 			Matcher rm = RANGE_PATTERN.matcher( s );
 			if( im.matches() ) {
 				start = Integer.parseInt( im.group( 1 ) );
-				// false positive on 'Replaced integer addition with subtraction → SURVIVED'
 				end = start + 1;
 			}
 			else if( rm.matches() ) {
 				start = Optional.of( rm.group( 1 ) )
-						// false positive on 'replaced boolean return with true for
-						// com/mastercard/test/flow/msg/bytes/Bytes$Range::lambda$new$0 → SURVIVED'
 						.filter( d -> !d.isEmpty() )
 						.map( Integer::parseInt )
 						.orElse( 0 );
@@ -165,9 +162,8 @@ public class Bytes extends AbstractMessage<Bytes> {
 				throw new IllegalArgumentException( "'" + s + "' is not a valid range" );
 			}
 
-			// false postive on 'changed conditional boundary → SURVIVED'
 			if( start > end ) {
-				throw new IllegalArgumentException( "'" + s + "' is not a valid range" );
+				throw new IllegalArgumentException( "range indices must be in 'a..b' order, where a<=b" );
 			}
 		}
 
