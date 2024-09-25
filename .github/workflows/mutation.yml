@@ -37,39 +37,22 @@ jobs:
 
     - name: Save aggregated mutation report
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      id: upload_aggregated
       with:
         name: mutation_report
         path: aggregator/target/pit-reports
 
+    - name: Emit aggregated artifact link
+      run: echo " * [aggregated report](https://bowlby.flowty.dev/flow/artifacts/Mastercard/flow/${{ steps.upload_aggregated.outputs.artifact-id }}/index.html)" >> $GITHUB_STEP_SUMMARY
+
     - name: Save project mutation reports
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      id: upload_project
       if:  ${{ failure() }}
       with:
         name: project_mutation_reports
         path: '**/target/pit-reports'
 
-  publish:
-    permissions:
-      contents: write  # for stefanzweifel/git-auto-commit-action to push code in repo
-    needs: build
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    concurrency: pages_branch
-    steps:
-    - name: Checkout
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      with:
-        ref: pages
-
-    - name: Download
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        path: mutation/ingest
-
-    - name: Ingest
-      run: perl regen_index.pl $GITHUB_HEAD_REF >> $GITHUB_STEP_SUMMARY
-
-    - name: Commit
-      uses: stefanzweifel/git-auto-commit-action@8621497c8c39c72f3e2a999a26b4ca1b5058a842 # v5.0.1
-      with:
-        branch: pages
+    - name: Emit project artifact link
+      if:  ${{ failure() }}
+      run: echo " * [project reports](https://bowlby.flowty.dev/flow/artifacts/Mastercard/flow/${{ steps.upload_project.outputs.artifact-id }})" >> $GITHUB_STEP_SUMMARY
