@@ -204,6 +204,6 @@ While it is important that tests are automated, stable, quick and easy to run, a
 ---
 
  * [Project root](https://github.com/Mastercard/flow)
- * [Example execution report](https://mastercard.github.io/flow/execution/latest/app-itest/target/mctf/latest/index.html)
+ * [Example execution report](https://mastercard.github.io/flow/static/app-itest/target/mctf/latest/index.html)
  * [Quickstart guide](../quickstart.md)
  * [Further reading](../further.md)
