@@ -1,0 +1,25 @@
+# This workflow hits an endpoint of our bowlby instance and fails if we don't get a success response
+# This confirms that
+#  * The OCI instance is still running
+#  * The https cert is still good
+#  * The github api token is still good
+
+name: health
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * *'
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+    
+      - name: Check the deployed service URL
+        uses: jtalk/url-health-check-action@v4
+        with:
+          url: https://bowlby.flowty.dev/flow/latest/Mastercard/flow/test.yml
+          max-attempts: 3
+          retry-delay: 5s
+          retry-all: true
