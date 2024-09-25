@@ -1,7 +1,7 @@
 # Build artifacts
 
 One of the main features of the [flow testing framework](https://github.com/Mastercard/flow) is the production of rich execution reports.
-Until such a time as [upload-artifact#14](https://github.com/actions/upload-artifact/issues/14) is addressed, we're using the [bowlby](https://github.com/therealryan/bowlby) instance at [https://bowlby.flowty.dev/flow/](https://bowlby.flowty.dev/flow/) to serve our workflow results.
+Until such a time as [upload-artifact#14](https://github.com/actions/upload-artifact/issues/14) is addressed, we're using the [bowlby](https://github.com/therealryan/bowlby) instance at [https://bowlby.flowty.dev/flow](https://bowlby.flowty.dev/flow) to serve our workflow results.
 
 See the latest results here:
  * [Testing](https://bowlby.flowty.dev/flow/latest/Mastercard/flow/test.yml)
@@ -15,5 +15,5 @@ See the latest results here:
    * [Report UI](https://bowlby.flowty.dev/flow/latest/Mastercard/flow/test.yml/angular_coverage/report/index.html)
  * [Mutation](https://bowlby.flowty.dev/flow/latest/Mastercard/flow/mutation.yml/mutation_report/index.html)
 
-Look at the workflow summaries for the results of historic runs.
+Look at the workflow run summaries for the results of historic runs.
 
