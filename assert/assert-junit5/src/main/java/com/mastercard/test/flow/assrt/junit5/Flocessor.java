@@ -1,23 +1,30 @@
 package com.mastercard.test.flow.assrt.junit5;
 
-import static org.junit.jupiter.api.DynamicTest.dynamicTest;
-
 import java.net.URI;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DynamicContainer;
 import org.junit.jupiter.api.DynamicNode;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import org.opentest4j.IncompleteExecutionException;
 import org.opentest4j.TestAbortedException;
+
+import static com.mastercard.test.flow.assrt.Order.CHAIN_TAG_PREFIX;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.assrt.AbstractFlocessor;
 import com.mastercard.test.flow.assrt.History.Result;
+import com.mastercard.test.flow.util.Tags;
 
 /**
  * Integrates {@link Flow} processing into junit 5. This should be used as the
@@ -53,33 +60,62 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 	 * @return A stream of test cases
 	 */
 	public Stream<DynamicNode> tests() {
-		return flows().map( flow -> dynamicTest(
-				flow.meta().id(),
-				testSource( flow ),
-				() -> {
-					try {
-						process( flow );
-						history.recordResult( flow, Result.SUCCESS );
-					}
-					catch( IncompleteExecutionException iee ) {
-						// not strictly required to record the skipped outcome in the history, as it
-						// does not inform the processing of later flows. That may change in the future
-						// though, so for now we're going to live with the mutation testing complaint
-						history.recordResult( flow, Result.SKIP );
-						throw iee;
-					}
-					catch( AssertionError ae ) {
-						history.recordResult( flow, Result.UNEXPECTED );
-						throw ae;
-					}
-					catch( Exception e ) {
-						// not strictly required to record the error outcome in the history, as it
-						// does not inform the processing of later flows. That may change in the future
-						// though, so for now we're going to live with the mutation testing complaint
-						history.recordResult( flow, Result.ERROR );
-						throw e;
-					}
-				} ) );
+
+		// Create DynamicNodes for both chained and non-chained flows
+		Stream<DynamicNode> chainedNodes = groupChainedFlows().values().stream()
+				.map( this::createDynamicContainer );
+		Stream<DynamicNode> nonChainedNodes = flows()
+				.filter( flow -> !Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX ).isPresent() )
+				.map( flow -> dynamicTest(
+						flow.meta().id(),
+						testSource( flow ),
+						() -> processFlow( flow ) ) );
+
+		// Combine both streams
+		return Stream.concat( chainedNodes, nonChainedNodes );
+	}
+
+	private void processFlow( Flow flow ) {
+		try {
+			process( flow );
+			history.recordResult( flow, Result.SUCCESS );
+		}
+		catch( IncompleteExecutionException iee ) {
+			// not strictly required to record the skipped outcome in the history, as it
+			// does not inform the processing of later flows. That may change in the future
+			// though, so for now we're going to live with the mutation testing complaint
+			history.recordResult( flow, Result.SKIP );
+			throw iee;
+		}
+		catch( AssertionError ae ) {
+			history.recordResult( flow, Result.UNEXPECTED );
+			throw ae;
+		}
+		catch( Exception e ) {
+			// not strictly required to record the error outcome in the history, as it
+			// does not inform the processing of later flows. That may change in the future
+			// though, so for now we're going to live with the mutation testing complaint
+			history.recordResult( flow, Result.ERROR );
+			throw e;
+		}
+	}
+
+	private Map<String, List<Flow>> groupChainedFlows() {
+		return flows()
+				.filter( flow -> Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX ).isPresent() )
+				.collect( Collectors.groupingBy(
+						flow -> Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX ).get() ) );
+	}
+
+	private DynamicContainer createDynamicContainer( List<Flow> chain ) {
+		List<DynamicTest> tests = chain.stream()
+				.map( flow -> dynamicTest(
+						flow.meta().id(),
+						testSource( flow ),
+						() -> processFlow( flow ) ) )
+				.collect( Collectors.toList() );
+
+		return DynamicContainer.dynamicContainer( "Chain: " + chain.get( 0 ).meta().id(), tests );
 	}
 
 	/**
