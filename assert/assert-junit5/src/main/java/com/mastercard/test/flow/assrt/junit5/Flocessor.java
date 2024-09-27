@@ -2,9 +2,7 @@ package com.mastercard.test.flow.assrt.junit5;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -117,13 +115,6 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 			history.recordResult( flow, Result.ERROR );
 			throw e;
 		}
-	}
-
-	private Map<String, List<Flow>> groupChainedFlows() {
-		return flows()
-				.filter( flow -> Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX ).isPresent() )
-				.collect( Collectors.groupingBy(
-						flow -> Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX ).get() ) );
 	}
 
 	private DynamicContainer createDynamicContainer( List<Flow> chain ) {

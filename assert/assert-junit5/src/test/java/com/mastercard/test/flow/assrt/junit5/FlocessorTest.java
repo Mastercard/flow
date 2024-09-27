@@ -1,0 +1,118 @@
+package com.mastercard.test.flow.assrt.junit5;
+
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.junit.jupiter.api.DynamicContainer;
+import org.junit.jupiter.api.DynamicNode;
+import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+
+import com.mastercard.test.flow.Flow;
+import com.mastercard.test.flow.Model;
+import com.mastercard.test.flow.builder.Chain;
+import com.mastercard.test.flow.builder.Creator;
+import com.mastercard.test.flow.builder.Deriver;
+import com.mastercard.test.flow.util.TaggedGroup;
+
+@SuppressWarnings("static-method")
+class FlocessorTest {
+
+	/**
+	 * Validates the {@link Flocessor} class for DynamicContainer creation of
+	 * chained flows
+	 */
+	@Test
+	void tests() {
+
+		Flocessor flocessor = new Flocessor( "Test Flocessor", new ChainedMdl() );
+		List<DynamicNode> nodes = flocessor.tests().collect( Collectors.toList() );
+		assertEquals( 4, nodes.size() );
+
+		// assert first test is a DynamicTest
+		assertInstanceOf( DynamicTest.class, nodes.get( 0 ) );
+		assertEquals( "a []", nodes.get( 0 ).getDisplayName() );
+
+		// assert second test is a DynamicContainer
+		assertInstanceOf( DynamicContainer.class, nodes.get( 1 ) );
+		List<DynamicNode> chain1 = ((DynamicContainer) nodes.get( 1 )).getChildren()
+				.collect( Collectors.toList() );
+
+		// assert all children are present in the correct order
+		assertEquals( "b1 [chain:b]", chain1.get( 0 ).getDisplayName() );
+		assertEquals( "b2 [chain:b]", chain1.get( 1 ).getDisplayName() );
+		assertEquals( "d [chain:b]", chain1.get( 2 ).getDisplayName() );
+
+		// assert last test is a DynamicContainer
+		List<DynamicNode> chain2 = ((DynamicContainer) nodes.get( 3 )).getChildren()
+				.collect( Collectors.toList() );
+
+		assertEquals( "e1 [chain:e]", chain2.get( 0 ).getDisplayName() );
+		assertEquals( "e2 [chain:e]", chain2.get( 1 ).getDisplayName() );
+
+	}
+
+	public static class ChainedMdl implements Model {
+
+		private Flow success = Creator.build( flow -> flow
+				.meta( data -> data
+						.description( "a" ) ) );
+		private Chain chain1 = new Chain( "b" );
+
+		private Flow chainedChain1 = Creator.build( chain1, flow -> flow
+				.meta( data -> data
+						.description( "b1" ) ) );
+		private Flow derivedChain1 = Deriver.build( chainedChain1, chain1, flow -> flow
+				.meta( data -> data
+						.description( "b2" ) ) );
+
+		private Flow successChild = Creator.build( flow -> flow
+				.meta( data -> data
+						.description( "c" ) ) );
+
+		private Flow derivedChildChain1 = Deriver.build( derivedChain1, chain1, flow -> flow
+				.meta( data -> data
+						.description( "d" ) ) );
+
+		private Chain chain2 = new Chain( "e" );
+
+		private Flow chainedChain2 = Creator.build( chain2, flow -> flow
+				.meta( data -> data
+						.description( "e1" ) ) );
+		private Flow derivedChain2 = Deriver.build( chainedChain2, chain2, flow -> flow
+				.meta( data -> data
+						.description( "e2" ) ) );
+
+		@Override
+		public Stream<Flow> flows( Set<String> include, Set<String> exclude ) {
+			return Stream.of( success, chainedChain1, derivedChain1, successChild, derivedChildChain1,
+					chainedChain2, derivedChain2 );
+		}
+
+		@Override
+		public Model listener( Listener l ) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public String title() {
+			return "Mdl";
+		}
+
+		@Override
+		public TaggedGroup tags() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public Stream<Model> subModels() {
+			return Stream.empty();
+		}
+
+	}
+}
