@@ -1,6 +1,8 @@
 package com.mastercard.test.flow.assrt.junit5;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -60,19 +62,36 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 	 * @return A stream of test cases
 	 */
 	public Stream<DynamicNode> tests() {
+		List<DynamicNode> nodes = new ArrayList<>();
+		List<Flow> currentChain = new ArrayList<>();
+		boolean inChain = false;
 
-		// Create DynamicNodes for both chained and non-chained flows
-		Stream<DynamicNode> chainedNodes = groupChainedFlows().values().stream()
-				.map( this::createDynamicContainer );
-		Stream<DynamicNode> nonChainedNodes = flows()
-				.filter( flow -> !Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX ).isPresent() )
-				.map( flow -> dynamicTest(
+		// Iterate over flows once and separate them into chained and non-chained
+		for( Flow flow : flows().collect( Collectors.toList() ) ) {
+			Optional<String> chainSuffix = Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX );
+			if( chainSuffix.isPresent() ) {
+				inChain = true;
+				currentChain.add( flow );
+			}
+			else {
+				if( inChain ) {
+					// End of a chain, add the current chain to nodes
+					nodes.add( createDynamicContainer( currentChain ) );
+					currentChain = new ArrayList<>();
+					inChain = false;
+				}
+				nodes.add( dynamicTest(
 						flow.meta().id(),
 						testSource( flow ),
 						() -> processFlow( flow ) ) );
+			}
+		}
 
-		// Combine both streams
-		return Stream.concat( chainedNodes, nonChainedNodes );
+		// If the last flows were part of a chain, add them as well
+		if( !currentChain.isEmpty() ) {
+			nodes.add( createDynamicContainer( currentChain ) );
+		}
+		return nodes.stream();
 	}
 
 	private void processFlow( Flow flow ) {
