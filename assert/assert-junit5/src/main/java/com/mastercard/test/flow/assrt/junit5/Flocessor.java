@@ -62,21 +62,31 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 	public Stream<DynamicNode> tests() {
 		List<DynamicNode> nodes = new ArrayList<>();
 		List<Flow> currentChain = new ArrayList<>();
-		boolean inChain = false;
+		String currentChainId = null;
 
 		// Iterate over flows once and separate them into chained and non-chained
 		for( Flow flow : flows().collect( Collectors.toList() ) ) {
 			Optional<String> chainSuffix = Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX );
 			if( chainSuffix.isPresent() ) {
-				inChain = true;
-				currentChain.add( flow );
+				String chainId = chainSuffix.get();
+				if( currentChainId == null || currentChainId.equals( chainId ) ) {
+					currentChainId = chainId;
+					currentChain.add( flow );
+				}
+				else {
+					// End of the previous chain, add the current chain to nodes
+					nodes.add( createDynamicContainer( currentChain ) );
+					currentChain.clear();
+					currentChainId = chainId;
+					currentChain.add( flow );
+				}
 			}
 			else {
-				if( inChain ) {
-					// End of a chain, add the current chain to nodes
+				if( currentChainId != null ) {
+					// End of the current chain, add the current chain to nodes
 					nodes.add( createDynamicContainer( currentChain ) );
-					currentChain = new ArrayList<>();
-					inChain = false;
+					currentChain.clear();
+					currentChainId = null;
 				}
 				nodes.add( dynamicTest(
 						flow.meta().id(),

@@ -32,7 +32,7 @@ class FlocessorTest {
 
 		Flocessor flocessor = new Flocessor( "Test Flocessor", new ChainedMdl() );
 		List<DynamicNode> nodes = flocessor.tests().collect( Collectors.toList() );
-		assertEquals( 4, nodes.size() );
+		assertEquals( 5, nodes.size() );
 
 		// assert first test is a DynamicTest
 		assertInstanceOf( DynamicTest.class, nodes.get( 0 ) );
@@ -48,12 +48,22 @@ class FlocessorTest {
 		assertEquals( "b2 [chain:b]", chain1.get( 1 ).getDisplayName() );
 		assertEquals( "d [chain:b]", chain1.get( 2 ).getDisplayName() );
 
-		// assert last test is a DynamicContainer
+		// assert test after a chain is a DynamicTest
+		assertInstanceOf( DynamicTest.class, nodes.get( 2 ) );
+		assertEquals( "c []", nodes.get( 2 ).getDisplayName() );
+
 		List<DynamicNode> chain2 = ((DynamicContainer) nodes.get( 3 )).getChildren()
 				.collect( Collectors.toList() );
 
-		assertEquals( "e1 [chain:e]", chain2.get( 0 ).getDisplayName() );
-		assertEquals( "e2 [chain:e]", chain2.get( 1 ).getDisplayName() );
+		assertEquals( "d1 [chain:d]", chain2.get( 0 ).getDisplayName() );
+		assertEquals( "d2 [chain:d]", chain2.get( 1 ).getDisplayName() );
+
+		// assert last test is a DynamicContainer
+		List<DynamicNode> chain3 = ((DynamicContainer) nodes.get( 4 )).getChildren()
+				.collect( Collectors.toList() );
+
+		assertEquals( "e1 [chain:e]", chain3.get( 0 ).getDisplayName() );
+		assertEquals( "e2 [chain:e]", chain3.get( 1 ).getDisplayName() );
 
 	}
 
@@ -75,23 +85,31 @@ class FlocessorTest {
 				.meta( data -> data
 						.description( "c" ) ) );
 
+		private Flow chainedChain2 = Creator.build( new Chain( "d" ), flow -> flow
+				.meta( data -> data
+						.description( "d1" ) ) );
+		private Flow derivedChain2 = Deriver.build( chainedChain2, new Chain( "d" ), flow -> flow
+				.meta( data -> data
+						.description( "d2" ) ) );
+
 		private Flow derivedChildChain1 = Deriver.build( derivedChain1, chain1, flow -> flow
 				.meta( data -> data
 						.description( "d" ) ) );
 
-		private Chain chain2 = new Chain( "e" );
+		private Chain chain3 = new Chain( "e" );
 
-		private Flow chainedChain2 = Creator.build( chain2, flow -> flow
+		private Flow chainedChain3 = Creator.build( chain3, flow -> flow
 				.meta( data -> data
 						.description( "e1" ) ) );
-		private Flow derivedChain2 = Deriver.build( chainedChain2, chain2, flow -> flow
+		private Flow derivedChain3 = Deriver.build( chainedChain3, chain3, flow -> flow
 				.meta( data -> data
 						.description( "e2" ) ) );
 
 		@Override
 		public Stream<Flow> flows( Set<String> include, Set<String> exclude ) {
-			return Stream.of( success, chainedChain1, derivedChain1, successChild, derivedChildChain1,
-					chainedChain2, derivedChain2 );
+			return Stream.of( success, chainedChain1, derivedChain1, chainedChain2, derivedChain2,
+					successChild, derivedChildChain1,
+					chainedChain3, derivedChain3 );
 		}
 
 		@Override
