@@ -74,14 +74,15 @@ Good pull requests - patches, improvements, new features - are a fantastic
 help. They should remain focused in scope and avoid containing unrelated
 commits.
 
-**Please ask first** before embarking on any significant pull request (e.g.
-implementing features, refactoring code), otherwise you risk spending a lot of
+**Please ask first** before embarking on any significant pull request that is speculative in nature (e.g.
+implementing new features, refactoring code), otherwise you risk spending a lot of
 time working on something that the project's developers might not want to merge
 into the project.
+There's no need to ask for permission for things like fixing issues - the project has already expressed a desire for that work.
 
 ### For new Contributors
 
-If you have never created a pull request before, welcome :tada: :smile: [Here is a great tutorial](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github)
+If you have never created a pull request before, welcome :tada: :smile: [Here is a great course](https://egghead.io/courses/how-to-contribute-to-an-open-source-project-on-github)
 on how to create a pull request..
 
 1. [Fork](http://help.github.com/fork-a-repo/) the project, clone your fork,
