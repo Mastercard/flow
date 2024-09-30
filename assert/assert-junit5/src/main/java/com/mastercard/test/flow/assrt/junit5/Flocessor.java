@@ -135,7 +135,13 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 						() -> processFlow( flow ) ) )
 				.collect( Collectors.toList() );
 
-		return DynamicContainer.dynamicContainer( "Chain: " + chain.get( 0 ).meta().id(), tests );
+		// Use the chain tag for the display name
+		String chainTag = chain.stream()
+				.findFirst()
+				.flatMap( flow -> Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX ) )
+				.orElse( chain.get( 0 ).meta().id() );
+
+		return DynamicContainer.dynamicContainer( "chain:" + chainTag, tests );
 	}
 
 	/**
