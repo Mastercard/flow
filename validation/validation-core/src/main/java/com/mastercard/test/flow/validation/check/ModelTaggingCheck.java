@@ -69,10 +69,10 @@ public class ModelTaggingCheck implements Validation {
 			} );
 			flowUnionTags.removeAll( flowIntersectionTags );
 
-			String expected = flowsFound.get()
+			String actual = flowsFound.get()
 					? formatCopypasta( flowUnionTags, flowIntersectionTags )
 					: "null;";
-			String actual = Optional.ofNullable( model.tags() )
+			String expected = Optional.ofNullable( model.tags() )
 					.map( mt -> {
 						Set<String> modelUnionTags = mt.union()
 								.collect( Collectors.toCollection( TreeSet::new ) );
@@ -83,8 +83,9 @@ public class ModelTaggingCheck implements Validation {
 					} )
 					.orElse( "null;" );
 
-			if( !expected.equals( actual ) ) {
-				return new Violation( this, "Inaccurate tagging", expected, actual );
+			if( !actual.equals( expected ) ) {
+				return new Violation( this, "Inaccurate tagging in model: " + model.title(), expected,
+						actual );
 			}
 
 			return null;

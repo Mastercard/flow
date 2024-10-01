@@ -65,27 +65,27 @@ class ModelTaggingCheckTest extends AbstractValidationTest {
 		test( leaf( "empty model tags",
 				null,
 				"a,b,c" ),
-				"  details: Inaccurate tagging\n"
-						+ " expected: new TaggedGroup(\"a\", \"b\", \"c\");\n"
-						+ "   actual: null;\n"
+				"  details: Inaccurate tagging in model: empty model tags\n"
+						+ " expected: null;\n"
+						+ "   actual: new TaggedGroup(\"a\", \"b\", \"c\");\n"
 						+ "offenders: " );
 
 		test( leaf( "empty flow tags",
 				new TaggedGroup( "a", "b", "c" ).union( "d" ) ),
-				"  details: Inaccurate tagging\n"
-						+ " expected: null;\n"
-						+ "   actual: new TaggedGroup(\"a\", \"b\", \"c\")\n"
+				"  details: Inaccurate tagging in model: empty flow tags\n"
+						+ " expected: new TaggedGroup(\"a\", \"b\", \"c\")\n"
 						+ "         .union(\"d\");\n"
+						+ "   actual: null;\n"
 						+ "offenders: " );
 
 		test( leaf( "mismatch",
 				new TaggedGroup( "a", "b", "c" ).union( "d" ),
 				"a,b,c", "b,c,d" ),
-				"  details: Inaccurate tagging\n"
-						+ " expected: new TaggedGroup(\"b\", \"c\")\n"
-						+ "         .union(\"a\", \"d\");\n"
-						+ "   actual: new TaggedGroup(\"a\", \"b\", \"c\")\n"
+				"  details: Inaccurate tagging in model: mismatch\n"
+						+ " expected: new TaggedGroup(\"a\", \"b\", \"c\")\n"
 						+ "         .union(\"d\");\n"
+						+ "   actual: new TaggedGroup(\"b\", \"c\")\n"
+						+ "         .union(\"a\", \"d\");\n"
 						+ "offenders: " );
 	}
 
@@ -99,15 +99,15 @@ class ModelTaggingCheckTest extends AbstractValidationTest {
 				leaf( "left", new TaggedGroup( "a", "b" ), "a,b" ),
 				leaf( "right", new TaggedGroup( "b", "c" ), "b,c,d" ) ),
 				"left : pass",
-				"  details: Inaccurate tagging\n"
-						+ " expected: new TaggedGroup(\"b\", \"c\", \"d\");\n"
-						+ "   actual: new TaggedGroup(\"b\", \"c\");\n"
+				"  details: Inaccurate tagging in model: right\n"
+						+ " expected: new TaggedGroup(\"b\", \"c\");\n"
+						+ "   actual: new TaggedGroup(\"b\", \"c\", \"d\");\n"
 						+ "offenders: ",
-				"  details: Inaccurate tagging\n"
+				"  details: Inaccurate tagging in model: branch\n"
 						+ " expected: new TaggedGroup(\"b\")\n"
-						+ "         .union(\"a\", \"c\", \"d\");\n"
-						+ "   actual: new TaggedGroup(\"b\")\n"
 						+ "         .union(\"a\", \"c\", \"x\");\n"
+						+ "   actual: new TaggedGroup(\"b\")\n"
+						+ "         .union(\"a\", \"c\", \"d\");\n"
 						+ "offenders: " );
 	}
 
