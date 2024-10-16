@@ -5,12 +5,12 @@ Until such a time as [upload-artifact#14](https://github.com/actions/upload-arti
 
 These reports are generated whenever [the `static_artifacts` workflow](https://github.com/Mastercard/flow/actions/workflows/static_artifacts.yml) is run: 
 
- * [Integrated system](static/app-itest/target/mctf/latest/index.html)
- * [Core service](static/app-core/target/mctf/latest/index.html)
- * [Histogram service](static/app-histogram/target/mctf/latest/index.html)
- * [Queue service](static/app-queue/target/mctf/latest/index.html)
- * [Store service](static/app-store/target/mctf/latest/index.html)
- * [UI service](static/app-ui/target/mctf/latest/index.html)
- * [Web UI service](static/app-web-ui/target/mctf/latest/index.html)
+ * [Integrated system](https://mastercard.github.io/flow/static/app-itest/target/mctf/latest/index.html)
+ * [Core service](https://mastercard.github.io/flow/static/app-core/target/mctf/latest/index.html)
+ * [Histogram service](https://mastercard.github.io/flow/static/app-histogram/target/mctf/latest/index.html)
+ * [Queue service](https://mastercard.github.io/flow/static/app-queue/target/mctf/latest/index.html)
+ * [Store service](https://mastercard.github.io/flow/static/app-store/target/mctf/latest/index.html)
+ * [UI service](https://mastercard.github.io/flow/static/app-ui/target/mctf/latest/index.html)
+ * [Web UI service](https://mastercard.github.io/flow/static/app-web-ui/target/mctf/latest/index.html)
 
 The same content (along with mutation testing and angular unit testing reports) is available as artifacts from the appropriate workflows.
