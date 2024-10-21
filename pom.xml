@@ -56,7 +56,7 @@
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<jline.version>3.23.0</jline.version>
+		<jline.version>3.27.1</jline.version>
 		<sonar.organization>mastercard</sonar.organization>
 		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 		<!-- The health of the example project is not terribly interesting, and
