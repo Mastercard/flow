@@ -12,7 +12,6 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.io.StringReader;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -367,18 +366,18 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	 */
 	public IndexSequence hasInteractionSummary( String expected ) {
 		trace( "hasInteractionSummary", expected );
+		// the interaction summary is updated as flow details pages are downloaded in
+		// the background, so we might need to wait for it to settle
+		try {
+			Thread.sleep( 5000 );
+		}
+		catch( InterruptedException e ) {
+			throw new IllegalStateException( e );
+		}
 		assertEquals( expected,
-				// the interaction summary is updated as flow details pages are downloaded in
-				// the background, so we might need to wait for it to settle
-				new WebDriverWait( driver, Duration.ofSeconds( 5 ) )
-						.pollingEvery( Duration.ofSeconds( 1 ) )
-						.withMessage( "Failed to find expected interaction summary" )
-						.until( d -> Optional
-								.ofNullable( d.findElements( By.id( "interaction_summary" ) ).stream()
-										.map( WebElement::getText )
-										.collect( joining( "\n" ) ) )
-								.filter( s -> expected.equals( s ) )
-								.orElse( null ) ),
+				driver.findElements( By.id( "interaction_summary" ) ).stream()
+						.map( WebElement::getText )
+						.collect( joining( "\n" ) ),
 				"Interaction summary" );
 		return self();
 	}
