@@ -35,7 +35,7 @@ jobs:
         cache-dependency-path: report/report-ng/package-lock.json
 
     - name: Set up Chrome
-      uses: browser-actions/setup-chrome@1208fbfeb50c2d4be7a87c2fa47d4cd7db1270e3 # v1.7.2
+      uses: browser-actions/setup-chrome@facf10a55b9caf92e0cc749b4f82bf8220989148 # v1.7.2
       
     - name: Chrome version
       run: chrome --version
