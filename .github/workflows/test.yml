@@ -37,7 +37,7 @@ jobs:
     - name: Set up Chrome
       uses: browser-actions/setup-chrome@facf10a55b9caf92e0cc749b4f82bf8220989148 # v1.7.2
       with:
-        chrome-version: 130
+        chrome-version: 125
 
     - name: Build with Maven
       run: mvn -B -Dnode=system package
