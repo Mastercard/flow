@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -18,6 +19,8 @@ import org.openqa.selenium.firefox.FirefoxBinary;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.firefox.FirefoxProfile;
+import org.openqa.selenium.remote.RemoteWebDriver;
+import org.slf4j.LoggerFactory;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
 
@@ -30,6 +33,8 @@ public class Browser implements
 		BeforeAllCallback,
 		AfterAllCallback,
 		ExtensionContext.Store.CloseableResource {
+
+	private static final org.slf4j.Logger LOG = LoggerFactory.getLogger( Browser.class );
 
 	/**
 	 * The system property name that controls browser visibility
@@ -86,6 +91,9 @@ public class Browser implements
 			}
 
 			driver = type.get();
+
+			Capabilities caps = ((RemoteWebDriver) driver).getCapabilities();
+			LOG.info( "Built {} {}", caps.getBrowserName(), caps.getBrowserVersion() );
 		}
 		return driver;
 	}
