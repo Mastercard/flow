@@ -35,19 +35,12 @@ jobs:
 
     - name: Save flow execution reports
       uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
-      id: upload_flow
       with:
         name: flow_execution_reports
         path: 'example/**/target/mctf/latest'
 
     - name: Save angular coverage reports
       uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
-      id: upload_angular
       with:
         name: angular_coverage
         path: 'report/report-ng/coverage'
-
-    - name: Emit links
-      run: |
-        echo " * [flow reports](https://bowlby.flowty.dev/flow/artifacts/Mastercard/flow/${{ steps.upload_flow.outputs.artifact-id }})" >> $GITHUB_STEP_SUMMARY
-        echo " * [angular coverage](https://bowlby.flowty.dev/flow/artifacts/Mastercard/flow/${{ steps.upload_angular.outputs.artifact-id }}/report/index.html)" >> $GITHUB_STEP_SUMMARY
