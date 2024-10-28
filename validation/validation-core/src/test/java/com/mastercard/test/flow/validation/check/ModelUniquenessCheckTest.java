@@ -23,7 +23,7 @@ class ModelUniquenessCheckTest extends AbstractValidationTest {
 
 	ModelUniquenessCheckTest() {
 		super( new ModelUniquenessCheck(), "Model uniqueness",
-				"Models should be uniquely identified by its title" );
+				"Models should be uniquely identified by their title" );
 	}
 
 	private List<Model> createMockModels( List<String> titles ) {
