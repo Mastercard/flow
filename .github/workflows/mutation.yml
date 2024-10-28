@@ -16,17 +16,17 @@ jobs:
     env:
       LANG: en_GB
     steps:
-    - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
     - name: Set up JDK 8
-      uses: actions/setup-java@b36c23c0d998641eff861008f374ee103c25ac73 # v4.4.0
+      uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b # v4.5.0
       with:
         java-version: '8'
         distribution: 'temurin'
         cache: maven
 
     - name: Set up Node
-      uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6 # v4.0.4
+      uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
       with:
         node-version: '14.15.1'
         cache: 'npm'
@@ -36,7 +36,7 @@ jobs:
       run: mvn -B -Paggregate -Dnode=system test org.pitest:pitest-maven:mutationCoverage package
 
     - name: Save aggregated mutation report
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
       id: upload_aggregated
       with:
         name: mutation_report
@@ -46,7 +46,7 @@ jobs:
       run: echo " * [aggregated report](https://bowlby.flowty.dev/flow/artifacts/Mastercard/flow/${{ steps.upload_aggregated.outputs.artifact-id }}/index.html)" >> $GITHUB_STEP_SUMMARY
 
     - name: Save project mutation reports
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
       id: upload_project
       if:  ${{ failure() }}
       with:

@@ -366,10 +366,11 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	 */
 	public IndexSequence hasInteractionSummary( String expected ) {
 		trace( "hasInteractionSummary", expected );
-		assertEquals( expected, driver
-				.findElements( By.id( "interaction_summary" ) ).stream()
-				.map( WebElement::getText )
-				.collect( joining( "\n" ) ),
+
+		assertEquals( expected,
+				driver.findElements( By.id( "interaction_summary" ) ).stream()
+						.map( WebElement::getText )
+						.collect( joining( "\n" ) ),
 				"Interaction summary" );
 		return self();
 	}
