@@ -171,7 +171,7 @@ public class Browser implements
 
 				ChromeDriver driver = new ChromeDriver( options );
 
-				// Use Chrome DevTools to set the timezone
+				// Test expectations assume UTC
 				Map<String, Object> params = new HashMap<>();
 				params.put( "timezoneId", "UTC" );
 

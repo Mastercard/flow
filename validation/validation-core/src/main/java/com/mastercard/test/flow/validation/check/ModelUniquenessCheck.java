@@ -24,7 +24,7 @@ public final class ModelUniquenessCheck implements Validation {
 
 	@Override
 	public String explanation() {
-		return "Models should be uniquely identified by its title";
+		return "Models should be uniquely identified by their title";
 	}
 
 	@Override
