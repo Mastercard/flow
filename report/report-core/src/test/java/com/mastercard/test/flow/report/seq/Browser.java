@@ -3,6 +3,8 @@ package com.mastercard.test.flow.report.seq;
 import static org.junit.jupiter.api.extension.ExtensionContext.Namespace.GLOBAL;
 import static org.openqa.selenium.chrome.ChromeDriverService.CHROME_DRIVER_SILENT_OUTPUT_PROPERTY;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -159,7 +161,15 @@ public class Browser implements
 				System.setProperty( CHROME_DRIVER_SILENT_OUTPUT_PROPERTY, "true" );
 				Logger.getLogger( "org.openqa.selenium" ).setLevel( Level.OFF );
 
-				return new ChromeDriver( options );
+				ChromeDriver driver = new ChromeDriver( options );
+
+				// Use Chrome DevTools to set the timezone
+				Map<String, Object> params = new HashMap<>();
+				params.put( "timezoneId", "UTC" );
+
+				driver.executeCdpCommand( "Emulation.setTimezoneOverride", params );
+
+				return driver;
 			}
 		},
 		FIREFOX {
