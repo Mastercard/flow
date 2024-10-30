@@ -29,10 +29,13 @@ public class FlowData {
 	@JsonProperty("tags")
 	public final Set<String> tags;
 	/**
+	 * public access to allow for enhancing the report with additional information
+	 * using {@link com.mastercard.test.flow.assrt.MotivationCustomizer}
+	 * 
 	 * @see Metadata#motivation()
 	 */
 	@JsonProperty("motivation")
-	public final String motivation;
+	public String motivation;
 	/**
 	 * @see Metadata#tags()
 	 */

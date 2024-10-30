@@ -183,6 +183,8 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		// no-op
 	};
 
+	private MotivationCustomizer motivationCustomizer = ( motivation, assrt ) -> motivation;
+
 	/**
 	 * @param title The title of this test
 	 * @param model The model to process
@@ -369,6 +371,20 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	/**
+	 * Configures the motivation customizer behavior. The `MotivationCustomizer`
+	 * interface allows you to customize the motivation text in the report. This
+	 * method sets the customizer that will be used to modify the motivation text
+	 * based on the original motivation and the test results.
+	 *
+	 * @param customizer The custom `MotivationCustomizer` implementation.
+	 * @return <code>this</code> for method chaining.
+	 */
+	public T motivation( MotivationCustomizer customizer ) {
+		motivationCustomizer = customizer;
+		return self();
+	}
+
+	/**
 	 * @return The {@link Flow}s to process, in order
 	 */
 	protected Stream<Flow> flows() {
@@ -547,6 +563,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 			reportUpdates.add( d -> logCapture.end( flow ).forEach( d.logs::add ) );
 			reportUpdates.add( d -> d.logs.add( error(
 					"Encountered error: " + LogEvent.stackTrace( e ) ) ) );
+			reportUpdates.add( d -> d.motivation = motivationCustomizer.apply( d.motivation, assrt ) );
 			report( w -> w.with( flow, reportUpdates.stream()
 					.reduce( d -> {
 						// no-op
@@ -611,6 +628,10 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 				// otherwise just store these up - we want to compare all the messages we can
 				// (which populates the report) before failing
 				parseFailures.add( e );
+			}
+			finally {
+				reportUpdates
+						.add( d -> d.motivation = motivationCustomizer.apply( d.motivation, assertion ) );
 			}
 			return 1;
 		}
