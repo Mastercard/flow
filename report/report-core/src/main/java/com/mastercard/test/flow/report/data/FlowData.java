@@ -30,7 +30,7 @@ public class FlowData {
 	public final Set<String> tags;
 	/**
 	 * public access to allow for enhancing the report with additional information
-	 * using {@link com.mastercard.test.flow.assrt.ReportCustomizer}
+	 * using {@link com.mastercard.test.flow.assrt.MotivationCustomizer}
 	 * 
 	 * @see Metadata#motivation()
 	 */

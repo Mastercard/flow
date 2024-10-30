@@ -2,7 +2,7 @@ package com.mastercard.test.flow.assrt;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.data.Entry;
@@ -10,9 +10,9 @@ import com.mastercard.test.flow.report.data.FlowData;
 import com.mastercard.test.flow.report.data.Index;
 
 /**
- * Demonstrates the execution {@link ReportCustomizer}
+ * Demonstrates the execution {@link MotivationCustomizer}
  */
-class ReportCustomizerTest {
+class MotivationCustomizerTest {
 
 	/**
 	 * Update motivation in the report even when flow is not processed due to some
@@ -21,12 +21,7 @@ class ReportCustomizerTest {
 	@Test
 	void motivationNoBehaviour() {
 		TestFlocessor tf = new TestFlocessor( "motivation without behaviour", TestModel.abc() )
-				.motivation( new ReportCustomizer() {
-					@Override
-					public void customizeReport( FlowData flowData, Assertion assertion ) {
-						flowData.motivation += "common motivation";
-					}
-				} )
+				.motivation( ( motivation, assertion ) -> motivation + "Common motivation" )
 				.reporting( Reporting.QUIETLY )
 				.system( AbstractFlocessor.State.LESS, TestModel.Actors.B );
 
@@ -39,7 +34,7 @@ class ReportCustomizerTest {
 		Index index = r.read();
 		Entry ie = index.entries.get( 0 );
 		FlowData fd = r.detail( ie );
-		assertEquals( "common motivation", fd.motivation );
+		assertEquals( "Common motivation", fd.motivation );
 	}
 
 	/**
@@ -48,18 +43,13 @@ class ReportCustomizerTest {
 	@Test
 	void motivation() {
 		TestFlocessor tf = new TestFlocessor( "motivation", TestModel.abc() )
-				.motivation( new ReportCustomizer() {
-					@Override
-					public void customizeReport( FlowData flowData, Assertion assertion ) {
-						String baseUrl = "https://www.google.com/search?q=";
-						// Extract data from request or response to build a link
-						String queryToken = new String( assertion.expected().request().content() ).substring( 0,
-								1 );
-						queryToken += new String( assertion.actual().response() ).substring( 0,
-								1 );
-						String logLink = baseUrl + queryToken;
-						flowData.motivation += "\n\n[View Logs](" + logLink + ")";
-					}
+				.motivation( ( motivation, assertion ) -> {
+					String baseUrl = "https://www.google.com/search?q=";
+					String queryToken = new String( assertion.expected().request().content() ).substring( 0,
+							1 );
+					queryToken += new String( assertion.actual().response() ).substring( 0, 1 );
+					String logLink = baseUrl + queryToken;
+					return motivation + "\n\n[View Logs](" + logLink + ")";
 				} )
 				.behaviour( assrt -> {
 					assrt.actual().response( assrt.expected().response().content() );

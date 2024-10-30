@@ -183,9 +183,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		// no-op
 	};
 
-	private ReportCustomizer reportCustomizer = new ReportCustomizer() {
-		// no-op
-	};
+	private MotivationCustomizer motivationCustomizer = ( motivation, assrt ) -> motivation;
 
 	/**
 	 * @param title The title of this test
@@ -378,8 +376,8 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @param customizer How to modify the {@link FlowData}
 	 * @return <code>this</code> for method chaining.
 	 */
-	public T motivation( ReportCustomizer customizer ) {
-		reportCustomizer = customizer;
+	public T motivation( MotivationCustomizer customizer ) {
+		motivationCustomizer = customizer;
 		return self();
 	}
 
@@ -562,7 +560,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 			reportUpdates.add( d -> logCapture.end( flow ).forEach( d.logs::add ) );
 			reportUpdates.add( d -> d.logs.add( error(
 					"Encountered error: " + LogEvent.stackTrace( e ) ) ) );
-			reportUpdates.add( d -> reportCustomizer.customizeReport( d, assrt ) );
+			reportUpdates.add( d -> d.motivation = motivationCustomizer.apply( d.motivation, assrt ) );
 			report( w -> w.with( flow, reportUpdates.stream()
 					.reduce( d -> {
 						// no-op
@@ -629,7 +627,8 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 				parseFailures.add( e );
 			}
 			finally {
-				reportUpdates.add( d -> reportCustomizer.customizeReport( d, assertion ) );
+				reportUpdates
+						.add( d -> d.motivation = motivationCustomizer.apply( d.motivation, assertion ) );
 			}
 			return 1;
 		}
