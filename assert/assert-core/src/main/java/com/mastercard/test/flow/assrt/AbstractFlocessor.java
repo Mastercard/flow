@@ -371,9 +371,12 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	/**
-	 * Configures the report customizer behaviour
+	 * Configures the motivation customizer behavior. The `MotivationCustomizer`
+	 * interface allows you to customize the motivation text in the report. This
+	 * method sets the customizer that will be used to modify the motivation text
+	 * based on the original motivation and the test results.
 	 *
-	 * @param customizer How to modify the {@link FlowData}
+	 * @param customizer The custom `MotivationCustomizer` implementation.
 	 * @return <code>this</code> for method chaining.
 	 */
 	public T motivation( MotivationCustomizer customizer ) {
