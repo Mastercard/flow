@@ -183,6 +183,10 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		// no-op
 	};
 
+	private ReportCustomizer reportCustomizer = new ReportCustomizer() {
+		// no-op
+	};
+
 	/**
 	 * @param title The title of this test
 	 * @param model The model to process
@@ -369,6 +373,17 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	/**
+	 * Configures the report customizer behaviour
+	 *
+	 * @param customizer How to modify the {@link FlowData}
+	 * @return <code>this</code> for method chaining.
+	 */
+	public T motivation( ReportCustomizer customizer ) {
+		reportCustomizer = customizer;
+		return self();
+	}
+
+	/**
 	 * @return The {@link Flow}s to process, in order
 	 */
 	protected Stream<Flow> flows() {
@@ -547,6 +562,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 			reportUpdates.add( d -> logCapture.end( flow ).forEach( d.logs::add ) );
 			reportUpdates.add( d -> d.logs.add( error(
 					"Encountered error: " + LogEvent.stackTrace( e ) ) ) );
+			reportUpdates.add( d -> reportCustomizer.customizeReport( d, assrt ) );
 			report( w -> w.with( flow, reportUpdates.stream()
 					.reduce( d -> {
 						// no-op
@@ -611,6 +627,9 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 				// otherwise just store these up - we want to compare all the messages we can
 				// (which populates the report) before failing
 				parseFailures.add( e );
+			}
+			finally {
+				reportUpdates.add( d -> reportCustomizer.customizeReport( d, assertion ) );
 			}
 			return 1;
 		}
