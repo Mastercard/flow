@@ -43,8 +43,8 @@ public class WebSequence extends AbstractMessage<WebSequence> {
 	private static final ObjectMapper JSON = new ObjectMapper();
 
 	private final WebSequence parent;
-
-	private final SortedMap<String, BiConsumer<WebDriver, Map<String, String>>> operations = new TreeMap<>();
+	private final SortedMap<String,
+			BiConsumer<WebDriver, Map<String, String>>> operations = new TreeMap<>();
 
 	private Map<String, String> results;
 
@@ -55,27 +55,28 @@ public class WebSequence extends AbstractMessage<WebSequence> {
 		parent = null;
 	}
 
-	private WebSequence(WebSequence parent) {
+	private WebSequence( WebSequence parent ) {
 		this.parent = parent;
 	}
 
 	@Override
 	public WebSequence child() {
-		return copyMasksTo(new WebSequence(self()));
+		return copyMasksTo( new WebSequence( self() ) );
 	}
 
 	@Override
-	public WebSequence peer(byte[] bytes) {
-		WebSequence peer = copyMasksTo(new WebSequence(parent));
-		peer.operations.putAll(operations);
+	public WebSequence peer( byte[] bytes ) {
+		WebSequence peer = copyMasksTo( new WebSequence( parent ) );
+		peer.operations.putAll( operations );
 		try {
-			((Map<String, String>) JSON.readValue(bytes, Map.class))
-					.forEach(peer::set);
-		} catch (IOException ioe) {
-			throw new UncheckedIOException(String.format(
+			((Map<String, String>) JSON.readValue( bytes, Map.class ))
+					.forEach( peer::set );
+		}
+		catch( IOException ioe ) {
+			throw new UncheckedIOException( String.format(
 					"Failed to parse '%s' (%s)",
-					new String(bytes, UTF_8), Arrays.toString(bytes)),
-					ioe);
+					new String( bytes, UTF_8 ), Arrays.toString( bytes ) ),
+					ioe );
 		}
 		return peer;
 	}
@@ -83,9 +84,10 @@ public class WebSequence extends AbstractMessage<WebSequence> {
 	@Override
 	public byte[] content() {
 		try {
-			return JSON.writeValueAsBytes(parameters());
-		} catch (IOException ioe) {
-			throw new UncheckedIOException(ioe);
+			return JSON.writeValueAsBytes( parameters() );
+		}
+		catch( IOException ioe ) {
+			throw new UncheckedIOException( ioe );
 		}
 	}
 
@@ -95,50 +97,68 @@ public class WebSequence extends AbstractMessage<WebSequence> {
 		// use 'parameters()'.
 		Map<String, String> params = results != null ? results : parameters();
 
-		// Find the maximum length of the parameter names. This is used for formatting.
-		int nameWidth = params.keySet().stream()
-				.mapToInt(String::length)
-				.max().orElse(1);
+		// Find the maximum length of the parameter names, values, and operations. This
+		// is used for formatting.
+		int nameWidth = Math.max( params.keySet().stream()
+				.mapToInt( String::length )
+				.max().orElse( 1 ), "Parameters".length() );
+		int valueWidth = Math.max( params.values().stream()
+				.flatMap( value -> Stream.of( value.split( "\n" ) ) )
+				.mapToInt( String::length )
+				.max().orElse( 1 ), "Values".length() );
+		int operationsWidth = Math.max( operations().keySet().stream()
+				.mapToInt( String::length )
+				.max().orElse( 1 ), "Operations".length() );
 
 		// Define the format for name-value pairs and padding for multi-line values.
-		String nvpFmt = " │ %" + nameWidth + "s │ %s │";
-		String padFmt = "\n │ %" + nameWidth + "s   ";
-		String pad = String.format(padFmt, "");
+		String nvpFmt = "│ %" + nameWidth + "s │ %" + valueWidth + "s │";
+		String padFmt = "\n│ %" + nameWidth + "s │ %-" + valueWidth + "s │";
 
 		// Create the formatted string for operations.
 		String operationsStr = operations().keySet().stream()
-				.map(o -> " │ " + o + " │")
-				.collect(Collectors.joining("\n"));
+				.map( o -> String.format( "│ %" + operationsWidth + "s │", o ) )
+				.collect( Collectors.joining( "\n" ) );
 
 		// Create the formatted string for parameters.
 		String paramsStr = params.entrySet().stream()
-				.map(e -> String.format(nvpFmt,
-						e.getKey(),
-						Stream.of(e.getValue().split("\n"))
-								.collect(Collectors.joining(pad))))
-				.collect(Collectors.joining("\n"));
+				.map( e -> {
+					String key = e.getKey();
+					String value = e.getValue();
+					String[] lines = value.split( "\n" );
+					return String.format( nvpFmt, key, lines[0] ) +
+							Stream.of( lines ).skip( 1 )
+									.map( line -> String.format( padFmt, "", line ) )
+									.collect( Collectors.joining() );
+				} )
+				.collect( Collectors.joining( "\n" ) );
 
-		// Create a borderline for the box drawing.
-		String border = "─".repeat(nameWidth + 4);
+		// Calculate the width for the box drawing based on the longest line in
+		// operations and parameters.
+		int maxOperationsWidth = Math.max( "│ Operations │".length(),
+				operationsStr.lines().mapToInt( String::length ).max().orElse( 0 ) );
+		int maxParamsWidth = Math.max( "│ Parameters │ Values │".length(),
+				paramsStr.lines().mapToInt( String::length ).max().orElse( 0 ) );
 
-		// Return the final formatted string with box drawing characters.
-		return String.format("┌%s┐\n"
-				+ "│ Operations │\n"
-				+ "├%s┤\n"
-				+ "%s\n"
-				+ "└%s┘\n"
-				+ "┌%s┐\n"
-				+ "│ Parameters │ Values │\n"
-				+ "├%s┤\n"
-				+ "%s\n"
-				+ "└%s┘",
-				border, border, operationsStr, border,
-				border, border, paramsStr, border);
+		String operationsBorder = "─".repeat( maxOperationsWidth - 2 );
+		String parametersBorder = "─".repeat( maxParamsWidth - 2 );
+
+		// Conditionally include the top, middle, and bottom lines only when there is
+		// data.
+		String operationsBox = operationsStr.isEmpty() ? "│ Operations │\n"
+				: String.format( "┌%s┐\n│ %-" + (maxOperationsWidth - 4) + "s │\n├%s┤\n%s\n└%s┘\n",
+						operationsBorder,
+						"Operations", operationsBorder, operationsStr, operationsBorder );
+		String parametersBox = paramsStr.isEmpty() ? "│ Parameters │ Values │"
+				: String.format( "┌%s┐\n│ %-" + (maxParamsWidth - 4) + "s │\n├%s┤\n%s\n└%s┘",
+						parametersBorder,
+						"Parameters │ Values", parametersBorder, paramsStr, parametersBorder );
+
+		return operationsBox + parametersBox;
 	}
 
 	@Override
 	public Set<String> fields() {
-		return new TreeSet<>(parameters().keySet());
+		return new TreeSet<>( parameters().keySet() );
 	}
 
 	/**
@@ -150,36 +170,37 @@ public class WebSequence extends AbstractMessage<WebSequence> {
 	 *             operation
 	 * @return <code>this</code>
 	 */
-	public WebSequence operation(String name,
-			BiConsumer<WebDriver, Map<String, String>> op) {
-		operations.put(name, op);
+	public WebSequence operation( String name,
+			BiConsumer<WebDriver, Map<String, String>> op ) {
+		operations.put( name, op );
 		return self();
 	}
 
 	@Override
-	protected Object access(String field) {
-		return parameters().get(field);
+	protected Object access( String field ) {
+		return parameters().get( field );
 	}
 
 	private SortedMap<String, BiConsumer<WebDriver, Map<String, String>>> operations() {
 		SortedMap<String, BiConsumer<WebDriver, Map<String, String>>> op = new TreeMap<>();
-		if (parent != null) {
-			op.putAll(parent.operations());
+		if( parent != null ) {
+			op.putAll( parent.operations() );
 		}
-		op.putAll(operations);
+		op.putAll( operations );
 		return op;
 	}
 
 	private Map<String, String> parameters() {
 		Map<String, String> p = new TreeMap<>();
-		if (parent != null) {
-			p.putAll(parent.parameters());
+		if( parent != null ) {
+			p.putAll( parent.parameters() );
 		}
-		for (Update update : updates) {
-			if (update.value() == DELETE) {
-				p.remove(update.field());
-			} else {
-				p.put(update.field(), String.valueOf(update.value()));
+		for( Update update : updates ) {
+			if( update.value() == DELETE ) {
+				p.remove( update.field() );
+			}
+			else {
+				p.put( update.field(), String.valueOf( update.value() ) );
 			}
 		}
 		return p;
@@ -191,33 +212,36 @@ public class WebSequence extends AbstractMessage<WebSequence> {
 	 * @param driver the browser to drive
 	 * @return The state of the parameters map after all operations have completed
 	 */
-	public byte[] process(WebDriver driver) {
+	public byte[] process( WebDriver driver ) {
 		Map<String, String> params = parameters();
-		operations().forEach((name, op) -> {
-			if (op != null) {
+		operations().forEach( ( name, op ) -> {
+			if( op != null ) {
 				try {
-					op.accept(driver, params);
-				} catch (Exception e) {
+					op.accept( driver, params );
+				}
+				catch( Exception e ) {
 					// our operation has failed!
 					String url = "No URL";
 					String source = "No page source";
 					try {
 						url = driver.getCurrentUrl();
 						source = driver.getPageSource();
-					} catch (Exception f) {
+					}
+					catch( Exception f ) {
 						source = f.getMessage();
 					}
-					throw new IllegalStateException(String.format(
+					throw new IllegalStateException( String.format(
 							"Operation '%s' failed on page '%s'\n%s",
-							name, url, source),
-							e);
+							name, url, source ),
+							e );
 				}
 			}
-		});
+		} );
 		try {
-			return JSON.writeValueAsBytes(params);
-		} catch (IOException ioe) {
-			throw new UncheckedIOException(ioe);
+			return JSON.writeValueAsBytes( params );
+		}
+		catch( IOException ioe ) {
+			throw new UncheckedIOException( ioe );
 		}
 	}
 
