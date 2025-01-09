@@ -29,11 +29,9 @@ class WebSequenceTest {
 	@Test
 	void empty() {
 		WebSequence ws = new WebSequence();
-		Assertions.assertEquals( ""
-				+ "Operations:\n"
-				+ "\n"
-				+ "Parameters:\n"
-				+ "",
+		Assertions.assertEquals(
+				"│ Operations │\n"
+						+ "│ Parameters │ Values │",
 				ws.assertable() );
 	}
 
@@ -46,14 +44,16 @@ class WebSequenceTest {
 		WebSequence ws = new WebSequence()
 				.set( "foo", "bar" )
 				.set( "multiline", "so\nmany\nlines" );
-		Assertions.assertEquals( ""
-				+ "Operations:\n"
-				+ "\n"
-				+ "Parameters:\n"
-				+ "       foo : bar\n"
-				+ " multiline : so\n"
-				+ "             many\n"
-				+ "             lines",
+		Assertions.assertEquals(
+				"│ Operations │\n"
+						+ "┌─────────────────────┐\n"
+						+ "│ Parameters │ Values │\n"
+						+ "├─────────────────────┤\n"
+						+ "│        foo │    bar │\n"
+						+ "│  multiline │     so │\n"
+						+ "│            │ many   │\n"
+						+ "│            │ lines  │\n"
+						+ "└─────────────────────┘",
 				ws.assertable() );
 	}
 
@@ -74,13 +74,19 @@ class WebSequenceTest {
 
 		WebSequence results = ws.peer( ws.process( null ) );
 
-		Assertions.assertEquals( ""
-				+ "Operations:\n"
-				+ " param update\n"
-				+ "Parameters:\n"
-				+ " a : b\n"
-				+ " c : i\n"
-				+ " g : h",
+		Assertions.assertEquals(
+				"┌──────────────┐\n"
+						+ "│ Operations   │\n"
+						+ "├──────────────┤\n"
+						+ "│ param update │\n"
+						+ "└──────────────┘\n"
+						+ "┌─────────────────────┐\n"
+						+ "│ Parameters │ Values │\n"
+						+ "├─────────────────────┤\n"
+						+ "│          a │      b │\n"
+						+ "│          c │      i │\n"
+						+ "│          g │      h │\n"
+						+ "└─────────────────────┘",
 				results.assertable() );
 	}
 
@@ -127,11 +133,18 @@ class WebSequenceTest {
 
 		WebSequence peer = ws.peer( ws.content() );
 
-		Assertions.assertEquals( ""
-				+ "Operations:\n"
-				+ " op\n"
-				+ "Parameters:\n"
-				+ " a : b", peer.assertable() );
+		Assertions.assertEquals(
+				"┌────────────┐\n"
+						+ "│ Operations │\n"
+						+ "├────────────┤\n"
+						+ "│         op │\n"
+						+ "└────────────┘\n"
+						+ "┌─────────────────────┐\n"
+						+ "│ Parameters │ Values │\n"
+						+ "├─────────────────────┤\n"
+						+ "│          a │      b │\n"
+						+ "└─────────────────────┘",
+				peer.assertable() );
 
 		Assertions.assertEquals( "Operation has not been invoked!", ref.get() );
 
@@ -170,11 +183,13 @@ class WebSequenceTest {
 				.masking( rng, m -> m.delete( "c" ) );
 
 		WebSequence peer = ws.peer( ws.content() );
-		Assertions.assertEquals( ""
-				+ "Operations:\n"
-				+ "\n"
-				+ "Parameters:\n"
-				+ " a : b",
+		Assertions.assertEquals(
+				"│ Operations │\n"
+						+ "┌─────────────────────┐\n"
+						+ "│ Parameters │ Values │\n"
+						+ "├─────────────────────┤\n"
+						+ "│          a │      b │\n"
+						+ "└─────────────────────┘",
 				peer.assertable( rng ) );
 	}
 
@@ -207,15 +222,21 @@ class WebSequenceTest {
 				+ "third operation invoked with {a=b, c=d}]",
 				operations.toString() );
 
-		Assertions.assertEquals( ""
-				+ "Operations:\n"
-				+ " first\n"
-				+ " second\n"
-				+ " third\n"
-				+ "Parameters:\n"
-				+ " a : b\n"
-				+ " c : d\n"
-				+ " e : f",
+		Assertions.assertEquals(
+				"┌────────────┐\n"
+						+ "│ Operations │\n"
+						+ "├────────────┤\n"
+						+ "│      first │\n"
+						+ "│     second │\n"
+						+ "│      third │\n"
+						+ "└────────────┘\n"
+						+ "┌─────────────────────┐\n"
+						+ "│ Parameters │ Values │\n"
+						+ "├─────────────────────┤\n"
+						+ "│          a │      b │\n"
+						+ "│          c │      d │\n"
+						+ "│          e │      f │\n"
+						+ "└─────────────────────┘",
 				results.assertable() );
 	}
 
