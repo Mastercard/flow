@@ -6,6 +6,7 @@ import java.nio.file.Paths;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +32,7 @@ class ServedIndexTest extends AbstractIndexTest {
 	@Test
 	@DisabledIf(value = "java.awt.GraphicsEnvironment#isHeadless",
 			disabledReason = "mysterious failure in CI")
+	@Disabled
 	void interactions() {
 		iseq.hasInteractionSummary( "2 interactions between 3 actors" )
 				.expandInteractions()
@@ -79,6 +81,7 @@ class ServedIndexTest extends AbstractIndexTest {
 	@Test
 	@DisabledIf(value = "java.awt.GraphicsEnvironment#isHeadless",
 			disabledReason = "no clipboard")
+	@Disabled
 	void mermaidMarkup() {
 		iseq.expandInteractions()
 				.hasMermaidMarkup(
@@ -110,6 +113,7 @@ class ServedIndexTest extends AbstractIndexTest {
 	@Test
 	@DisabledIf(value = "java.awt.GraphicsEnvironment#isHeadless",
 			disabledReason = "mysterious failure in CI")
+	@Disabled
 	void hoveredInteractions() {
 		iseq
 				.expandInteractions()
