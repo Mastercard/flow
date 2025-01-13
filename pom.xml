@@ -53,8 +53,7 @@
 	</distributionManagement>
 
 	<properties>
-		<maven.compiler.target>17</maven.compiler.target>
-		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.release>17</maven.compiler.release>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<jline.version>3.23.0</jline.version>
 		<sonar.organization>mastercard</sonar.organization>
