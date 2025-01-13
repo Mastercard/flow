@@ -53,8 +53,7 @@
 	</distributionManagement>
 
 	<properties>
-		<maven.compiler.target>1.8</maven.compiler.target>
-		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.release>17</maven.compiler.release>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<jline.version>3.23.0</jline.version>
 		<sonar.organization>mastercard</sonar.organization>
@@ -171,6 +170,11 @@
 					<artifactId>maven-surefire-plugin</artifactId>
 					<version>3.5.2</version>
 				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.13.0</version>
+				</plugin>
 
 				<plugin>
 					<!-- `mvn formatter:format` to apply the format -->
@@ -216,7 +220,7 @@
 					     a `mvn test-compile` invocation -->
 					<groupId>org.pitest</groupId>
 					<artifactId>pitest-maven</artifactId>
-					<version>1.17.3</version>
+					<version>1.17.4</version>
 					<configuration>
 						<timestampedReports>false</timestampedReports>
 						<exportLineCoverage>true</exportLineCoverage>

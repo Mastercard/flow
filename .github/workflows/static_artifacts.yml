@@ -21,10 +21,10 @@ jobs:
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-    - name: Set up JDK 8
+    - name: Set up JDK 17
       uses: actions/setup-java@7a6d8a8234af8eb26422e24e3006232cccaa061b # v4.6.0
       with:
-        java-version: '8'
+        java-version: '17'
         distribution: 'temurin'
         cache: maven
 
@@ -39,7 +39,7 @@ jobs:
       run: mvn -B -Dnode=system package
 
     - name: Save flow execution reports
-      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       id: upload_flow
       with:
         name: flow_execution_reports
@@ -68,6 +68,6 @@ jobs:
         path: static
 
     - name: Commit
-      uses: stefanzweifel/git-auto-commit-action@8621497c8c39c72f3e2a999a26b4ca1b5058a842 # v5.0.1
+      uses: stefanzweifel/git-auto-commit-action@e348103e9026cc0eee72ae06630dbe30c8bf7a79 # v5.1.0
       with:
         branch: slim_pages
