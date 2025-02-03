@@ -43,17 +43,17 @@ class WebSequenceTest {
 	void unprocessed() {
 		WebSequence ws = new WebSequence()
 				.set( "foo", "bar" )
-				.set( "multiline", "so\nmany\nlines" );
+				.set( "multiline", "so\nmany\nlines with a lot of data" );
 		Assertions.assertEquals(
-				"│ Operations │\n"
-						+ "┌─────────────────────┐\n"
-						+ "│ Parameters │ Values │\n"
-						+ "├─────────────────────┤\n"
-						+ "│        foo │    bar │\n"
-						+ "│  multiline │     so │\n"
-						+ "│            │ many   │\n"
-						+ "│            │ lines  │\n"
-						+ "└─────────────────────┘",
+				"│ Operations │\n" +
+						"┌───────────────────────────────────────┐\n" +
+						"│ Parameters │ Values                   │\n" +
+						"├───────────────────────────────────────┤\n" +
+						"│        foo │                      bar │\n" +
+						"│  multiline │                       so │\n" +
+						"│            │ many                     │\n" +
+						"│            │ lines with a lot of data │\n" +
+						"└───────────────────────────────────────┘",
 				ws.assertable() );
 	}
 
