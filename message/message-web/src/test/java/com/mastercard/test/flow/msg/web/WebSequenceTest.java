@@ -65,7 +65,7 @@ class WebSequenceTest {
 						├───────────────────────────────────────┤
 						│ foo        │ bar                      │
 						│ multiline  │ so                       │
-						│            │ many                     │ .
+						│            │ many                     │
 						│            │ lines with a lot of data │
 						└───────────────────────────────────────┘""",
 				ws.assertable() );
