@@ -30,8 +30,18 @@ class WebSequenceTest {
 	void empty() {
 		WebSequence ws = new WebSequence();
 		Assertions.assertEquals(
-				"│ Operations │\n"
-						+ "│ Parameters │ Values │",
+				"""
+						┌──────────────┐
+						│ Operations   │
+						├──────────────┤
+						│              │
+						└──────────────┘
+						┌─────────────────────┐
+						│ Parameters │ Values │
+						├─────────────────────┤
+						│                     │
+						└─────────────────────┘
+						""",
 				ws.assertable() );
 	}
 
@@ -45,15 +55,50 @@ class WebSequenceTest {
 				.set( "foo", "bar" )
 				.set( "multiline", "so\nmany\nlines with a lot of data" );
 		Assertions.assertEquals(
-				"│ Operations │\n" +
-						"┌───────────────────────────────────────┐\n" +
-						"│ Parameters │ Values                   │\n" +
-						"├───────────────────────────────────────┤\n" +
-						"│        foo │                      bar │\n" +
-						"│  multiline │                       so │\n" +
-						"│            │ many                     │\n" +
-						"│            │ lines with a lot of data │\n" +
-						"└───────────────────────────────────────┘",
+				"""
+						┌──────────────┐
+						│ Operations   │
+						├──────────────┤
+						│              │
+						└──────────────┘
+						┌───────────────────────────────────────┐
+						│ Parameters │ Values                   │
+						├───────────────────────────────────────┤
+						│ foo        │ bar                      │
+						│ multiline  │ so                       │
+						│            │ many                     │
+						│            │ lines with a lot of data │
+						└───────────────────────────────────────┘""",
+				ws.assertable() );
+	}
+
+	/**
+	 * Validate tabs for page source
+	 */
+	@Test
+	void pageSource() {
+		WebSequence ws = new WebSequence()
+				.set( "foo", "bar" )
+				.set( "page_source", "<html><head>\n\t\t<title>Histogram</title>\n\t</head></html>" )
+				.set( "multiline", "so\nmany\nlines" );
+		Assertions.assertEquals(
+				"""
+						┌──────────────┐
+						│ Operations   │
+						├──────────────┤
+						│              │
+						└──────────────┘
+						┌────────────────────────────────────────────────┐
+						│ Parameters  │ Values                           │
+						├────────────────────────────────────────────────┤
+						│ foo         │ bar                              │
+						│ multiline   │ so                               │
+						│             │ many                             │
+						│             │ lines                            │
+						│ page_source │ <html><head>                     │
+						│             │         <title>Histogram</title> │
+						│             │     </head></html>               │
+						└────────────────────────────────────────────────┘""",
 				ws.assertable() );
 	}
 
@@ -75,18 +120,19 @@ class WebSequenceTest {
 		WebSequence results = ws.peer( ws.process( null ) );
 
 		Assertions.assertEquals(
-				"┌──────────────┐\n"
-						+ "│ Operations   │\n"
-						+ "├──────────────┤\n"
-						+ "│ param update │\n"
-						+ "└──────────────┘\n"
-						+ "┌─────────────────────┐\n"
-						+ "│ Parameters │ Values │\n"
-						+ "├─────────────────────┤\n"
-						+ "│          a │      b │\n"
-						+ "│          c │      i │\n"
-						+ "│          g │      h │\n"
-						+ "└─────────────────────┘",
+				"""
+						┌──────────────┐
+						│ Operations   │
+						├──────────────┤
+						│ param update │
+						└──────────────┘
+						┌─────────────────────┐
+						│ Parameters │ Values │
+						├─────────────────────┤
+						│ a          │ b      │
+						│ c          │ i      │
+						│ g          │ h      │
+						└─────────────────────┘""",
 				results.assertable() );
 	}
 
@@ -134,16 +180,17 @@ class WebSequenceTest {
 		WebSequence peer = ws.peer( ws.content() );
 
 		Assertions.assertEquals(
-				"┌────────────┐\n"
-						+ "│ Operations │\n"
-						+ "├────────────┤\n"
-						+ "│         op │\n"
-						+ "└────────────┘\n"
-						+ "┌─────────────────────┐\n"
-						+ "│ Parameters │ Values │\n"
-						+ "├─────────────────────┤\n"
-						+ "│          a │      b │\n"
-						+ "└─────────────────────┘",
+				"""
+						┌────────────┐
+						│ Operations │
+						├────────────┤
+						│ op         │
+						└────────────┘
+						┌─────────────────────┐
+						│ Parameters │ Values │
+						├─────────────────────┤
+						│ a          │ b      │
+						└─────────────────────┘""",
 				peer.assertable() );
 
 		Assertions.assertEquals( "Operation has not been invoked!", ref.get() );
@@ -184,12 +231,17 @@ class WebSequenceTest {
 
 		WebSequence peer = ws.peer( ws.content() );
 		Assertions.assertEquals(
-				"│ Operations │\n"
-						+ "┌─────────────────────┐\n"
-						+ "│ Parameters │ Values │\n"
-						+ "├─────────────────────┤\n"
-						+ "│          a │      b │\n"
-						+ "└─────────────────────┘",
+				"""
+						┌──────────────┐
+						│ Operations   │
+						├──────────────┤
+						│              │
+						└──────────────┘
+						┌─────────────────────┐
+						│ Parameters │ Values │
+						├─────────────────────┤
+						│ a          │ b      │
+						└─────────────────────┘""",
 				peer.assertable( rng ) );
 	}
 
@@ -223,20 +275,21 @@ class WebSequenceTest {
 				operations.toString() );
 
 		Assertions.assertEquals(
-				"┌────────────┐\n"
-						+ "│ Operations │\n"
-						+ "├────────────┤\n"
-						+ "│      first │\n"
-						+ "│     second │\n"
-						+ "│      third │\n"
-						+ "└────────────┘\n"
-						+ "┌─────────────────────┐\n"
-						+ "│ Parameters │ Values │\n"
-						+ "├─────────────────────┤\n"
-						+ "│          a │      b │\n"
-						+ "│          c │      d │\n"
-						+ "│          e │      f │\n"
-						+ "└─────────────────────┘",
+				"""
+						┌────────────┐
+						│ Operations │
+						├────────────┤
+						│ first      │
+						│ second     │
+						│ third      │
+						└────────────┘
+						┌─────────────────────┐
+						│ Parameters │ Values │
+						├─────────────────────┤
+						│ a          │ b      │
+						│ c          │ d      │
+						│ e          │ f      │
+						└─────────────────────┘""",
 				results.assertable() );
 	}
 
