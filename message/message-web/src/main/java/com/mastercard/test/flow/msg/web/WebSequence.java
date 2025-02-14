@@ -1,7 +1,5 @@
 package com.mastercard.test.flow.msg.web;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
@@ -14,9 +12,11 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.openqa.selenium.WebDriver;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import com.mastercard.test.flow.msg.AbstractMessage;
 
 /**
@@ -93,65 +93,81 @@ public class WebSequence extends AbstractMessage<WebSequence> {
 
 	@Override
 	protected String asHuman() {
-		// Get the parameters to use. If 'results' is not null, use 'results', otherwise
-		// use 'parameters()'.
 		Map<String, String> params = results != null ? results : parameters();
 
-		// Find the maximum length of the parameter names, values, and operations. This
-		// is used for formatting.
 		int nameWidth = Math.max( params.keySet().stream()
 				.mapToInt( String::length )
 				.max().orElse( 1 ), "Parameters".length() );
+
 		int valueWidth = Math.max( params.values().stream()
-				.flatMap( value -> Stream.of( value.split( "\n" ) ) )
-				.mapToInt( String::length )
+				.flatMap( value -> Stream.of( value.split( "\\R" ) ) )
+				.mapToInt( str -> str.replace( "\t", "    " ).length() )
 				.max().orElse( 1 ), "Values".length() );
+
 		int operationsWidth = Math.max( operations().keySet().stream()
 				.mapToInt( String::length )
 				.max().orElse( 1 ), "Operations".length() );
 
-		// Define the format for name-value pairs and padding for multi-line values.
-		String nvpFmt = "│ %" + nameWidth + "s │ %" + valueWidth + "s │";
+		String nvpFmt = "│ %-" + nameWidth + "s │ %-" + valueWidth + "s │";
 		String padFmt = "\n│ %" + nameWidth + "s │ %-" + valueWidth + "s │";
 
-		// Create the formatted string for operations.
 		String operationsStr = operations().keySet().stream()
-				.map( o -> String.format( "│ %" + operationsWidth + "s │", o ) )
+				.map( o -> String.format( "│ %-" + operationsWidth + "s │", o ) )
 				.collect( Collectors.joining( "\n" ) );
 
-		// Create the formatted string for parameters.
 		String paramsStr = params.entrySet().stream()
 				.map( e -> {
 					String key = e.getKey();
-					String value = e.getValue();
-					String[] lines = value.split( "\n" );
-					return String.format( nvpFmt, key, lines[0] ) +
+					String[] lines = e.getValue().split( "\\R" );
+					return String.format( nvpFmt, key, lines[0].replace( "\t", "    " ) ) +
 							Stream.of( lines ).skip( 1 )
-									.map( line -> String.format( padFmt, "", line ) )
+									.map( line -> String.format( padFmt, "", line.replace( "\t", "    " ) ) )
 									.collect( Collectors.joining() );
 				} )
 				.collect( Collectors.joining( "\n" ) );
 
-		// Calculate the width for the box drawing based on the longest line in
-		// operations and parameters.
-		int maxOperationsWidth = Math.max( "│ Operations │".length(),
-				operationsStr.lines().mapToInt( String::length ).max().orElse( 0 ) );
-		int maxParamsWidth = Math.max( "│ Parameters │ Values │".length(),
+		int maxParamsWidth = Math.max( nvpFmt.length(),
 				paramsStr.lines().mapToInt( String::length ).max().orElse( 0 ) );
+		int maxOperationsWidth = Math.max(
+				operationsStr.lines().mapToInt( String::length ).max().orElse( 0 ),
+				"│ Operations │".length() );
 
 		String operationsBorder = "─".repeat( maxOperationsWidth - 2 );
 		String parametersBorder = "─".repeat( maxParamsWidth - 2 );
 
-		// Conditionally include the top, middle, and bottom lines only when there is
-		// data.
-		String operationsBox = operationsStr.isEmpty() ? "│ Operations │\n"
-				: String.format( "┌%s┐\n│ %-" + (maxOperationsWidth - 4) + "s │\n├%s┤\n%s\n└%s┘\n",
-						operationsBorder,
-						"Operations", operationsBorder, operationsStr, operationsBorder );
-		String parametersBox = paramsStr.isEmpty() ? "│ Parameters │ Values │"
-				: String.format( "┌%s┐\n│ %-" + (maxParamsWidth - 4) + "s │\n├%s┤\n%s\n└%s┘",
-						parametersBorder,
-						"Parameters │ Values", parametersBorder, paramsStr, parametersBorder );
+		String operationsBox;
+		if( operationsStr.isEmpty() ) {
+			operationsBox = """
+					┌──────────────┐
+					│ Operations   │
+					├──────────────┤
+					│              │
+					└──────────────┘
+					""";
+		}
+		else {
+			operationsBox = String.format(
+					"┌%s┐\n│ %-" + (maxOperationsWidth - 4) + "s │\n├%s┤\n%s\n└%s┘\n",
+					operationsBorder, "Operations", operationsBorder, operationsStr, operationsBorder );
+		}
+
+		String header = String.format( "│ %-" + nameWidth + "s │ %-" + valueWidth + "s │", "Parameters",
+				"Values" );
+
+		String parametersBox;
+		if( paramsStr.isEmpty() ) {
+			parametersBox = """
+					┌─────────────────────┐
+					│ Parameters │ Values │
+					├─────────────────────┤
+					│                     │
+					└─────────────────────┘
+					""";
+		}
+		else {
+			parametersBox = String.format( "┌%s┐\n%s\n├%s┤\n%s\n└%s┘",
+					parametersBorder, header, parametersBorder, paramsStr, parametersBorder );
+		}
 
 		return operationsBox + parametersBox;
 	}
