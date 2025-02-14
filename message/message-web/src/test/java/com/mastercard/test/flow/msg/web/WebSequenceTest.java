@@ -1,10 +1,5 @@
 package com.mastercard.test.flow.msg.web;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.when;
-
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +9,11 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.openqa.selenium.WebDriver;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
 
 import com.mastercard.test.flow.Unpredictable;
 
@@ -29,11 +29,18 @@ class WebSequenceTest {
 	@Test
 	void empty() {
 		WebSequence ws = new WebSequence();
-		Assertions.assertEquals( ""
-				+ "Operations:\n"
-				+ "\n"
-				+ "Parameters:\n"
-				+ "",
+		Assertions.assertEquals(
+				"""
+						┌────────────┐
+						│ Operations │
+						├────────────┤
+						│            │
+						└────────────┘
+						┌─────────────────────┐
+						│ Parameters │ Values │
+						├─────────────────────┤
+						│            │        │
+						└─────────────────────┘""",
 				ws.assertable() );
 	}
 
@@ -45,15 +52,52 @@ class WebSequenceTest {
 	void unprocessed() {
 		WebSequence ws = new WebSequence()
 				.set( "foo", "bar" )
+				.set( "multiline", "so\nmany\nlines with a lot of data" );
+		Assertions.assertEquals(
+				"""
+						┌────────────┐
+						│ Operations │
+						├────────────┤
+						│            │
+						└────────────┘
+						┌───────────────────────────────────────┐
+						│ Parameters │ Values                   │
+						├───────────────────────────────────────┤
+						│ foo        │ bar                      │
+						│ multiline  │ so                       │
+						│            │ many                     │
+						│            │ lines with a lot of data │
+						└───────────────────────────────────────┘""",
+				ws.assertable() );
+	}
+
+	/**
+	 * Validate tabs for page source
+	 */
+	@Test
+	void pageSource() {
+		WebSequence ws = new WebSequence()
+				.set( "foo", "bar" )
+				.set( "page_source", "<html><head>\n\t\t<title>Histogram</title>\n\t</head></html>" )
 				.set( "multiline", "so\nmany\nlines" );
-		Assertions.assertEquals( ""
-				+ "Operations:\n"
-				+ "\n"
-				+ "Parameters:\n"
-				+ "       foo : bar\n"
-				+ " multiline : so\n"
-				+ "             many\n"
-				+ "             lines",
+		Assertions.assertEquals(
+				"""
+						┌────────────┐
+						│ Operations │
+						├────────────┤
+						│            │
+						└────────────┘
+						┌────────────────────────────────────────────────┐
+						│ Parameters  │ Values                           │
+						├────────────────────────────────────────────────┤
+						│ foo         │ bar                              │
+						│ multiline   │ so                               │
+						│             │ many                             │
+						│             │ lines                            │
+						│ page_source │ <html><head>                     │
+						│             │         <title>Histogram</title> │
+						│             │     </head></html>               │
+						└────────────────────────────────────────────────┘""",
 				ws.assertable() );
 	}
 
@@ -74,13 +118,20 @@ class WebSequenceTest {
 
 		WebSequence results = ws.peer( ws.process( null ) );
 
-		Assertions.assertEquals( ""
-				+ "Operations:\n"
-				+ " param update\n"
-				+ "Parameters:\n"
-				+ " a : b\n"
-				+ " c : i\n"
-				+ " g : h",
+		Assertions.assertEquals(
+				"""
+						┌──────────────┐
+						│ Operations   │
+						├──────────────┤
+						│ param update │
+						└──────────────┘
+						┌─────────────────────┐
+						│ Parameters │ Values │
+						├─────────────────────┤
+						│ a          │ b      │
+						│ c          │ i      │
+						│ g          │ h      │
+						└─────────────────────┘""",
 				results.assertable() );
 	}
 
@@ -109,7 +160,7 @@ class WebSequenceTest {
 	void get() {
 		WebSequence ws = new WebSequence()
 				.set( "a", "b" );
-		Assertions.assertEquals( null, ws.get( "foo" ) );
+		Assertions.assertNull( ws.get( "foo" ) );
 		Assertions.assertEquals( "b", ws.get( "a" ) );
 	}
 
@@ -127,11 +178,19 @@ class WebSequenceTest {
 
 		WebSequence peer = ws.peer( ws.content() );
 
-		Assertions.assertEquals( ""
-				+ "Operations:\n"
-				+ " op\n"
-				+ "Parameters:\n"
-				+ " a : b", peer.assertable() );
+		Assertions.assertEquals(
+				"""
+						┌────────────┐
+						│ Operations │
+						├────────────┤
+						│ op         │
+						└────────────┘
+						┌─────────────────────┐
+						│ Parameters │ Values │
+						├─────────────────────┤
+						│ a          │ b      │
+						└─────────────────────┘""",
+				peer.assertable() );
 
 		Assertions.assertEquals( "Operation has not been invoked!", ref.get() );
 
@@ -170,11 +229,18 @@ class WebSequenceTest {
 				.masking( rng, m -> m.delete( "c" ) );
 
 		WebSequence peer = ws.peer( ws.content() );
-		Assertions.assertEquals( ""
-				+ "Operations:\n"
-				+ "\n"
-				+ "Parameters:\n"
-				+ " a : b",
+		Assertions.assertEquals(
+				"""
+						┌────────────┐
+						│ Operations │
+						├────────────┤
+						│            │
+						└────────────┘
+						┌─────────────────────┐
+						│ Parameters │ Values │
+						├─────────────────────┤
+						│ a          │ b      │
+						└─────────────────────┘""",
 				peer.assertable( rng ) );
 	}
 
@@ -207,15 +273,22 @@ class WebSequenceTest {
 				+ "third operation invoked with {a=b, c=d}]",
 				operations.toString() );
 
-		Assertions.assertEquals( ""
-				+ "Operations:\n"
-				+ " first\n"
-				+ " second\n"
-				+ " third\n"
-				+ "Parameters:\n"
-				+ " a : b\n"
-				+ " c : d\n"
-				+ " e : f",
+		Assertions.assertEquals(
+				"""
+						┌────────────┐
+						│ Operations │
+						├────────────┤
+						│ first      │
+						│ second     │
+						│ third      │
+						└────────────┘
+						┌─────────────────────┐
+						│ Parameters │ Values │
+						├─────────────────────┤
+						│ a          │ b      │
+						│ c          │ d      │
+						│ e          │ f      │
+						└─────────────────────┘""",
 				results.assertable() );
 	}
 
