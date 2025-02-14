@@ -1,10 +1,5 @@
 package com.mastercard.test.flow.msg.web;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.when;
-
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +9,11 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.openqa.selenium.WebDriver;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
 
 import com.mastercard.test.flow.Unpredictable;
 
@@ -31,17 +31,16 @@ class WebSequenceTest {
 		WebSequence ws = new WebSequence();
 		Assertions.assertEquals(
 				"""
-						┌──────────────┐
-						│ Operations   │
-						├──────────────┤
-						│              │
-						└──────────────┘
+						┌────────────┐
+						│ Operations │
+						├────────────┤
+						│            │
+						└────────────┘
 						┌─────────────────────┐
 						│ Parameters │ Values │
 						├─────────────────────┤
-						│                     │
-						└─────────────────────┘
-						""",
+						│            │        │
+						└─────────────────────┘""",
 				ws.assertable() );
 	}
 
@@ -56,17 +55,17 @@ class WebSequenceTest {
 				.set( "multiline", "so\nmany\nlines with a lot of data" );
 		Assertions.assertEquals(
 				"""
-						┌──────────────┐
-						│ Operations   │
-						├──────────────┤
-						│              │
-						└──────────────┘
+						┌────────────┐
+						│ Operations │
+						├────────────┤
+						│            │
+						└────────────┘
 						┌───────────────────────────────────────┐
 						│ Parameters │ Values                   │
 						├───────────────────────────────────────┤
 						│ foo        │ bar                      │
 						│ multiline  │ so                       │
-						│            │ many                     │
+						│            │ many                     │ .
 						│            │ lines with a lot of data │
 						└───────────────────────────────────────┘""",
 				ws.assertable() );
@@ -83,11 +82,11 @@ class WebSequenceTest {
 				.set( "multiline", "so\nmany\nlines" );
 		Assertions.assertEquals(
 				"""
-						┌──────────────┐
-						│ Operations   │
-						├──────────────┤
-						│              │
-						└──────────────┘
+						┌────────────┐
+						│ Operations │
+						├────────────┤
+						│            │
+						└────────────┘
 						┌────────────────────────────────────────────────┐
 						│ Parameters  │ Values                           │
 						├────────────────────────────────────────────────┤
@@ -161,7 +160,7 @@ class WebSequenceTest {
 	void get() {
 		WebSequence ws = new WebSequence()
 				.set( "a", "b" );
-		Assertions.assertEquals( null, ws.get( "foo" ) );
+		Assertions.assertNull( ws.get( "foo" ) );
 		Assertions.assertEquals( "b", ws.get( "a" ) );
 	}
 
@@ -232,11 +231,11 @@ class WebSequenceTest {
 		WebSequence peer = ws.peer( ws.content() );
 		Assertions.assertEquals(
 				"""
-						┌──────────────┐
-						│ Operations   │
-						├──────────────┤
-						│              │
-						└──────────────┘
+						┌────────────┐
+						│ Operations │
+						├────────────┤
+						│            │
+						└────────────┘
 						┌─────────────────────┐
 						│ Parameters │ Values │
 						├─────────────────────┤

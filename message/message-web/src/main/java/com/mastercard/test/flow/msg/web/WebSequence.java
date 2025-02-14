@@ -10,7 +10,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.openqa.selenium.WebDriver;
@@ -94,82 +94,58 @@ public class WebSequence extends AbstractMessage<WebSequence> {
 	@Override
 	protected String asHuman() {
 		Map<String, String> params = results != null ? results : parameters();
+		SortedMap<String, BiConsumer<WebDriver, Map<String, String>>> ops = operations();
 
-		int nameWidth = Math.max( params.keySet().stream()
-				.mapToInt( String::length )
-				.max().orElse( 1 ), "Parameters".length() );
+		int nameWidth = Math.max(
+				params.keySet().stream().mapToInt( String::length ).max().orElse( 1 ),
+				"Parameters".length() );
 
-		int valueWidth = Math.max( params.values().stream()
-				.flatMap( value -> Stream.of( value.split( "\\R" ) ) )
-				.mapToInt( str -> str.replace( "\t", "    " ).length() )
-				.max().orElse( 1 ), "Values".length() );
+		int valueWidth = Math.max(
+				params.values().stream()
+						.flatMap( value -> Arrays.stream( value.split( "\\R" ) ) )
+						.mapToInt( str -> replaceTabs( str ).length() )
+						.max().orElse( 1 ),
+				"Values".length() );
 
-		int operationsWidth = Math.max( operations().keySet().stream()
-				.mapToInt( String::length )
-				.max().orElse( 1 ), "Operations".length() );
+		int operationsWidth = Math.max(
+				ops.keySet().stream().mapToInt( String::length ).max().orElse( 1 ),
+				"Operations".length() );
 
-		String nvpFmt = "│ %-" + nameWidth + "s │ %-" + valueWidth + "s │";
-		String padFmt = "\n│ %" + nameWidth + "s │ %-" + valueWidth + "s │";
+		String nvpPadFormat = "│ %-" + nameWidth + "s │ %-" + valueWidth + "s │";
+		String operationsPadFormat = "│ %-" + operationsWidth + "s │";
 
-		String operationsStr = operations().keySet().stream()
-				.map( o -> String.format( "│ %-" + operationsWidth + "s │", o ) )
+		// For parameters: fixed characters ("│ ", " │ ", " │") add up to 7.
+		int paramsBoxWidth = nameWidth + valueWidth + 7;
+		// For operations: fixed characters ("│ ", " │") add up to 4.
+		int operationsBoxWidth = operationsWidth + 4;
+
+		String parametersBorder = "─".repeat( paramsBoxWidth - 2 );
+		String operationsBorder = "─".repeat( operationsBoxWidth - 2 );
+
+		String operationsStr = ops.keySet().stream()
+				.map( o -> String.format( operationsPadFormat, o ) )
 				.collect( Collectors.joining( "\n" ) );
 
 		String paramsStr = params.entrySet().stream()
-				.map( e -> {
-					String key = e.getKey();
-					String[] lines = e.getValue().split( "\\R" );
-					return String.format( nvpFmt, key, lines[0].replace( "\t", "    " ) ) +
-							Stream.of( lines ).skip( 1 )
-									.map( line -> String.format( padFmt, "", line.replace( "\t", "    " ) ) )
-									.collect( Collectors.joining() );
+				.map( entry -> {
+					String key = entry.getKey();
+					String[] lines = entry.getValue().split( "\\R" );
+					return IntStream.range( 0, lines.length )
+							.mapToObj(
+									i -> String.format( nvpPadFormat, i == 0 ? key : "", replaceTabs( lines[i] ) ) )
+							.collect( Collectors.joining( "\n" ) );
 				} )
 				.collect( Collectors.joining( "\n" ) );
 
-		int maxParamsWidth = Math.max( nvpFmt.length(),
-				paramsStr.lines().mapToInt( String::length ).max().orElse( 0 ) );
-		int maxOperationsWidth = Math.max(
-				operationsStr.lines().mapToInt( String::length ).max().orElse( 0 ),
-				"│ Operations │".length() );
+		String operationsHeader = String.format( operationsPadFormat, "Operations" );
+		String operationsBox = formatBox( operationsBorder, operationsHeader, operationsStr,
+				String.format( operationsPadFormat, "" ) );
 
-		String operationsBorder = "─".repeat( maxOperationsWidth - 2 );
-		String parametersBorder = "─".repeat( maxParamsWidth - 2 );
+		String parametersHeader = String.format( nvpPadFormat, "Parameters", "Values" );
+		String parametersBox = formatBox( parametersBorder, parametersHeader, paramsStr,
+				String.format( nvpPadFormat, "", "" ) );
 
-		String operationsBox;
-		if( operationsStr.isEmpty() ) {
-			operationsBox = """
-					┌──────────────┐
-					│ Operations   │
-					├──────────────┤
-					│              │
-					└──────────────┘
-					""";
-		}
-		else {
-			operationsBox = String.format(
-					"┌%s┐\n│ %-" + (maxOperationsWidth - 4) + "s │\n├%s┤\n%s\n└%s┘\n",
-					operationsBorder, "Operations", operationsBorder, operationsStr, operationsBorder );
-		}
-
-		String header = String.format( "│ %-" + nameWidth + "s │ %-" + valueWidth + "s │", "Parameters",
-				"Values" );
-
-		String parametersBox;
-		if( paramsStr.isEmpty() ) {
-			parametersBox = """
-					┌─────────────────────┐
-					│ Parameters │ Values │
-					├─────────────────────┤
-					│                     │
-					└─────────────────────┘
-					""";
-		}
-		else {
-			parametersBox = String.format( "┌%s┐\n%s\n├%s┤\n%s\n└%s┘",
-					parametersBorder, header, parametersBorder, paramsStr, parametersBorder );
-		}
-
-		return operationsBox + parametersBox;
+		return operationsBox + "\n" + parametersBox;
 	}
 
 	@Override
@@ -259,6 +235,24 @@ public class WebSequence extends AbstractMessage<WebSequence> {
 		catch( IOException ioe ) {
 			throw new UncheckedIOException( ioe );
 		}
+	}
+
+	private String replaceTabs( String input ) {
+		return input.replace( "\t", "    " );
+	}
+
+	private String formatBox( String border, String header, String content, String defaultContent ) {
+		if( content == null || content.isEmpty() ) {
+			content = defaultContent;
+		}
+		return String.format(
+				"""
+						┌%s┐
+						%s
+						├%s┤
+						%s
+						└%s┘""",
+				border, header, border, content, border );
 	}
 
 }
