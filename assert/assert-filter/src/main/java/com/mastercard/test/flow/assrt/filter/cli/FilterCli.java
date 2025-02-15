@@ -5,8 +5,11 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.function.Supplier;
 
+import org.jline.keymap.KeyMap;
+import org.jline.reader.Binding;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.Reference;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.jline.utils.InfoCmp.Capability;
@@ -76,6 +79,9 @@ public class FilterCli {
 						.terminal( term )
 						.completer( uiPhase.completer() )
 						.build();
+
+				KeyMap<Binding> map = lr.getKeyMaps().get( LineReader.MAIN );
+				map.bind( new Reference( LineReader.COMPLETE_PREFIX ), "\t" );
 
 				Cli cli = new Cli( Math.max( Cli.MIN_WIDTH, term.getWidth() ) );
 				uiPhase.render( cli );
