@@ -1,8 +1,5 @@
 package com.mastercard.test.flow.msg.web;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.joining;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
@@ -12,11 +9,14 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.BiConsumer;
-import java.util.stream.Stream;
-
-import org.openqa.selenium.WebDriver;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.openqa.selenium.WebDriver;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import com.mastercard.test.flow.msg.AbstractMessage;
 
 /**
@@ -43,7 +43,6 @@ public class WebSequence extends AbstractMessage<WebSequence> {
 	private static final ObjectMapper JSON = new ObjectMapper();
 
 	private final WebSequence parent;
-
 	private final SortedMap<String,
 			BiConsumer<WebDriver, Map<String, String>>> operations = new TreeMap<>();
 
@@ -94,28 +93,59 @@ public class WebSequence extends AbstractMessage<WebSequence> {
 
 	@Override
 	protected String asHuman() {
-		Map<String, String> params = results != null
-				? results
-				: parameters();
-		int nameWidth = params.keySet().stream()
-				.mapToInt( String::length )
-				.max().orElse( 1 );
-		String nvpFmt = " %" + nameWidth + "s : %s";
-		String padFmt = "\n %" + nameWidth + "s   ";
-		String pad = String.format( padFmt, "" );
-		return String.format( "Operations:\n"
-				+ "%s\n"
-				+ "Parameters:\n"
-				+ "%s",
-				operations().keySet().stream()
-						.map( o -> " " + o )
-						.collect( joining( "\n" ) ),
-				params.entrySet().stream()
-						.map( e -> String.format( nvpFmt,
-								e.getKey(),
-								Stream.of( e.getValue().split( "\n" ) )
-										.collect( joining( pad ) ) ) )
-						.collect( joining( "\n" ) ) );
+		Map<String, String> params = results != null ? results : parameters();
+		SortedMap<String, BiConsumer<WebDriver, Map<String, String>>> ops = operations();
+
+		int nameWidth = Math.max(
+				params.keySet().stream().mapToInt( String::length ).max().orElse( 1 ),
+				"Parameters".length() );
+
+		int valueWidth = Math.max(
+				params.values().stream()
+						.flatMap( value -> Arrays.stream( value.split( "\\R" ) ) )
+						.mapToInt( str -> replaceTabs( str ).length() )
+						.max().orElse( 1 ),
+				"Values".length() );
+
+		int operationsWidth = Math.max(
+				ops.keySet().stream().mapToInt( String::length ).max().orElse( 1 ),
+				"Operations".length() );
+
+		String nvpPadFormat = "│ %-" + nameWidth + "s │ %-" + valueWidth + "s │";
+		String operationsPadFormat = "│ %-" + operationsWidth + "s │";
+
+		// For parameters: fixed characters ("│ ", " │ ", " │") add up to 7.
+		int paramsBoxWidth = nameWidth + valueWidth + 7;
+		// For operations: fixed characters ("│ ", " │") add up to 4.
+		int operationsBoxWidth = operationsWidth + 4;
+
+		String parametersBorder = "─".repeat( paramsBoxWidth - 2 );
+		String operationsBorder = "─".repeat( operationsBoxWidth - 2 );
+
+		String operationsStr = ops.keySet().stream()
+				.map( o -> String.format( operationsPadFormat, o ) )
+				.collect( Collectors.joining( "\n" ) );
+
+		String paramsStr = params.entrySet().stream()
+				.map( entry -> {
+					String key = entry.getKey();
+					String[] lines = entry.getValue().split( "\\R" );
+					return IntStream.range( 0, lines.length )
+							.mapToObj(
+									i -> String.format( nvpPadFormat, i == 0 ? key : "", replaceTabs( lines[i] ) ) )
+							.collect( Collectors.joining( "\n" ) );
+				} )
+				.collect( Collectors.joining( "\n" ) );
+
+		String operationsHeader = String.format( operationsPadFormat, "Operations" );
+		String operationsBox = formatBox( operationsBorder, operationsHeader, operationsStr,
+				String.format( operationsPadFormat, "" ) );
+
+		String parametersHeader = String.format( nvpPadFormat, "Parameters", "Values" );
+		String parametersBox = formatBox( parametersBorder, parametersHeader, paramsStr,
+				String.format( nvpPadFormat, "", "" ) );
+
+		return operationsBox + "\n" + parametersBox;
 	}
 
 	@Override
@@ -205,6 +235,24 @@ public class WebSequence extends AbstractMessage<WebSequence> {
 		catch( IOException ioe ) {
 			throw new UncheckedIOException( ioe );
 		}
+	}
+
+	private String replaceTabs( String input ) {
+		return input.replace( "\t", "    " );
+	}
+
+	private String formatBox( String border, String header, String content, String defaultContent ) {
+		if( content == null || content.isEmpty() ) {
+			content = defaultContent;
+		}
+		return String.format(
+				"""
+						┌%s┐
+						%s
+						├%s┤
+						%s
+						└%s┘""",
+				border, header, border, content, border );
 	}
 
 }
