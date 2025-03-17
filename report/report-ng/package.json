@@ -20,7 +20,7 @@
     "@angular/material": "14.2.7",
     "@angular/platform-browser": "^14.1.2",
     "@angular/platform-browser-dynamic": "^14.1.2",
-    "@angular/router": "^14.1.2",
+    "@angular/router": "^18.2.13",
     "@babel/core": "^7.26.0",
     "@types/d3": "^7.4.3",
     "@types/diff-match-patch": "^1.0.32",
