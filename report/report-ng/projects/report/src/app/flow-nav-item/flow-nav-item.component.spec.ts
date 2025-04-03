@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { FlowNavItemComponent } from './flow-nav-item.component';
-import { MatLegacyListModule as MatListModule } from '@angular/material/legacy-list';
+import { MatListModule } from '@angular/material/list';
 
 describe('FlowNavItemComponent', () => {
   let component: FlowNavItemComponent;

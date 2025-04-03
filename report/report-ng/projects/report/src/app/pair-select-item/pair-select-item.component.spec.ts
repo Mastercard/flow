@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, Input } from '@angular/core';
 import { ListPair, PairSelectItemComponent } from './pair-select-item.component';
 import { empty_flow } from '../types';
-import { MatLegacyListModule as MatListModule } from '@angular/material/legacy-list';
+import { MatListModule } from '@angular/material/list';
 
 describe('PairSelectItemComponent', () => {
   let component: TestWrapper;

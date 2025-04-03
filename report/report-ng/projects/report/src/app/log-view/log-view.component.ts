@@ -1,5 +1,5 @@
 import { Component, OnInit, Input } from '@angular/core';
-import { MatLegacyTableDataSource as MatTableDataSource } from '@angular/material/legacy-table';
+import { MatTableDataSource } from '@angular/material/table';
 import { QueryService } from '../query.service';
 import { LogEvent } from '../types';
 import { IconEmbedService } from '../icon-embed.service';

@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { DuctIndexItemComponent } from './duct-index-item.component';
-import { MatLegacyListModule as MatListModule } from '@angular/material/legacy-list';
+import { MatListModule } from '@angular/material/list';
 
 describe('DuctIndexItemComponent', () => {
   let component: DuctIndexItemComponent;

@@ -4,7 +4,7 @@ import { ViewOptionsComponent } from './view-options.component';
 import { EnumIteratePipe } from '../enum-iterate.pipe';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatLegacyTooltipModule as MatTooltipModule } from '@angular/material/legacy-tooltip';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 
 describe('ViewOptionsComponent', () => {
