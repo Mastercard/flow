@@ -5,7 +5,7 @@ import { ModelDiffDataService } from '../model-diff-data.service';
 import { FlowPairingService } from '../flow-pairing.service';
 import { FlowFilterService } from '../flow-filter.service';
 import { Entry } from '../types';
-import { MatListModule } from '@angular/material/list';
+import { MatLegacyListModule as MatListModule } from '@angular/material/legacy-list';
 
 describe('PairedFlowListComponent', () => {
   let component: PairedFlowListComponent;
