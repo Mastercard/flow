@@ -237,8 +237,8 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 		driver.findElement( By.id( "menu_trigger" ) ).click();
 
 		Function<WebDriver, Stream<WebElement>> menuItems = dr -> dr
-				.findElement( By.className( "mat-menu-panel" ) )
-				.findElements( By.className( "mat-menu-item" ) )
+				.findElement( By.className( "mat-mdc-menu-panel" ) )
+				.findElements( By.className( "mat-mdc-menu-item" ) )
 				.stream();
 
 		new WebDriverWait( driver, Duration.ofSeconds( 1 ) )
@@ -298,10 +298,10 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 		// wait for the tab transition to complete
 		new WebDriverWait( driver, Duration.ofSeconds( 3 ) )
 				.withMessage( () -> "Failed to find a relaxed tab body in:\n  " + driver
-						.findElements( By.className( "mat-tab-body-content" ) ).stream()
+						.findElements( By.className( "mat-mdc-tab-body-content" ) ).stream()
 						.map( e -> e.getAttribute( "style" ) )
 						.collect( joining( "\n  " ) ) )
-				.until( dr -> dr.findElements( By.className( "mat-tab-body-content" ) ).stream()
+				.until( dr -> dr.findElements( By.className( "mat-mdc-tab-body-content" ) ).stream()
 						.anyMatch( e -> "transform: none;".equals( e.getAttribute( "style" ) ) ) );
 	}
 

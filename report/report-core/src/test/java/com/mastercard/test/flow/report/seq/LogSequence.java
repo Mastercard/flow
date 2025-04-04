@@ -138,7 +138,7 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 		trace( "hasMessages", (Object[]) lines );
 		Assertions.assertEquals(
 				Copy.pasta( lines ),
-				Copy.pasta( driver.findElements( By.className( "mat-row" ) ).stream()
+				Copy.pasta( driver.findElements( By.className( "mat-mdc-row" ) ).stream()
 						.map( r -> r.getText().replace( '\n', ' ' ) ) ) );
 		return this;
 	}
