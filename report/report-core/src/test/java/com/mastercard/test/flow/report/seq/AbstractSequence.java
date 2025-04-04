@@ -266,7 +266,7 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 	 */
 	public <T extends AbstractSequence<T>> T tab( String name,
 			Function<AbstractSequence<S>, T> seqConstructor ) {
-		List<WebElement> tabs = driver.findElements( By.className( "mat-tab-label-content" ) );
+		List<WebElement> tabs = driver.findElements( By.className( "mdc-tab__text-label" ) );
 		tabs.stream()
 				.filter( e -> e.getText().startsWith( name ) )
 				.findFirst()
