@@ -13,7 +13,7 @@ export interface DiffPair {
 };
 
 /**
- * Associates a diff with a set of flow pairs that have undergone 
+ * Associates a diff with a set of flow pairs that have undergone
  * that diff
  */
 export interface Change {
@@ -34,7 +34,7 @@ export interface CollatedChange {
   providedIn: 'root'
 })
 export class FlowDiffService {
-  private readonly dmp: diff_match_patch = new diff_match_patch();
+  private readonly dmp = new diff_match_patch();
 
   sourceData: DiffPair[] = [];
   changes: Change[] = [];
