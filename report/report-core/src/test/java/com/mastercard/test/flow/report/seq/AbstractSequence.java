@@ -237,8 +237,8 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 		driver.findElement( By.id( "menu_trigger" ) ).click();
 
 		Function<WebDriver, Stream<WebElement>> menuItems = dr -> dr
-				.findElement( By.className( "mat-menu-panel" ) )
-				.findElements( By.className( "mat-menu-item" ) )
+				.findElement( By.className( "mat-mdc-menu-panel" ) )
+				.findElements( By.className( "mat-mdc-menu-item" ) )
 				.stream();
 
 		new WebDriverWait( driver, Duration.ofSeconds( 1 ) )

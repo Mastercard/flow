@@ -280,6 +280,8 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 				.moveByOffset( 0, 5 ) // shrug
 				.moveToElement( items.get( to ) )
 				.release()
+				.moveByOffset( 0, 5 ) // shrug
+				.release()
 				.pause( 400 )
 				.build()
 				.perform();
