@@ -15,12 +15,15 @@
       "prefix": "app",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:browser",
+          "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/report",
+            "outputPath": {
+              "base": "dist/report"
+            },
             "index": "projects/report/src/index.html",
-            "main": "projects/report/src/main.ts",
-            "polyfills": "projects/report/src/polyfills.ts",
+            "polyfills": [
+              "projects/report/src/polyfills.ts"
+            ],
             "tsConfig": "projects/report/tsconfig.app.json",
             "assets": [
               "projects/report/src/favicon.ico",
@@ -30,7 +33,8 @@
               "./node_modules/@angular/material/prebuilt-themes/indigo-pink.css",
               "projects/report/src/styles.css"
             ],
-            "scripts": []
+            "scripts": [],
+            "browser": "projects/report/src/main.ts"
           },
           "configurations": {
             "production": {
@@ -55,9 +59,7 @@
               "outputHashing": "all"
             },
             "development": {
-              "buildOptimizer": false,
               "optimization": false,
-              "vendorChunk": true,
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true
