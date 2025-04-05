@@ -17,7 +17,10 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedCondition;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import com.mastercard.test.flow.report.Copy;
@@ -507,9 +510,11 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 
 		// wait for expansion to finish
 		new WebDriverWait( driver, ofSeconds( 2 ) )
-				.until( dr -> "visibility: visible;"
-						.equals( changed.findElement( By.className( "mat-expansion-panel-content" ) )
-								.getAttribute( "style" ) ) );
+				.until( (ExpectedCondition<Boolean>) dr -> {
+					List<WebElement> headers = changed
+							.findElements( By.className( "diff_display" ) );
+					return headers.stream().allMatch( WebElement::isDisplayed );
+				} );
 
 		WebElement changes = changed.findElement( By.id( "changes" ) );
 
@@ -541,11 +546,13 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 				.orElseThrow( () -> new IllegalStateException( "" ) );
 		diffPanel.findElement( By.tagName( "mat-expansion-panel-header" ) ).click();
 
-		// wait for expansion to finish
+		// wait for changes to load
 		new WebDriverWait( driver, ofSeconds( 2 ) )
-				.until( dr -> "visibility: visible;"
-						.equals( diffPanel.findElement( By.className( "mat-expansion-panel-content" ) )
-								.getAttribute( "style" ) ) );
+				.until( (ExpectedCondition<Boolean>) dr -> {
+					List<WebElement> headers = diffPanel
+							.findElements( By.className( "mat-mdc-list-item" ) );
+					return headers.stream().allMatch( WebElement::isDisplayed );
+				} );
 
 		return this;
 	}
