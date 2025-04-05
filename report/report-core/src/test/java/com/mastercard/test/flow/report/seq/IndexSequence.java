@@ -548,7 +548,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 
 	private IndexSequence dragChip( String text, String sourceId, String destId ) {
 		WebElement source = driver.findElement( By.id( sourceId ) );
-		WebElement chip = source.findElements( By.tagName( "mat-chip" ) ).stream()
+		WebElement chip = source.findElements( By.tagName( "mat-chip-row" ) ).stream()
 				.filter( c -> text.equals( c.findElement( By.className( "tag_text" ) ).getText() ) )
 				.findFirst()
 				.orElseThrow( () -> new AssertionError( ""
@@ -556,7 +556,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 						+ "Have you called expandFilters()?" ) );
 		WebElement destination = driver
 				.findElement( By.id( destId ) )
-				.findElement( By.tagName( "mat-chip-list" ) );
+				.findElement( By.tagName( "mat-chip-grid" ) );
 		actions.moveToElement( chip )
 				.clickAndHold( chip )
 				.moveToElement( destination )
