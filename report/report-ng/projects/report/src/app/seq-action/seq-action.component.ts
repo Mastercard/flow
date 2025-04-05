@@ -12,7 +12,7 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./seq-action.component.css']
 })
 export class SeqActionComponent implements OnInit {
-  private readonly dmp: diff_match_patch = new diff_match_patch();
+  private readonly dmp = new diff_match_patch();
 
   @Input() entity: string[] = ["empty"];
   @Input() action: Action = empty_action;

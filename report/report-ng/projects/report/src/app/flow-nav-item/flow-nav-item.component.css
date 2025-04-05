@@ -28,3 +28,9 @@ mat-icon {
   color: rgba(255, 0, 0, 1);
   border-radius: 1.5ch;
 }
+
+.flow-nav-item .content {
+  display: flex;
+  align-items: center;
+}
+

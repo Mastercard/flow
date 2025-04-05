@@ -1,18 +1,24 @@
 <mat-form-field class="filter_control" appearance="fill">
   <mat-label>{{type}}</mat-label>
-  <mat-chip-list #chipList cdkDropList [cdkDropListData]="filters" (cdkDropListDropped)="drop($event)"
+  <mat-chip-grid #chipList cdkDropListOrientation="horizontal" cdkDropList [cdkDropListData]="filters" (cdkDropListDropped)="drop($event)"
     [disabled]="disabled">
-    <mat-chip *ngFor="let filter of filters" [selectable]=false [removable]="true" (removed)="remove(filter)" cdkDrag
-      [cdkDragDisabled]="disabled">
+    <mat-chip-row *ngFor="let filter of filters" [removable]="true" (removed)="remove(filter)" cdkDrag
+                  [cdkDragDisabled]="disabled">
       <span class="tag_text">{{filter}}</span>
       <mat-icon matChipRemove svgIcon="cancel"></mat-icon>
-    </mat-chip>
+      <ng-template cdkDragPlaceholder>
+        <mat-chip-row class="placeholder-chip">
+          <span class="tag_text">{{ filter }}</span>
+        </mat-chip-row>
+      </ng-template>
+    </mat-chip-row>
+
     <input #filterInput placeholder="tag" matInput [formControl]="ctrl" [matAutocomplete]="auto"
       [matChipInputFor]="chipList" [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
       (matChipInputTokenEnd)="add($event)" [attr.disabled]="disabled">
-  </mat-chip-list>
+  </mat-chip-grid>
   <mat-autocomplete #auto="matAutocomplete" (optionSelected)="selected($event)">
-    <mat-option *ngFor="let tag of completionTags | async" [value]="tag">
+    <mat-option *ngFor="let tag of completionTags | async" [value]="tag" >
       {{tag}}
     </mat-option>
   </mat-autocomplete>

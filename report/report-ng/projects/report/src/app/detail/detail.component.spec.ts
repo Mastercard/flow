@@ -121,7 +121,7 @@ function testTabs(component: DetailComponent, fixture: ComponentFixture<DetailCo
   fixture.detectChanges();
 
   let nl: NodeList = fixture.nativeElement
-    .querySelectorAll("div.mat-tab-label-content");
+    .querySelectorAll("div.mat-mdc-tab");
   return Array.from(nl).map(e => e.textContent?.trim() || "???");
 }
 

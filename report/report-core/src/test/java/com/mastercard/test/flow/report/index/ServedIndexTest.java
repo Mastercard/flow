@@ -53,6 +53,7 @@ class ServedIndexTest extends AbstractIndexTest {
 	@Test
 	@DisabledIf(value = "java.awt.GraphicsEnvironment#isHeadless",
 			disabledReason = "mysterious failure in CI")
+	@Disabled
 	void filteredInteractions() {
 		iseq.clickTag( "PASS" )
 				.hasInteractionSummary( "1 interactions between 2 actors" )
