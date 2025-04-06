@@ -5,11 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -302,7 +298,9 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 						.map( e -> e.getAttribute( "style" ) )
 						.collect( joining( "\n  " ) ) )
 				.until( dr -> dr.findElements( By.className( "mat-mdc-tab-body-content" ) ).stream()
-						.anyMatch( e -> "transform: none;".equals( e.getAttribute( "style" ) ) ) );
+						.map( e -> e.getAttribute( "style" ) )
+						.filter( Objects::nonNull )
+						.anyMatch( style -> style.contains( "transform: none;" ) ) );
 	}
 
 	/**
