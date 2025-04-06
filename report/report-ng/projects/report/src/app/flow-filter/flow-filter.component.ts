@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { FlowFilterService, Type } from '../flow-filter.service';
 import { IconEmbedService } from '../icon-embed.service';
@@ -9,6 +9,9 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./flow-filter.component.css']
 })
 export class FlowFilterComponent implements OnInit {
+  filterService = inject(FlowFilterService);
+  private icons = inject(IconEmbedService);
+
 
   readonly includeType: Type = Type.Include;
   readonly excludeType: Type = Type.Exclude;
@@ -21,9 +24,10 @@ export class FlowFilterComponent implements OnInit {
    */
   @Input() tags: Set<string> = new Set();
 
-  constructor(
-    public filterService: FlowFilterService,
-    private icons: IconEmbedService,) {
+  constructor() {
+    const filterService = this.filterService;
+    const icons = this.icons;
+
     filterService.onUpdate(() => this.refresh());
     icons.register("lock", "close", "clear");
   }

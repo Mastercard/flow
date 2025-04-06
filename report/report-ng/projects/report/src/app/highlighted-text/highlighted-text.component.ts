@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges, inject } from '@angular/core';
 import { MsgSearchService } from '../msg-search.service';
 
 /**
@@ -10,11 +10,15 @@ import { MsgSearchService } from '../msg-search.service';
   styleUrls: ['./highlighted-text.component.css']
 })
 export class HighlightedTextComponent implements OnInit, OnChanges {
+  private searchService = inject(MsgSearchService);
+
   @Input() content: string | undefined = "";
   toHighlight: string = "";
   public result: string[] = [];
 
-  constructor(private searchService: MsgSearchService) {
+  constructor() {
+    const searchService = this.searchService;
+
     searchService.onClear(() => {
       this.toHighlight = '';
       this.refresh();

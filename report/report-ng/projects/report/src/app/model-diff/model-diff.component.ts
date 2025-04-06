@@ -1,5 +1,5 @@
 import { Location } from '@angular/common';
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import { ChangeAnalysisComponent } from '../change-analysis/change-analysis.component';
@@ -15,6 +15,11 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./model-diff.component.css']
 })
 export class ModelDiffComponent implements OnInit {
+  private filters = inject(FlowFilterService);
+  private fps = inject(FlowPairingService);
+  private location = inject(Location);
+  private icons = inject(IconEmbedService);
+
 
   @ViewChild("from") from!: ModelDiffDataSourceComponent;
   @ViewChild("to") to!: ModelDiffDataSourceComponent;
@@ -22,13 +27,13 @@ export class ModelDiffComponent implements OnInit {
   @ViewChild(ChangeAnalysisComponent) changeAnalysis!: ChangeAnalysisComponent;
   tabIndex = 0;
 
-  constructor(
-    private filters: FlowFilterService,
-    private fps: FlowPairingService,
-    private location: Location,
-    route: ActivatedRoute,
-    title: Title,
-    private icons: IconEmbedService,) {
+  constructor() {
+    const filters = this.filters;
+    const fps = this.fps;
+    const route = inject(ActivatedRoute);
+    const title = inject(Title);
+    const icons = this.icons;
+
     this.tabIndex = Number.parseInt(route.snapshot.queryParamMap.get("tab") ?? "0");
     filters.onUpdate(() => this.updateQuery());
     fps.onUnpair(p => this.updateQuery());

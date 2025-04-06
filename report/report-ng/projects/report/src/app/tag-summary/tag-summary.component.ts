@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, SimpleChanges } from '@angular/core';
+import { Component, Input, OnInit, SimpleChanges, inject } from '@angular/core';
 import { FlowFilterService } from '../flow-filter.service';
 import { Entry } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
@@ -9,6 +9,9 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./tag-summary.component.css']
 })
 export class TagSummaryComponent implements OnInit {
+  private filters = inject(FlowFilterService);
+  private icons = inject(IconEmbedService);
+
   readonly RESULT_TAGS: string[] = ["PASS", "FAIL", "SKIP", "ERROR"];
 
   @Input() entries: Entry[] = [];
@@ -18,9 +21,9 @@ export class TagSummaryComponent implements OnInit {
   tagCounts: { [key: string]: number; } = {};
   alphaSort: boolean = false;
 
-  constructor(
-    private filters: FlowFilterService,
-    private icons: IconEmbedService,) {
+  constructor() {
+    const icons = this.icons;
+
     icons.register(
       "check_circle_outline", "help_outline", "error_outline",
       "new_releases", "sort_by_alpha");

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { FlowFilterService, Type } from '../flow-filter.service';
@@ -17,12 +17,15 @@ import { Location } from '@angular/common';
   styleUrls: ['./index.component.css']
 })
 export class IndexComponent implements OnInit {
+  private filterService = inject(FlowFilterService);
+  private location = inject(Location);
+  private indexData = inject(IndexDataService);
+  private title = inject(Title);
 
-  constructor(
-    private filterService: FlowFilterService,
-    private location: Location,
-    private indexData: IndexDataService,
-    private title: Title) {
+
+  constructor() {
+    const filterService = this.filterService;
+
     filterService.onUpdate(() => {
       this.updateQuery();
     });

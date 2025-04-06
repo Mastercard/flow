@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, Input, ViewChild, ElementRef, inject } from '@angular/core';
 import { UntypedFormControl } from '@angular/forms';
 import { MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { MatChipInputEvent } from '@angular/material/chips';
@@ -16,10 +16,13 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./tag-filter.component.css']
 })
 export class TagFilterComponent implements OnInit {
+  private filterService = inject(FlowFilterService);
+  private icons = inject(IconEmbedService);
 
-  constructor(
-    private filterService: FlowFilterService,
-    private icons: IconEmbedService,) {
+
+  constructor() {
+    const icons = this.icons;
+
     icons.register("cancel", "close");
   }
 

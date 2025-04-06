@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 
@@ -13,6 +13,9 @@ import { DomSanitizer } from '@angular/platform-browser';
   providedIn: 'root'
 })
 export class IconEmbedService {
+  private iconRegistry = inject(MatIconRegistry);
+  private sanitizer = inject(DomSanitizer);
+
 
   /**
    * The SVG source is lifted straight from the material icon svg download 
@@ -65,10 +68,6 @@ export class IconEmbedService {
   };
 
   private registered: { [key: string]: boolean; } = {};
-
-  constructor(
-    private iconRegistry: MatIconRegistry,
-    private sanitizer: DomSanitizer) { }
 
   /**
    * Ensures that icon data is available for a component

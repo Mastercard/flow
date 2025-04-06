@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { IndexDataService } from './index-data.service';
@@ -12,6 +12,9 @@ import { Entry, Flow, Index, isFlow, isIndex } from './types';
   providedIn: 'root'
 })
 export class ModelDiffDataService {
+  private thisIndex = inject(IndexDataService);
+  private http = inject(HttpClient);
+
   private readonly start = "// START_JSON_DATA";
   private readonly end = "// END_JSON_DATA";
 
@@ -22,11 +25,6 @@ export class ModelDiffDataService {
 
   private indexListeners: Map<string, ((label: string) => void)[]> = new Map();
   private flowListeners: Map<string, ((label: string, entry: Entry, flow: Flow) => void)[]> = new Map();
-
-  constructor(
-    private thisIndex: IndexDataService,
-    private http: HttpClient
-  ) { }
 
   /**
    * Call this when a new path is entered by the user

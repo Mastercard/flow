@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { DuctService, Report } from '../duct.service';
 
@@ -8,14 +8,11 @@ import { DuctService, Report } from '../duct.service';
   styleUrls: ['./duct-index.component.css']
 })
 export class DuctIndexComponent implements OnInit {
+  private ductService = inject(DuctService);
+  private title = inject(Title);
+
 
   reports: Report[] = [];
-
-  constructor(
-    private ductService: DuctService,
-    private title: Title
-  ) {
-  }
 
   ngOnInit(): void {
     this.title.setTitle("Duct");

@@ -10,11 +10,19 @@ describe('BasisFetchService', () => {
   let httpClientSpy: jasmine.SpyObj<HttpClient>;
   let service: BasisFetchService;
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-    httpClientSpy = jasmine.createSpyObj('HttpClient', ['get']);
-    service = new BasisFetchService(httpClientSpy);
+beforeEach(() => {
+  const spy = jasmine.createSpyObj('HttpClient', ['get']);
+
+  TestBed.configureTestingModule({
+    providers: [
+      BasisFetchService,
+      { provide: HttpClient, useValue: spy }
+    ]
   });
+
+  httpClientSpy = TestBed.inject(HttpClient) as jasmine.SpyObj<HttpClient>;
+  service = TestBed.inject(BasisFetchService);
+});
 
   it('should be created', () => {
     expect(service).toBeTruthy();

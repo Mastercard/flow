@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, HostListener } from '@angular/core';
+import { Component, OnInit, Input, HostListener, inject } from '@angular/core';
 import { Entry } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
 import { EntryHoverService } from '../entry-hover.service';
@@ -9,6 +9,8 @@ import { EntryHoverService } from '../entry-hover.service';
   styleUrls: ['./flow-nav-item.component.css']
 })
 export class FlowNavItemComponent implements OnInit {
+  private hover = inject(EntryHoverService);
+
 
   @Input() showResult: boolean = true;
   @Input() basePath: string = "";
@@ -21,10 +23,9 @@ export class FlowNavItemComponent implements OnInit {
 
   lineClass: string = "";
 
-  constructor(
-    icons: IconEmbedService,
-    private hover: EntryHoverService,
-  ) {
+  constructor() {
+    const icons = inject(IconEmbedService);
+
     icons.register("check_circle_outline", "error_outline", "help_outline", "new_releases");
   }
 

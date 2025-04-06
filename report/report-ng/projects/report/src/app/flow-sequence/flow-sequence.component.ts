@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, inject } from '@angular/core';
 import { Action, isAction } from '../seq-action/seq-action.component';
 import { Note, isNote } from '../seq-note/seq-note.component';
 import { Section, isSection } from '../seq-section/seq-section.component';
@@ -10,13 +10,10 @@ import { TxSelectionService } from '../tx-selection.service';
   styleUrls: ['./flow-sequence.component.css']
 })
 export class FlowSequenceComponent implements OnInit {
+  private txSelect = inject(TxSelectionService);
+
 
   @Input() sequence: SequenceData = { entity: [], exercised: [], item: [] };
-
-  constructor(
-    private txSelect: TxSelectionService) {
-
-  }
 
   ngOnInit(): void {
   }

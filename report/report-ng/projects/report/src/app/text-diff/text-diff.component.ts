@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit, SimpleChanges, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges, ChangeDetectorRef, inject } from '@angular/core';
 import { DIFF_EQUAL } from 'diff-match-patch';
 import { DIFF_DELETE, DIFF_INSERT, Diff, diff_match_patch } from 'diff-match-patch';
 
@@ -8,6 +8,8 @@ import { DIFF_DELETE, DIFF_INSERT, Diff, diff_match_patch } from 'diff-match-pat
   styleUrls: ['./text-diff.component.css']
 })
 export class TextDiffComponent implements OnInit, OnChanges {
+  private cdRef = inject(ChangeDetectorRef);
+
 
   /**
    * One half of the diff - the "before"
@@ -33,11 +35,6 @@ export class TextDiffComponent implements OnInit, OnChanges {
   @Input() context: number = 3;
 
   blocks: Block[] = [];
-
-  constructor(
-    private cdRef: ChangeDetectorRef
-  ) {
-  }
 
   ngOnInit(): void {
     this.ngOnChanges();

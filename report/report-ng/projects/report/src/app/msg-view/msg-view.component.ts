@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, inject } from '@angular/core';
 import { QueryService } from '../query.service';
 import { DataDisplay, Options } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
@@ -10,6 +10,9 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./msg-view.component.css']
 })
 export class MsgViewComponent implements OnInit {
+  private query = inject(QueryService);
+  private icons = inject(IconEmbedService);
+
 
   @Input() options: Options = new Options();
   @Input() dataDisplay: DataDisplay = DataDisplay.Human;
@@ -22,9 +25,9 @@ export class MsgViewComponent implements OnInit {
   showContent: boolean = false;
   showHex: boolean = false;
 
-  constructor(
-    private query: QueryService,
-    private icons: IconEmbedService,) {
+  constructor() {
+    const icons = this.icons;
+
     icons.register("visibility_off");
   }
 

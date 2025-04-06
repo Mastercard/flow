@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 
 import { MsgSearchService } from '../msg-search.service';
 import { QueryService } from '../query.service';
@@ -10,15 +10,20 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./msg-search-input.component.css']
 })
 export class MsgSearchInputComponent implements OnInit {
+  private searchService = inject(MsgSearchService);
+  private query = inject(QueryService);
+  private icons = inject(IconEmbedService);
+
 
   value: string;
   showInput: boolean = false;
   @ViewChild('input') input?: ElementRef;
 
-  constructor(
-    private searchService: MsgSearchService,
-    private query: QueryService,
-    private icons: IconEmbedService,) {
+  constructor() {
+    const searchService = this.searchService;
+    const query = this.query;
+    const icons = this.icons;
+
     this.value = query.get("search", "");
     searchService.search(this.value);
     this.showInput = this.value.length > 0;

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ModelDiffDataService } from './model-diff-data.service';
 import { Entry, isResultTag, removeResultTagsFrom } from './types';
@@ -7,6 +7,9 @@ import { Entry, isResultTag, removeResultTagsFrom } from './types';
   providedIn: 'root'
 })
 export class FlowPairingService {
+  private mdds = inject(ModelDiffDataService);
+  private route = inject(ActivatedRoute);
+
 
   /**
    * The pairs of flows that we can match automatically - they have the same metadata
@@ -35,9 +38,9 @@ export class FlowPairingService {
   private pairListeners: Set<((p: Pair) => void)> = new Set();
   private rebuildListeners: Set<(() => void)> = new Set();
 
-  constructor(
-    private mdds: ModelDiffDataService,
-    private route: ActivatedRoute) {
+  constructor() {
+    const mdds = this.mdds;
+
     mdds.onIndex("from", l => this.rebuild());
     mdds.onIndex("to", l => this.rebuild());
   }

@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { IconEmbedService } from '../icon-embed.service';
 
 /**
@@ -10,6 +10,8 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./menu.component.css']
 })
 export class MenuComponent implements OnInit {
+  private icons = inject(IconEmbedService);
+
 
   items: Item[] = [
     {
@@ -28,7 +30,9 @@ export class MenuComponent implements OnInit {
 
   @Input() current: string = "";
 
-  constructor(private icons: IconEmbedService,) {
+  constructor() {
+    const icons = this.icons;
+
     icons.register("menu", "format_list_bulleted", "compare");
   }
 

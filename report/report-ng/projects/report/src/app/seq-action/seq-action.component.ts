@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, inject } from '@angular/core';
 import { BasisFetchService } from '../basis-fetch.service';
 import { MsgSearchService } from '../msg-search.service';
 import { TxSelectionService } from '../tx-selection.service';
@@ -12,6 +12,11 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./seq-action.component.css']
 })
 export class SeqActionComponent implements OnInit {
+  private txSelect = inject(TxSelectionService);
+  private basis = inject(BasisFetchService);
+  private search = inject(MsgSearchService);
+  private icons = inject(IconEmbedService);
+
   private readonly dmp = new diff_match_patch();
 
   @Input() entity: string[] = ["empty"];
@@ -28,11 +33,12 @@ export class SeqActionComponent implements OnInit {
   markExpected: boolean = false;
   markActual: boolean = false;
 
-  constructor(
-    private txSelect: TxSelectionService,
-    private basis: BasisFetchService,
-    private search: MsgSearchService,
-    private icons: IconEmbedService,) {
+  constructor() {
+    const txSelect = this.txSelect;
+    const basis = this.basis;
+    const search = this.search;
+    const icons = this.icons;
+
 
     txSelect.onSelected(tx => this.selected = tx === this.action);
     basis.onLoad(() => this.hasBasis = this.basis.message(this.action) != null);

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CollatedChange, DiffPair, FlowDiffService } from '../flow-diff.service';
 import { FlowFilterService } from '../flow-filter.service';
@@ -13,6 +13,12 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./change-analysis.component.css'],
 })
 export class ChangeAnalysisComponent implements OnInit {
+  private fds = inject(FlowDiffService);
+  private mdds = inject(ModelDiffDataService);
+  private filters = inject(FlowFilterService);
+  private route = inject(ActivatedRoute);
+  private icons = inject(IconEmbedService);
+
 
   changes: CollatedChange[] = [];
 
@@ -34,14 +40,12 @@ export class ChangeAnalysisComponent implements OnInit {
 
   viewChangeCall: ((from: string, to: string) => void) = (from: string, to: string) => { };
 
-  constructor(
-    private fds: FlowDiffService,
-    fps: FlowPairingService,
-    private mdds: ModelDiffDataService,
-    private filters: FlowFilterService,
-    private route: ActivatedRoute,
-    private icons: IconEmbedService,
-  ) {
+  constructor() {
+    const fds = this.fds;
+    const fps = inject(FlowPairingService);
+    const filters = this.filters;
+    const icons = this.icons;
+
     fds.onFlowData(() => this.rebuild());
     fps.onRebuild(() => this.rebuild());
     fps.onPair(() => this.rebuild());

@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { tap } from 'rxjs';
 import { Meta, isMeta } from './types';
 
@@ -10,8 +10,8 @@ import { Meta, isMeta } from './types';
   providedIn: 'root'
 })
 export class DuctService {
+  private http = inject(HttpClient);
 
-  constructor(private http: HttpClient) { }
 
   /**
    * Starts the heartbeat. Every 30 seconds we'll
