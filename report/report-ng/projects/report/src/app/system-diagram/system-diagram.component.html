@@ -8,7 +8,7 @@
         <div id="interaction_controls_diagram">
             <div id="interaction_controls">
                 <section>
-                    <mat-button-toggle-group id="interactions_orientation_group" [vertical]="true"
+                    <mat-button-toggle-group hideSingleSelectionIndicator="true" id="interactions_orientation_group" [vertical]="true"
                         [(ngModel)]="orientation" (change)="forceRerender()">
                         <mat-button-toggle matTooltip="Vertical layout" matTooltipPosition="right" value="TD">
                             <mat-icon svgIcon="panorama_vertical"></mat-icon>

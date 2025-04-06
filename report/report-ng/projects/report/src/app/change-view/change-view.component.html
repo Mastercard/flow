@@ -19,7 +19,7 @@
     </div>
 
     <div id="top_nav">
-        <mat-button-toggle-group (change)="navChange($event)">
+        <mat-button-toggle-group hideSingleSelectionIndicator="true" (change)="navChange($event)">
             <mat-button-toggle matTooltip="Previous" value="previous" [disabled]="!canPrevious()">
                 <mat-icon svgIcon="navigate_before"></mat-icon>
             </mat-button-toggle>
@@ -34,7 +34,7 @@
     <mat-drawer [opened]="treeOpen" mode="side" disableClose>
         <div class="drawer">
             <div class="diff_controls">
-                <mat-button-toggle-group id="diff_type" name="diff_options" [(ngModel)]="diffFormat">
+                <mat-button-toggle-group hideSingleSelectionIndicator="true" id="diff_type" name="diff_options" [(ngModel)]="diffFormat">
                     <mat-button-toggle value="split" matTooltip="Side-by-side comparison">
                         <mat-icon svgIcon="vertical_split"></mat-icon>
                     </mat-button-toggle>
@@ -42,7 +42,7 @@
                         <mat-icon svgIcon="horizontal_split"></mat-icon>
                     </mat-button-toggle>
                 </mat-button-toggle-group>
-                <mat-button-toggle-group id="context" (change)="contextChange($event)">
+                <mat-button-toggle-group hideSingleSelectionIndicator="true" id="context" (change)="contextChange($event)">
                     <mat-button-toggle matTooltip="Less context" value="less">
                         <mat-icon svgIcon="remove"></mat-icon>
                     </mat-button-toggle>
@@ -77,7 +77,7 @@
     </mat-drawer-content>
 </mat-drawer-container>
 <div id="bottom_nav">
-    <mat-button-toggle-group (change)="navChange($event)">
+    <mat-button-toggle-group hideSingleSelectionIndicator="true" (change)="navChange($event)">
         <mat-button-toggle matTooltip="Previous" value="previous" [disabled]="!canPrevious()">
             <mat-icon svgIcon="navigate_before"></mat-icon>
         </mat-button-toggle>
