@@ -72,21 +72,6 @@
 		</dependency>
 
 		<dependency>
-			<!-- We use a headless chrome instance to test the report, this 
-			     provides automatic management of the drivers for that -->
-			<groupId>io.github.bonigarcia</groupId>
-			<artifactId>webdrivermanager</artifactId>
-			<scope>test</scope>
-			<exclusions>
-				<exclusion>
-					<!-- Avoid incompatible slf4j -->
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-api</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-
-		<dependency>
 			<!-- This is how we drive the browser when testing the report -->
 			<groupId>org.seleniumhq.selenium</groupId>
 			<artifactId>selenium-java</artifactId>
