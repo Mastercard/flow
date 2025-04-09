@@ -4,3 +4,23 @@
 .clear_button {
   cursor: pointer;
 }
+::ng-deep .cdk-drag-placeholder {
+  display: inline-flex;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+::ng-deep .mat-mdc-chip-set {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.placeholder-chip {
+  background: white;
+  border: 1px dashed #aaa;
+  border-radius: 16px;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+}

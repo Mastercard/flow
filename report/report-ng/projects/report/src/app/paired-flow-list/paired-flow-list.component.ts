@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FlowFilterService } from '../flow-filter.service';
 import { FlowPairingService, Pair } from '../flow-pairing.service';
 import { ModelDiffDataService } from '../model-diff-data.service';
@@ -11,12 +11,15 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./paired-flow-list.component.css']
 })
 export class PairedFlowListComponent implements OnInit {
+  private mdds = inject(ModelDiffDataService);
+  private fps = inject(FlowPairingService);
+  private filter = inject(FlowFilterService);
+  private icons = inject(IconEmbedService);
 
-  constructor(
-    private mdds: ModelDiffDataService,
-    private fps: FlowPairingService,
-    private filter: FlowFilterService,
-    private icons: IconEmbedService,) {
+
+  constructor() {
+    const icons = this.icons;
+
     icons.register("link_off");
   }
 

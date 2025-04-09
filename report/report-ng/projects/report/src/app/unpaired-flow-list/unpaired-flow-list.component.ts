@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FlowFilterService } from '../flow-filter.service';
 import { FlowPairingService, IndexedEntry } from '../flow-pairing.service';
 import { ModelDiffDataService } from '../model-diff-data.service';
@@ -11,15 +11,20 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./unpaired-flow-list.component.css'],
 })
 export class UnpairedFlowListComponent implements OnInit {
+  private mdds = inject(ModelDiffDataService);
+  private fps = inject(FlowPairingService);
+  private filter = inject(FlowFilterService);
+  private icons = inject(IconEmbedService);
+
 
   leftEntries: Entry[] = [];
   rightEntries: Entry[] = [];
 
-  constructor(
-    private mdds: ModelDiffDataService,
-    private fps: FlowPairingService,
-    private filter: FlowFilterService,
-    private icons: IconEmbedService,) {
+  constructor() {
+    const fps = this.fps;
+    const filter = this.filter;
+    const icons = this.icons;
+
 
     // We've got a whole new dataset!
     fps.onRebuild(() => this.rebuild());

@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { tap } from 'rxjs/operators';
 import { toSequence } from './detail/detail.component';
 import { SequenceData } from './flow-sequence/flow-sequence.component';
@@ -10,6 +10,8 @@ import { isFlow } from './types';
   providedIn: 'root'
 })
 export class BasisFetchService {
+  private http = inject(HttpClient);
+
 
   readonly start = "// START_JSON_DATA";
   readonly end = "// END_JSON_DATA";
@@ -17,9 +19,6 @@ export class BasisFetchService {
   private basis?: SequenceData = undefined;
 
   private callbacks: (() => void)[] = [];
-
-  constructor(private http: HttpClient) {
-  }
 
   /**
    * Invoked when the detail json is decoded

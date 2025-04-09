@@ -24,8 +24,6 @@ import org.openqa.selenium.firefox.FirefoxProfile;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.slf4j.LoggerFactory;
 
-import io.github.bonigarcia.wdm.WebDriverManager;
-
 /**
  * Handles the lifecycle of the chrome instance we use to test the report. Add
  * this class as an {@link ExtendWith} annotation on your test class that uses
@@ -150,7 +148,6 @@ public class Browser implements
 		CHROME {
 			@Override
 			public WebDriver get() {
-				WebDriverManager.chromedriver().setup();
 				ChromeOptions options = new ChromeOptions();
 				if( !SHOW ) {
 					options.addArguments( "--headless=new" );
@@ -183,8 +180,6 @@ public class Browser implements
 		FIREFOX {
 			@Override
 			public WebDriver get() {
-				WebDriverManager.firefoxdriver().setup();
-
 				FirefoxOptions options = new FirefoxOptions();
 
 				if( !SHOW ) {

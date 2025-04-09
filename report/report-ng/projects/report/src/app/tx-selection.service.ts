@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { QueryService } from './query.service';
 import { Action, empty_action } from './seq-action/seq-action.component';
 import { empty_transmission, Transmission } from './types';
@@ -11,11 +11,10 @@ import { empty_transmission, Transmission } from './types';
   providedIn: 'root'
 })
 export class TxSelectionService {
+  private query = inject(QueryService);
+
   private current: Action = empty_action;
   private callbacks: ((a: Action) => void)[] = [];
-  constructor(private query: QueryService) {
-
-  }
 
   get(): Action {
     return this.current;

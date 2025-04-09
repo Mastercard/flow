@@ -1,4 +1,4 @@
-import { Component, OnInit, OnChanges, Input, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnChanges, Input, ViewEncapsulation, inject } from '@angular/core';
 import { DiffType, Display, Options } from '../types';
 import { TxSelectionService } from '../tx-selection.service';
 import { QueryService } from '../query.service';
@@ -13,6 +13,11 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./transmission.component.css'],
 })
 export class TransmissionComponent implements OnInit, OnChanges {
+  private txSelect = inject(TxSelectionService);
+  private query = inject(QueryService);
+  private basis = inject(BasisFetchService);
+  private icons = inject(IconEmbedService);
+
   action?: Action;
   @Input() options: Options = new Options();
 
@@ -28,11 +33,10 @@ export class TransmissionComponent implements OnInit, OnChanges {
   effectiveDisplay: Display = this.display;
   substitutionWarning: boolean = false;
 
-  constructor(
-    private txSelect: TxSelectionService,
-    private query: QueryService,
-    private basis: BasisFetchService,
-    private icons: IconEmbedService,) {
+  constructor() {
+    const txSelect = this.txSelect;
+    const icons = this.icons;
+
     txSelect.onSelected((action) => {
       this.action = action;
       this.ngOnChanges();

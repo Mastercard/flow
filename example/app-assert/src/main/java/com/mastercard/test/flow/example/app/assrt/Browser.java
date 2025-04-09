@@ -15,8 +15,6 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
-import io.github.bonigarcia.wdm.WebDriverManager;
-
 /**
  * Handles the lifecycle of the chrome instance we use to test web UI. Add this
  * class as an {@link ExtendWith} annotation on your test class that uses the
@@ -69,7 +67,6 @@ public class Browser implements
 						+ "Only call Browser.get() in test classes with @ExtendWith(Browser.class) annotation" );
 			}
 
-			WebDriverManager.chromedriver().setup();
 			ChromeOptions options = new ChromeOptions();
 			if( !SHOW ) {
 				options.addArguments( "--headless=new" );

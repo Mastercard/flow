@@ -8,7 +8,7 @@
     </mat-select>
   </mat-form-field>
   from
-  <mat-form-field appearance="standard">
+  <mat-form-field>
     <mat-label>Source</mat-label>
     <input id="source_filter_input" matInput [(ngModel)]="sourcefilter" (keyup)="applyFilters()">
     <span class="clear_button" *ngIf="sourcefilter" matSuffix mat-icon-button aria-label="Clear"
@@ -17,7 +17,7 @@
     </span>
   </mat-form-field>
   containing
-  <mat-form-field appearance="standard">
+  <mat-form-field>
     <mat-label>Message</mat-label>
     <input id="message_filter_input" matInput [(ngModel)]="messagefilter" (keyup)="applyFilters()">
     <span class="clear_button" *ngIf="messagefilter" matSuffix mat-icon-button aria-label="Clear"

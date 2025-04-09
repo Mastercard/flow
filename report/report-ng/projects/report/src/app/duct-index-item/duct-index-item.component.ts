@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { IconEmbedService } from '../icon-embed.service';
 import { Report } from '../duct.service';
 
@@ -16,9 +16,9 @@ export class DuctIndexItemComponent implements OnInit {
   };
   time: string = "";
 
-  constructor(
-    icons: IconEmbedService
-  ) {
+  constructor() {
+    const icons = inject(IconEmbedService);
+
     icons.register("check_circle_outline", "error_outline", "help_outline", "new_releases");
   }
 

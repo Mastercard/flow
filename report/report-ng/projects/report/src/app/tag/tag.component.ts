@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, inject } from '@angular/core';
 import { FlowFilterService } from '../flow-filter.service';
 
 @Component({
@@ -7,12 +7,10 @@ import { FlowFilterService } from '../flow-filter.service';
   styleUrls: ['./tag.component.css']
 })
 export class TagComponent implements OnInit {
+  filterService = inject(FlowFilterService);
+
 
   @Input() tag: string = "";
-
-  constructor(
-    public filterService: FlowFilterService) {
-  }
 
   ngOnInit(): void {
   }

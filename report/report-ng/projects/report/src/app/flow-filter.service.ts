@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { ActivatedRoute, ParamMap } from '@angular/router';
 import { Observable } from 'rxjs';
 import { Entry } from './types';
@@ -7,8 +7,12 @@ import { Entry } from './types';
   providedIn: 'root'
 })
 export class FlowFilterService {
+  private route = inject(ActivatedRoute);
 
-  constructor(private route: ActivatedRoute) {
+
+  constructor() {
+    const route = this.route;
+
     this.fromParams(route.queryParamMap);
   }
 

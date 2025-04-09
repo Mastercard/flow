@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -237,8 +238,8 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 		driver.findElement( By.id( "menu_trigger" ) ).click();
 
 		Function<WebDriver, Stream<WebElement>> menuItems = dr -> dr
-				.findElement( By.className( "mat-menu-panel" ) )
-				.findElements( By.className( "mat-menu-item" ) )
+				.findElement( By.className( "mat-mdc-menu-panel" ) )
+				.findElements( By.className( "mat-mdc-menu-item" ) )
 				.stream();
 
 		new WebDriverWait( driver, Duration.ofSeconds( 1 ) )
@@ -266,7 +267,7 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 	 */
 	public <T extends AbstractSequence<T>> T tab( String name,
 			Function<AbstractSequence<S>, T> seqConstructor ) {
-		List<WebElement> tabs = driver.findElements( By.className( "mat-tab-label-content" ) );
+		List<WebElement> tabs = driver.findElements( By.className( "mdc-tab__text-label" ) );
 		tabs.stream()
 				.filter( e -> e.getText().startsWith( name ) )
 				.findFirst()
@@ -298,11 +299,13 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 		// wait for the tab transition to complete
 		new WebDriverWait( driver, Duration.ofSeconds( 3 ) )
 				.withMessage( () -> "Failed to find a relaxed tab body in:\n  " + driver
-						.findElements( By.className( "mat-tab-body-content" ) ).stream()
+						.findElements( By.className( "mat-mdc-tab-body-content" ) ).stream()
 						.map( e -> e.getAttribute( "style" ) )
 						.collect( joining( "\n  " ) ) )
-				.until( dr -> dr.findElements( By.className( "mat-tab-body-content" ) ).stream()
-						.anyMatch( e -> "transform: none;".equals( e.getAttribute( "style" ) ) ) );
+				.until( dr -> dr.findElements( By.className( "mat-mdc-tab-body-content" ) ).stream()
+						.map( e -> e.getAttribute( "style" ) )
+						.filter( Objects::nonNull )
+						.anyMatch( style -> style.contains( "transform: none;" ) ) );
 	}
 
 	/**

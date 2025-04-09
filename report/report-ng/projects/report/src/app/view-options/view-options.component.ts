@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, inject } from '@angular/core';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { DataDisplay, DiffType, Display, Options } from '../types';
@@ -10,13 +10,17 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./view-options.component.css']
 })
 export class ViewOptionsComponent implements OnInit {
+  private icons = inject(IconEmbedService);
+
 
   @Input() options: Options = new Options();
   displayEnum = Display;
   dataDisplayEnum = DataDisplay;
   diffTypeEnum = DiffType;
 
-  constructor(private icons: IconEmbedService,) {
+  constructor() {
+    const icons = this.icons;
+
     icons.register(
       "psychology", "difference", "visibility", "foundation",
       "person", "text_format", "hex",

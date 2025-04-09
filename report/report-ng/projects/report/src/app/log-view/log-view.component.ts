@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, inject } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
 import { QueryService } from '../query.service';
 import { LogEvent } from '../types';
@@ -10,6 +10,9 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./log-view.component.css']
 })
 export class LogViewComponent implements OnInit {
+  private query = inject(QueryService);
+  private icons = inject(IconEmbedService);
+
 
   displayedColumns: string[] = ['time', 'level', 'source', 'message'];
   @Input() logs: LogEvent[] = [];
@@ -21,9 +24,10 @@ export class LogViewComponent implements OnInit {
   messagefilter: string;
   firstIdx: number = 0;
 
-  constructor(
-    private query: QueryService,
-    private icons: IconEmbedService,) {
+  constructor() {
+    const query = this.query;
+    const icons = this.icons;
+
     this.sourcefilter = query.get("sf", "");
     this.messagefilter = query.get("mf", "");
     this.levels = query.get("lv", "").split(",");

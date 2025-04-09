@@ -28,7 +28,7 @@ class IconEmbedTest {
 	private static final String ICON_SERVICE_NAME = "icon-embed.service.ts";
 
 	private static final Pattern ICON_SERVICE_INJECTION_PATTERN = Pattern.compile(
-			"(\\S*?): IconEmbedService" );
+			"(\\S*?) = inject\\(IconEmbedService\\);" );
 
 	/**
 	 * Matches SVG definitions out of {@value #ICON_SERVICE_NAME}, captures the icon
@@ -79,7 +79,7 @@ class IconEmbedTest {
 													"Undefined icon '%s' in mat-icon invocation '%s'",
 													icon, usage.group() ) );
 											assertTrue( registered.contains( icon ), String.format(
-													"Uregistered icon '%s' in mat-icon invocation '%s'",
+													"Unregistered icon '%s' in mat-icon invocation '%s'",
 													icon, usage.group() ) );
 										}
 									}

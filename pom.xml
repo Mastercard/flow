@@ -129,14 +129,6 @@
 			</dependency>
 
 			<dependency>
-				<!-- We use a headless chrome instance to test the report, this 
-			     provides automatic management of the drivers for that -->
-				<groupId>io.github.bonigarcia</groupId>
-				<artifactId>webdrivermanager</artifactId>
-				<version>6.0.1</version>
-			</dependency>
-
-			<dependency>
 				<!-- text diffs -->
 				<groupId>io.github.java-diff-utils</groupId>
 				<artifactId>java-diff-utils</artifactId>

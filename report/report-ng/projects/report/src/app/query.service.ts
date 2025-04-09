@@ -1,5 +1,5 @@
 import { Location } from '@angular/common';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 
 /**
  * Manages the URL query in the detail page - allows
@@ -9,10 +9,14 @@ import { Injectable } from '@angular/core';
   providedIn: 'root'
 })
 export class QueryService {
+  private location = inject(Location);
+
 
   private params: Map<string, string> = new Map();
 
-  constructor(private location: Location) {
+  constructor() {
+    const location = this.location;
+
     const i = location.path().indexOf('?');
     if (i >= 0) {
       const usp = new URLSearchParams(location.path().substr(i));

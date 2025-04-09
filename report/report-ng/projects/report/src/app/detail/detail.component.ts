@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { BasisFetchService } from '../basis-fetch.service';
 import { SequenceData } from '../flow-sequence/flow-sequence.component';
@@ -30,6 +30,12 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./detail.component.css']
 })
 export class DetailComponent implements OnInit {
+  private txSelect = inject(TxSelectionService);
+  private query = inject(QueryService);
+  private basisFetch = inject(BasisFetchService);
+  private title = inject(Title);
+  private icons = inject(IconEmbedService);
+
   @Input() flow: Flow = empty_flow;
   msgPassed: boolean = false;
   msgFailed: boolean = false;
@@ -42,12 +48,10 @@ export class DetailComponent implements OnInit {
   tabIndex = 0;
 
 
-  constructor(
-    private txSelect: TxSelectionService,
-    private query: QueryService,
-    private basisFetch: BasisFetchService,
-    private title: Title,
-    private icons: IconEmbedService,) {
+  constructor() {
+    const query = this.query;
+    const icons = this.icons;
+
 
     this.options.display = Display[query.get("display", "Actual") as keyof typeof Display];
     this.options.dataDisplay = DataDisplay[query.get("facet", "Human") as keyof typeof DataDisplay];

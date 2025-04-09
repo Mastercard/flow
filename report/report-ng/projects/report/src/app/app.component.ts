@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { DuctFlag, Flow, Index, isDuctFlag, isFlow, isIndex } from './types';
 import { DuctService } from './duct.service';
 
@@ -17,13 +17,13 @@ declare var data: any;
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
+  private ductService = inject(DuctService);
+
   flow?: Flow;
   index?: Index;
   duct?: DuctFlag;
   error: boolean = false;
   error_data?: any;
-
-  constructor(private ductService: DuctService) { }
 
   ngOnInit(): void {
     if (isIndex(data)) {

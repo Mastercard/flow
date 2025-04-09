@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Diff, DIFF_EQUAL, diff_match_patch } from 'diff-match-patch';
 import { FlowPairingService } from './flow-pairing.service';
 import { ModelDiffDataService } from './model-diff-data.service';
@@ -13,7 +13,7 @@ export interface DiffPair {
 };
 
 /**
- * Associates a diff with a set of flow pairs that have undergone 
+ * Associates a diff with a set of flow pairs that have undergone
  * that diff
  */
 export interface Change {
@@ -34,7 +34,10 @@ export interface CollatedChange {
   providedIn: 'root'
 })
 export class FlowDiffService {
-  private readonly dmp: diff_match_patch = new diff_match_patch();
+  private mdds = inject(ModelDiffDataService);
+  private fps = inject(FlowPairingService);
+
+  private readonly dmp = new diff_match_patch();
 
   sourceData: DiffPair[] = [];
   changes: Change[] = [];
@@ -43,10 +46,10 @@ export class FlowDiffService {
   private rebuildListeners: (() => void)[] = [];
   private refreshListeners: (() => void)[] = [];
 
-  constructor(
-    private mdds: ModelDiffDataService,
-    private fps: FlowPairingService,
-  ) {
+  constructor() {
+    const mdds = this.mdds;
+    const fps = this.fps;
+
     fps.onRebuild(() => this.rebuild());
 
     fps.onPair(pair => {

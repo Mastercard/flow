@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, inject } from '@angular/core';
 import mermaid from "mermaid";
 import { ModelDiffDataService } from '../model-diff-data.service';
 import { Entry, Flow, Interaction } from '../types';
@@ -24,6 +24,10 @@ interface Edge {
   styleUrls: ['./system-diagram.component.css']
 })
 export class SystemDiagramComponent implements OnInit {
+  private modelData = inject(ModelDiffDataService);
+  private filter = inject(FlowFilterService);
+  private hover = inject(EntryHoverService);
+
   private readonly modelLabel = "this";
   private readonly invisibleEdge = '~~~';
   private readonly dottedEdge = '-.->';
@@ -41,12 +45,12 @@ export class SystemDiagramComponent implements OnInit {
 
   @ViewChild('myTestDiv') containerElRef: ElementRef | null = null;
 
-  constructor(
-    private modelData: ModelDiffDataService,
-    private filter: FlowFilterService,
-    private hover: EntryHoverService,
-    icons: IconEmbedService,
-  ) {
+  constructor() {
+    const modelData = this.modelData;
+    const filter = this.filter;
+    const hover = this.hover;
+    const icons = inject(IconEmbedService);
+
     modelData.onFlow(this.modelLabel, (label: string, entry: Entry, flow: Flow) => {
       this.loadProgress = modelData.flowLoadProgress(this.modelLabel);
       this.refreshEdges();

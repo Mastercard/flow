@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { UntypedFormControl } from '@angular/forms';
 import { ProgressBarMode } from '@angular/material/progress-bar';
 import { ActivatedRoute } from '@angular/router';
@@ -14,6 +14,9 @@ import { empty_index, Index, isIndex } from '../types';
   styleUrls: ['./model-diff-data-source.component.css']
 })
 export class ModelDiffDataSourceComponent implements OnInit {
+  private mdds = inject(ModelDiffDataService);
+  private route = inject(ActivatedRoute);
+
 
   readonly start = "// START_JSON_DATA";
   readonly end = "// END_JSON_DATA";
@@ -24,11 +27,6 @@ export class ModelDiffDataSourceComponent implements OnInit {
   linkText: string = "";
   progressState: ProgressBarMode = 'query';
   progressValue: number = 0;
-
-  constructor(
-    private mdds: ModelDiffDataService,
-    private route: ActivatedRoute) {
-  }
 
   ngOnInit(): void {
 

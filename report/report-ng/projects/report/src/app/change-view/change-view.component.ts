@@ -1,5 +1,5 @@
 import { ViewportScroller } from '@angular/common';
-import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewEncapsulation, inject } from '@angular/core';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { MatSelectionListChange } from '@angular/material/list';
 import { ActivatedRoute } from '@angular/router';
@@ -17,6 +17,13 @@ import { IconEmbedService } from '../icon-embed.service';
   styleUrls: ['./change-view.component.css'],
 })
 export class ChangeViewComponent implements OnInit {
+  private fds = inject(FlowDiffService);
+  private mdds = inject(ModelDiffDataService);
+  private filter = inject(FlowFilterService);
+  private scroll = inject(ViewportScroller);
+  private route = inject(ActivatedRoute);
+  private icons = inject(IconEmbedService);
+
 
   treeOpen: boolean = true;
 
@@ -32,14 +39,11 @@ export class ChangeViewComponent implements OnInit {
   diffLeft: string = "";
   diffRight: string = "";
 
-  constructor(
-    private fds: FlowDiffService,
-    private mdds: ModelDiffDataService,
-    private filter: FlowFilterService,
-    private scroll: ViewportScroller,
-    private route: ActivatedRoute,
-    private icons: IconEmbedService,
-  ) {
+  constructor() {
+    const fds = this.fds;
+    const filter = this.filter;
+    const icons = this.icons;
+
     filter.onUpdate(() => this.rebuild());
     fds.onPairing(() => this.rebuild());
     fds.onFlowData(() => this.rebuild());

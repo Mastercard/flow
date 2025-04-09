@@ -34,24 +34,6 @@
 		</dependency>
 
 		<dependency>
-			<!-- browser interaction driver management -->
-			<groupId>io.github.bonigarcia</groupId>
-			<artifactId>webdrivermanager</artifactId>
-			<exclusions>
-				<exclusion>
-					<!-- This conflicts with the newer version that selenium needs -->
-					<groupId>com.google.guava</groupId>
-					<artifactId>guava</artifactId>
-				</exclusion>
-				<exclusion>
-					<!-- Avoid incompatible slf4j -->
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-api</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-
-		<dependency>
 			<!-- embedded database -->
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>

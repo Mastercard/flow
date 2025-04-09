@@ -123,8 +123,8 @@ Build with
 
 		<profile>
 			<id>node-local</id>
-			<!-- Use this profile if you *don't* have node and npm installed on your 
-				system. Maven will create a local installation (in your home directory) of 
+			<!-- Use this profile if you *don't* have node and npm installed on your
+				system. Maven will create a local installation (in your home directory) of
 				the tools it needs -->
 			<activation>
 				<property>
@@ -142,7 +142,7 @@ Build with
 						<groupId>com.github.eirslett</groupId>
 						<artifactId>frontend-maven-plugin</artifactId>
 						<configuration>
-							<nodeVersion>v14.15.1</nodeVersion>
+							<nodeVersion>v18.19.1</nodeVersion>
 							<installDirectory>target</installDirectory>
 						</configuration>
 						<executions>
@@ -194,7 +194,7 @@ Build with
 						<groupId>com.github.eirslett</groupId>
 						<artifactId>frontend-maven-plugin</artifactId>
 						<configuration>
-							<nodeVersion>v14.15.1</nodeVersion>
+							<nodeVersion>v18.19.1</nodeVersion>
 							<installDirectory>target</installDirectory>
 						</configuration>
 						<executions>
@@ -216,7 +216,7 @@ Build with
 
 		<profile>
 			<id>node-system</id>
-			<!-- Use this profile if you *do* have node and npm installed, and you'd 
+			<!-- Use this profile if you *do* have node and npm installed, and you'd
 				prefer to use those -->
 			<activation>
 				<property>
