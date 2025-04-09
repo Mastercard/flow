@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>validation</artifactId>
-		<version>1.1.7</version>
+		<version>1.1.8-SNAPSHOT</version>
 	</parent>
 	<artifactId>validation-junit4</artifactId>
 	<packaging>jar</packaging>
