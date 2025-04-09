@@ -1,11 +1,11 @@
 package com.mastercard.test.flow.report.seq;
 
-import com.mastercard.test.flow.report.Copy;
-import org.junit.jupiter.api.Assertions;
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.ui.ExpectedCondition;
-import org.openqa.selenium.support.ui.WebDriverWait;
+import static java.time.Duration.ofSeconds;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,10 +15,13 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static java.time.Duration.ofSeconds;
-import static java.util.stream.Collectors.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable;
+import org.junit.jupiter.api.Assertions;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedCondition;
+import org.openqa.selenium.support.ui.WebDriverWait;
+
+import com.mastercard.test.flow.report.Copy;
 
 /**
  * Encapsulates the details of interacting with the diff tool
