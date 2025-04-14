@@ -18,7 +18,7 @@
     "@angular/core": "^14.1.2",
     "@angular/forms": "^14.1.2",
     "@angular/material": "14.2.7",
-    "@angular/platform-browser": "^14.1.2",
+    "@angular/platform-browser": "^15.2.10",
     "@angular/platform-browser-dynamic": "^14.1.2",
     "@angular/router": "^14.1.2",
     "@babel/core": "^7.26.0",
