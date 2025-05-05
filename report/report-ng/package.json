@@ -40,7 +40,7 @@
     "@types/node": "^22.10.7",
     "babel-core": "^6.26.3",
     "babel-loader": "^9.2.1",
-    "jasmine-core": "~5.5.0",
+    "jasmine-core": "~5.7.1",
     "karma": "~6.4.4",
     "karma-chrome-launcher": "~3.2.0",
     "karma-coverage": "~2.2.1",
