@@ -50,6 +50,7 @@ public class Json extends AbstractMessage<Json> {
 		@Override
 		public String toString() {
 			return "Json.EMPTY_MAP";
+
 		}
 	};
 
