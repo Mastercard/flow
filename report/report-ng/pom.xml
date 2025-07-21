@@ -31,7 +31,7 @@
 			<plugin>
 				<!-- Step 2: Fail the build with a useful message if the compiled content isn't there -->
 				<artifactId>maven-enforcer-plugin</artifactId>
-				<version>3.6.0</version>
+				<version>3.6.1</version>
 				<executions>
 					<execution>
 						<id>enforce-content</id>
