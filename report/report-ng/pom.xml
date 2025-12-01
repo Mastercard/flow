@@ -60,7 +60,7 @@ Build with
 			<plugin>
 				<!-- Step 3: copy the compiled content into the resources dir -->
 				<artifactId>maven-resources-plugin</artifactId>
-				<version>3.3.1</version>
+				<version>3.4.0</version>
 				<executions>
 					<execution>
 						<id>copy-content-to-artifact</id>
@@ -321,7 +321,7 @@ Build with
 					<plugin>
 						<!-- Step 1: copy a dummy index.html into the dist directory -->
 						<artifactId>maven-resources-plugin</artifactId>
-						<version>3.3.1</version>
+						<version>3.4.0</version>
 						<executions>
 							<execution>
 								<id>copy-dummy-index</id>
