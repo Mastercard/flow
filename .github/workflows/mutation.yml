@@ -36,7 +36,7 @@ jobs:
       run: mvn -B -Paggregate -Dnode=system test org.pitest:pitest-maven:mutationCoverage package
 
     - name: Save aggregated mutation report
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       id: upload_aggregated
       with:
         name: mutation_report
@@ -46,7 +46,7 @@ jobs:
       run: echo " * [aggregated report](https://bowlby.flowty.dev/flow/artifacts/Mastercard/flow/${{ steps.upload_aggregated.outputs.artifact-id }}/index.html)" >> $GITHUB_STEP_SUMMARY
 
     - name: Save project mutation reports
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       id: upload_project
       if:  ${{ failure() }}
       with:
