@@ -20,7 +20,7 @@ import com.mastercard.test.flow.util.Bytes;
  * An HTTP response message, which probably encapsulates another {@link Message}
  * as the response body
  */
-public class HttpRes extends HttpMsg<HttpRes> {
+public final class HttpRes extends HttpMsg<HttpRes> {
 
 	/**
 	 * Use this as the field path to set the HTTP status code
