@@ -29,7 +29,7 @@ jobs:
         cache: maven
 
     - name: Set up Node
-      uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
       with:
         node-version: '14.15.1'
         cache: 'npm'
@@ -39,7 +39,7 @@ jobs:
       run: mvn -B -Dnode=system package
 
     - name: Save flow execution reports
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       id: upload_flow
       with:
         name: flow_execution_reports
@@ -62,7 +62,7 @@ jobs:
       run: rm -rf static
 
     - name: Download flow reports
-      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
       with:
         name: flow_execution_reports
         path: static
