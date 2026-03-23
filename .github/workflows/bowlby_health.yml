@@ -17,7 +17,7 @@ jobs:
     steps:
     
       - name: Check the deployed service URL
-        uses: jtalk/url-health-check-action@v4
+        uses: jtalk/url-health-check-action@v5
         with:
           url: https://bowlby.flowty.dev/flow/latest/Mastercard/flow/test.yml
           max-attempts: 3
