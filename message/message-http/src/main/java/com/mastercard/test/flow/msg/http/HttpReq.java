@@ -22,7 +22,7 @@ import com.mastercard.test.flow.util.Bytes;
  * An HTTP request message, which probably encapsulates another {@link Message}
  * as the request body
  */
-public class HttpReq extends HttpMsg<HttpReq> {
+public final class HttpReq extends HttpMsg<HttpReq> {
 
 	/**
 	 * Use this as the field path to set the HTTP request method
