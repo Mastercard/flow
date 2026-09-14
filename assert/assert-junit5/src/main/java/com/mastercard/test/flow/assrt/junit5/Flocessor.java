@@ -151,7 +151,13 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 	 */
 	private static final Pattern TRACE = Pattern.compile( "(\\S+)\\.[^.]+?\\.java:(\\d+)\\)" );
 
-	private static URI testSource( Flow flow ) {
+	/**
+	 * Resolves existing Flow source metadata for native test navigation.
+	 *
+	 * @param flow The flow whose source is required
+	 * @return A supported source URI, or null when the trace cannot be parsed
+	 */
+	static URI testSource( Flow flow ) {
 		URI uri = null;
 		try {
 			String addendaStripped = flow.meta().trace().replaceAll( " \\[.*?\\]$", "" );

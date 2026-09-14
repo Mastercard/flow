@@ -1,6 +1,8 @@
 package com.mastercard.test.flow.assrt;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -88,6 +90,42 @@ class OrderTest {
 				"[b [], c [chain:foo], a [chain:foo]]" );
 		// also note that b comes before the chain, as it compares favourably with the
 		// new head of the chain
+	}
+
+	/** Hard edges cannot be removed to repair an impossible dependency order. */
+	@Test
+	void hardCyclesAreRejected() {
+		IllegalArgumentException failure = assertThrows( IllegalArgumentException.class,
+				() -> new Order( flws( "a[],b[],c[]", "ab", "ab bc ca" ), EMPTY ).order() );
+		assertTrue( failure.getMessage().contains( "Hard prerequisite cycle" ), failure::getMessage );
+	}
+
+	/** A1 -> B1 -> A2 cannot coexist with uninterrupted A1/A2 execution. */
+	@Test
+	void contractedChainContradictionIsRejected() {
+		Flw a1 = new Flw( "A1 [chain:A]" );
+		Flw b1 = new Flw( "B1 []" ).depedency( a1 );
+		Flw a2 = new Flw( "A2 [chain:A]" ).depedency( b1 );
+		// Neither a contrary basis preference nor dropping a hard edge is a repair.
+		a1.basis( a2 );
+		IllegalArgumentException failure = assertThrows( IllegalArgumentException.class,
+				() -> new Order( Stream.of( a2, b1, a1 ), EMPTY ).order() );
+		assertTrue( failure.getMessage().contains( "contracted chains" ), failure::getMessage );
+		assertTrue( failure.getMessage().contains( "A1" ), failure::getMessage );
+		assertTrue( failure.getMessage().contains( "B1" ), failure::getMessage );
+		assertTrue( failure.getMessage().contains( "A2" ), failure::getMessage );
+	}
+
+	/**
+	 * Ordering ignores absent references and never turns a self binding into a
+	 * wait.
+	 */
+	@Test
+	void absentAndSelfReferencesKeepExistingOrderSemantics() {
+		Flw a = new Flw( "a []" );
+		Flw b = new Flw( "b []" ).depedency( a ).depedency( a );
+		a.depedency( a ).depedency( null ).depedency( new Flw( "outside []" ) );
+		assertOrder( new Order( Stream.of( b, a ), EMPTY ), "[a [], b []]" );
 	}
 
 	private static void assertOrder( Order order, String expect ) {

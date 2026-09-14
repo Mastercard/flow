@@ -1,0 +1,887 @@
+package com.mastercard.test.flow.assrt;
+
+import static com.mastercard.test.flow.assrt.History.Result.NOT_OBSERVED;
+import static java.time.Instant.now;
+import static java.time.ZoneId.systemDefault;
+import static java.util.stream.Collectors.toCollection;
+import static java.util.stream.Collectors.toList;
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
+import java.nio.channels.ClosedByInterruptException;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import com.mastercard.test.flow.Actor;
+import com.mastercard.test.flow.Context;
+import com.mastercard.test.flow.Flow;
+import com.mastercard.test.flow.Interaction;
+import com.mastercard.test.flow.Message;
+import com.mastercard.test.flow.Residue;
+import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
+import com.mastercard.test.flow.assrt.filter.Filter;
+import com.mastercard.test.flow.report.Writer;
+import com.mastercard.test.flow.report.data.AssertedData;
+import com.mastercard.test.flow.report.data.FlowData;
+import com.mastercard.test.flow.report.data.InteractionData;
+import com.mastercard.test.flow.report.data.LogEvent;
+import com.mastercard.test.flow.report.data.ResidueData;
+import com.mastercard.test.flow.report.data.TransmissionData;
+import com.mastercard.test.flow.report.duct.Duct;
+import com.mastercard.test.flow.util.Dependencies;
+import com.mastercard.test.flow.util.Flows;
+
+/**
+ * Shared serial processing, independent of the fluent adapter. One processor
+ * uses one configuration, dependency publisher and History across all flows.
+ * Each call to {@link #process(Flow)} creates only invocation-local evidence
+ * and failures; it does not clone the model or create another runner.
+ * <p>
+ * This owner is serial: its applied-context map describes the actual SUT state,
+ * not thread-local state or resource isolation. Selection can rebuild
+ * dependency indexing, while History, applied contexts and the lazily created
+ * report remain owned here. Enumeration neither completes a run nor closes its
+ * report.
+ */
+abstract class FlowProcessor {
+
+	private FlowConfiguration config;
+	private final History history;
+	private Dependencies dependencies;
+	private final Map<Class<? extends Context>, Context> currentContext = new HashMap<>();
+	private Writer report;
+
+	/**
+	 * @param config  Configuration owned by the caller
+	 * @param history The one History shared with the adapter's result recording
+	 */
+	FlowProcessor( FlowConfiguration config, History history ) {
+		this.config = config;
+		this.history = history;
+	}
+
+	/**
+	 * Freeze registrations without replacing the processor, History or domain
+	 * objects.
+	 */
+	void freezeConfiguration() {
+		config = config.snapshot();
+	}
+
+	/** @return The live statefulness setting of the caller */
+	abstract State statefulness();
+
+	/** @return The adapter's log source name */
+	abstract String logSource();
+
+	/** @param reason The framework-specific skip reason */
+	abstract void skip( String reason );
+
+	/**
+	 * @param message  Description of the comparison
+	 * @param expected Expected content
+	 * @param actual   Observed content
+	 */
+	abstract void compare( String message, String expected, String actual );
+
+	/** @return The live set of actors under test */
+	Set<Actor> system() {
+		return config.systemUnderTest;
+	}
+
+	/** @return Selected flows in the legacy execution order */
+	Stream<Flow> flows() {
+		// per system properties, find out which flows we want to exercise and save
+		// those settings for future runs
+		config.progress.filtering();
+		Set<Flow> toRun;
+		if( AssertionOptions.SUPPRESS_FILTER.isTrue() ) {
+			toRun = config.model.flows().collect( toCollection( FlowProcessor::identities ) );
+		}
+		else {
+			Filter fltr = new Filter( config.model );
+			config.filterCfg.accept( fltr );
+			fltr.load()
+					.blockForUpdates()
+					.save();
+
+			// find the flows that pass the user-controlled filter
+			toRun = fltr.flows().collect( toCollection( FlowProcessor::identities ) );
+
+			// refine by the programmatic filter
+			toRun = toRun.stream()
+					.map( f -> {
+						if( config.flowFilter.test( f ) ) {
+							return f;
+						}
+						config.filterRejectionLog.accept( String.format(
+								"Flow '%s' rejected by .exercising() filter",
+								f.meta().id() ) );
+						return null;
+					} )
+					.filter( Objects::nonNull )
+					.collect( toCollection( FlowProcessor::identities ) );
+		}
+
+		// collect dependencies of those flows - we need them in the execution too
+		config.progress.dependencies();
+		// Mark identities before descending. This is run-local closure, not the
+		// public helper's deliberately duplicate-preserving traversal. An explicit
+		// worklist also avoids using the Java call stack for long dependency paths.
+		Deque<Flow> pending = new ArrayDeque<>( toRun );
+		while( !pending.isEmpty() ) {
+			try( Stream<Flow> prerequisites = pending.removeFirst().dependencies()
+					.map( d -> d.source().flow() ).filter( Objects::nonNull ) ) {
+				prerequisites.filter( toRun::add ).forEach( pending::addLast );
+			}
+		}
+
+		// gather the data dependencies for processing
+		dependencies = new Dependencies( toRun.stream() );
+
+		// find the execution order
+		config.progress.ordering();
+		Order order = new Order( toRun.stream(), config.applicators.values() );
+		return order.order();
+	}
+
+	private static Set<Flow> identities() {
+		return Collections.newSetFromMap( new IdentityHashMap<>() );
+	}
+
+	/**
+	 * Invokes real flow processing synchronously on the calling thread.
+	 *
+	 * @param flow The flow to process after selection has indexed dependencies
+	 */
+	void process( Flow flow ) {
+		new Invocation( flow ).process();
+	}
+
+	/** Evidence and deferred failures belong only to this actual invocation. */
+	private final class Invocation {
+
+		private final Flow flow;
+		private final List<Consumer<FlowData>> reportUpdates = new ArrayList<>();
+		private final List<String> skipReasons = new ArrayList<>();
+		private final List<AssertionError> comparisonFailures = new ArrayList<>();
+		private final List<RuntimeException> executionFailures = new ArrayList<>();
+		private final List<Assertion> actualMessages = new ArrayList<>();
+		private final Capture capture = new Capture();
+
+		private Invocation( Flow flow ) {
+			this.flow = flow;
+		}
+
+		private void process() {
+			try( Capture owned = capture ) {
+				owned.start();
+				execute();
+			}
+		}
+
+		private void execute() {
+			config.progress.flow( flow );
+
+			Collection<Interaction> toExercise = Flows.interactions( flow )
+					// exercise interactions that *enter* the system, not intra-system
+					.filter( i -> config.systemUnderTest.contains( i.responder() )
+							&& !config.systemUnderTest.contains( i.requester() ) )
+					.collect( toList() );
+
+			if( toExercise.isEmpty() ) {
+				if( flow.root() != null && config.autonomous.contains( flow.root().requester() ) ) {
+					history.recordResult( flow, NOT_OBSERVED );
+					reportAndSkip( flow, String.format(
+							"No interactions with system [%s], but autonomous actor '%s' is assumed to be doing something",
+							config.systemUnderTest.stream()
+									.map( Actor::name )
+									.sorted()
+									.collect( Collectors.joining( "," ) ),
+							flow.root().requester().name() ) );
+				}
+				else {
+					reportAndSkip( flow, String.format(
+							"No interactions with system [%s]",
+							config.systemUnderTest.stream()
+									.map( Actor::name )
+									.sorted()
+									.collect( Collectors.joining( "," ) ) ) );
+				}
+			}
+
+			if( config.replay.hasData() ) {
+				// we're replaying data from a report, no need to look for reasons to skip
+				// or to apply contexts
+			}
+			else {
+				checkPreconditions( flow );
+				applyContexts( flow, executionFailures );
+			}
+
+			Map<Residue, Message> expectedResidue = expectedResidue( flow );
+
+			// keeps track of how many assertions we make - we don't want to tag a flow as a
+			// pass if we don't actually test anything
+			AtomicInteger assertionCount = new AtomicInteger( 0 );
+
+			toExercise.forEach( ntr -> assertionCount.addAndGet( processInteraction( ntr ) ) );
+			// we've processed all of the appropriate interactions
+
+			assertionCount.addAndGet( checkResidue( expectedResidue ) );
+			Throwable primary = !executionFailures.isEmpty() ? executionFailures.get( 0 )
+					: comparisonFailures.isEmpty() ? null : comparisonFailures.get( 0 );
+			preserving( primary, () -> finaliseReport( assertionCount.get() ) );
+			preserving( primary, () -> config.progress.flowComplete( flow ) );
+
+			// throw any deferred failures
+			if( !executionFailures.isEmpty() ) {
+				throw executionFailures.get( 0 );
+			}
+			if( !comparisonFailures.isEmpty() ) {
+				throw comparisonFailures.get( 0 );
+			}
+			if( !skipReasons.isEmpty() ) {
+				skip( skipReasons.get( 0 ) );
+			}
+			if( assertionCount.get() == 0 ) {
+				// we're not really skipping anything here (we've already processed the flow),
+				// but this will make things more obvious to whatever is driving the test
+				skip( "No assertions made" );
+			}
+		}
+
+		private int processInteraction( Interaction ntr ) throws AssertionError {
+			config.progress.interaction( ntr );
+			// provoke the system with input data and capture the outputs
+			Assertion assrt = new Assertion( flow, ntr, FlowProcessor.this );
+
+			try {
+				if( config.replay.hasData() ) {
+					warn( reportUpdates, "Replaying data from " + config.replaySource );
+					String sr = config.replay.populate( assrt );
+					if( sr != null ) {
+						warn( reportUpdates, sr );
+						skipReasons.add( sr );
+					}
+				}
+				else {
+					config.test.accept( assrt );
+				}
+			}
+			// Sonar would rather we just catch Exception here, but we're not trying to
+			// *recover* from the failure (it gets rethrown below), we're just trying to
+			// make sure it gets recorded to the report
+			catch( Throwable e ) {
+				preserving( e, () -> {
+					reportUpdates.add( d -> d.tags.add( Writer.ERROR_TAG ) );
+					List<LogEvent> logs = capture.snapshot();
+					reportUpdates.add( d -> d.logs.addAll( logs ) );
+					reportUpdates
+							.add( d -> d.logs.add( error( "Encountered error: " + LogEvent.stackTrace( e ) ) ) );
+					reportUpdates
+							.add( d -> d.motivation = config.motivationCustomizer.apply( d.motivation, assrt ) );
+					report( w -> w.with( flow, reportUpdates.stream().reduce( d -> {
+						// no-op
+					}, Consumer::andThen ) ), true );
+				} );
+				throw e;
+			}
+
+			// parse the data that we extracted from the system and compare it against the
+			// model
+			int assertionCount = 0;
+			List<Assertion> harvested = assrt.collect( new ArrayList<>() );
+			for( MessageAssertion ma : MessageAssertion.values() ) {
+				for( Assertion assertion : harvested ) {
+					assertionCount += processMessage( assertion, ma );
+					actualMessages.add( assertion );
+				}
+			}
+			return assertionCount;
+		}
+
+		private int processMessage( Assertion assertion, MessageAssertion ma ) throws AssertionError {
+			if( ma.actual( assertion ) != null ) {
+				reportUpdates.add( d -> d.root.update(
+						i -> i.peer == assertion.expected(),
+						i -> ma.report( i ).full.actualBytes = ma.actual( assertion ) ) );
+
+				try {
+					checkResult( flow, assertion.expected(), ma.name().toLowerCase(),
+							ma.expected( assertion ),
+							ma.actual( assertion ),
+							ar -> reportUpdates.add( d -> d.root.update(
+									i -> i.peer == assertion.expected(),
+									i -> {
+										TransmissionData td = ma.report( i );
+										td.full.actual = ar.fullActual;
+										td.asserted.expect = ar.maskedExpect;
+										td.asserted.actual = ar.maskedActual;
+									} ) ) );
+				}
+				catch( AssertionError e ) {
+					if( !config.reporting.writing()
+							&& !AssertionOptions.SUPPRESS_ASSERTION_FAILURE.isTrue() ) {
+						// we're not generating a report or suppressing failures, so fail immediately
+						throw e;
+					}
+					// otherwise just store these up - we want to compare all the messages we can
+					// (populating the report as a side effect) before failing
+					comparisonFailures.add( e );
+				}
+				catch( RuntimeException e ) {
+					if( !config.reporting.writing()
+							&& !AssertionOptions.SUPPRESS_ASSERTION_FAILURE.isTrue() ) {
+						// we're not generating a report, so fail immediately
+						throw e;
+					}
+					// otherwise just store these up - we want to compare all the messages we can
+					// (which populates the report) before failing
+					executionFailures.add( e );
+				}
+				finally {
+					reportUpdates
+							.add( d -> d.motivation = config.motivationCustomizer.apply( d.motivation,
+									assertion ) );
+				}
+				return 1;
+			}
+			return 0;
+		}
+
+		private void finaliseReport( int assertionCount ) {
+			List<LogEvent> logs = capture.snapshot();
+			String resultTag = resultTag( assertionCount, comparisonFailures, executionFailures );
+			reportUpdates.add( d -> d.tags.add( resultTag ) );
+			if( assertionCount == 0 ) {
+				warn( reportUpdates, "No assertions made" );
+			}
+			reportUpdates.add( d -> d.logs.addAll( logs ) );
+			reportUpdates.add( d -> executionFailures.stream()
+					.map( e -> error( LogEvent.stackTrace( e ) ) )
+					.forEach( d.logs::add ) );
+			reportUpdates.add( d -> config.systemUnderTest.stream()
+					.map( Actor::name )
+					.forEach( d.exercised::add ) );
+			report( w -> w.with( flow, reportUpdates.stream()
+					.reduce( d -> {
+						// no-op
+					}, Consumer::andThen ) ),
+					// error condition
+					!comparisonFailures.isEmpty() );
+		}
+
+		private void checkPreconditions( Flow checked ) {
+			FlowProcessor.this.checkPreconditions( checked, reason -> reportAndSkip( checked, reason ) );
+		}
+
+		private void reportAndSkip( Flow skipped, String reason ) {
+			try {
+				skip( reason );
+			}
+			catch( RuntimeException | Error primary ) {
+				preserving( primary, () -> reportSkip( skipped, reason ) );
+				throw primary;
+			}
+			reportSkip( skipped, reason );
+		}
+
+		private void reportSkip( Flow skipped, String reason ) {
+			List<LogEvent> logs = capture.snapshot();
+			report( w -> w.with( skipped, d -> {
+				d.tags.add( Writer.SKIP_TAG );
+				d.logs.addAll( logs );
+				d.logs.add( warn( "Skipping flow: " + reason ) );
+			} ), false );
+		}
+
+		/**
+		 * Owns only this entered invocation, never a writer callback or live FlowData.
+		 */
+		private final class Capture implements AutoCloseable {
+			private final LogCapture source = config.logCapture;
+			private boolean begun;
+			private boolean ended;
+			private List<LogEvent> logs = Collections.emptyList();
+
+			void start() {
+				if( config.reporting.writing() ) {
+					try {
+						source.start( flow );
+						begun = true;
+					}
+					catch( RuntimeException e ) {
+						diagnose( "begin", e );
+					}
+				}
+			}
+
+			List<LogEvent> snapshot() {
+				close();
+				return logs;
+			}
+
+			@Override
+			public void close() {
+				if( begun && !ended ) {
+					ended = true;
+					try( Stream<LogEvent> events = source.end( flow ) ) {
+						logs = events.map( e -> new LogEvent( e.time, e.level, e.source, e.message ) )
+								.collect( Collectors.toUnmodifiableList() );
+					}
+					catch( RuntimeException e ) {
+						diagnose( "end/materialize/close", e );
+					}
+				}
+			}
+
+			private void diagnose( String operation, RuntimeException failure ) {
+				if( !ordinaryCaptureFailure( failure ) ) {
+					throw failure;
+				}
+				// Independent of Writer availability; no backend logging feedback loop or
+				// unbounded source message/stack trace in the prompt diagnostic.
+				String diagnostic = "Log capture " + operation + " failed: "
+						+ failure.getClass().getName();
+				System.err.println( diagnostic );
+				List<LogEvent> diagnosed = new ArrayList<>( logs );
+				diagnosed.add( warn( diagnostic ) );
+				logs = Collections.unmodifiableList( diagnosed );
+			}
+		}
+
+		private int checkResidue( Map<Residue, Message> expectedResidue ) {
+			AtomicInteger assertionCount = new AtomicInteger();
+
+			expectedResidue.forEach( ( residue, expected ) -> {
+				config.progress.after( residue );
+				byte[] harvested = null;
+				try {
+					harvested = checker( residue ).actual( residue, actualMessages );
+				}
+				catch( Exception e ) {
+					IllegalStateException ise = new IllegalStateException(
+							"Failed to extract actual residue data for " + residue.name(), e );
+					if( !config.reporting.writing() ) {
+						throw ise;
+					}
+					executionFailures.add( ise );
+				}
+				if( harvested != null ) {
+					try {
+						Message actual = expected.peer( harvested );
+						CheckMessages cm = new CheckMessages(
+								actual.assertable(),
+								expected.assertable( config.masks ),
+								actual.assertable( config.masks ) );
+
+						reportUpdates.add(
+								fd -> {
+									ResidueData residueData = fd.residue
+											.stream()
+											.filter( r -> residue.name().equals( r.name ) )
+											.findFirst()
+											.orElseGet( () -> {
+												ResidueData rd = new ResidueData( residue.name(), residue, null, null );
+												fd.residue.add( rd );
+												return rd;
+											} );
+									residueData.masked = new AssertedData( cm.maskedExpect, cm.maskedActual );
+									residueData.full = new AssertedData( expected.assertable(), cm.fullActual );
+								} );
+
+						assertionCount.incrementAndGet();
+						compare( String.format( "Residue '%s'", residue.name() ),
+								cm.maskedExpect,
+								cm.maskedActual );
+					}
+					catch( AssertionError ae ) {
+						if( !config.reporting.writing() ) {
+							throw ae;
+						}
+						comparisonFailures.add( ae );
+					}
+					catch( Exception e ) {
+						IllegalArgumentException iae = new IllegalArgumentException(
+								"Failed to parse actual residue data for " + residue.name(), e );
+						if( !config.reporting.writing() ) {
+							throw iae;
+						}
+						executionFailures.add( iae );
+					}
+				}
+			} );
+
+			return assertionCount.get();
+		}
+	}
+
+	/**
+	 * Retains secondary faults without replacing primary execution/control
+	 * evidence.
+	 */
+	private static void preserving( Throwable primary, Runnable action ) {
+		try {
+			action.run();
+		}
+		catch( RuntimeException | Error secondary ) {
+			if( primary == null ) {
+				throw secondary;
+			}
+			if( primary != secondary ) {
+				primary.addSuppressed( secondary );
+			}
+		}
+	}
+
+	/**
+	 * Only known ordinary source faults, including their entire exception graph.
+	 */
+	private static boolean ordinaryCaptureFailure( Throwable failure ) {
+		Set<Throwable> visited = Collections.newSetFromMap( new IdentityHashMap<>() );
+		Deque<Throwable> pending = new ArrayDeque<>();
+		pending.add( failure );
+		while( !pending.isEmpty() ) {
+			Throwable next = pending.removeFirst();
+			if( !visited.add( next ) ) {
+				continue;
+			}
+			Class<?> type = next.getClass();
+			if( !(type == RuntimeException.class || type == IllegalStateException.class
+					|| type == IllegalArgumentException.class || type == NullPointerException.class
+					|| type == UnsupportedOperationException.class || type == SecurityException.class
+					|| type == UncheckedIOException.class
+					|| next instanceof IOException && !(next instanceof InterruptedIOException)
+							&& !(next instanceof ClosedByInterruptException)) ) {
+				return false;
+			}
+			if( next.getCause() != null ) {
+				pending.addLast( next.getCause() );
+			}
+			Collections.addAll( pending, next.getSuppressed() );
+		}
+		return true;
+	}
+
+	private void checkPreconditions( Flow flow, Consumer<String> reportAndSkip ) {
+		if( !AssertionOptions.SUPPRESS_SYSTEM_CHECK.isTrue() ) {
+			// If there are implied system dependencies that the system cannot satisfy...
+			flow.implicit()
+					.filter( a -> !config.systemUnderTest.contains( a ) )
+					.findFirst()
+					.ifPresent( a -> reportAndSkip.accept(
+							"Implicitly depends on " + a + ", which is not part of the system under test" ) );
+		}
+
+		// If the history suggests we're going to fail...
+		// (this could be missing flow dependencies or a failing basis)
+		history.skipReason( flow, statefulness(), config.systemUnderTest )
+				.ifPresent( reportAndSkip );
+	}
+
+	private void applyContexts( Flow flow, List<RuntimeException> executionFailures ) {
+		try {
+			// work out the context updates
+			Set<Class<? extends Context>> unupdated = new HashSet<>( currentContext.keySet() );
+			Set<Context> contextUpdates = new TreeSet<>(
+					Comparator.comparing( ctx -> ctx.getClass().getName() ) );
+			flow.context()
+					.filter( ctx -> ctx.domain().stream().anyMatch( config.systemUnderTest::contains ) )
+					.forEach( ctx -> {
+						contextUpdates.add( ctx );
+						unupdated.remove( ctx.getClass() );
+					} );
+
+			// deactivate the orphaned context types - those that existed on the previous
+			// flow but not on the current one. We're doing this *before* the normal context
+			// changes as there can be dependencies between contexts - the ones on the new
+			// flow might not cope with the ones on the old flow that they know nothing
+			// about
+			unupdated.forEach( this::removeContext );
+
+			// apply the context for the new flow
+			contextUpdates.forEach( this::updateContext );
+		}
+		catch( RuntimeException e ) {
+			if( !config.reporting.writing() ) {
+				// we're not generating a report, so fail immediately
+				throw e;
+			}
+			// otherwise just store these up - we want to compare all the messages we can
+			// (which populates the report) before failing
+			executionFailures.add( e );
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private <C extends Context> void updateContext( C ctx ) {
+		config.progress.context( ctx );
+		Class<? extends Context> ctxt = ctx.getClass();
+		Applicator<C> apl = (Applicator<C>) applicator( ctxt );
+		C current = (C) currentContext.get( ctxt );
+		apl.transition( current, ctx );
+		currentContext.put( ctxt, ctx );
+	}
+
+	@SuppressWarnings("unchecked")
+	private <C extends Context> void removeContext( Class<C> ctxt ) {
+		Applicator<C> apl = applicator( ctxt );
+		C current = (C) currentContext.remove( ctxt );
+		apl.transition( current, null );
+	}
+
+	private <C extends Context> Applicator<C> applicator( Class<C> ctxt ) {
+		@SuppressWarnings("unchecked")
+		Applicator<C> apl = (Applicator<C>) config.applicators.get( ctxt );
+		if( apl == null ) {
+			throw new IllegalStateException( "No applicator for context type " + ctxt );
+		}
+		return apl;
+	}
+
+	private Map<Residue, Message> expectedResidue( Flow flow ) {
+		Map<Residue, Message> expected = new HashMap<>();
+		flow.residue()
+				.filter( r -> config.checkers.containsKey( r.getClass() ) )
+				.forEach( r -> {
+					config.progress.before( r );
+					expected.put( r, checker( r ).expected( r ) );
+				} );
+		return expected;
+	}
+
+	@SuppressWarnings("unchecked")
+	private <R extends Residue> Checker<R> checker( R rsd ) {
+		return (Checker<R>) config.checkers.get( rsd.getClass() );
+	}
+
+	private static String resultTag( int assertionCount,
+			List<AssertionError> compareFailures, List<RuntimeException> parseFailures ) {
+		if( !parseFailures.isEmpty() ) {
+			// we choked on data extracted from the system
+			return Writer.ERROR_TAG;
+		}
+		if( !compareFailures.isEmpty() ) {
+			// The data that we extracted was not as expected
+			return Writer.FAIL_TAG;
+		}
+		if( assertionCount == 0 ) {
+			// We failed to extract any data from the system
+			return Writer.SKIP_TAG;
+		}
+		return Writer.PASS_TAG;
+	}
+
+	private void warn( List<Consumer<FlowData>> reportUpdates, String msg ) {
+		reportUpdates.add( d -> d.logs.add( warn( msg ) ) );
+	}
+
+	private LogEvent warn( String msg ) {
+		return new LogEvent( Instant.now(), "WARN", logSource(), msg );
+	}
+
+	private LogEvent error( String msg ) {
+		return new LogEvent( Instant.now(), "ERROR", logSource(), msg );
+	}
+
+	private enum MessageAssertion {
+
+		REQUEST(
+				a -> a.actual().request(),
+				a -> a.expected().request(),
+				i -> i.request),
+		RESPONSE(
+				a -> a.actual().response(),
+				a -> a.expected().response(),
+				i -> i.response);
+
+		MessageAssertion( Function<Assertion, byte[]> actual,
+				Function<Assertion, Message> expected,
+				Function<InteractionData, TransmissionData> report ) {
+			this.actual = actual;
+			this.expected = expected;
+			this.report = report;
+		}
+
+		private final Function<Assertion, byte[]> actual;
+		private final Function<Assertion, Message> expected;
+		private final Function<InteractionData, TransmissionData> report;
+
+		public byte[] actual( Assertion assrt ) {
+			return actual.apply( assrt );
+		}
+
+		public Message expected( Assertion assrt ) {
+			return expected.apply( assrt );
+		}
+
+		public TransmissionData report( InteractionData ntr ) {
+			return report.apply( ntr );
+		}
+	}
+
+	private void checkResult( Flow flow, Interaction interaction, String type, Message expected,
+			byte[] actual, Consumer<CheckMessages> reportUpdate ) {
+		try {
+			Message am = dependencies.publish( flow, interaction, expected, actual );
+
+			CheckMessages messages = new CheckMessages(
+					am.assertable(),
+					expected.assertable( config.masks ),
+					am.assertable( config.masks ) );
+			reportUpdate.accept( messages );
+			compare(
+					String.format( "%s%n%s %s->%s %s %s",
+							flow.meta().id(), flow.meta().trace(),
+							interaction.requester(), interaction.responder(), interaction.tags(), type ),
+					messages.maskedExpect,
+					messages.maskedActual );
+		}
+		catch( Exception e ) {
+			throw new IllegalArgumentException(
+					String.format( "Failed to parse %s message from actual data", type ), e );
+		}
+	}
+
+	private static class CheckMessages {
+
+		public final String fullActual;
+		public final String maskedExpect;
+		public final String maskedActual;
+
+		public CheckMessages( String fullActual, String maskedExpect, String maskedActual ) {
+			this.fullActual = fullActual;
+			this.maskedExpect = maskedExpect;
+			this.maskedActual = maskedActual;
+		}
+	}
+
+	private static final Supplier<String> RUN_DATETIME = () -> DateTimeFormatter
+			.ofPattern( "yyMMdd-HHmmss" )
+			.format( now().atZone( systemDefault() ) );
+
+	private void report( Consumer<Writer> data, boolean error ) {
+		if( config.reporting.writing() ) {
+			Path testDir = null;
+			Path reportDir = null;
+			if( report == null ) {
+
+				String testTitle = config.title;
+
+				testDir = Paths.get( AssertionOptions.ARTIFACT_DIR.value(), config.reportPath );
+
+				// work out what the report directory should be called
+				String name = AssertionOptions.REPORT_NAME.value();
+				if( name == null ) {
+					name = RUN_DATETIME.get();
+				}
+				if( config.replay.hasData() ) {
+					// reports that have been generated from replaying historic data don't really
+					// imply anything about the behaviour of the system under test, so we want them
+					// to be really obvious. Hence we're giving them a directory name suffix and an
+					// addendum to the test report title
+					name += Replay.REPLAYED_SUFFIX;
+					testTitle += " (replay)";
+					// The dir name suffix also stops us overwriting the data source when
+					// the REPORT_NAME property is the same as the REPLAY property
+				}
+
+				reportDir = testDir.resolve( name );
+
+				report = new Writer( config.model.title(), testTitle, reportDir );
+			}
+
+			data.accept( report );
+
+			if( testDir != null && reportDir != null ) {
+				// We've just created a new report! We should:
+
+				// if required, create a predictably-named link to it
+				if( !"latest".equals( reportDir.getFileName().toString() ) ) {
+					try {
+						Path linkPath = testDir.resolve( "latest" );
+						boolean shouldLink;
+						// we want to delete an existing symlink, but avoid changing any other kind of
+						// file that might exist at that path
+						if( Files.exists( linkPath, LinkOption.NOFOLLOW_LINKS ) ) {
+							if( Files.isSymbolicLink( linkPath ) ) {
+								Files.delete( linkPath );
+								shouldLink = true;
+							}
+							else {
+								shouldLink = false;
+							}
+						}
+						else {
+							shouldLink = true;
+						}
+
+						if( shouldLink ) {
+							Files.createSymbolicLink( linkPath, linkPath.getParent().relativize( reportDir ) );
+						}
+					}
+					catch( @SuppressWarnings("unused") IOException ioe ) {
+						// The symlink to the latest report is a nice-to-have. Some platforms (e.g.:
+						// windows) restrict the ability to create symlinks so we can't count on it
+						// working.
+					}
+				}
+
+				// also, if appropriate, open a browser to it
+				if( config.reporting.shouldOpen( error ) ) {
+					if( AssertionOptions.DUCT.isTrue() ) {
+						// if you've traced a ClassNotFoundException or NoClassDefFoundError to here,
+						// then you've forgotten to add the duct module to your dependencies.
+						Duct.serve( report.path() );
+					}
+					else {
+						report.browse();
+					}
+				}
+			}
+		}
+	}
+
+	/** @return The report path, or null until the first report update */
+	Path report() {
+		return report == null ? null : report.path();
+	}
+
+	/**
+	 * Disposes an existing immediate writer at proven owned completion. Does not
+	 * initialize a writer or promise enabled-empty/final-only runner reporting.
+	 * Legacy adapters deliberately do not call this on enumeration.
+	 */
+	void complete() {
+		if( report != null ) {
+			report.close();
+		}
+	}
+
+}

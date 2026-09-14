@@ -1,12 +1,18 @@
 package com.mastercard.test.flow.assrt;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -50,6 +56,16 @@ public class Order {
 	 * @return A processing schedule for the supplied {@link Flow}s
 	 */
 	public Stream<Flow> order() {
+		// Read the model once for both member ordering and chain contraction.
+		// This index is order-only: the publisher still retains every binding.
+		Map<Flow, Set<Flow>> prerequisites = new IdentityHashMap<>();
+		flows.forEach( flow -> {
+			Set<Flow> sources = Collections.newSetFromMap( new IdentityHashMap<>() );
+			try( Stream<Flow> dependencies = flow.dependencies().map( d -> d.source().flow() ) ) {
+				dependencies.filter( Objects::nonNull ).forEach( sources::add );
+			}
+			prerequisites.put( flow, sources );
+		} );
 		// A map from chain name to chain members
 		Map<String, List<Flow>> chains = new HashMap<>();
 		// A map from chain member to chain name
@@ -78,7 +94,7 @@ public class Order {
 			if( chain.getValue().size() > 1 ) {
 				chains.put( chain.getKey(),
 						order( chain.getValue().stream(),
-								flw -> flw.dependencies().map( d -> d.source().flow() ),
+								flw -> prerequisites.get( flw ).stream(),
 								flw -> Stream.of( flw.basis() ).filter( Objects::nonNull ),
 								contextOrder ) );
 			}
@@ -87,9 +103,7 @@ public class Order {
 		// Order the list of chains
 		List<List<Flow>> metaChain = order( chains.values().stream(),
 				chain -> chain.stream()
-						.flatMap( Flow::dependencies )
-						.map( dep -> dep.source().flow() )
-						.filter( Objects::nonNull )
+						.flatMap( flow -> prerequisites.get( flow ).stream() )
 						.map( chainNames::get )
 						.map( chains::get ),
 				chain -> chain.stream()
@@ -121,10 +135,45 @@ public class Order {
 			Comparator<T> preference ) {
 		Graph<T> graph = new Graph<>( preference );
 		items.forEach( graph::with );
-		// dependencies have max weight - they must be honoured
-		graph.values().forEach(
-				snk -> prerequisites.apply( snk )
-						.forEach( src -> graph.edge( Integer.MAX_VALUE, snk, src ) ) );
+		// Validate hard precedence before the weighted graph removes soft cycles.
+		// One successor edge/counter per pair, irrespective of binding multiplicity.
+		// Absent references retain Graph's ignored-edge semantics. Intra-flow (or
+		// already internally ordered intra-chain) bindings are not self-waits.
+		Map<T, Set<T>> successors = new HashMap<>();
+		Map<T, Integer> remaining = new HashMap<>();
+		graph.values().forEach( value -> {
+			successors.put( value, new HashSet<>() );
+			remaining.put( value, 0 );
+		} );
+		graph.values().forEach( sink -> prerequisites.apply( sink )
+				.filter( source -> !Objects.equals( source, sink ) && successors.containsKey( source ) )
+				.forEach( source -> {
+					if( successors.get( source ).add( sink ) ) {
+						remaining.compute( sink, ( key, count ) -> count + 1 );
+						graph.edge( Integer.MAX_VALUE, sink, source );
+					}
+				} ) );
+		Deque<T> ready = new ArrayDeque<>();
+		remaining.forEach( ( value, count ) -> {
+			if( count == 0 ) {
+				ready.addLast( value );
+			}
+		} );
+		int visited = 0;
+		while( !ready.isEmpty() ) {
+			T source = ready.removeFirst();
+			visited++;
+			for( T sink : successors.get( source ) ) {
+				if( remaining.compute( sink, ( key, count ) -> count - 1 ) == 0 ) {
+					ready.addLast( sink );
+				}
+			}
+		}
+		if( visited != remaining.size() ) {
+			throw new IllegalArgumentException( "Hard prerequisite cycle (including contracted chains): "
+					+ remaining.entrySet().stream().filter( e -> e.getValue() != 0 )
+							.map( e -> String.valueOf( e.getKey() ) ).sorted().toList() );
+		}
 		// basis links have weight 1 - these will be deleted first to resolve cycles
 		graph.values().forEach(
 				flw -> bases.apply( flw )

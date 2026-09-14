@@ -239,44 +239,53 @@ export class SystemDiagramComponent implements OnInit {
             .querySelector("pre")
             .innerHTML = this.mermaidMarkup;
 
-          mermaid.init();
+          // Initial Mermaid output needs the same canonical styles as later
+          // updates. Apply them after its asynchronous SVG generation finishes.
+          mermaid.init().then(() => this.styleEdges());
           this.renderedEdgeCount = this.edges.length;
         }
       }
       else {
         // edge count hasn't changed, so we can get away with editing styles
-
-        // style names have the svg's ID (which is dynamic) as a prefix, so we have to find that first
-        let markers: HTMLElement[] = (Array.from(this.containerElRef?.nativeElement
-          .querySelectorAll("marker")) as HTMLElement[])
-          .filter(marker => marker.id.includes("flowchart-pointEnd"));
-        let pointEndId = markers.length > 0 ? markers[0].id : "unknown!";
-
-        let paths: HTMLElement[] = (Array.from(this.containerElRef?.nativeElement
-          .querySelectorAll("path")) as HTMLElement[])
-          .filter(path => path.classList.contains("flowchart-link"));
-
-        this.edges.forEach(edge => {
-          paths
-            .filter(path => path.classList.contains("LS-" + edge.from)
-              && path.classList.contains("LE-" + edge.to))
-            .forEach(path => {
-              if (edge.edge === this.dottedEdge) {
-                this.dottedEdgeStyle(path, pointEndId);
-              }
-              else if (edge.edge === this.thickEdge) {
-                this.thickEdgeStyle(path, pointEndId);
-              }
-              else if (edge.edge === this.invisibleEdge) {
-                this.invisibleEdgeStyle(path);
-              }
-              else {
-                this.lineEdgeStyle(path, pointEndId);
-              }
-            });
-        });
+        this.styleEdges();
       }
     }
+  }
+
+  /** Applies the current edge state to completed SVG output. */
+  private styleEdges(): void {
+    if (this.containerElRef == null) {
+      return;
+    }
+    // style names have the svg's ID (which is dynamic) as a prefix, so we have to find that first
+    let markers: HTMLElement[] = (Array.from(this.containerElRef.nativeElement
+      .querySelectorAll("marker")) as HTMLElement[])
+      .filter(marker => marker.id.includes("flowchart-pointEnd"));
+    let pointEndId = markers.length > 0 ? markers[0].id : "unknown!";
+
+    let paths: HTMLElement[] = (Array.from(this.containerElRef.nativeElement
+      .querySelectorAll("path")) as HTMLElement[])
+      .filter(path => path.classList.contains("flowchart-link"));
+
+    this.edges.forEach(edge => {
+      paths
+        .filter(path => path.classList.contains("LS-" + edge.from)
+          && path.classList.contains("LE-" + edge.to))
+        .forEach(path => {
+          if (edge.edge === this.dottedEdge) {
+            this.dottedEdgeStyle(path, pointEndId);
+          }
+          else if (edge.edge === this.thickEdge) {
+            this.thickEdgeStyle(path, pointEndId);
+          }
+          else if (edge.edge === this.invisibleEdge) {
+            this.invisibleEdgeStyle(path);
+          }
+          else {
+            this.lineEdgeStyle(path, pointEndId);
+          }
+        });
+    });
   }
 
   private lineEdgeStyle(e: HTMLElement, pointEndId: string): void {

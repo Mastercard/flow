@@ -25,6 +25,44 @@ import com.mastercard.test.flow.report.data.LogEvent;
  */
 @SuppressWarnings("static-method")
 class LogCaptureTest {
+	@Test
+	void closesAndFreezesCaptureBeforeReportDecoration() {
+		List<String> lifecycle = new ArrayList<>();
+		List<LogEvent> source = new ArrayList<>();
+		source.add( new LogEvent( "time", "INFO", "source", "original" ) );
+		TestFlocessor tf = new TestFlocessor( "capture snapshot", TestModel.abc() )
+				.system( State.LESS, B ).reporting( Reporting.QUIETLY )
+				.logs( new LogCapture() {
+					@Override
+					public void start( Flow flow ) {
+						lifecycle.add( "start" );
+					}
+
+					@Override
+					public Stream<LogEvent> end( Flow flow ) {
+						lifecycle.add( "end" );
+						return source.stream().peek( e -> lifecycle.add( "read" ) )
+								.onClose( () -> lifecycle.add( "close" ) );
+					}
+				} )
+				.behaviour( a -> a.actual().response( a.expected().response().content() ) )
+				.motivation( ( text, a ) -> {
+					assertEquals( List.of( "start", "end", "read", "close" ), lifecycle );
+					source.clear();
+					return text;
+				} );
+		try {
+			tf.execute();
+			assertEquals( "abc [] SUCCESS", tf.results() );
+			Reader reader = new Reader( tf.report() );
+			assertEquals( "original",
+					reader.detail( reader.read().entries.get( 0 ) ).logs.get( 0 ).message );
+		}
+		finally {
+			tf.completeProcessing();
+		}
+	}
+
 	/**
 	 * A record of context switches made by {@link #CAPTURE}
 	 */

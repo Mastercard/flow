@@ -45,6 +45,11 @@ class SysOutTest {
 		accept( "../report/duct/src/main/java/com/mastercard/test/flow/report/duct/"
 				+ "Duct.java",
 				"System.err.println( \"Failed to browse \" + served );" );
+		// Required capture-failure diagnostics must remain visible when reporting
+		// itself is unavailable, without feeding back into a captured log backend.
+		accept( "../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/"
+				+ "FlowProcessor.java",
+				"System.err.println( diagnostic );" );
 	}
 
 	private static void accept( String file, String... line ) {

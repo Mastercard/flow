@@ -24,10 +24,10 @@
 		</dependency>
 
 		<dependency>
-			<!-- Required for the metatest that exercises our example test -->
+			<!-- Public, baseline-compatible native execution notifications. Versions
+			     remain selected by the consumer's coherent JUnit dependency set. -->
 			<groupId>org.junit.platform</groupId>
 			<artifactId>junit-platform-launcher</artifactId>
-			<scope>test</scope>
 		</dependency>
 
 		<dependency>

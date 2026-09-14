@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,6 +21,7 @@ class JsApp {
 
 	private final Path originalIndexPath;
 	private final Template indexTemplate;
+	private final ReportFiles output;
 
 	/**
 	 * Initialises the application, extracting the index {@link Template} and
@@ -32,6 +34,16 @@ class JsApp {
 	 * @param resDir Where to put all non-html files
 	 */
 	public JsApp( String name, Path resDir ) {
+		this( name, resDir, new ReportFiles() );
+	}
+
+	/**
+	 * @param name   Application resource directory
+	 * @param resDir Extracted resource directory
+	 * @param output Payload filesystem operations
+	 */
+	JsApp( String name, Path resDir, ReportFiles output ) {
+		this.output = output;
 		String manifest = name + "/manifest.txt";
 		try( BufferedReader br = new BufferedReader( new InputStreamReader(
 				getClass().getResourceAsStream( manifest ) ) ) ) {
@@ -143,10 +155,16 @@ class JsApp {
 	 */
 	public void write( Object payload, Path destination ) {
 		QuietFiles.createDirectories( destination.getParent() );
-		QuietFiles.write( destination, indexTemplate.insert(
+		byte[] content = indexTemplate.insert(
 				payload,
 				destination.getParent().relativize( originalIndexPath.getParent() ) )
-				.getBytes( UTF_8 ) );
+				.getBytes( UTF_8 );
+		try( OutputStream stream = output.open( destination ) ) {
+			stream.write( content );
+		}
+		catch( IOException e ) {
+			throw new UncheckedIOException( "Failed to write " + destination, e );
+		}
 	}
 
 	private static void copy( InputStream in, FileOutputStream out ) throws IOException {

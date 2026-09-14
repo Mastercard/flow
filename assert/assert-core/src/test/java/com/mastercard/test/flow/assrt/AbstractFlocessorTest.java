@@ -1,22 +1,37 @@
 package com.mastercard.test.flow.assrt;
 
+import static com.mastercard.test.flow.assrt.TestModel.Actors.A;
 import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
 import static com.mastercard.test.flow.assrt.TestModel.Actors.D;
+import static com.mastercard.test.flow.util.Transmission.Type.REQUEST;
+import static com.mastercard.test.flow.util.Transmission.Type.RESPONSE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.mastercard.test.flow.Actor;
+import com.mastercard.test.flow.Flow;
+import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.TestModel.Actors;
+import com.mastercard.test.flow.assrt.mock.Mdl;
+import com.mastercard.test.flow.assrt.mock.TestResidue;
+import com.mastercard.test.flow.builder.Creator;
+import com.mastercard.test.flow.msg.txt.Text;
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.data.Entry;
 import com.mastercard.test.flow.report.data.FlowData;
@@ -69,6 +84,188 @@ class AbstractFlocessorTest {
 		assertSame( tf, tf.logs( null ) );
 		assertSame( tf, tf.autonomous() );
 		assertSame( tf, tf.motivation( null ) );
+	}
+
+	/**
+	 * Enumeration is not execution or completion, and legacy configuration remains
+	 * live after enumeration and between invocations.
+	 */
+	@Test
+	void enumerationKeepsLegacyConfigurationLive() {
+		List<String> events = new ArrayList<>();
+		TestFlocessor tf = new TestFlocessor( "enumeration", TestModel.abcWithChild() )
+				.system( State.LESS, B )
+				.reporting( Reporting.QUIETLY, "enumeration" )
+				.listening( new Listener() {
+					@Override
+					public void flowComplete( Flow flow ) {
+						events.add( "complete " + flow.meta().description() );
+					}
+				} );
+		List<Flow> selected;
+		try( Stream<Flow> flows = tf.flows() ) {
+			selected = flows.collect( Collectors.toList() );
+		}
+		assertEquals( 2, selected.size() );
+		assertTrue( events.isEmpty() );
+		assertNull( tf.report() );
+
+		tf.behaviour( a -> {
+			events.add( "first " + a.flow().meta().description() );
+			a.actual().response( a.expected().response().content() );
+		} );
+		tf.process( selected.get( 0 ) );
+		Reader report = new Reader( tf.report() );
+		assertEquals( 1, report.read().entries.size() );
+
+		tf.behaviour( a -> {
+			events.add( "second " + a.flow().meta().description() );
+			a.actual().response( a.expected().response().content() );
+		} );
+		tf.process( selected.get( 1 ) );
+		assertEquals( 2, report.read().entries.size() );
+		assertEquals( List.of( "first abc", "complete abc", "second child", "complete child" ),
+				events );
+		assertEquals( 2, tf.flows().count() );
+	}
+
+	/**
+	 * An accumulated execution error takes priority over a comparison failure, but
+	 * neither the failures nor harvested message evidence belong to the next flow.
+	 */
+	@Test
+	void invocationEvidenceAndFailuresAreLocal() {
+		Thread caller = Thread.currentThread();
+		List<List<Assertion>> evidence = new ArrayList<>();
+		TestFlocessor tf = new TestFlocessor( "invocation-local", TestModel.withResidue() )
+				.system( State.FUL, B )
+				.reporting( Reporting.QUIETLY, "invocation-local" )
+				.checkers( new Checker<TestResidue>( TestResidue.class ) {
+					@Override
+					public Message expected( TestResidue residue ) {
+						assertSame( caller, Thread.currentThread() );
+						return new Text( "residue" );
+					}
+
+					@Override
+					public byte[] actual( TestResidue residue, List<Assertion> actual ) {
+						assertSame( caller, Thread.currentThread() );
+						evidence.add( List.copyOf( actual ) );
+						if( evidence.size() == 1 ) {
+							throw new IllegalStateException( "checker failed" );
+						}
+						return "residue".getBytes( UTF_8 );
+					}
+				} )
+				.behaviour( a -> {
+					assertSame( caller, Thread.currentThread() );
+					a.actual().response( a.flow().meta().description().equals( "abc" )
+							? "unexpected".getBytes( UTF_8 )
+							: a.expected().response().content() );
+				} );
+		tf.execute();
+
+		assertEquals( "abc [] ERROR\ndef [] SUCCESS", tf.results() );
+		assertEquals( 2, evidence.size() );
+		// Legacy checkers receive the harvested assertions once per message type.
+		assertEquals( List.of( "abc", "abc" ), evidence.get( 0 ).stream()
+				.map( a -> a.flow().meta().description() ).collect( Collectors.toList() ) );
+		assertEquals( List.of( "def", "def" ), evidence.get( 1 ).stream()
+				.map( a -> a.flow().meta().description() ).collect( Collectors.toList() ) );
+		Reader report = new Reader( tf.report() );
+		Index index = report.read();
+		assertEquals( 2, index.entries.size() );
+		FlowData first = report.detail( index.entries.get( 0 ) );
+		FlowData second = report.detail( index.entries.get( 1 ) );
+		assertEquals( Set.of( "ERROR" ), first.tags );
+		assertTrue( first.logs.get( 0 ).message.contains( "checker failed" ) );
+		assertEquals( Set.of( "PASS" ), second.tags );
+		assertTrue( second.logs.isEmpty() );
+		assertEquals( "B response to A", second.root.response.full.actual );
+	}
+
+	/**
+	 * Selection includes the producer once, and actual data is published before
+	 * comparison. Immediate failure stops later publication; accumulated failure
+	 * publishes both messages, without replaying binding mutations or callbacks.
+	 *
+	 * @param reporting Immediate or accumulated comparison mode
+	 */
+	@ParameterizedTest
+	@EnumSource(value = Reporting.class, names = { "NEVER", "QUIETLY" })
+	void synchronousPublicationPreservesFailureMode( Reporting reporting ) {
+		Thread caller = Thread.currentThread();
+		List<String> publications = new ArrayList<>();
+		List<String> bodies = new ArrayList<>();
+		List<String> completed = new ArrayList<>();
+		Flow producer = Creator.build( f -> f
+				.meta( m -> m.description( "producer" ) )
+				.call( i -> i.from( A ).to( B )
+						.request( new Text( "request" ) ).response( new Text( "response" ) ) ) );
+		Flow sink = Creator.build( f -> f
+				.meta( m -> m.description( "sink" ) )
+				.call( i -> i.from( A ).to( B )
+						.request( new Text( "request" ) ).response( new Text( "response" ) ) )
+				.dependency( producer, d -> d.from( i -> i.responder() == B, REQUEST, ".+" )
+						.mutate( value -> {
+							assertSame( caller, Thread.currentThread() );
+							publications.add( "request " + value );
+							return value;
+						} ).to( i -> i.responder() == B, REQUEST, ".+" ) )
+				.dependency( producer, d -> d.from( i -> i.responder() == B, RESPONSE, ".+" )
+						.mutate( value -> {
+							assertSame( caller, Thread.currentThread() );
+							publications.add( "response " + value );
+							return value;
+						} ).to( i -> i.responder() == B, RESPONSE, ".+" ) ) );
+		TestFlocessor tf = new TestFlocessor( "publication", new Mdl().withFlows( sink, producer ) )
+				.system( State.FUL, B )
+				.reporting( reporting, "publication-" + reporting )
+				.exercising( f -> f == sink, rejection -> {
+					// The required producer must still be included.
+				} )
+				.listening( new Listener() {
+					@Override
+					public void flowComplete( Flow flow ) {
+						assertSame( caller, Thread.currentThread() );
+						completed.add( flow.meta().description() );
+					}
+				} )
+				.behaviour( a -> {
+					assertSame( caller, Thread.currentThread() );
+					bodies.add( a.flow().meta().description() );
+					if( a.flow() == producer ) {
+						a.actual().request( "actual-request".getBytes( UTF_8 ) )
+								.response( "actual-response".getBytes( UTF_8 ) );
+					}
+					else {
+						assertEquals( "actual-request", a.expected().request().assertable() );
+						assertEquals( reporting == Reporting.NEVER ? "response" : "actual-response",
+								a.expected().response().assertable() );
+						a.actual().request( a.expected().request().content() )
+								.response( a.expected().response().content() );
+					}
+				} );
+		tf.execute();
+
+		assertEquals( "producer [] UNEXPECTED\nsink [] SUCCESS", tf.results() );
+		assertEquals( List.of( "producer", "sink" ), bodies );
+		if( reporting == Reporting.NEVER ) {
+			assertEquals( List.of( "request actual-request" ), publications );
+			assertEquals( List.of( "sink" ), completed );
+			assertEquals( 3, tf.events().lines().filter( l -> l.startsWith( "COMPARE" ) ).count() );
+			assertNull( tf.report() );
+		}
+		else {
+			assertEquals( List.of( "request actual-request", "response actual-response" ), publications );
+			assertEquals( List.of( "producer", "sink" ), completed );
+			assertEquals( 4, tf.events().lines().filter( l -> l.startsWith( "COMPARE" ) ).count() );
+			Reader report = new Reader( tf.report() );
+			Index index = report.read();
+			assertEquals( 2, index.entries.size() );
+			assertEquals( Set.of( "FAIL" ), report.detail( index.entries.get( 0 ) ).tags );
+			assertEquals( Set.of( "PASS" ), report.detail( index.entries.get( 1 ) ).tags );
+		}
 	}
 
 	/**

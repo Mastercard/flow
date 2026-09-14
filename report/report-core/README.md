@@ -19,6 +19,48 @@ It is unlikely that you'll need to depend directly on this module, it will be tr
 
 This module provides an object model for the data in an execution report along with facilities for writing and reading that data to and from storage.
 
+### Direct writers and final-only indexing
+
+The three-argument `Writer` constructor retains immediate indexing: each successful
+`with()` writes its detail, index and incremental basis links before returning.
+Updates and accessor snapshots are serialized on the writer; callbacks run once,
+synchronously on the calling thread. Callers still order repeated updates to the
+same flow and must not wait inside a callback for another thread to update that
+writer. `missingBases()` returns detached, immutable maps and lists, retaining the
+original Flow references.
+
+For a report that only needs a final index, select `Writer.Indexing.FINAL_ONLY`:
+
+```java
+try (Writer writer = new Writer("model", "test", destination,
+		Writer.Indexing.FINAL_ONLY)) {
+	flows.forEach(writer::with);
+}
+```
+
+Details are written synchronously. Close resolves links against final membership
+and supported renames, using previously serialized detail snapshots rather than
+rerunning callbacks or reading mutable execution data. Final entries are sorted
+by their existing detail identities. The index is written and closed in a temporary
+file in the report directory, then atomically moved into place. Unsupported or
+failed atomic moves fail reporting; there is no non-atomic fallback.
+
+Successful repeated close does no work, and subsequent updates are rejected.
+Within one writer, a decorated detail identity already owned by another flow is
+rejected before destructive IO. A first decorator may still move a shared initial
+identity to a free path. This narrow check does not change detail hashes or add
+cross-writer destination ownership.
+Update/publication failures are latched: subsequent update/close calls throw an
+`IllegalStateException` whose cause is the original failure, without retrying IO.
+Closing is not proof that the surrounding test run has completed; the caller must
+stop submissions and drain its work first. Direct Writer failures remain visible.
+
+**Current limitation:** cooperating destination claims are not implemented yet.
+Different writers must not share or overlap output directories. Construction still
+replaces existing output. Final-only indexing does not provide run-level resource
+ownership, automatic runner finalization or final-only `latest` advertisement.
+The legacy assertion adapters still use immediate reporting.
+
 ## Testing
 
 In addition to the unit tests for the report input/output functionality, this module also contains [selenium-powered](https://www.selenium.dev/) tests to exercise the functionality of the [report webapp](../report-ng).

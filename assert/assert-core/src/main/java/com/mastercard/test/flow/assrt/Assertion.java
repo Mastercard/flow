@@ -27,7 +27,7 @@ public class Assertion {
 
 	private final Flow flow;
 	private final Interaction expected;
-	private final AbstractFlocessor<?> flocessor;
+	private final FlowProcessor flocessor;
 	private final Actual actual = new Actual();
 
 	/**
@@ -40,7 +40,7 @@ public class Assertion {
 	 * @param expected  The expected {@link Interaction}
 	 * @param flocessor The engine driving the test
 	 */
-	Assertion( Flow flow, Interaction expected, AbstractFlocessor<?> flocessor ) {
+	Assertion( Flow flow, Interaction expected, FlowProcessor flocessor ) {
 		this.flow = flow;
 		this.expected = expected;
 		this.flocessor = flocessor;
