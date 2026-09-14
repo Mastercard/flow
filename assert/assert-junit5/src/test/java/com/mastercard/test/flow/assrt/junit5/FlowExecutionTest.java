@@ -70,6 +70,10 @@ class FlowExecutionTest {
 		}
 	}
 
+	/**
+	 * Unsupported parallel selection and conflicting serial mode fail before
+	 * factory entry.
+	 */
 	@Test
 	void unsupportedModesFailBeforeFactoryOrBody() {
 		for( String mode : new String[] { "true", "invalid" } ) {
@@ -77,7 +81,8 @@ class FlowExecutionTest {
 			List<Throwable> failures = new ArrayList<>();
 			execute( SerialFactory.class, mode, failures( failures ) );
 			assertEquals( null, SerialFactory.thread, "must reject before the original factory" );
-			assertTrue( failures.stream().anyMatch( f -> f.toString().contains( "flow.parallel" ) ),
+			assertTrue( failures.stream().anyMatch( f -> f.toString().contains( "flow.parallel" )
+					|| f.toString().contains( "sole top-level" ) ),
 					failures.toString() );
 		}
 		SerialFactory.thread = null;

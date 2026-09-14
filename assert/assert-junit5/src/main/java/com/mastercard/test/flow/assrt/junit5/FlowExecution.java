@@ -11,10 +11,12 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.junit.jupiter.api.DynamicNode;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.junit.jupiter.api.function.Executable;
 
 import com.mastercard.test.flow.Model;
+import com.mastercard.test.flow.Flow;
 
 /** Model-free factory-local handle supplied by {@link FlowTest}. */
 @SuppressWarnings("deprecation") // Stable ordinary store lifecycle, including Jupiter 5.10.
@@ -33,6 +35,81 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 	private int drained;
 	private boolean released;
 	private Runnable removeBackstop;
+	private FlowParallelOwner parallelOwner;
+
+	/** @return Whether this handle currently has a native parallel owner */
+	boolean parallel() {
+		return parallelOwner != null;
+	}
+
+	/**
+	 * Establishes the checked parallel owner and its early Launcher attachment.
+	 *
+	 * @param context The owning factory context
+	 */
+	void attachParallel( ExtensionContext context ) {
+		parallelOwner = new FlowParallelOwner( this, context );
+		parallelOwner.attach( context );
+	}
+
+	/**
+	 * Revalidates parallel ownership before invoking the factory; serial is
+	 * unchanged.
+	 *
+	 * @param context The factory about to execute
+	 */
+	void checkFactory( ExtensionContext context ) {
+		if( parallel() ) {
+			parallelOwner.checkFactory( context );
+		}
+	}
+
+	/**
+	 * Rechecks the parallel factory owner before entering a native leaf.
+	 *
+	 * @param context The stored factory context, not the leaf context
+	 */
+	void checkNativeOwner( ExtensionContext context ) {
+		parallelOwner.checkFactory( context );
+	}
+
+	/**
+	 * Audits selected flows and prepares their native admission graph.
+	 *
+	 * @param flows Selected flows in canonical order
+	 * @param nodes Corresponding owned native descriptions
+	 */
+	void prepareParallel( List<Flow> flows, List<DynamicNode> nodes ) {
+		parallelOwner.prepare( flows, nodes );
+	}
+
+	/**
+	 * Stops further parallel admission without forcing ownership release.
+	 *
+	 * @param failure The reason admission cannot safely continue
+	 */
+	void stopParallel( Throwable failure ) {
+		if( parallel() ) {
+			parallelOwner.stop( failure );
+		}
+	}
+
+	/**
+	 * Processes a selected flow after its parallel owner has validated body entry.
+	 *
+	 * @param index The preparation-local flow index
+	 */
+	void processParallel( int index ) {
+		runner.processSelected( index );
+	}
+
+	/**
+	 * Finalizes the runner and detaches this handle after proven native drainage.
+	 */
+	void completeParallel() {
+		runner.complete();
+		release();
+	}
 
 	/** @param removeBackstop Removes this owner from its class-local store */
 	FlowExecution( Runnable removeBackstop ) {
@@ -113,12 +190,21 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 			}
 		}
 		catch( RuntimeException | Error failure ) {
+			stopParallel( failure );
 			try( Stream<?> original = originalStream ) {
 				throw failure;
 			}
 			finally {
-				release();
+				if( !parallel() ) {
+					release();
+				}
+				else {
+					originalStream = null;
+				}
 			}
+		}
+		if( parallel() ) {
+			return parallelOwner.consume( originalStream );
 		}
 		live = true;
 		Spliterator<DynamicNode> consumption = new Spliterators.AbstractSpliterator<DynamicNode>(
@@ -186,6 +272,10 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 	}
 
 	private void process( int index ) {
+		if( parallel() ) {
+			parallelOwner.process( index, FlowExtension.invocationContext() );
+			return;
+		}
 		requireConsumption();
 		if( active || index != drained || index >= issued ) {
 			throw new IllegalStateException(
@@ -229,6 +319,7 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 
 	private void release() {
 		released = true;
+		parallelOwner = null;
 		live = false;
 		configuring = false;
 		descriptions = null;
@@ -252,6 +343,10 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 	@Override
 	public void close() {
 		if( released ) {
+			return;
+		}
+		if( parallel() ) {
+			parallelOwner.close();
 			return;
 		}
 		broken = true;

@@ -110,7 +110,6 @@ class SerialCleanupTest {
 
 	/** Simulates early stream closure or a failure while consuming descriptions. */
 	static class StopConsumption implements InvocationInterceptor {
-		/** {@inheritDoc} */
 		@Override
 		public <T> T interceptTestFactoryMethod( Invocation<T> invocation,
 				ReflectiveInvocationContext<Method> method, ExtensionContext context ) throws Throwable {

@@ -330,6 +330,20 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	/**
+	 * Temporary real-native tracer guard, not general parallel authorization.
+	 * Applied contexts, replay, capture and lazy report initialization have no
+	 * parallel owner in this slice. Invoke before any live admission.
+	 */
+	protected final void requireIndependentTracerConfiguration() {
+		if( config.reporting != Reporting.NEVER || config.logCapture != LogCapture.NO_OP
+				|| config.replay.hasData() || !config.applicators.isEmpty()
+				|| !config.checkers.isEmpty() || !config.autonomous.isEmpty() ) {
+			throw new IllegalStateException( "Flow parallel tracer requires reporting NEVER, "
+					+ "NO_OP capture, no replay, applicators, checkers or autonomous actors" );
+		}
+	}
+
+	/**
 	 * Disposes existing processor-owned reporting only at an adapter's proven
 	 * completion boundary. Never call merely because descriptions were enumerated.
 	 */

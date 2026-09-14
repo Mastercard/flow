@@ -6,15 +6,19 @@ import java.util.List;
 
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.DynamicTestInvocationContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolver;
 import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.platform.commons.support.AnnotationSupport;
 
 /** Internal registration support; use {@link FlowTest}. */
 public final class FlowExtension implements ParameterResolver, InvocationInterceptor {
+	private static final ThreadLocal<ExtensionContext> INVOCATION = new ThreadLocal<>();
+	private static final ThreadLocal<Executable> EXECUTABLE = new ThreadLocal<>();
 	private static final ExtensionContext.Namespace OWNERS = ExtensionContext.Namespace
 			.create( FlowExtension.class );
 
@@ -43,6 +47,9 @@ public final class FlowExtension implements ParameterResolver, InvocationInterce
 		String key = context.getUniqueId();
 		FlowExecution handle = new FlowExecution( () -> store.remove( key ) );
 		store.put( key, handle );
+		if( parallel( context ) ) {
+			handle.attachParallel( context );
+		}
 		return handle;
 	}
 
@@ -59,10 +66,15 @@ public final class FlowExtension implements ParameterResolver, InvocationInterce
 					"Exactly one FlowExecution parameter is required on the Flow factory" );
 		}
 		FlowExecution handle = handles.get( 0 );
+		handle.checkFactory( context );
 		handle.enterFactory();
 		T original;
 		try {
 			original = invocation.proceed();
+		}
+		catch( Throwable failure ) {
+			handle.stopParallel( failure );
+			throw failure;
 		}
 		finally {
 			handle.leaveFactory();
@@ -70,16 +82,102 @@ public final class FlowExtension implements ParameterResolver, InvocationInterce
 		return (T) handle.consume( original );
 	}
 
+	private static boolean parallel( ExtensionContext context ) {
+		return FlowMethodOrderer.parallel( context.getConfigurationParameter(
+				FlowMethodOrderer.PARALLEL_PROPERTY ).orElse( "false" ) );
+	}
+
 	private static void checkMode( ExtensionContext context ) {
-		if( FlowMethodOrderer.parallel( context.getConfigurationParameter(
-				FlowMethodOrderer.PARALLEL_PROPERTY ).orElse( "false" ) ) ) {
-			throw new UnsupportedOperationException(
-					"flow.parallel=true is not implemented yet; native parallel execution requires ticket08. "
-							+ "Omit flow.parallel or set it to false for native serial execution." );
-		}
-		if( context.getExecutionMode() != ExecutionMode.SAME_THREAD ) {
+		if( !parallel( context ) && context.getExecutionMode() != ExecutionMode.SAME_THREAD ) {
 			throw new IllegalStateException( "Flow serial execution requires native SAME_THREAD; "
 					+ "remove conflicting @Execution or method-orderer configuration" );
 		}
+	}
+
+	/**
+	 * Jupiter 6 removed the old default method; its three-argument entry delegates
+	 * to the same guard. No executable is reconstructed from the invocation
+	 * context.
+	 *
+	 * @param invocation The native invocation to proceed with
+	 * @param dynamic    The context exposing the original executable
+	 * @param context    The native leaf context
+	 * @throws Throwable If ownership validation or invocation fails
+	 */
+	@Override
+	public void interceptDynamicTest( Invocation<Void> invocation,
+			DynamicTestInvocationContext dynamic, ExtensionContext context ) throws Throwable {
+		Executable previous = EXECUTABLE.get();
+		try {
+			EXECUTABLE.set( dynamic.getExecutable() );
+			interceptDynamicTest( invocation, context );
+		}
+		finally {
+			if( previous == null ) {
+				EXECUTABLE.remove();
+			}
+			else {
+				EXECUTABLE.set( previous );
+			}
+		}
+	}
+
+	/**
+	 * Guards the original two-argument Jupiter 5.10 interception entry and restores
+	 * the previous worker context after invocation.
+	 *
+	 * @param invocation The native invocation to proceed with
+	 * @param context    The native leaf context
+	 * @throws Throwable If ownership validation or invocation fails
+	 */
+	@SuppressWarnings("deprecation")
+	public void interceptDynamicTest( Invocation<Void> invocation, ExtensionContext context )
+			throws Throwable {
+		ExtensionContext factory = null;
+		// Some native leaf contexts inherit the factory method. Find the actual
+		// factory owner using the class-local stored handle, never a guessed UID.
+		FlowExecution owner = null;
+		for( ExtensionContext candidate = context; candidate != null;
+				candidate = candidate.getParent().orElse( null ) ) {
+			for( ExtensionContext ancestor = candidate; ancestor != null;
+					ancestor = ancestor.getParent().orElse( null ) ) {
+				FlowExecution found = ancestor.getStore( OWNERS )
+						.get( candidate.getUniqueId(), FlowExecution.class );
+				if( found != null ) {
+					owner = found;
+					factory = candidate;
+					break;
+				}
+			}
+			if( owner != null ) {
+				break;
+			}
+		}
+		ExtensionContext previous = INVOCATION.get();
+		try {
+			if( owner != null && owner.parallel() ) {
+				owner.checkNativeOwner( factory );
+				INVOCATION.set( context );
+			}
+			invocation.proceed();
+		}
+		finally {
+			if( previous == null ) {
+				INVOCATION.remove();
+			}
+			else {
+				INVOCATION.set( previous );
+			}
+		}
+	}
+
+	/** @return The current guarded parallel leaf context, or null outside one */
+	static ExtensionContext invocationContext() {
+		return INVOCATION.get();
+	}
+
+	/** @return The original executable exposed by native interception, or null */
+	static Executable invocationExecutable() {
+		return EXECUTABLE.get();
 	}
 }

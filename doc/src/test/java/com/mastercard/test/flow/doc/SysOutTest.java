@@ -50,6 +50,15 @@ class SysOutTest {
 		accept( "../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/"
 				+ "FlowProcessor.java",
 				"System.err.println( diagnostic );" );
+		// Standalone compatibility runners deliberately print their native test
+		// summaries and failures for the same-binary, cross-runtime evidence logs.
+		for( String runner : new String[] { "FlowLauncherBridgeRuntime", "FlowNativeProfileRuntime",
+				"FlowParallelRuntime" } ) {
+			accept( "../assert/assert-junit5/src/test/java/com/mastercard/test/flow/assrt/junit5/"
+					+ runner + ".java",
+					"listener.getSummary().printTo( new PrintWriter( System.out, true ) );",
+					"listener.getSummary().printFailuresTo( new PrintWriter( System.out, true ) );" );
+		}
 	}
 
 	private static void accept( String file, String... line ) {

@@ -154,7 +154,6 @@ class PreparedFlowLifecycleTest {
 	 */
 	static Model model( Flow... flows ) {
 		return new Mdl() {
-			/** {@inheritDoc} */
 			@Override
 			public Stream<Flow> flows( Set<String> include, Set<String> exclude ) {
 				return Stream.of( flows );
@@ -197,7 +196,6 @@ class PreparedFlowLifecycleTest {
 
 	/** Discards factory results to simulate abandoned native consumption. */
 	static class AbandonConsumption implements InvocationInterceptor {
-		/** {@inheritDoc} */
 		@Override
 		@SuppressWarnings("unchecked")
 		public <T> T interceptTestFactoryMethod( Invocation<T> invocation,
@@ -265,7 +263,6 @@ class PreparedFlowLifecycleTest {
 	static List<Throwable> launch( Class<?> factory ) {
 		List<Throwable> failures = new ArrayList<>();
 		FlowExecutionTest.execute( factory, "false", new TestExecutionListener() {
-			/** {@inheritDoc} */
 			@Override
 			public void executionFinished( TestIdentifier id, TestExecutionResult result ) {
 				result.getThrowable().ifPresent( failures::add );

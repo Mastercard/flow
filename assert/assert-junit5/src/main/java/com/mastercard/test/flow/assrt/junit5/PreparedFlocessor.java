@@ -2,8 +2,12 @@ package com.mastercard.test.flow.assrt.junit5;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -26,6 +30,34 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	private final FlowExecution owner;
 	private boolean prepared;
 	private final List<Flow> selectedFlows = new ArrayList<>();
+	private final Map<String, Predicate<Flow>> independence = new LinkedHashMap<>();
+
+	/**
+	 * Declares an assessed empty resource set using a named bulk rule. The audit
+	 * must include the synchronous behaviour, listeners, messages and callbacks,
+	 * including hidden state. Matching declares no required physical worker
+	 * affinity and no use surviving synchronous callback return. Missing rules
+	 * remain UNKNOWN; neither State.LESS nor empty contexts establishes
+	 * independence. Rules are resolved once during preparation and never on native
+	 * workers.
+	 * <p>
+	 * Temporary ticket08 tracer only: no chains, basis, contexts, residue, replay,
+	 * capture, reports, shared message instances or fan-in; class source URIs and
+	 * at most one distinct external predecessor per flow. No general resource
+	 * reservation, affinity, cancellation or fairness implementation is implied.
+	 *
+	 * @param rule    Unique nonblank audit name
+	 * @param matches Selected flows affirmatively assessed as independent
+	 * @return this adapter
+	 */
+	public PreparedFlocessor independent( String rule, Predicate<Flow> matches ) {
+		beforeConfiguration();
+		if( Objects.requireNonNull( rule ).isBlank() || independence.containsKey( rule ) ) {
+			throw new IllegalArgumentException( "Independence rule must be named and unique: " + rule );
+		}
+		independence.put( rule, Objects.requireNonNull( matches ) );
+		return this;
+	}
 
 	/**
 	 * @param owner The factory-local lifecycle owner
@@ -37,10 +69,18 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 		this.owner = owner;
 	}
 
-	/** @return The native descriptions to return from the owning factory */
+	/**
+	 * Freezes configuration, prepares owned descriptions and audits parallel
+	 * admission. No flow bodies execute during preparation.
+	 *
+	 * @return The native descriptions to return from the owning factory
+	 */
 	public Stream<DynamicNode> tests() {
 		beforeConfiguration();
 		prepared = true;
+		if( owner.parallel() ) {
+			requireIndependentTracerConfiguration();
+		}
 		List<DynamicNode> nodes = new ArrayList<>();
 		Set<String> identities = new HashSet<>();
 		try( Stream<Flow> selected = prepareFlows() ) {
@@ -56,6 +96,20 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 				nodes.add( DynamicTest.dynamicTest( id, Flocessor.testSource( flow ),
 						owner.invocation( index ) ) );
 			}
+		}
+		if( owner.parallel() ) {
+			Map<String, Predicate<Flow>> rules = new LinkedHashMap<>( independence );
+			for( Flow flow : selectedFlows ) {
+				boolean covered = false;
+				for( Predicate<Flow> rule : rules.values() ) {
+					covered |= rule.test( flow );
+				}
+				if( !covered ) {
+					throw new IllegalStateException( "Flow parallel tracer UNKNOWN resource audit: "
+							+ flow.meta().id() + "; independence rules=" + rules.keySet() );
+				}
+			}
+			owner.prepareParallel( selectedFlows, nodes );
 		}
 		return owner.describe( nodes );
 	}
@@ -77,6 +131,7 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	/** Clears the prepared invocation table after owned use has drained. */
 	void detach() {
 		selectedFlows.clear();
+		independence.clear();
 	}
 
 	/**
