@@ -19,6 +19,7 @@ authoritative; no frozen feasibility evidence or design decision was rewritten.
 | 09 (partial) | Early service-loaded public Launcher decorator; exact call/preview ownership; actual pool and metadata guards; optional isolated JUnit 6 overload | `FlowLauncherBridgeTest`, `FlowLauncherSixTest`, `FlowNativeProfileTest`, `FlowNativeCallTest` |
 | 10 (automated portion) | Standalone consumer of locally installed Flow POM/BOM/JARs; real model, binding, native overlap, provider-free serial and exact callback UID checks on consumer-selected JUnit stacks | `assert/assert-junit5/src/it/packaged-consumer`; artifact hashes, JVM class-load traces and native summaries |
 | 11 | Named rule union/provenance, UNKNOWN global exclusion, shared same-JVM whole-resource-set and execution-slot reservation before native emission; prepared serial/parallel cooperation | `ResourcePlanningTest`, `NativeResourceAdmissionTest`, serial cleanup and actual packaged consumer regressions |
+| 13 | Shared-core dependency-ready admission, coherent processing/native accounting, sparse canonical basis visibility, direct successor release and idempotent evidence | `FlowAdmissionTest`, actual serial/native `FlowParallelBindingTest` oracles, resource/queueing and packaged-consumer regressions |
 
 The new caller permits `flow.parallel=true` only through the checked native owner.
 Named bulk `resources()`, `exclusive()` and `independent()` declarations are resolved
@@ -26,7 +27,7 @@ once after dependency expansion. Unmatched work remains UNKNOWN/global-exclusive
 including against explicitly known-empty work. Reporting/capture/replay/context/chain/
 fan-in and other unchecked parallel surfaces fail closed before SUT use. These temporary
 implementation boundaries are not permanent public support restrictions. There is
-no completed fairness, general dependency scheduler or workload-speedup claim.
+no completed fairness, general producer-publication or workload-speedup claim.
 Report-only failure classification and run-owned final-only activation are unfinished.
 
 ## Blocking work and unpassed gates
@@ -107,8 +108,8 @@ results below predate this slice; the next full run is reserved for final integr
 - 05 needs the actual 6,000–7,000-flow consuming workload and resource-owner input.
   That environment was not supplied; the reported 52/25-minute observations are
   not new measurements or a diagnosed serial-tail cause.
-- 13–19 and 21–27 are not delivered. This includes general dependency-ready
-  admission, uninterrupted chain reservations, fairness,
+- 14–19 and 21–27 are not delivered. This includes canonical conflicting-producer
+  publication, uninterrupted chain reservations, fairness,
   bounded cancellation, correlated capture/cutoff, truthful stopped-run final
   artifacts, integrated compatibility, performance assessment and rollout.
 
@@ -143,6 +144,52 @@ original and reviewed evidence are archived separately; no historical IDE fixtur
 was altered. Human-only IntelliJ and 6,000-flow checks remain deferred until the end.
 
 ## Validation record
+
+### Dependency-ready admission slice
+
+`FlowAdmission` now owns ready work, whole grants, direct successor counters and
+native/processing records in assertion-core. Actual processing shares its History
+monitor; the Jupiter adapter retains native identity/source and actual-pool checks,
+not another scheduler. Resource operations, model traversal, callbacks and SUT work
+remain outside the short-held bookkeeping monitor. Admission is committed before
+emission, including buffered and inline native execution. Only the factory waits.
+
+An independent review exposed two basis-planning defects: later-canonical ancestors
+could change an earlier derived flow's eligibility, and retaining all selected
+ancestors produced quadratic readiness state. Both were reproduced before correction.
+The iterative, identity-cached basis forest now inserts at most two canonical-forward
+edges per selected flow; related flows preserve serial visibility in either rank
+direction without selecting absent bases or adding sibling edges. Hard and basis
+scheduling pairs are deduplicated without dropping bindings. At 7,000 nodes the
+tested deep, inverted and shared-absent-path shapes retained 6,999, 13,975 and 6,999
+basis edges respectively. Actual admission/completion visits match retained edges.
+This measures readiness operations, not History traversal, resource reconsideration,
+payload work or whole-workload performance.
+
+Native regressions exercise independent successor progress, actual dependent aborts,
+selected/absent/inverted bases, suppression/stateless policies, ordinary timeout,
+synchronous timeout-as-assertion, fatal faults and duplicate/conflicting evidence.
+The timeout assertion retains the original native failure, permits genuine dependent
+SUT entry and suppresses derived work, matching literal serial outcomes. The 12/20
+queueing control accepts native inline execution before the 24-grant upper bound;
+the bound is not a promised queue depth. Teardown preserves the primary failure and
+attaches any cleanup failure rather than replacing it.
+
+Final Java 17 / JUnit 6.0.3 validation passed **219 focused tests** (108 core, 111
+adapter) and **three 88-test repeats**, with zero failures/errors/skips. Interrupted
+and earlier failing attempts remain recorded and are not counted as passes. Both
+test-skip flags and failure-ignore were disabled, with all 39 real frontend assets.
+Independent standards and spec follow-ups found no actionable issue. No dedicated
+injected dual-cleanup-failure or basis-cycle test is claimed.
+
+An additional 88-test install gate and all four same-binary packaged-consumer points
+passed after the extraction: JUnit 5.10/Platform 1.10 and 6.0.3, serial and parallel.
+After refreshing generated source anchors, all 636 clean-export documentation
+checks passed. Current logs and artifact fingerprints are archived separately at
+`C:/Data/Code/flow-admission13-packaged-20260915/`; earlier archives are unchanged.
+This does not discharge retained-registration/model-reference, manual IntelliJ,
+full Stop or workload acceptance. Native fan-in/shared-message/intra-flow publication
+remain guarded for ticket 14; chain/context/capture/report integration is later work.
 
 ### Resource admission slice
 

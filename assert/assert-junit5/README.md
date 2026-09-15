@@ -163,8 +163,8 @@ value if diagnostics are needed after the run detaches.
 
 Temporary tracer limits also reject reporting other than `Reporting.NEVER`, capture
 other than `LogCapture.NO_OP`, replay, contexts/applicators, residue/checkers,
-autonomous actors, chains, basis, shared message instances, fan-in, noncanonical
-prerequisites and non-class source URIs. These are fail-closed implementation
+autonomous actors, chains, shared message instances, fan-in, intra-flow publication,
+noncanonical prerequisites and non-class source URIs. These are fail-closed implementation
 boundaries, **not new permanent support restrictions**. Resource declarations do
 not authorize any of those unsupported surfaces or promote chains. Explicit serial
 resource declarations also reject reports, capture, replay, applicators/checkers,
@@ -235,8 +235,17 @@ ticket 16 work, so starvation is not yet prevented.
 Admission is not claimed to be linear: a blocked prefix of B ready nodes can be
 retried for each of D disjoint admissions (B×D attempts), and grant release scans
 pending requests to deduplicate coordinator wakeups. Ownership-version-aware scan
-progress and relevant-ready invalidation remain ticket 13/16 performance work;
-this correctness fix does not introduce a general scheduler.
+progress and relevant-ready invalidation remain resource/fairness work for ticket 16.
+Dependency readiness is measured separately: each prepared node is admitted once
+and each deduplicated successor edge is visited once, with O(V+E) bookkeeping/storage
+plus O(V log V) ordered-ready-set work. Basis planning visits each distinct reachable
+identity once and adds at most 2V canonical-forward edges, using O(V log V) rank-set
+work without retaining the ancestor closure. Resource reconsideration, History
+traversal, callbacks and SUT work are not included in the readiness bound. Core
+measurements cover 100, 1,000 and 7,000 nodes in fork, chain and two-predecessor graphs,
+plus deep/inverted basis paths and siblings sharing absent bases, counting basis
+lookups and retained-edge visits; these are operation-count evidence, not a
+whole-run speedup or a workload benchmark. Native fan-in remains guarded.
 
 Legacy `Flocessor` users do not automatically participate. Use the prepared serial
 caller with the same declarations for explicit serial cooperation, or explicitly
@@ -252,22 +261,46 @@ sessions of `LauncherFactory.create()` are rejected. The isolated JUnit 6 helper
 preserves the native execution overload and identical cancellation token; it does
 not implement Flow cancellation polling or bounded stop/drain.
 
-One factory readiness waiter releases successors after predecessor native terminal
-evidence and drained processing. Native inline completion is supported; there is
-no second body pool or idle-worker estimate. Flow History remains distinct from
-native status: an external native failure does not automatically become a Flow
-processing error. Successful disposal requires actual factory terminal and owned
-drainage, never stream close alone. Exceptional incompleteness is diagnosed without
-forced release or successful report finalization.
+Shared-core `FlowAdmission` owns direct predecessor counters, ordered ready work,
+grants and native/processing records under the same short-held monitor as History.
+The Jupiter adapter retains native identity/source and actual-pool validation, not
+a second admission state machine. Model traversal, resource effects and callbacks
+stay outside bookkeeping. One factory readiness waiter releases each successor
+after its own predecessors' safe native completion and synchronous publication;
+unrelated slow branches impose no level barrier. Identical evidence is idempotent;
+conflicting evidence latches a stop checked before further Flow use.
+
+Selected comparable basis ancestors and descendants retain canonical order in both
+directions, including across absent intermediate bases: a later ancestor cannot
+publish failure before an earlier derived flow checks eligibility. This neither
+selects extra flows nor overrides hard order, and adds no edges between siblings.
+Readiness does not require predecessors to pass: unexpected comparisons suppress
+derived flows but permit data dependents, while ordinary errors permit derived retries
+and abort stateful dependents. Existing suppression/stateless policies still apply.
+Those ineligible selected flows take their real native abort path without SUT calls.
+Native failure (or an extension suppressing an exception) never rewrites Flow History;
+missing processing is not success. Fatal/protocol faults stop admission rather than
+pretend normal completion.
+
+Native inline completion is supported; there is no second body pool or idle-worker
+estimate. At 12/20 Jupiter may execute inline before filling the 24-grant bound; the
+queueing control accepts either supported path and separately checks the core bound.
+Successful disposal requires actual factory terminal and owned drainage, never stream
+close alone. Exceptional incompleteness is diagnosed without forced release or
+successful report finalization.
 
 Real Launcher tests cover A-to-B message binding while independent C remains active,
 real dependent aborts, callback context/restoration, native inline execution and
 provider-free serial behavior. Resource regressions additionally exercise equal-key
 exclusion, disjoint overlap, atomic multi-key admission, UNKNOWN/empty/exclusive
 precedence, once-only dependency-expanded resolution, native cleanup and serial/
-parallel cooperation through separate real 12/20 pools. Baseline-compiled binaries
-from the earlier tracer have been run on coherent
-5.10/1.10 and 6.0.3 stacks.
+parallel cooperation through separate real 12/20 pools. Admission regressions also
+compare the actual serial MetaTest outcome oracle, basis gaps, suppression, fatal
+versus ordinary failures, duplicate/conflicting evidence and core capacities 1/2/5.
+Native target one remains a rejected-profile control. The final admission changes
+passed 219 focused tests and three 88-test repeats on Java 17/JUnit 6.0.3, including
+the separate synchronous timeout-as-assertion oracle. Newly installed binaries also
+passed the four-point consumer matrix below. IDE acceptance remains unverified.
 
 ### Automated packaged consumer gate
 
@@ -285,9 +318,9 @@ callback's invocation UID must match the listener's started-leaf UID for that fl
 Fresh Surefire XML, resolved dependency provenance, JAR/POM hashes and actual JVM
 class-loading checks are retained. Repetition does not prove registration or model
 disposal: the automated **no safely disposable retained registrations** criterion
-remains unverified for the later integrated ticket 25 gate. The resource-enabled
-binaries have also passed this four-point matrix after local installation; the
-earlier tracer/package artifact hashes remain historical. Ticket 10 is not fully
+remains unverified for the later integrated ticket 25 gate. The resource-enabled and
+shared-core admission binaries each passed this four-point matrix after local
+installation; earlier artifact hashes remain historical. Ticket 10 is not fully
 passed. These are exact tested points, not a support range or a full parallel
 release. Intended IntelliJ Run/Debug/selection/navigation/Stop and the manual
 6,000-flow workload remain pending, deferred until the end by user decision; nested

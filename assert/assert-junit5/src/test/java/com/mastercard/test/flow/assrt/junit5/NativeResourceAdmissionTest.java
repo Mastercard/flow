@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -64,6 +66,62 @@ class NativeResourceAdmissionTest {
 	private static final Map<String, Run> RUNS = new ConcurrentHashMap<>();
 	private static final AtomicInteger IDS = new AtomicInteger();
 	private static final ThreadLocal<Run> FACTORY = new ThreadLocal<>();
+
+	/**
+	 * Jupiter may fill the logical window or execute inline first. Neither choice
+	 * may strand queued work or require another body executor.
+	 * 
+	 * @throws Exception If the real Launcher fails to drain
+	 */
+	@Test
+	void twelveTargetTwentyCapSupportsQueuedOrInlineWorkWithinTheAdmissionBound() throws Exception {
+		CountDownLatch queuedOrInline = new CountDownLatch( 1 );
+		CountDownLatch entered = new CountDownLatch( 1 );
+		CountDownLatch release = new CountDownLatch( 1 );
+		AtomicInteger inline = new AtomicInteger();
+		Run run = new Run( true, IntStream.range( 0, 40 )
+				.mapToObj( i -> flow( "queued-" + i ) ).toList(),
+				r -> r.independent( "finite synchronous isolated use", f -> true ), a -> {
+					entered.countDown();
+					await( release );
+				} );
+		run.registration = id -> {
+			if( run.registered.size() == 24 )
+				queuedOrInline.countDown();
+		};
+		run.inline = () -> {
+			inline.incrementAndGet();
+			queuedOrInline.countDown();
+		};
+		Throwable primary = null;
+		try {
+			run.start();
+			await( queuedOrInline );
+			await( entered );
+			assertTrue( run.registered.size() <= 24, "logical bound is not a guaranteed queue depth" );
+			assertTrue( run.bodies.get() < run.registered.size(), "real admitted nodes remain queued" );
+			Files.writeString( Files.createDirectories( Path.of( "target", "admission13" ) )
+					.resolve( "native-queue.txt" ),
+					"target=12, maximum=20, registered=" + run.registered.size()
+							+ ", bodies=" + run.bodies.get() + ", inline=" + inline.get() + ", terminal=0\n" );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			release.countDown();
+			try {
+				run.finish();
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+		}
+	}
 
 	/**
 	 * A parallel request must explain why unaudited work will run serially.
@@ -700,11 +758,15 @@ class NativeResourceAdmissionTest {
 		final List<String> fallbacks = new CopyOnWriteArrayList<>();
 		final List<ResourceRequirements> requirements = new ArrayList<>();
 		final AtomicInteger bodies = new AtomicInteger();
+		private Consumer<TestIdentifier> registration = id -> {
+		};
 		FutureTask<Void> execution;
 		Thread launcherThread;
 		Thread factoryThread;
 		ForkJoinPool pool;
 		Runnable cleanup = () -> {
+		};
+		private Runnable inline = () -> {
 		};
 		boolean rejectBody;
 		boolean skipBody;
@@ -829,6 +891,7 @@ class NativeResourceAdmissionTest {
 		public void dynamicTestRegistered( TestIdentifier testIdentifier ) {
 			super.dynamicTestRegistered( testIdentifier );
 			registered.add( testIdentifier.getDisplayName() );
+			registration.accept( testIdentifier );
 		}
 
 		@Override
@@ -913,6 +976,8 @@ class NativeResourceAdmissionTest {
 			if( !run.parallel )
 				assertSame( run.factoryThread, Thread.currentThread() );
 			run.bodies.incrementAndGet();
+			if( run.parallel && Thread.currentThread() == run.factoryThread )
+				run.inline.run();
 			run.body.accept( a );
 			a.actual().response( a.expected().response().content() );
 		} );

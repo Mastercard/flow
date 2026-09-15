@@ -117,7 +117,7 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	 * @param model The existing system model
 	 */
 	PreparedFlocessor( FlowExecution owner, String title, Model model ) {
-		super( title, model );
+		super( title, model, owner.history() );
 		this.owner = owner;
 	}
 
@@ -198,25 +198,39 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	 * @param index The preparation-local flow index
 	 */
 	void processSelected( int index ) {
-		processFlow( selectedFlows.get( index ) );
-	}
-
-	private void processFlow( Flow flow ) {
+		Flow flow = selectedFlows.get( index );
+		Result result = null;
+		Throwable failure = null;
 		try {
 			process( flow );
-			history.recordResult( flow, Result.SUCCESS );
+			result = Result.SUCCESS;
 		}
 		catch( IncompleteExecutionException e ) {
-			history.recordResult( flow, Result.SKIP );
+			result = Result.SKIP;
+			failure = e;
 			throw e;
 		}
 		catch( AssertionError e ) {
-			history.recordResult( flow, Result.UNEXPECTED );
+			result = Result.UNEXPECTED;
+			failure = e;
 			throw e;
 		}
 		catch( Exception e ) {
-			history.recordResult( flow, Result.ERROR );
+			result = Result.ERROR;
+			failure = e;
 			throw e;
+		}
+		catch( Error e ) {
+			failure = e;
+			throw e;
+		}
+		finally {
+			if( owner.parallel() ) {
+				owner.processedParallel( index, result, failure );
+			}
+			else if( result != null ) {
+				history.recordResult( flow, result );
+			}
 		}
 	}
 

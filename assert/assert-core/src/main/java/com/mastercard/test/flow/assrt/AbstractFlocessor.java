@@ -63,7 +63,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	/**
 	 * Tracks the outcome of processing {@link Flow}s to inform further processing
 	 */
-	protected final History history = new History();
+	protected final History history;
 
 	/**
 	 * Whether the system's subsequent behaviour will be changed by the processing
@@ -76,6 +76,18 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @param model The model to process
 	 */
 	protected AbstractFlocessor( String title, Model model ) {
+		this( title, model, new History() );
+	}
+
+	/**
+	 * Shares the prepared run's publication monitor without copying processing.
+	 * 
+	 * @param title   The title of this test
+	 * @param model   The model to process
+	 * @param history The run-owned processing history
+	 */
+	protected AbstractFlocessor( String title, Model model, History history ) {
+		this.history = history;
 		config = new FlowConfiguration( title, model );
 		processor = new FlowProcessor( config, history ) {
 			@Override

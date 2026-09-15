@@ -17,6 +17,8 @@ import org.junit.jupiter.api.function.Executable;
 
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.Flow;
+import com.mastercard.test.flow.assrt.History;
+import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations.Grant;
@@ -117,6 +119,22 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 	 */
 	void processParallel( int index ) {
 		runner.processSelected( index );
+	}
+
+	/** @return Shared admission History in parallel, ordinary History in serial */
+	History history() {
+		return parallelOwner == null ? new History() : parallelOwner.history();
+	}
+
+	/**
+	 * Publishes real processing, never an inferred native classification.
+	 * 
+	 * @param index   Entered selected flow
+	 * @param result  Genuine processing classification
+	 * @param failure Its primary failure
+	 */
+	void processedParallel( int index, Result result, Throwable failure ) {
+		parallelOwner.processed( index, result, failure );
 	}
 
 	/**

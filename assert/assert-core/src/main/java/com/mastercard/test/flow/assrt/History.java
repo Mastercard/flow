@@ -1,6 +1,6 @@
 package com.mastercard.test.flow.assrt;
 
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -57,7 +57,9 @@ public class History {
 		}
 	}
 
-	private final Map<Flow, Result> results = new HashMap<>();
+	// A model's equals/hashCode may execute user code. Identity lookup keeps the
+	// shared admission/History monitor free of model calls.
+	private final Map<Flow, Result> results = new IdentityHashMap<>();
 
 	/**
 	 * Records the outcome of {@link Flow} processing. This data will be used to

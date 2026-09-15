@@ -1,0 +1,544 @@
+package com.mastercard.test.flow.assrt;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static com.mastercard.test.flow.assrt.FlowAdmission.EXHAUSTED;
+import static com.mastercard.test.flow.assrt.FlowAdmission.WAITING;
+import static com.mastercard.test.flow.assrt.FlowAdmission.Outcome.SUCCESSFUL;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
+import java.util.stream.IntStream;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import com.mastercard.test.flow.Flow;
+import com.mastercard.test.flow.Dependency;
+import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
+import com.mastercard.test.flow.assrt.History.Result;
+import com.mastercard.test.flow.assrt.mock.Flw;
+import com.mastercard.test.flow.assrt.resource.ResourceRules;
+import com.mastercard.test.flow.assrt.resource.ResourceReservations;
+import com.mastercard.test.flow.assrt.resource.ResourceReservations.Grant;
+import com.mastercard.test.flow.builder.Creator;
+import com.mastercard.test.flow.builder.Deriver;
+
+/**
+ * Pure prepared-run seam; real native execution is exercised in the adapter.
+ */
+class FlowAdmissionTest {
+	/**
+	 * The logical window is an exact core bound, independent of Jupiter scheduling.
+	 */
+	@Test
+	void twentyFourOutstandingGrantsBlockTheNextEmissionUntilNativeDrainage() {
+		List<Flow> flows = IntStream.range( 0, 40 ).mapToObj( i -> flow( "flow" + i ) ).toList();
+		FlowAdmission run = prepare( 24, flows );
+		for( int i = 0; i < 24; i++ ) {
+			assertEquals( i, run.poll() );
+			enter( run, i );
+		}
+		try {
+			assertEquals( WAITING, run.poll() );
+			run.processed( 0, Result.SUCCESS, null );
+			assertEquals( WAITING, run.poll(), "processing alone does not free a slot" );
+		}
+		finally {
+			for( int i = 0; i < 24; i++ )
+				complete( run, i );
+		}
+		for( int i = 24; i < 40; i++ ) {
+			assertEquals( i, run.poll() );
+			enter( run, i );
+			complete( run, i );
+		}
+		finish( run );
+	}
+
+	/**
+	 * A fork/join's own counters, not level membership, govern release.
+	 * 
+	 * @param capacity Core/serial outstanding capacity
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 2, 5 })
+	void forkJoinCompletesExactlyOnceAtEachCoreCapacity( int capacity ) {
+		Flow root = flow( "root" );
+		Flow left = flow( "left", root, root );
+		Flow right = flow( "right", root );
+		Flow join = flow( "join", left, right );
+		Flow unrelated = flow( "unrelated" );
+		FlowAdmission run = prepare( capacity, List.of( root, left, right, join, unrelated ) );
+		Deque<Integer> held = new ArrayDeque<>();
+		List<Integer> completed = new ArrayList<>();
+		int peak = 0;
+		try {
+			for( ;; ) {
+				int next = run.poll();
+				if( next >= 0 ) {
+					if( next == 3 ) {
+						assertTrue( completed.containsAll( List.of( 1, 2 ) ) );
+					}
+					enter( run, next );
+					held.addLast( next );
+					peak = Math.max( peak, held.size() );
+				}
+				else if( !held.isEmpty() ) {
+					int finished = held.removeFirst();
+					complete( run, finished );
+					completed.add( finished );
+				}
+				else {
+					assertEquals( EXHAUSTED, next, "no unexplained nonterminal stall" );
+					break;
+				}
+			}
+			assertEquals( Set.of( 0, 1, 2, 3, 4 ), Set.copyOf( completed ) );
+			assertEquals( 5, completed.size() );
+			assertEquals( Math.min( capacity, 3 ), peak );
+			assertEquals( 4, run.successorVisits(), "duplicate bindings remain one scheduling edge" );
+			finish( run );
+		}
+		finally {
+			held.forEach( i -> complete( run, i ) );
+		}
+	}
+
+	/** Native terminal and publication are separate from readiness and capacity. */
+	@Test
+	void independentSuccessorDoesNotWaitForAnUnrelatedHeldBranch() {
+		Flow a = flow( "a" );
+		Flow b = flow( "b", a );
+		Flow c = flow( "c" );
+		Flow d = flow( "d", c );
+		FlowAdmission run = prepare( 2, List.of( a, b, c, d ) );
+		assertEquals( 0, run.poll() );
+		enter( run, 0 );
+		assertEquals( 2, run.poll() );
+		enter( run, 2 );
+		try {
+			assertEquals( WAITING, run.poll() );
+			run.processed( 0, Result.SUCCESS, null );
+			assertEquals( Result.SUCCESS, run.history().get( a ) );
+			assertEquals( WAITING, run.poll(), "body return is not native cleanup completion" );
+			run.finished( "0", SUCCESSFUL, null );
+			assertEquals( 1, run.poll(), "b can proceed while c is still held" );
+			enter( run, 1 );
+			complete( run, 1 );
+			assertEquals( WAITING, run.poll(), "d still needs its own c" );
+		}
+		finally {
+			complete( run, 2 );
+		}
+		assertEquals( 3, run.poll() );
+		enter( run, 3 );
+		complete( run, 3 );
+		assertEquals( 2, run.successorVisits() );
+		finish( run );
+	}
+
+	/** Duplicate evidence is idempotent; conflicts stop queued pre-use. */
+	@Test
+	void duplicatesDoNotDoubleCountAndConflictingEvidenceStaysLatched() {
+		Flow first = flow( "first" );
+		Flow next = flow( "next", first );
+		FlowAdmission run = prepare( 2, List.of( first, next ) );
+		assertEquals( 0, run.poll() );
+		enter( run, 0 );
+		run.registered( 0, "0" );
+		run.started( "0" );
+		complete( run, 0 );
+		complete( run, 0 );
+		assertEquals( 1, run.successorVisits() );
+		assertEquals( 1, run.poll() );
+		run.registered( 1, "1" );
+		run.started( "1" );
+		IllegalStateException conflict = assertThrows( IllegalStateException.class,
+				() -> run.finished( "0", FlowAdmission.Outcome.FAILED,
+						new IllegalStateException( "different" ) ) );
+		assertFalse( run.enter( 1, "1" ), "already emitted work cannot bypass stop" );
+		run.finished( "1", FlowAdmission.Outcome.ABORTED, null );
+		assertSame( conflict, assertThrows( IllegalStateException.class, run::poll ).getCause() );
+		assertEquals( Result.SUCCESS, run.history().get( first ) );
+		assertEquals( Result.PENDING, run.history().get( next ),
+				"absence is not success or a made-up skip" );
+		assertThrows( IllegalStateException.class, run::close );
+	}
+
+	/**
+	 * Terminal delivery cannot release ongoing use; late drainage never restarts.
+	 */
+	@Test
+	void earlyTerminalRetainsUseUntilLateDrainageAndNeverRestarts() {
+		Flow first = flow( "first" );
+		Flow next = flow( "next", first );
+		var rules = new ResourceRules().resources( "fixture", f -> true, "admission-late" );
+		FlowAdmission run = new FlowAdmission( 2 );
+		run.prepare( List.of( first, next ), List.of( rules.resolve( first ), rules.resolve( next ) ) );
+		var scope = ResourceReservations.shared();
+		var probe = scope.register( scope.capacity( 1 ), rules.resolve( first ), () -> {
+		} );
+		assertEquals( 0, run.poll() );
+		enter( run, 0 );
+		try {
+			run.finished( "0", FlowAdmission.Outcome.FAILED, new IllegalStateException( "early" ) );
+			assertNull( probe.tryAcquire() );
+			assertThrows( IllegalStateException.class, run::poll );
+		}
+		finally {
+			run.processed( 0, Result.ERROR, new IllegalArgumentException( "actual" ) );
+		}
+		try( Grant released = probe.tryAcquire() ) {
+			assertNotNull( released );
+		}
+		finally {
+			probe.cancel();
+		}
+		assertThrows( IllegalStateException.class, run::poll );
+		assertEquals( 0, run.successorVisits() );
+		assertThrows( IllegalStateException.class, run::close );
+	}
+
+	/**
+	 * Basis preferences neither auto-select absent ancestors nor defeat hard order.
+	 */
+	@Test
+	void selectedAncestorAcrossAnAbsentBasisAndHardReversedBasisFollowCanonicalOrder() {
+		Flow ancestor = flow( "ancestor" );
+		Flow absent = Deriver.build( ancestor, f -> f.meta( m -> m.description( "absent" ) ) );
+		Flow child = Deriver.build( absent, f -> f.meta( m -> m.description( "child" ) ) );
+		FlowAdmission run = prepare( 5, List.of( ancestor, child ) );
+		assertEquals( 0, run.poll() );
+		assertEquals( WAITING, run.poll() );
+		enter( run, 0 );
+		complete( run, 0 );
+		assertEquals( 1, run.poll() );
+		enter( run, 1 );
+		complete( run, 1 );
+		finish( run );
+		FlowAdmission absentRun = prepare( 1, List.of( child ) );
+		assertEquals( 0, absentRun.poll() );
+		enter( absentRun, 0 );
+		complete( absentRun, 0 );
+		finish( absentRun );
+		// Preserve the serial visibility of PENDING for a later ancestor too.
+		FlowAdmission reversed = prepare( 2, List.of( child, ancestor ) );
+		assertEquals( 0, reversed.poll() );
+		enter( reversed, 0 );
+		assertEquals( WAITING, reversed.poll() );
+		complete( reversed, 0 );
+		assertEquals( 1, reversed.poll() );
+		enter( reversed, 1 );
+		complete( reversed, 1 );
+		finish( reversed );
+		Flw hardAncestor = new Flw( "hard ancestor []" );
+		Flw hardChild = new Flw( "hard child []" ).basis( hardAncestor );
+		hardAncestor.depedency( hardChild ).depedency( hardChild );
+		FlowAdmission hard = prepare( 2, List.of( hardChild, hardAncestor ) );
+		assertEquals( 0, hard.poll() );
+		enter( hard, 0 );
+		assertEquals( WAITING, hard.poll() );
+		complete( hard, 0 );
+		assertEquals( 1, hard.poll() );
+		enter( hard, 1 );
+		complete( hard, 1 );
+		assertEquals( 1, hard.successorVisits(), "hard/basis pair deduplicated, bindings retained" );
+		assertEquals( 2, hardAncestor.dependencies().count() );
+		finish( hard );
+	}
+
+	/**
+	 * Deep bases and shared absent paths must not become an ancestor closure.
+	 *
+	 * @param size  Selected flow count
+	 * @param shape Basis shape and canonical rank order
+	 * @throws IOException If measurement evidence cannot be retained
+	 */
+	@ParameterizedTest
+	@CsvSource({ "100,deep", "1000,deep", "7000,deep", "100,inverted", "1000,inverted",
+			"7000,inverted", "100,siblings", "1000,siblings", "7000,siblings" })
+	void basisReadinessRetainsLinearEdgesAndVisitsSharedAbsentPathsOnce( int size, String shape )
+			throws IOException {
+		AtomicInteger basisCalls = new AtomicInteger();
+		List<Flow> flows = new ArrayList<>();
+		Flow basis = null;
+		for( int i = 0; i < size; i++ ) {
+			basis = basisFlow( "basis" + i, basis, basisCalls, 4 * size );
+			if( !shape.equals( "siblings" ) || i == 0 )
+				flows.add( basis );
+		}
+		if( shape.equals( "siblings" ) ) {
+			for( int i = 1; i < size; i++ )
+				flows.add( basisFlow( "sibling" + i, basis, basisCalls, 4 * size ) );
+		}
+		if( shape.equals( "inverted" ) )
+			Collections.shuffle( flows, new Random( 13 ) );
+		long preparing = System.nanoTime();
+		FlowAdmission run = prepare( 5, flows );
+		long preparationNanos = System.nanoTime() - preparing;
+		int uniqueFlows = shape.equals( "siblings" ) ? 2 * size - 1 : size;
+		assertEquals( uniqueFlows, basisCalls.get(), "one basis lookup per distinct identity" );
+		for( int i = 0; i < size; i++ ) {
+			assertEquals( i, run.next( () -> {
+			} ) );
+			enter( run, i );
+			try {
+				if( !shape.equals( "siblings" ) && i < size - 1 )
+					assertEquals( WAITING, run.poll(), "all nodes on one basis path are comparable" );
+			}
+			finally {
+				complete( run, i );
+			}
+		}
+		// Every node completed once, so the visits count is the retained edge count.
+		assertTrue( run.successorVisits() <= 2L * size, "at most two basis edges per selected flow" );
+		if( shape.equals( "siblings" ) )
+			assertEquals( size - 1, run.successorVisits() );
+		Files.writeString( Files.createDirectories( Path.of( "target", "admission13" ) )
+				.resolve( "basis-" + shape + "-" + size + ".txt" ),
+				"shape=" + shape + ", V=" + size + ", basisDepth=" + (size - 1
+						+ (shape.equals( "siblings" ) ? 1 : 0)) + ", basisCalls=" + basisCalls.get()
+						+ ", uniqueFlows=" + uniqueFlows + ", retainedEdges=" + run.successorVisits()
+						+ ", successorVisits=" + run.successorVisits() + ", emitted=" + size
+						+ ", preparationNanos=" + preparationNanos + "\n" );
+		finish( run );
+	}
+
+	/** Sibling branches must not be serialized behind one another. */
+	@Test
+	void basisBranchesProceedWhileAnUnrelatedSiblingIsHeld() {
+		Flw root = new Flw( "root []" );
+		Flw left = new Flw( "left []" ).basis( root );
+		Flw right = new Flw( "right []" ).basis( root );
+		Flw leaf = new Flw( "right leaf []" ).basis( right );
+		FlowAdmission run = prepare( 5, List.of( root, left, right, leaf ) );
+		assertEquals( 0, run.poll() );
+		enter( run, 0 );
+		complete( run, 0 );
+		assertEquals( 1, run.poll() );
+		enter( run, 1 );
+		try {
+			assertEquals( 2, run.poll() );
+			enter( run, 2 );
+			complete( run, 2 );
+			assertEquals( 3, run.poll() );
+			enter( run, 3 );
+			complete( run, 3 );
+		}
+		finally {
+			complete( run, 1 );
+		}
+		assertEquals( 3, run.successorVisits() );
+		finish( run );
+	}
+
+	private static Flow basisFlow( String name, Flow basis, AtomicInteger calls, int limit ) {
+		return new Flw( name + " []" ) {
+			@Override
+			public Flow basis() {
+				assertTrue( calls.incrementAndGet() <= limit, "repeated ancestry traversal is not linear" );
+				return basis;
+			}
+		};
+	}
+
+	/**
+	 * Admission work visits each direct edge once, not every node per completion.
+	 *
+	 * @param size  Selected node count
+	 * @param shape Direct prerequisite shape
+	 * @throws IOException If measurement evidence cannot be retained
+	 */
+	@ParameterizedTest
+	@CsvSource({ "100,fork", "1000,fork", "7000,fork", "100,chain", "1000,chain", "7000,chain",
+			"100,fanin", "1000,fanin", "7000,fanin" })
+	void readinessCountsOnlyDirectSuccessorTransitions( int size, String shape ) throws IOException {
+		List<Flow> flows = new ArrayList<>( List.of( flow( "root" ) ) );
+		for( int i = 1; i < size; i++ ) {
+			Flow previous = flows.get( i - 1 );
+			flows.add( shape.equals( "fork" ) ? flow( "child" + i, flows.get( 0 ) )
+					: shape.equals( "fanin" ) && i > 1 ? flow( "join" + i, previous, flows.get( i - 2 ) )
+							: flow( "child" + i, previous ) );
+		}
+		long prepared = System.nanoTime();
+		FlowAdmission run = prepare( 5, flows );
+		long preparationNanos = System.nanoTime() - prepared;
+		long execution = System.nanoTime();
+		for( int i = 0; i < flows.size(); i++ ) {
+			assertEquals( i, run.poll() );
+			enter( run, i );
+			complete( run, i );
+		}
+		long executionNanos = System.nanoTime() - execution;
+		assertEquals( shape.equals( "fanin" ) ? 2 * size - 3 : size - 1, run.successorVisits() );
+		Files.writeString( Files.createDirectories( Path.of( "target", "admission13" ) )
+				.resolve( "readiness-" + shape + "-" + size + ".txt" ),
+				"shape=" + shape + ", V=" + size
+						+ ", emitted=" + flows.size() + ", successorVisits=" + run.successorVisits()
+						+ ", preparationNanos=" + preparationNanos + ", dispatchAndCompletionNanos="
+						+ executionNanos
+						+ " (includes resource, History and test calls; not isolated readiness time)\n" );
+		finish( run );
+	}
+
+	/**
+	 * Source methods and model equality never execute under the History monitor.
+	 */
+	@Test
+	void planningAndHistoryTraverseTheModelOutsideBookkeeping() {
+		FlowAdmission run = new FlowAdmission( 1 );
+		Flw first = new Flw( "first []" ) {
+			@Override
+			public Flow basis() {
+				assertFalse( Thread.holdsLock( run.history() ) );
+				return super.basis();
+			}
+
+			@Override
+			public Stream<Dependency> dependencies() {
+				assertFalse( Thread.holdsLock( run.history() ) );
+				return super.dependencies();
+			}
+
+			@Override
+			public int hashCode() {
+				assertFalse( Thread.holdsLock( run.history() ) );
+				return super.hashCode();
+			}
+		};
+		var rules = new ResourceRules().resources( "owned empty", f -> true );
+		run.prepare( List.of( first ), List.of( rules.resolve( first ) ) );
+		assertTrue( run.history().skipReason( first, State.LESS, Set.of() ).isEmpty() );
+		assertEquals( 0, run.poll() );
+		enter( run, 0 );
+		complete( run, 0 );
+		assertEquals( Result.SUCCESS, run.history().get( first ) );
+		finish( run );
+	}
+
+	/**
+	 * Only the preparing factory can wait; completion cannot lose its wakeup.
+	 *
+	 * @throws Exception If controlled factory coordination fails
+	 */
+	@Test
+	void oneFactoryWaiterIsReleasedByItsOwnPredecessor() throws Exception {
+		AtomicReference<FlowAdmission> owner = new AtomicReference<>();
+		CountDownLatch checking = new CountDownLatch( 1 );
+		FutureTask<Void> factory = new FutureTask<>( () -> {
+			Flow first = flow( "first" );
+			FlowAdmission run = prepare( 1, List.of( first, flow( "next", first ) ) );
+			owner.set( run );
+			assertEquals( 0, run.poll() );
+			enter( run, 0 );
+			assertEquals( WAITING, run.poll() );
+			assertEquals( 1, run.next( () -> {
+				assertFalse( Thread.holdsLock( run.history() ), "adapter check is outside bookkeeping" );
+				checking.countDown();
+			} ) );
+			enter( run, 1 );
+			complete( run, 1 );
+			finish( run );
+			return null;
+		} );
+		Thread thread = new Thread( factory, "admission-factory" );
+		thread.start();
+		try {
+			assertTrue( checking.await( 5, TimeUnit.SECONDS ) );
+			assertThrows( IllegalStateException.class,
+					() -> owner.get().next( () -> fail( "second waiter" ) ) );
+		}
+		finally {
+			if( owner.get() != null )
+				complete( owner.get(), 0 );
+		}
+		factory.get( 5, TimeUnit.SECONDS );
+		thread.join( 1000 );
+		assertFalse( thread.isAlive() );
+	}
+
+	/**
+	 * Resource notifications can observe History on another thread without
+	 * deadlock.
+	 */
+	@Test
+	void resourceReleaseRunsOutsideTheHistoryMonitor() throws Exception {
+		Flow first = flow( "first" );
+		var rules = new ResourceRules().resources( "fixture", f -> true, "admission-monitor" );
+		FlowAdmission run = new FlowAdmission( 1 );
+		run.prepare( List.of( first ), List.of( rules.resolve( first ) ) );
+		assertEquals( 0, run.poll() );
+		enter( run, 0 );
+		var scope = ResourceReservations.shared();
+		var probe = scope.register( scope.capacity( 1 ), rules.resolve( first ), () -> {
+			FutureTask<Result> read = new FutureTask<>( () -> run.history().get( first ) );
+			Thread thread = new Thread( read, "admission-history-observer" );
+			thread.start();
+			try {
+				assertEquals( Result.SUCCESS, read.get( 5, TimeUnit.SECONDS ) );
+			}
+			catch( Exception failure ) {
+				throw new AssertionError( failure );
+			}
+		} );
+		try {
+			complete( run, 0 );
+		}
+		finally {
+			probe.cancel();
+		}
+		finish( run );
+	}
+
+	private static Flow flow( String name, Flow... prerequisites ) {
+		return Creator.build( f -> {
+			f.meta( m -> m.description( name ) );
+			for( Flow prerequisite : prerequisites ) {
+				f.prerequisite( prerequisite );
+			}
+		} );
+	}
+
+	private static FlowAdmission prepare( int capacity, List<Flow> flows ) {
+		FlowAdmission run = new FlowAdmission( capacity );
+		ResourceRules rules = new ResourceRules().resources( "owned empty", f -> true );
+		run.prepare( flows, flows.stream().map( rules::resolve ).toList() );
+		return run;
+	}
+
+	private static void enter( FlowAdmission run, int index ) {
+		run.registered( index, "" + index );
+		run.started( "" + index );
+		assertTrue( run.enter( index, "" + index ) );
+	}
+
+	private static void complete( FlowAdmission run, int index ) {
+		run.processed( index, Result.SUCCESS, null );
+		run.finished( "" + index, SUCCESSFUL, null );
+	}
+
+	private static void finish( FlowAdmission run ) {
+		assertEquals( EXHAUSTED, run.poll() );
+		run.enumerationClosed();
+		assertTrue( run.factoryFinished( SUCCESSFUL, null ) );
+		assertFalse( run.factoryFinished( SUCCESSFUL, null ), "exactly one finalization" );
+		run.release();
+		assertDoesNotThrow( run::close );
+	}
+}

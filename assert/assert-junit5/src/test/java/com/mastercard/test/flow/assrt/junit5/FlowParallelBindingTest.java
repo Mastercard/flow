@@ -6,6 +6,7 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import static com.mastercard.test.flow.util.Transmission.Type.REQUEST;
 import static com.mastercard.test.flow.util.Transmission.Type.RESPONSE;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,26 +24,204 @@ import org.junit.jupiter.api.extension.DynamicTestInvocationContext;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherConfig;
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
 import org.junit.platform.launcher.core.LauncherFactory;
+import org.opentest4j.AssertionFailedError;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
+import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.LogCapture;
 import com.mastercard.test.flow.assrt.Reporting;
 import com.mastercard.test.flow.assrt.junit5.mock.Actrs;
 import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
 import com.mastercard.test.flow.builder.Creator;
+import com.mastercard.test.flow.builder.Deriver;
 import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.Unpredictable;
 import com.mastercard.test.flow.assrt.junit5.mock.Msg;
 
 /** Public caller/Launcher regression seam for the restricted native tracer. */
 class FlowParallelBindingTest {
+	/** Both direct successors can finish before an unrelated slow root. */
+	@Test
+	void dependencyForkProgressesWithoutAnUnrelatedLevelBarrier() {
+		Evidence e = execute( "fork", "true", 12 );
+		assertEquals( List.of(), e.failures );
+		assertEquals( 4, e.starts.size() );
+		assertEquals( 4, e.results.size() );
+		assertTrue( e.events.indexOf( "finish:B []" ) < e.events.indexOf( "end:C" ) );
+		assertTrue( e.events.indexOf( "finish:D []" ) < e.events.indexOf( "end:C" ) );
+		assertEquals( "published", e.bound );
+		assertDoesNotThrow( e.handle::close );
+	}
+
+	/**
+	 * Actual native evidence may be redelivered, but cannot change after delivery.
+	 */
+	@Test
+	void realNativeDuplicateIsIdempotentAndConflictFailsTheBackstop() {
+		for( String scenario : List.of( "duplicate", "duplicate-conflict" ) ) {
+			Evidence e = execute( scenario, "true", 12 );
+			assertEquals( List.of( "A []:SUCCESSFUL" ), e.results );
+			assertEquals( 1, e.starts.size() );
+			assertEquals( 1, e.events.stream().filter( s -> s.startsWith( "body:" ) ).count() );
+			if( scenario.equals( "duplicate" ) ) {
+				assertEquals( List.of(), e.failures );
+				assertDoesNotThrow( e.handle::close );
+			}
+			else {
+				assertFalse( e.failures.isEmpty(),
+						"latched listener fault must fail outside the callback" );
+				assertThrows( IllegalStateException.class, e.handle::close );
+			}
+		}
+	}
+
+	/**
+	 * External suppression cannot turn an actual Flow error into processed data.
+	 */
+	@Test
+	void suppressedErrorAndActualTimeoutKeepDependentAbortAndIndependentProgress() {
+		for( String scenario : List.of( "swallow-error", "timeout" ) ) {
+			Evidence e = execute( scenario, "true", 12 );
+			assertEquals( List.of( "A []:" + (scenario.equals( "timeout" ) ? "FAILED" : "SUCCESSFUL"),
+					"B []:ABORTED", "C []:SUCCESSFUL" ), e.results.stream().sorted().toList() );
+			assertEquals( 3, e.starts.size() );
+			assertFalse( e.events.contains( "body:B" ) );
+			assertTrue( e.events.contains( "body:C" ) );
+			if( scenario.equals( "timeout" ) ) {
+				assertTrue(
+						e.failures.stream().anyMatch(
+								failure -> failure.getCause() instanceof java.net.SocketTimeoutException ),
+						e.failures::toString );
+			}
+			assertDoesNotThrow( e.handle::close );
+		}
+	}
+
+	/**
+	 * Selected ancestors constrain History without auto-selecting missing bases.
+	 */
+	@Test
+	void basisOnlyAndAbsentIntermediateDoNotExpandTheSelectedWorkload() {
+		for( String scenario : List.of( "basis-only", "basis-gap" ) ) {
+			for( String mode : List.of( "false", "true" ) ) {
+				Evidence e = execute( scenario, mode, 12 );
+				assertEquals( scenario.equals( "basis-only" ) ? List.of( "D []:SUCCESSFUL" )
+						: List.of( "A []:FAILED", "D []:ABORTED" ), e.results.stream().sorted().toList() );
+				assertEquals( scenario.equals( "basis-only" ) ? 1 : 2, e.starts.size() );
+				assertDoesNotThrow( e.handle::close );
+			}
+		}
+	}
+
+	/** A basis gap can legitimately put the derived flow first in serial order. */
+	@Test
+	void laterCanonicalAncestorCannotChangeEarlierDerivedEligibility() {
+		for( String mode : List.of( "false", "true" ) ) {
+			Evidence e = execute( "basis-inverted", mode, 12 );
+			assertEquals( List.of( "register:A []", "register:Z []" ),
+					e.events.stream().filter( s -> s.startsWith( "register:" ) ).toList(),
+					"the absent intermediate basis must not be selected" );
+			assertEquals( List.of( "A []:SUCCESSFUL", "Z []:FAILED" ),
+					e.results.stream().sorted().toList(), e.failures::toString );
+			assertTrue( e.events.containsAll( List.of( "body:A", "body:Z" ) ) );
+			assertTrue( e.events.indexOf( "finish:A []" ) < e.events.indexOf( "body:Z" ) );
+			assertDoesNotThrow( e.handle::close );
+		}
+	}
+
+	/** Selected bases retain the existing serial error/assertion/abort oracle. */
+	@Test
+	void selectedBasesPreserveSerialHistoryWithoutBlockingUnrelatedWork() {
+		List<String> expected = List.of( "error []:FAILED", "errorChild []:FAILED",
+				"errorDependent []:ABORTED", "failure []:FAILED", "failureChild []:ABORTED",
+				"failureDependent []:FAILED", "success []:SUCCESSFUL", "successChild []:SUCCESSFUL",
+				"successDependent []:SUCCESSFUL" );
+		for( int target : List.of( 1, 2, 5, 12 ) ) {
+			Evidence e = execute( "oracle", target == 12 ? "true" : "false", target );
+			assertEquals( expected, e.results.stream().sorted().toList(), e.failures::toString );
+			assertEquals( 9, e.starts.size() );
+			assertEquals( 7, e.events.stream().filter( s -> s.startsWith( "body:" ) ).count() );
+			assertDoesNotThrow( e.handle::close );
+		}
+	}
+
+	/** A synchronous assertion timeout retains the unexpected-assertion oracle. */
+	@Test
+	void assertionTimeoutPermitsDependentSutEntryButSuppressesDerivedFlows() {
+		List<String> expected = List.of( "error []:FAILED", "errorChild []:FAILED",
+				"errorDependent []:ABORTED", "failure []:FAILED", "failureChild []:ABORTED",
+				"failureDependent []:FAILED", "success []:SUCCESSFUL", "successChild []:SUCCESSFUL",
+				"successDependent []:SUCCESSFUL" );
+		Evidence serial = execute( "oracle-timeout", "false", 12 );
+		Evidence parallel = execute( "oracle-timeout", "true", 12 );
+		for( Evidence e : List.of( serial, parallel ) ) {
+			assertEquals( expected, e.results.stream().sorted().toList(), e.failures::toString );
+			assertEquals( 9, e.starts.size() );
+			assertEquals( 6, e.failures.size(), e.failures::toString );
+			assertEquals( List.of( "body:error", "body:errorChild", "body:failure",
+					"body:failureDependent", "body:success", "body:successChild", "body:successDependent" ),
+					e.events.stream().filter( s -> s.startsWith( "body:" ) ).sorted().toList() );
+			assertTrue( e.events.contains( "timeout:completed" ),
+					"the timed work completed on the original invocation thread" );
+			assertNotNull( e.timeoutAssertion, "JUnit itself must have raised the timeout assertion" );
+			assertNotNull( e.timeoutResult );
+			assertSame( e.timeoutAssertion, e.timeoutResult.getThrowable().orElseThrow(),
+					"native failure must retain the original timeout assertion, not a replacement" );
+			assertTrue(
+					e.events.indexOf( "timeout:completed" ) < e.events.indexOf( "body:failureDependent" ) );
+			assertTrue( e.events.indexOf( "finish:failure []" ) < e.events.indexOf( "finish:success []" ),
+					"independent work must progress after the native timeout failure" );
+			assertDoesNotThrow( e.handle::close );
+		}
+		assertEquals( serial.results.stream().sorted().toList(),
+				parallel.results.stream().sorted().toList() );
+	}
+
+	/**
+	 * Explicit History policy still controls eligibility, not the readiness edge.
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = { "basis", "dependency", "stateless" })
+	void suppressionAndStatelessnessPreserveTheSerialOracle( String policy ) {
+		List<String> expected = List.of( "error []:FAILED", "errorChild []:FAILED",
+				"errorDependent []:" + (policy.equals( "basis" ) ? "ABORTED" : "FAILED"),
+				"failure []:FAILED", "failureChild []:" + (policy.equals( "basis" ) ? "FAILED" : "ABORTED"),
+				"failureDependent []:FAILED", "success []:SUCCESSFUL", "successChild []:SUCCESSFUL",
+				"successDependent []:SUCCESSFUL" );
+		try( var basis = AssertionOptions.SUPPRESS_BASIS_CHECK
+				.temporarily( "" + policy.equals( "basis" ) );
+				var dependency = AssertionOptions.SUPPRESS_DEPENDENCY_CHECK
+						.temporarily( "" + policy.equals( "dependency" ) ) ) {
+			for( String mode : List.of( "false", "true" ) ) {
+				Evidence e = execute( "oracle-" + policy, mode, 12 );
+				assertEquals( expected, e.results.stream().sorted().toList(), e.failures::toString );
+				assertEquals( 9, e.starts.size() );
+				assertEquals( 8, e.events.stream().filter( s -> s.startsWith( "body:" ) ).count() );
+				assertDoesNotThrow( e.handle::close );
+			}
+		}
+	}
+
+	/** A fatal processing Error is neither an ordinary failure nor a success. */
+	@Test
+	void fatalProcessingErrorStopsDependentAdmissionAndPreservesItsCause() {
+		Evidence e = execute( "fatal", "true", 12 );
+		assertTrue( e.results.contains( "A []:FAILED" ), e.results::toString );
+		assertFalse( e.events.contains( "body:B" ) );
+		assertTrue( e.failures.stream().anyMatch( t -> t instanceof LinkageError
+				&& t.getMessage().equals( "fatal SUT linkage" ) ), e.failures::toString );
+		assertThrows( IllegalStateException.class, e.handle::close );
+	}
+
 	/**
 	 * Missing early provenance rejects parameter resolution before factory entry.
 	 */
@@ -141,11 +320,17 @@ class FlowParallelBindingTest {
 	 */
 	@Test
 	void allPreparationMustBeAuditedBeforeAnySutUse() {
-		for( String mode : List.of( "report", "capture", "chain", "fanin",
+		for( String mode : List.of( "report", "capture", "chain", "fanin", "alias",
 				"transform" ) ) {
 			Evidence e = execute( mode, "true", 3 );
 			assertFalse( e.failures.isEmpty(), mode );
+			assertEquals( 0, e.starts.size(), mode );
 			assertFalse( e.events.stream().anyMatch( s -> s.startsWith( "body:" ) ), mode );
+			if( mode.equals( "alias" ) || mode.equals( "fanin" ) )
+				assertTrue( e.failures.stream().anyMatch( failure -> failure.toString()
+						.contains(
+								mode.equals( "alias" ) ? "shared message instance" : "fan-in publication" ) ),
+						e.failures::toString );
 		}
 	}
 
@@ -203,7 +388,8 @@ class FlowParallelBindingTest {
 		ParallelBindingFixture.evidence = e;
 		String hook = "junit.platform.launcher.interceptors.enabled";
 		String previous = System.getProperty( hook );
-		System.setProperty( hook, Boolean.toString( e.parallel && !scenario.equals( "nohook" ) ) );
+		System.setProperty( hook, Boolean.toString( e.parallel && !scenario.equals( "nohook" )
+				&& !scenario.startsWith( "duplicate" ) ) );
 		try {
 			var request = LauncherDiscoveryRequestBuilder.request()
 					.selectors( selectClass( ParallelBindingFixture.class ) )
@@ -217,13 +403,43 @@ class FlowParallelBindingTest {
 			if( !"absent".equals( parallel ) ) {
 				request.configurationParameter( "flow.parallel", parallel );
 			}
-			LauncherFactory.create( LauncherConfig.builder()
+			var launcher = LauncherFactory.create( LauncherConfig.builder()
 					.enableTestExecutionListenerAutoRegistration( false )
-					.enableLauncherSessionListenerAutoRegistration( false ).build() )
-					.execute( request.build(), e );
+					.enableLauncherSessionListenerAutoRegistration( false ).build() );
+			var actual = request.build();
+			if( scenario.startsWith( "duplicate" ) ) {
+				// Exercise the existing call-local receiver seam with real native IDs,
+				// not a fake executable or a private Jupiter descriptor.
+				try( FlowNativeCall call = new FlowNativeCall( actual ) ) {
+					launcher.execute( actual, call, e, new TestExecutionListener() {
+						@Override
+						public void dynamicTestRegistered( TestIdentifier id ) {
+							call.dynamicTestRegistered( id );
+						}
+
+						@Override
+						public void executionStarted( TestIdentifier id ) {
+							if( id.isTest() )
+								call.executionStarted( id );
+						}
+
+						@Override
+						public void executionFinished( TestIdentifier id, TestExecutionResult result ) {
+							if( id.isTest() )
+								call.executionFinished( id, scenario.equals( "duplicate" ) ? result
+										: TestExecutionResult
+												.failed( new IllegalStateException( "conflicting evidence" ) ) );
+						}
+					} );
+				}
+			}
+			else {
+				launcher.execute( actual, e );
+			}
 		}
 		finally {
-			e.release.countDown();
+			while( e.release.getCount() != 0 )
+				e.release.countDown();
 			if( previous == null )
 				System.clearProperty( hook );
 			else
@@ -236,6 +452,7 @@ class FlowParallelBindingTest {
 	 * Cross-worker observations and bounded coordination for one fixture execution.
 	 */
 	static class Evidence implements TestExecutionListener {
+		private final CountDownLatch laterAncestorFinished = new CountDownLatch( 1 );
 		/** Behavior selected by the enclosing test. */
 		final String scenario;
 		/** Whether guarded native parallel execution is requested. */
@@ -243,7 +460,7 @@ class FlowParallelBindingTest {
 		/** Signals entry of C, or the deliberately blocking busy-case body. */
 		final CountDownLatch cEntered = new CountDownLatch( 1 );
 		/** Releases the deliberately held independent body. */
-		final CountDownLatch release = new CountDownLatch( 1 );
+		final CountDownLatch release;
 		/** Ordered body and native-terminal observations. */
 		final List<String> events = new CopyOnWriteArrayList<>();
 		/** Native leaf display names paired with terminal statuses. */
@@ -268,6 +485,12 @@ class FlowParallelBindingTest {
 		FlowExecution handle;
 		/** Request value observed after dependency publication into B. */
 		volatile String bound;
+		/**
+		 * Original JUnit timeout assertion, captured and rethrown by the SUT callback.
+		 */
+		volatile AssertionFailedError timeoutAssertion;
+		/** Actual native result for the flow that raised the timeout assertion. */
+		volatile TestExecutionResult timeoutResult;
 
 		/**
 		 * Initializes per-execution scenario controls.
@@ -278,6 +501,12 @@ class FlowParallelBindingTest {
 		Evidence( String scenario, boolean parallel ) {
 			this.scenario = scenario;
 			this.parallel = parallel;
+			release = new CountDownLatch( scenario.equals( "fork" ) ? 2 : 1 );
+		}
+
+		@Override
+		public void dynamicTestRegistered( TestIdentifier id ) {
+			events.add( "register:" + id.getDisplayName() );
 		}
 
 		@Override
@@ -293,11 +522,18 @@ class FlowParallelBindingTest {
 				durations.put( id.getUniqueId(), System.nanoTime() - starts.get( id.getUniqueId() ) );
 				results.add( id.getDisplayName() + ":" + result.getStatus() );
 				events.add( "finish:" + id.getDisplayName() );
+				if( scenario.equals( "oracle-timeout" ) && id.getDisplayName().equals( "failure []" ) ) {
+					timeoutResult = result;
+					release.countDown();
+				}
+				if( id.getDisplayName().equals( "Z []" ) )
+					laterAncestorFinished.countDown();
 				if( id.getSource()
 						.filter( org.junit.platform.engine.support.descriptor.ClassSource.class::isInstance )
 						.isPresent() )
 					sources.incrementAndGet();
-				if( id.getDisplayName().equals( "B []" ) )
+				if( id.getDisplayName().equals( "B []" )
+						|| scenario.equals( "fork" ) && id.getDisplayName().equals( "D []" ) )
 					release.countDown();
 			}
 		}
@@ -323,7 +559,19 @@ class FlowParallelBindingTest {
 				if( e.scenario.equals( "stop" ) && context.getDisplayName().equals( "A []" ) ) {
 					e.handle.close();
 				}
-				invocation.proceed();
+				try {
+					if( e.parallel && e.scenario.equals( "basis-inverted" )
+							&& context.getDisplayName().equals( "A []" ) ) {
+						// Give an incorrectly admitted Z a bounded opportunity to publish
+						// UNEXPECTED before A's actual Flow preconditions, not after its body.
+						e.laterAncestorFinished.await( 1, TimeUnit.SECONDS );
+					}
+					invocation.proceed();
+				}
+				catch( IllegalArgumentException error ) {
+					if( !e.scenario.equals( "swallow-error" ) )
+						throw error;
+				}
 				if( e.scenario.equals( "external" ) && context.getDisplayName().equals( "A []" ) ) {
 					throw new IllegalStateException( "external native failure after real processing" );
 				}
@@ -412,7 +660,18 @@ class ParallelBindingFixture {
 		e.factory = Thread.currentThread();
 		e.handle = execution;
 		Flow a = create( "A", "published" );
-		Flow c = create( "C", "response" );
+		Flow c = e.scenario.equals( "alias" )
+				? Creator.build( f -> f.meta( m -> m.description( "C" ) )
+						.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+								.request( new Text( "shared" ) {
+									@Override
+									public Message child() {
+										return a.root().request();
+									}
+								} ).response( new Text( "response" ) ) ) )
+				: create( "C", "response" );
+		if( e.scenario.equals( "alias" ) )
+			assertSame( a.root().request(), c.root().request(), "builder must retain the alias control" );
 		Flow b = Creator.build( f -> {
 			f.meta( m -> m.description( "B" ) );
 			if( e.scenario.equals( "chain" ) )
@@ -427,13 +686,30 @@ class ParallelBindingFixture {
 		List<Flow> flows = e.scenario.equals( "busy" )
 				? IntStream.range( 0, 80 ).mapToObj( n -> create( String.format( "%03d", n ), "response" ) )
 						.toList()
-				: List.of( a, b, c );
+				: e.scenario.startsWith( "oracle" ) ? new Mdl().flows().toList() : List.of( a, b, c );
+		if( e.scenario.startsWith( "basis-" ) ) {
+			Flow basis = e.scenario.equals( "basis-inverted" ) ? create( "Z", "published" ) : a;
+			Flow absent = Deriver.build( basis, f -> f.meta( m -> m.description( "absent" ) ) );
+			Flow derived = Deriver.build( absent, f -> f.meta( m -> m.description(
+					e.scenario.equals( "basis-inverted" ) ? "A" : "D" ) ) );
+			flows = e.scenario.equals( "basis-only" ) ? List.of( derived ) : List.of( basis, derived );
+		}
+		if( e.scenario.startsWith( "duplicate" ) ) {
+			flows = List.of( a );
+		}
+		if( e.scenario.equals( "fork" ) ) {
+			Flow d = Creator.build( f -> f.meta( m -> m.description( "D" ) ).prerequisite( a )
+					.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+							.request( new Text( "request" ) ).response( new Text( "response" ) ) ) );
+			flows = List.of( a, b, c, d );
+		}
+		List<Flow> selected = flows;
 		PreparedFlocessor runner = execution.flocessor( "real binding", new Mdl() {
 			@Override
 			public Stream<Flow> flows( Set<String> include, Set<String> exclude ) {
-				return flows.stream();
+				return selected.stream();
 			}
-		} ).system( State.FUL, Actrs.BEN );
+		} ).system( e.scenario.equals( "oracle-stateless" ) ? State.LESS : State.FUL, Actrs.BEN );
 		if( !e.scenario.equals( "unknown" ) ) {
 			runner.independent( "owned synchronous resources and callbacks; no affinity",
 					f -> !e.scenario.equals( "partial" ) || f == a );
@@ -460,6 +736,34 @@ class ParallelBindingFixture {
 				assertEquals( token, FlowExtension.invocationContext().getUniqueId() );
 			e.threads.add( Thread.currentThread() );
 			e.events.add( "body:" + name );
+			if( e.scenario.startsWith( "oracle" ) ) {
+				if( e.scenario.equals( "oracle-timeout" ) && name.equals( "failure" ) ) {
+					Thread caller = Thread.currentThread();
+					try {
+						assertTimeout( Duration.ofMillis( 1 ), () -> {
+							// Exceed even a coarse millisecond clock's budget without a speed threshold.
+							// No preemption, separate body thread, or sleep is involved.
+							long start = System.nanoTime();
+							while( System.nanoTime() - start < TimeUnit.MILLISECONDS.toNanos( 50 ) )
+								Thread.onSpinWait();
+							assertSame( caller, Thread.currentThread() );
+							e.events.add( "timeout:completed" );
+						} );
+					}
+					catch( AssertionFailedError timeout ) {
+						e.timeoutAssertion = timeout;
+						throw timeout;
+					}
+				}
+				if( e.scenario.equals( "oracle-timeout" ) && name.equals( "success" ) )
+					await( e.release );
+				if( name.startsWith( "error" ) )
+					throw new IllegalArgumentException( "no thanks!" );
+				assertion.actual().response( name.startsWith( "failure" )
+						? "unexpected content!".getBytes( UTF_8 )
+						: assertion.expected().response().content() );
+				return;
+			}
 			if( e.scenario.equals( "busy" ) ) {
 				if( name.equals( "000" ) ) {
 					e.cEntered.countDown();
@@ -470,7 +774,7 @@ class ParallelBindingFixture {
 					e.release.countDown();
 				}
 			}
-			if( e.scenario.equals( "overlap" ) ) {
+			if( e.scenario.equals( "overlap" ) || e.scenario.equals( "fork" ) ) {
 				if( name.equals( "C" ) ) {
 					e.cEntered.countDown();
 					await( e.release );
@@ -479,15 +783,24 @@ class ParallelBindingFixture {
 				if( name.equals( "A" ) )
 					await( e.cEntered );
 			}
-			if( name.equals( "A" ) && e.scenario.equals( "error" ) )
+			if( name.equals( "A" )
+					&& (e.scenario.equals( "error" ) || e.scenario.equals( "swallow-error" )) )
 				throw new IllegalArgumentException( "SUT error" );
+			if( name.equals( "A" ) && e.scenario.equals( "timeout" ) )
+				throw new java.io.UncheckedIOException(
+						new java.net.SocketTimeoutException( "SUT timed out" ) );
+			if( name.equals( "A" ) && e.scenario.equals( "fatal" ) )
+				throw new LinkageError( "fatal SUT linkage" );
 			if( name.equals( "B" ) ) {
 				e.bound = assertion.expected().request().assertable();
 				assertEquals( e.scenario.equals( "comparison" ) ? "unexpected" : "published", e.bound );
 			}
-			assertion.actual().response( name.equals( "A" ) && e.scenario.equals( "comparison" )
-					? "unexpected".getBytes( UTF_8 )
-					: assertion.expected().response().content() );
+			assertion.actual()
+					.response( name.equals( "Z" ) && e.scenario.equals( "basis-inverted" )
+							|| name.equals( "A" )
+									&& (e.scenario.equals( "comparison" ) || e.scenario.equals( "basis-gap" ))
+											? "unexpected".getBytes( UTF_8 )
+											: assertion.expected().response().content() );
 		} );
 		Stream<DynamicNode> tests = runner.tests();
 		assertThrows( IllegalStateException.class, () -> runner.independent( "late", f -> true ) );
