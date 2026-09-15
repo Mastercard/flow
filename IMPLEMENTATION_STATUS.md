@@ -22,6 +22,7 @@ authoritative; no frozen feasibility evidence or design decision was rewritten.
 | 13 | Shared-core dependency-ready admission, coherent processing/native accounting, sparse canonical basis visibility, direct successor release and idempotent evidence | `FlowAdmissionTest`, actual serial/native `FlowParallelBindingTest` oracles, resource/queueing and packaged-consumer regressions |
 | 14 (code; native REPORT acceptance pending 23) | Canonical destination and identical-message participant precedence; retained synchronous binding operations, partial effects and order-only eligibility | `DependenciesTest`, `AbstractFlocessorTest`, `FlowAdmissionTest`, real serial/native publication and fault oracles |
 | 15 (supported execution slice) | Selected-only chain planning, whole-interval grants, default global exclusion, explicit whole-chain isolation audits and safe native member advancement | Core capacities 1/2/5; real serial/parallel scope, payload, cleanup, stop-gate and native-inline regressions; context/fixture integration remains 17 |
+| 16 | Atomic readiness-cohort publication; oldest-ready conflict protection, disjoint bypass, exclusive drain/resume and cancellation wakeups | `ResourcePlanningTest`, `FlowAdmissionTest`, actual separate native pools and serial/parallel cooperation; narrow race qualifications below |
 
 The new caller permits `flow.parallel=true` only through the checked native owner.
 Named bulk `resources()`, `exclusive()` and `independent()` declarations are resolved
@@ -29,10 +30,20 @@ once after dependency expansion. Unmatched work remains UNKNOWN/global-exclusive
 including against explicitly known-empty work. Reporting/capture/replay/context
 and other unchecked parallel surfaces fail closed before SUT use. These temporary
 implementation boundaries are not permanent public support restrictions. There is
-no completed fairness or workload-speedup claim.
+no workload-speedup or wall-clock scheduling guarantee.
 Report-only failure classification and run-owned final-only activation are unfinished.
 
 ## Blocking work and unpassed gates
+
+### Unresolved report-reuse failure
+
+One focused run failed `scopedCompletionAllowsReportReuseAfterRepeatedExecution`:
+expected `abc [] SUCCESS`, observed `abc [] ERROR`. Its cause remains unestablished.
+The original failed log is retained; later passes are not an explanation or a fix.
+Fifty sequential exact-method runs and twelve seeded class-order runs (336 cases)
+did not reproduce it. A 200-run attempt was incomplete and is not a passing gate.
+The assertion now includes existing processing events on failure; temporary debug
+instrumentation was removed. Reporting/final acceptance must retain this open item.
 
 ### 04: destination claims and explicit completion
 
@@ -110,7 +121,7 @@ results below predate this slice; the next full run is reserved for final integr
 - 05 needs the actual 6,000–7,000-flow consuming workload and resource-owner input.
   That environment was not supplied; the reported 52/25-minute observations are
   not new measurements or a diagnosed serial-tail cause.
-- 16–19 and 21–27 are not delivered. This includes fairness and actual context/fixture ownership,
+- 17–19 and 21–27 are not delivered. This includes actual context/fixture ownership,
   bounded cancellation, correlated capture/cutoff, truthful stopped-run final
   artifacts, integrated compatibility, performance assessment and rollout.
 
@@ -145,6 +156,41 @@ original and reviewed evidence are archived separately; no historical IDE fixtur
 was altered. Human-only IntelliJ and 6,000-flow checks remain deferred until the end.
 
 ## Validation record
+
+### Fair ready-admission slice
+
+Atomic insertion of a canonical ready cohort into the shared pending set is the
+scope-wide readiness-publication point. Roots publish during preparation; native
+completion publishes newly ready owners before factory visibility and parent-grant
+release. Retries and capacity blockage do not reset age. Every older conflicting
+request protects its entire set without partial holdings; disjoint requests may
+pass. Ready exclusive/UNKNOWN requests gate newer work, including EMPTY, while
+dependency-blocked exclusives have no priority that could block their prerequisites.
+Chain continuation keeps existing ownership rather than registering fresh priority.
+
+Pending withdrawal wakes affected coordinators outside both locks. Completion keeps
+direct successor counters; pending conflict/retry/notification scans remain separate
+resource costs, not a whole-workload linearity claim. Core capacities 1/2/5 and actual
+separate native pools cover older-root/new-cheaper-child order, cross-runner conflicts,
+disjoint progress, exclusive drainage/resumption and stop withdrawal.
+
+Review corrected test paths that could leak pending priority or unexpected probe
+grants when an assertion failed. Sixteen deliberate negative-control failures each
+proved same-JVM exclusive reuse before rethrowing the primary failure; these are not
+passing tests. Final standards/spec follow-up found zero actionable source findings,
+separate from the open report-reuse validation item above.
+
+The broader gate completed **399 cases: 397 passed, two existing Windows symlink
+skips, zero failures/errors** (10 API, 27 message, 195 core, 167 adapter). Three
+271-test repeats and another 271-test install gate passed without failures/skips.
+All four existing packaged-consumer configurations passed on the new same binaries.
+Java 17.0.19, both skip flags and failure-ignore disabled, and 39 real frontend assets
+were used. Exact stop-between-publication/commit, tentative acquisition/commit and
+factory wait-transition pauses remain source-guard reasoning rather than controlled
+runtime proof. Broader chain/fairness integration, hosts and full acceptance remain 25.
+All 637 clean-export documentation checks passed, with tracked Markdown and staged
+files matching after line-ending normalization. The separate fairness16 archive
+retains 56 evidence files, including the unresolved report investigation and failures.
 
 ### Uninterrupted chain slice
 

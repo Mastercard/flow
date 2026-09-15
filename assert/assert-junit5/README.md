@@ -269,14 +269,32 @@ The public core interface also permits an explicit cooperating fixture owner to
 create a `Capacity`, `register` a dependency-ready whole-set request, `tryAcquire`
 a `Grant`, cancel an ungranted request, and close a proven unused or safely finished
 grant. Wakeups must be short and nonthrowing. This does **not** move fixture creation,
-reset or teardown responsibility into Flow. Pending request positions are stable;
-scope-wide oldest-ready conflicting fairness and exclusive drain gates remain
-ticket 16 work, so starvation is not yet prevented.
+reset or teardown responsibility into Flow.
+
+Conflicting requests retain scope-wide oldest-dependency-ready priority across
+resource/capacity waits and retries. An older `{A, B}` blocked on B protects free A
+from newer conflicts without holding it; genuinely disjoint C may pass. Ready
+exclusive/UNKNOWN work gates all newer requests, including EMPTY, even while its
+own capacity is busy. Older pending work keeps precedence; active work drains,
+the exclusive runs alone, and admission resumes after safe release. Dependency-
+blocked work has no age or gate. Context/canonical preference cannot override an
+older conflicting request. This is not a wall-clock termination guarantee.
+
+The readiness linearization point is atomic insertion into the shared pending set,
+not a timestamp on invisible work. Parallel preparation publishes all root owners
+as one canonical cohort; native completion publishes only newly ready owners as a
+canonical cohort before releasing the parent grant. Publication is outside History's
+lock and precedes factory visibility; a concurrent stop withdraws the cohort rather
+than reopening admission. Serial publishes its next canonical unit on actual
+SAME_THREAD advance after prior native release, not early during preparation.
+Both modes retain one request across retries and keep the existing grant across
+chain continuation. Withdrawal itself wakes other factories outside both locks,
+even when no grant is released; completing workers never wait for admission.
 
 Admission is not claimed to be linear: a blocked prefix of B ready nodes can be
-retried for each of D disjoint admissions (B×D attempts), and grant release scans
-pending requests to deduplicate coordinator wakeups. Ownership-version-aware scan
-progress and relevant-ready invalidation remain resource/fairness work for ticket 16.
+retried for each of D disjoint admissions (B×D attempts). Each attempt can compare
+older pending requirements; release and withdrawal scan pending requests to
+deduplicate coordinator wakeups. These resource reconsideration costs are separate.
 Dependency readiness is measured separately: each prepared node is admitted once
 and each deduplicated successor edge is visited once, with O(V+E) bookkeeping/storage
 plus O(V log V) ordered-ready-set work. Basis planning visits each distinct reachable

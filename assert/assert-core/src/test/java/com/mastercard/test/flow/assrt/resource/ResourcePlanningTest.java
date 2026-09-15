@@ -10,6 +10,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.builder.Creator;
@@ -166,11 +168,15 @@ class ResourcePlanningTest {
 		try {
 			try( Grant held = first.tryAcquire() ) {
 				assertNotNull( held );
-				assertNull( second.tryAcquire() );
+				try( Grant denied = second.tryAcquire() ) {
+					assertNull( denied );
+				}
 			}
 			try( Grant held = second.tryAcquire() ) {
 				assertNotNull( held );
-				assertNull( third.tryAcquire() );
+				try( Grant denied = third.tryAcquire() ) {
+					assertNull( denied );
+				}
 			}
 			try( Grant held = third.tryAcquire() ) {
 				assertNotNull( held );
@@ -184,35 +190,53 @@ class ResourcePlanningTest {
 	}
 
 	/**
-	 * A blocked whole-set request must not retain a partial set or execution slot.
+	 * A blocked whole-set request protects free keys without holding them or a
+	 * slot.
 	 */
-	@Test
-	void blockedWholeSetHoldsNeitherFreeKeyNorExecutionCapacity() {
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 2, 5 })
+	void blockedWholeSetHoldsNeitherFreeKeyNorExecutionCapacity( int limit ) {
 		ResourceReservations scope = ResourceReservations.shared();
-		var capacity = scope.capacity( 1 );
+		var capacity = scope.capacity( limit );
 		Request b = scope.register( scope.capacity( 1 ), requirements( "B" ), () -> {
 		} );
 		Request both = scope.register( capacity, requirements( "A", new String( "B" ) ), () -> {
 		} );
 		Request a = scope.register( capacity, requirements( "A" ), () -> {
 		} );
+		Request c = scope.register( capacity, requirements( "C" ), () -> {
+		} );
 		try {
 			try( Grant heldB = b.tryAcquire() ) {
 				assertNotNull( heldB );
-				assertNull( both.tryAcquire() );
-				try( Grant freeA = a.tryAcquire() ) {
-					assertNotNull( freeA, "blocked set held neither A nor its owner's only slot" );
-					assertNull( both.tryAcquire() );
+				try( Grant denied = both.tryAcquire() ) {
+					assertNull( denied );
+				}
+				try( Grant youngerA = a.tryAcquire(); Grant disjoint = c.tryAcquire() ) {
+					assertNull( youngerA, "older AB protects A even while B is busy" );
+					assertNotNull( disjoint, "disjoint C can use the blocked owner's capacity" );
+					try( Grant denied = both.tryAcquire() ) {
+						assertNull( denied );
+					}
+				}
+			}
+			for( int retry = 0; retry < 3; retry++ ) {
+				try( Grant younger = a.tryAcquire() ) {
+					assertNull( younger, "retry order cannot replace dependency-ready age" );
 				}
 			}
 			try( Grant complete = both.tryAcquire() ) {
 				assertNotNull( complete );
+			}
+			try( Grant after = a.tryAcquire() ) {
+				assertNotNull( after );
 			}
 		}
 		finally {
 			b.cancel();
 			both.cancel();
 			a.cancel();
+			c.cancel();
 		}
 	}
 
@@ -232,15 +256,25 @@ class ResourcePlanningTest {
 		try {
 			try( Grant held = first.tryAcquire() ) {
 				assertNotNull( held );
-				assertNull( second.tryAcquire() );
+				try( Grant denied = second.tryAcquire() ) {
+					assertNull( denied );
+				}
 				try( Grant disjointOwner = other.tryAcquire() ) {
-					assertNotNull( disjointOwner, "capacity-blocked request must not reserve its key" );
+					assertNull( disjointOwner, "capacity-blocked older work protects its key" );
 				}
 				first.cancel();
-				assertNull( second.tryAcquire(), "cancelling a granted request cannot release live use" );
+				try( Grant denied = second.tryAcquire() ) {
+					assertNull( denied, "cancelling a granted request cannot release live use" );
+				}
+				second.cancel();
+				try( Grant free = other.tryAcquire() ) {
+					assertNotNull( free, "withdrawal proves the older request held no partial key" );
+				}
 			}
 			second.cancel();
-			assertNull( second.tryAcquire() );
+			try( Grant denied = second.tryAcquire() ) {
+				assertNull( denied );
+			}
 		}
 		finally {
 			first.cancel();
@@ -258,13 +292,14 @@ class ResourcePlanningTest {
 	void releaseNotifiesOutsideReservationLockAndOnlyOnce() throws Exception {
 		ResourceReservations scope = ResourceReservations.shared();
 		AtomicInteger notified = new AtomicInteger();
+		List<Request> probes = new ArrayList<>();
 		Request first = scope.register( scope.capacity( 1 ), requirements( "notify" ), () -> {
 		} );
 		Request second = scope.register( scope.capacity( 1 ), requirements( "notify" ), () -> {
 			FutureTask<Boolean> probe = new FutureTask<>( () -> {
 				Request nested = scope.register( scope.capacity( 1 ), requirements(), () -> {
 				} );
-				nested.cancel();
+				probes.add( nested );
 				return true;
 			} );
 			Thread thread = new Thread( probe, "reservation-lock-probe" );
@@ -279,7 +314,9 @@ class ResourcePlanningTest {
 		} );
 		try( Grant held = first.tryAcquire() ) {
 			assertNotNull( held );
-			assertNull( second.tryAcquire() );
+			try( Grant denied = second.tryAcquire() ) {
+				assertNull( denied );
+			}
 			held.close();
 			held.close();
 			assertEquals( 1, notified.get() );
@@ -287,6 +324,108 @@ class ResourcePlanningTest {
 		finally {
 			first.cancel();
 			second.cancel();
+			probes.forEach( Request::cancel );
+		}
+	}
+
+	/**
+	 * The exclusive gate exists before its owner has capacity or retries admission.
+	 *
+	 * @param unknown Whether exclusion is the UNKNOWN fallback
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void readyExclusiveGatesNewerEmptyWorkButPreservesOlderPending( boolean unknown ) {
+		ResourceReservations scope = ResourceReservations.shared();
+		var capacity = scope.capacity( 1 );
+		Request active = scope.register( capacity, requirements(), () -> {
+		} );
+		Request older = scope.register( scope.capacity( 1 ), requirements( "older" ), () -> {
+		} );
+		ResourceRequirements reset = unknown ? new ResourceRules().resolve( null )
+				: new ResourceRules().exclusive( "reset", f -> true ).resolve( null );
+		Request exclusive = scope.register( capacity, reset, () -> {
+		} );
+		Request empty = scope.register( scope.capacity( 1 ), requirements(), () -> {
+		} );
+		Request disjoint = scope.register( scope.capacity( 1 ), requirements( "disjoint" ), () -> {
+		} );
+		try( Grant held = active.tryAcquire(); Grant beforeGate = older.tryAcquire() ) {
+			assertNotNull( held );
+			assertNotNull( beforeGate, "older pending work precedes even a ready exclusive" );
+			try( Grant deniedEmpty = empty.tryAcquire(); Grant deniedKey = disjoint.tryAcquire() ) {
+				assertNull( deniedEmpty, "even EMPTY is gated before exclusive's first try" );
+				assertNull( deniedKey );
+			}
+			try( Grant denied = exclusive.tryAcquire() ) {
+				assertNull( denied );
+			}
+			held.close();
+			try( Grant denied = exclusive.tryAcquire() ) {
+				assertNull( denied, "other active work still has to drain" );
+			}
+			beforeGate.close();
+			try( Grant alone = exclusive.tryAcquire() ) {
+				assertNotNull( alone );
+				try( Grant deniedEmpty = empty.tryAcquire(); Grant deniedKey = disjoint.tryAcquire() ) {
+					assertNull( deniedEmpty );
+					assertNull( deniedKey );
+				}
+			}
+			try( Grant resumedEmpty = empty.tryAcquire(); Grant resumedKey = disjoint.tryAcquire() ) {
+				assertNotNull( resumedEmpty );
+				assertNotNull( resumedKey );
+			}
+		}
+		finally {
+			List.of( active, older, exclusive, empty, disjoint ).forEach( Request::cancel );
+		}
+	}
+
+	/**
+	 * Withdrawal itself enables admission; no grant release is available to wake
+	 * it.
+	 *
+	 * @throws Exception If the cross-thread reservation probe fails
+	 */
+	@Test
+	void cancellationNotifiesOutsideReservationLockWithoutAnyRelease() throws Exception {
+		ResourceReservations scope = ResourceReservations.shared();
+		AtomicInteger notified = new AtomicInteger();
+		List<Request> probes = new ArrayList<>();
+		Request older = scope.register( scope.capacity( 1 ), requirements( "cancel" ), () -> {
+		} );
+		Request newer = scope.register( scope.capacity( 1 ), requirements( "cancel" ), () -> {
+			FutureTask<Boolean> probe = new FutureTask<>( () -> {
+				probes.add( scope.register( scope.capacity( 1 ), requirements(), () -> {
+				} ) );
+				return true;
+			} );
+			new Thread( probe, "cancel-lock-probe" ).start();
+			try {
+				assertTrue( probe.get( 5, TimeUnit.SECONDS ) );
+				notified.incrementAndGet();
+			}
+			catch( Exception failure ) {
+				throw new AssertionError( failure );
+			}
+		} );
+		try {
+			try( Grant denied = newer.tryAcquire() ) {
+				assertNull( denied );
+			}
+			older.cancel();
+			assertEquals( 1, notified.get(), "withdrawal must wake the gated request" );
+			older.cancel();
+			assertEquals( 1, notified.get(), "duplicate withdrawal has no effect" );
+			try( Grant resumed = newer.tryAcquire() ) {
+				assertNotNull( resumed );
+			}
+		}
+		finally {
+			newer.cancel();
+			older.cancel();
+			probes.forEach( Request::cancel );
 		}
 	}
 

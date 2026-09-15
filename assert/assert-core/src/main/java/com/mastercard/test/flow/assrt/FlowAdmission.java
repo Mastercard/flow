@@ -122,18 +122,39 @@ public final class FlowAdmission {
 		basisPrecedence( flows, indices, planned );
 		publicationPrecedence( flows, indices, planned );
 		chainPrecedence( chains, planned );
+		List<Integer> roots = new ArrayList<>();
+		for( int i = 0; i < planned.size(); i++ )
+			if( planned.get( i ).remaining == 0 )
+				roots.add( i );
 		synchronized( history ) {
 			if( prepared || released || stopped != null ) {
 				throw new IllegalStateException( "Flow admission cannot be prepared", stopped );
 			}
 			nodes = planned;
-			for( int i = 0; i < nodes.size(); i++ ) {
-				if( nodes.get( i ).remaining == 0 ) {
-					ready.add( i );
-				}
-			}
 			prepared = true;
 		}
+		publishReady( planned, roots );
+	}
+
+	private void publishReady( List<Node> planned, List<Integer> cohort ) {
+		if( cohort.isEmpty() )
+			return;
+		cohort.sort( Integer::compareTo );
+		List<Node> owners = cohort.stream().map( planned::get ).filter( n -> n.owner == n ).toList();
+		List<Request> requests = ResourceReservations.shared().register( capacity,
+				owners.stream().map( n -> n.requirements ).toList(), resourceChanged );
+		boolean keep;
+		synchronized( history ) {
+			keep = stopped == null && !released;
+			if( keep ) {
+				for( int i = 0; i < owners.size(); i++ )
+					owners.get( i ).request = requests.get( i );
+				ready.addAll( cohort );
+				wake();
+			}
+		}
+		if( !keep )
+			requests.forEach( Request::cancel );
 	}
 
 	private static void precedence( List<Node> planned, int before, int after ) {
@@ -331,21 +352,6 @@ public final class FlowAdmission {
 				}
 				request = node.request;
 			}
-			if( request == null ) {
-				request = ResourceReservations.shared().register( capacity, node.requirements,
-						resourceChanged );
-				boolean keep;
-				synchronized( history ) {
-					keep = stopped == null;
-					if( keep ) {
-						node.request = request;
-					}
-				}
-				if( !keep ) {
-					request.cancel();
-					continue;
-				}
-			}
 			Grant grant = request.tryAcquire();
 			if( grant != null ) {
 				synchronized( history ) {
@@ -483,8 +489,11 @@ public final class FlowAdmission {
 	 */
 	public void finished( String id, Outcome outcome, Throwable failure ) {
 		Grant finished = null;
+		List<Integer> cohort = new ArrayList<>();
+		List<Node> planned;
 		try {
 			synchronized( history ) {
+				planned = nodes;
 				Node node = nodes.get( index( id ) );
 				if( node.outcome != null ) {
 					if( node.outcome != outcome || node.nativeFailure != failure ) {
@@ -503,13 +512,16 @@ public final class FlowAdmission {
 					for( int successor : node.successors ) {
 						successorVisits++;
 						if( --nodes.get( successor ).remaining == 0 ) {
-							ready.add( successor );
+							cohort.add( successor );
 						}
 					}
 				}
 				finished = finishedGrant( node );
 				wake();
 			}
+			// Publish before returning the completed parent's grant. Factories cannot
+			// see a half-published cohort, and continuations keep their existing grant.
+			publishReady( planned, cohort );
 		}
 		finally {
 			if( finished != null ) {

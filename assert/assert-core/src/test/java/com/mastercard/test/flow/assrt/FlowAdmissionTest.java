@@ -46,6 +46,314 @@ import com.mastercard.test.flow.util.Transmission.Type;
  */
 class FlowAdmissionTest {
 	/**
+	 * All joint successors precede a request created by the parent's release
+	 * listener, without making the completing worker wait for admission.
+	 *
+	 * @param capacity Outstanding grant limit
+	 * @throws Exception If completion waits for the factory
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 2, 5 })
+	void completionPublishesCanonicalCohortBeforeReleasingParent( int capacity ) throws Exception {
+		Flow parent = flow( "parent" );
+		List<Flow> flows = List.of( parent, flow( "first child", parent ),
+				flow( "second child", parent ) );
+		ResourceRules rules = new ResourceRules().resources( "parent", f -> f == parent, "cohort-B" )
+				.resources( "children", f -> f != parent, "cohort-A" );
+		FlowAdmission run = new FlowAdmission( capacity );
+		var scope = ResourceReservations.shared();
+		AtomicReference<ResourceReservations.Request> observer = new AtomicReference<>();
+		AtomicReference<ResourceReservations.Request> newer = new AtomicReference<>();
+		AtomicReference<Boolean> bypassed = new AtomicReference<>();
+		List<Integer> entered = new ArrayList<>();
+		List<Integer> admitted = new ArrayList<>();
+		boolean finalized = false;
+		Throwable primary = null;
+		try {
+			run.prepare( flows, flows.stream().map( rules::resolve ).toList() );
+			assertEquals( 0, poll( run, admitted ) );
+			enter( run, 0 );
+			entered.add( 0 );
+			observer.set( scope.register( scope.capacity( 1 ),
+					new ResourceRules().resources( "observer", f -> true ).resolve( null ), () -> {
+						observer.get().cancel();
+						var request = scope.register( scope.capacity( 1 ), rules.resolve( flows.get( 1 ) ),
+								() -> {
+								} );
+						newer.set( request );
+						try( Grant grant = request.tryAcquire() ) {
+							bypassed.set( grant != null );
+						}
+					} ) );
+			run.processed( 0, Result.SUCCESS, null );
+			FutureTask<Void> completion = new FutureTask<>( () -> {
+				run.finished( "0", SUCCESSFUL, null );
+				return null;
+			} );
+			new Thread( completion, "native-completion" ).start();
+			completion.get( 5, TimeUnit.SECONDS );
+			admitted.remove( Integer.valueOf( 0 ) );
+			assertEquals( false, bypassed.get(), "children must be published before parent release" );
+			for( int expected : new int[] { 1, 2 } ) {
+				int next = poll( run, admitted );
+				enter( run, next );
+				entered.add( next );
+				assertEquals( expected, next, "joint readiness has canonical ties" );
+				try( Grant grant = newer.get().tryAcquire() ) {
+					assertNull( grant, "both children were published before the release listener" );
+				}
+				complete( run, next );
+				admitted.remove( Integer.valueOf( next ) );
+			}
+			try( Grant grant = newer.get().tryAcquire() ) {
+				assertNotNull( grant );
+			}
+			assertEquals( 2, run.successorVisits() );
+			finish( run );
+			finalized = true;
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			if( observer.get() != null )
+				observer.get().cancel();
+			if( newer.get() != null )
+				newer.get().cancel();
+			if( !finalized )
+				cleanup( run, admitted, entered, primary );
+		}
+	}
+
+	private static void await( CountDownLatch latch ) {
+		try {
+			assertTrue( latch.await( 5, TimeUnit.SECONDS ), "admission coordination timed out" );
+		}
+		catch( InterruptedException failure ) {
+			Thread.currentThread().interrupt();
+			throw new AssertionError( failure );
+		}
+	}
+
+	/**
+	 * A dependency-blocked exclusive has no age or gate, even with a cheap rank.
+	 *
+	 * @param capacity Outstanding grant limit
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 2, 5 })
+	void dependencyBlockedExclusiveCannotGateItsPrerequisiteOrOlderRoot( int capacity ) {
+		Flow parent = flow( "parent" );
+		Flow exclusive = flow( "exclusive", parent );
+		Flow older = flow( "older" );
+		List<Flow> flows = List.of( parent, exclusive, older );
+		ResourceRules rules = new ResourceRules().resources( "empty", f -> true )
+				.exclusive( "reset", f -> f == exclusive );
+		FlowAdmission run = new FlowAdmission( capacity );
+		List<Integer> entered = new ArrayList<>();
+		List<Integer> admitted = new ArrayList<>();
+		boolean finalized = false;
+		Throwable primary = null;
+		try {
+			run.prepare( flows, flows.stream().map( rules::resolve ).toList() );
+			int first = poll( run, admitted );
+			enter( run, first );
+			entered.add( first );
+			assertEquals( 0, first );
+			if( capacity > 1 ) {
+				int next = poll( run, admitted );
+				enter( run, next );
+				entered.add( next );
+				assertEquals( 2, next, "dependency-blocked exclusive cannot gate EMPTY" );
+			}
+			complete( run, 0 );
+			admitted.remove( Integer.valueOf( 0 ) );
+			if( capacity == 1 ) {
+				int next = poll( run, admitted );
+				enter( run, next );
+				entered.add( next );
+				assertEquals( 2, next, "older pending root precedes newly ready exclusive" );
+			}
+			assertEquals( WAITING, poll( run, admitted ), "exclusive must drain older active work" );
+			complete( run, 2 );
+			admitted.remove( Integer.valueOf( 2 ) );
+			assertEquals( 1, poll( run, admitted ) );
+			enter( run, 1 );
+			entered.add( 1 );
+			complete( run, 1 );
+			admitted.remove( Integer.valueOf( 1 ) );
+			finish( run );
+			finalized = true;
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			if( !finalized )
+				cleanup( run, admitted, entered, primary );
+		}
+	}
+
+	/**
+	 * Stop withdraws a ready gate without a release event or callbacks under either
+	 * bookkeeping lock.
+	 *
+	 * @throws Exception If a callback or lock probe fails to drain
+	 */
+	@Test
+	void stoppedPendingGateWakesOutsideBothLocksAndNeverReopens() throws Exception {
+		FlowAdmission run = new FlowAdmission( 1 );
+		Flow flow = flow( "never admitted" );
+		ResourceRules rules = new ResourceRules().exclusive( "gate", f -> true );
+		run.prepare( List.of( flow ), List.of( rules.resolve( flow ) ) );
+		var scope = ResourceReservations.shared();
+		var empty = new ResourceRules().resources( "empty", f -> true ).resolve( null );
+		CountDownLatch notified = new CountDownLatch( 1 );
+		CountDownLatch release = new CountDownLatch( 1 );
+		var waiting = scope.register( scope.capacity( 1 ), empty, () -> {
+			notified.countDown();
+			await( release );
+		} );
+		FutureTask<Void> stopping = new FutureTask<>( () -> {
+			run.stop( new IllegalStateException( "requested stop" ) );
+			return null;
+		} );
+		Thread thread = new Thread( stopping, "admission-stop" );
+		FutureTask<Boolean> probe = new FutureTask<>( () -> {
+			synchronized( run.history() ) {
+				try( Grant granted = waiting.tryAcquire() ) {
+					return granted != null;
+				}
+			}
+		} );
+		Throwable primary = null;
+		try {
+			try( Grant grant = waiting.tryAcquire() ) {
+				assertNull( grant, "unpolled ready exclusive already gates EMPTY" );
+			}
+			thread.start();
+			await( notified );
+			new Thread( probe, "admission-lock-probe" ).start();
+			assertTrue( probe.get( 5, TimeUnit.SECONDS ), "both locks are free during notification" );
+			assertThrows( IllegalStateException.class, run::poll );
+			assertFalse( run.enter( 0, "never emitted" ) );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			release.countDown();
+			try {
+				if( thread.getState() != Thread.State.NEW )
+					stopping.get( 5, TimeUnit.SECONDS );
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				primary.addSuppressed( cleanup );
+			}
+			finally {
+				waiting.cancel();
+				run.stop( new IllegalStateException( "test cleanup" ) );
+			}
+		}
+		assertThrows( IllegalStateException.class, run::poll );
+	}
+
+	/**
+	 * Readiness is published before a factory polls, not discovered by its retry
+	 * order.
+	 *
+	 * @param capacity Outstanding grant limit
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 2, 5 })
+	void oldReadyRootPrecedesNewLowerCanonicalChild( int capacity ) {
+		Flow parent = flow( "parent" );
+		Flow child = flow( "child", parent );
+		Flow oldRoot = flow( "old root" );
+		List<Flow> flows = List.of( parent, child, oldRoot );
+		ResourceRules rules = new ResourceRules().resources( "parent", f -> f == parent, "B" )
+				.resources( "conflict", f -> f != parent, "A" );
+		FlowAdmission run = new FlowAdmission( capacity );
+		List<Integer> entered = new ArrayList<>();
+		List<Integer> admitted = new ArrayList<>();
+		boolean finalized = false;
+		Throwable primary = null;
+		try {
+			run.prepare( flows, flows.stream().map( rules::resolve ).toList() );
+			assertEquals( 0, poll( run, admitted ) );
+			enter( run, 0 );
+			entered.add( 0 );
+			complete( run, 0 );
+			admitted.remove( Integer.valueOf( 0 ) );
+			int next = poll( run, admitted );
+			enter( run, next );
+			entered.add( next );
+			assertEquals( 2, next, "old root was ready before the cheaper child" );
+			assertEquals( WAITING, poll( run, admitted ) );
+			complete( run, 2 );
+			admitted.remove( Integer.valueOf( 2 ) );
+			assertEquals( 1, poll( run, admitted ) );
+			enter( run, 1 );
+			entered.add( 1 );
+			complete( run, 1 );
+			admitted.remove( Integer.valueOf( 1 ) );
+			assertEquals( 1, run.successorVisits() );
+			finish( run );
+			finalized = true;
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			if( !finalized )
+				cleanup( run, admitted, entered, primary );
+		}
+	}
+
+	private static int poll( FlowAdmission run, List<Integer> admitted ) {
+		int next = run.poll();
+		if( next >= 0 )
+			admitted.add( next );
+		return next;
+	}
+
+	// These tests have no live bodies: entered work is synchronously drained, and
+	// an admitted but unentered description is known unused, not force-released.
+	private static void cleanup( FlowAdmission run, List<Integer> admitted,
+			List<Integer> entered, Throwable primary ) {
+		List<Runnable> actions = new ArrayList<>();
+		actions.add( () -> run.stop( new IllegalStateException( "test cleanup" ) ) );
+		admitted.forEach( index -> actions.add( () -> {
+			if( entered.contains( index ) )
+				complete( run, index );
+			else {
+				run.registered( index, "" + index );
+				run.finished( "" + index, FlowAdmission.Outcome.ABORTED, null );
+			}
+		} ) );
+		Throwable failure = primary;
+		for( Runnable action : actions ) {
+			try {
+				action.run();
+			}
+			catch( Throwable cleanup ) {
+				if( failure == null )
+					failure = cleanup;
+				else if( failure != cleanup )
+					failure.addSuppressed( cleanup );
+			}
+		}
+		if( primary == null && failure != null )
+			throw new AssertionError( "test cleanup failed", failure );
+	}
+
+	/**
 	 * Stop may return a between-member reservation, but not one still used by an
 	 * entered member or its outer native cleanup.
 	 *
@@ -111,17 +419,17 @@ class FlowAdmissionTest {
 				.resources( "A state", f -> f == flows.get( 0 ), "chain-A" )
 				.resources( "B state", f -> f == flows.get( 1 ), "chain-B" );
 		FlowAdmission run = new FlowAdmission( capacity );
-		run.prepare( flows, rules.chains( flows, flows.stream().map( rules::resolve ).toList() ) );
 		var scope = ResourceReservations.shared();
 		var b = scope.register( scope.capacity( 1 ), rules.resolve( flows.get( 1 ) ), () -> {
 		} );
 		var a = scope.register( scope.capacity( 1 ), rules.resolve( flows.get( 0 ) ), () -> {
 		} );
+		run.prepare( flows, rules.chains( flows, flows.stream().map( rules::resolve ).toList() ) );
 		try( Grant held = b.tryAcquire() ) {
 			assertNotNull( held );
 			assertEquals( WAITING, run.poll() );
 			try( Grant free = a.tryAcquire() ) {
-				assertNotNull( free, "waiting whole chain holds no partial A" );
+				assertNotNull( free, "older A may proceed: waiting whole chain holds no partial A" );
 			}
 		}
 		finally {

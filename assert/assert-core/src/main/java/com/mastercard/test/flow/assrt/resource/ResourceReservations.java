@@ -11,9 +11,9 @@ import java.util.Set;
  * Same-classloader/JVM whole-set reservations for cooperating runners and
  * fixture owners. No worker waits here. Callers register only dependency-ready
  * work, try admission outside their own locks, then commit or return a proven
- * unused grant. Pending registration order is stable; oldest-conflicting-ready
- * fairness is not yet enforced. Reservations do not transfer fixture lifecycle
- * ownership.
+ * unused grant. Older pending work protects its entire set against newer
+ * conflicting requests, without partially holding keys or capacity.
+ * Reservations do not transfer fixture lifecycle ownership.
  */
 public final class ResourceReservations {
 	private static final ResourceReservations SHARED = new ResourceReservations();
@@ -54,12 +54,32 @@ public final class ResourceReservations {
 	 *                     reservation operations
 	 * @return A stable pending request, retained across unsuccessful tries
 	 */
-	public synchronized Request register( Capacity capacity, ResourceRequirements requirements,
+	public Request register( Capacity capacity, ResourceRequirements requirements,
 			Runnable changed ) {
-		Request request = new Request( Objects.requireNonNull( capacity ),
-				Objects.requireNonNull( requirements ), Objects.requireNonNull( changed ) );
-		pending.add( request );
-		return request;
+		return register( capacity, List.of( requirements ), changed ).get( 0 );
+	}
+
+	/**
+	 * Publishes a jointly ready cohort atomically, in canonical tie order.
+	 * Insertion into the shared pending set is the scope-wide readiness
+	 * linearization point; unpublished work has no priority. Call outside the run
+	 * lock, before exposing any member of the cohort to admission.
+	 *
+	 * @param capacity     Execution owner for the cohort
+	 * @param requirements Immutable requirements in canonical order
+	 * @param changed      Short nonthrowing notification, delivered outside locks
+	 * @return Stable requests in the supplied order
+	 */
+	public List<Request> register( Capacity capacity, List<ResourceRequirements> requirements,
+			Runnable changed ) {
+		Objects.requireNonNull( capacity );
+		Objects.requireNonNull( changed );
+		List<Request> requests = List.copyOf( requirements ).stream()
+				.map( requirement -> new Request( capacity, requirement, changed ) ).toList();
+		synchronized( this ) {
+			pending.addAll( requests );
+		}
+		return requests;
 	}
 
 	/** Run-local execution slots; their bookkeeping belongs to the shared scope. */
@@ -97,6 +117,13 @@ public final class ResourceReservations {
 						|| requirements.keys().stream().anyMatch( held::contains ) ) {
 					return null;
 				}
+				for( Request older : pending ) {
+					if( older == this )
+						break;
+					if( older.requirements.exclusive() || requirements.exclusive()
+							|| older.requirements.keys().stream().anyMatch( requirements.keys()::contains ) )
+						return null;
+				}
 				pending.remove( this );
 				held.addAll( requirements.keys() );
 				exclusive = requirements.exclusive();
@@ -108,10 +135,20 @@ public final class ResourceReservations {
 
 		/** Withdraws only an ungranted request; it cannot release live ownership. */
 		public void cancel() {
+			List<Runnable> notifications;
 			synchronized( ResourceReservations.this ) {
-				pending.remove( this );
+				if( !pending.remove( this ) )
+					return;
+				notifications = notifications();
 			}
+			notifications.forEach( Runnable::run );
 		}
+	}
+
+	private List<Runnable> notifications() {
+		Set<Runnable> wakeups = new LinkedHashSet<>();
+		pending.forEach( waiter -> wakeups.add( waiter.changed ) );
+		return new ArrayList<>( wakeups );
 	}
 
 	/** Ownership released only after proven unused or safely finished use. */
@@ -141,9 +178,7 @@ public final class ResourceReservations {
 				}
 				active--;
 				request.capacity.active--;
-				Set<Runnable> wakeups = new LinkedHashSet<>();
-				pending.forEach( waiter -> wakeups.add( waiter.changed ) );
-				notifications = new ArrayList<>( wakeups );
+				notifications = notifications();
 			}
 			notifications.forEach( Runnable::run );
 		}

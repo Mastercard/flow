@@ -83,6 +83,292 @@ class NativeResourceAdmissionTest {
 	private static final ThreadLocal<Run> FACTORY = new ThreadLocal<>();
 
 	/**
+	 * Removing a never-admitted exclusive wakes another real factory while the
+	 * original holder is still active; stopped enumeration never resumes.
+	 *
+	 * @param parallel Whether the waiting runner uses native parallel mode
+	 * @throws Exception If native work does not drain
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void stoppedExclusiveWakesAnotherFactoryWithoutAResourceRelease( boolean parallel )
+			throws Exception {
+		CountDownLatch held = new CountDownLatch( 1 );
+		CountDownLatch releaseHolder = new CountDownLatch( 1 );
+		CountDownLatch published = new CountDownLatch( 1 );
+		CountDownLatch pollExclusive = new CountDownLatch( 1 );
+		CountDownLatch entered = new CountDownLatch( 1 );
+		Run holder = new Run( true, List.of( flow( "holder" ) ),
+				r -> r.independent( "empty", f -> true ), a -> {
+					held.countDown();
+					await( releaseHolder );
+				} );
+		Run exclusive = new Run( true, List.of( flow( "exclusive" ) ),
+				r -> r.exclusive( "reset", f -> true ), a -> fail( "stopped body" ) );
+		exclusive.returning = () -> {
+			published.countDown();
+			await( pollExclusive );
+		};
+		Run newer = new Run( parallel, List.of( flow( "newer" ) ),
+				r -> r.independent( "empty", f -> true ), a -> entered.countDown() );
+		Throwable primary = null;
+		try {
+			holder.start();
+			await( held );
+			exclusive.start();
+			await( published );
+			newer.start();
+			await( newer.prepared );
+			assertReservation( false );
+			assertThrows( IllegalStateException.class, exclusive.handle::close );
+			await( entered );
+			newer.finish();
+			assertEquals( 1, releaseHolder.getCount(), "no holder release woke the waiting factory" );
+			assertEquals( List.of(), holder.finished );
+			pollExclusive.countDown();
+			exclusive.awaitCompletion();
+			assertEquals( List.of(), exclusive.registered );
+			assertEquals( 0, exclusive.bodies.get() );
+			assertFalse( exclusive.failures.isEmpty(), "stop must remain incomplete" );
+			assertThrows( IllegalStateException.class, exclusive.handle::close );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			pollExclusive.countDown();
+			releaseHolder.countDown();
+			try {
+				drain( primary, holder, newer );
+			}
+			catch( Throwable cleanup ) {
+				primary = cleanup;
+				throw cleanup;
+			}
+			finally {
+				if( exclusive.execution != null ) {
+					try {
+						exclusive.awaitCompletion();
+					}
+					catch( Throwable cleanup ) {
+						if( primary == null )
+							throw cleanup;
+						if( primary != cleanup )
+							primary.addSuppressed( cleanup );
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Preparation publishes the old root before the factory can emit a newly ready
+	 * child with a cheaper canonical rank.
+	 *
+	 * @param exclusive Whether the child needs global exclusion
+	 * @throws Exception If native work does not drain
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void nativeOldRootPrecedesNewCheaperChildBeforeSecondAdvance( boolean exclusive )
+			throws Exception {
+		Flow parent = ParallelBindingFixture.create( "0 parent", "parent value" );
+		Flow child = Creator.build( f -> f.meta( m -> m.description( "1 child" ) )
+				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+						.request( new ParallelBindingFixture.Text( "initial" ) )
+						.response( new ParallelBindingFixture.Text( "response" ) ) )
+				.dependency( parent, d -> d.from( i -> true, RESPONSE, ".+" )
+						.to( i -> true, REQUEST, ".+" ) ) );
+		Flow old = flow( "2 old root" );
+		CountDownLatch secondAdvance = new CountDownLatch( 1 );
+		CountDownLatch proceed = new CountDownLatch( 1 );
+		AtomicInteger advances = new AtomicInteger();
+		Run run = new Run( true, List.of( old, child, parent ), r -> r
+				.resources( "parent B", f -> f == parent, "age-B" )
+				.resources( "shared A", f -> f != parent, "age-A" )
+				.exclusive( "child reset", f -> exclusive && f == child ), a -> {
+					if( a.flow() == child )
+						assertEquals( "parent value", a.expected().request().assertable() );
+				} );
+		run.beforeAdvance = () -> {
+			if( advances.incrementAndGet() == 2 ) {
+				await( run.firstFinished );
+				secondAdvance.countDown();
+				await( proceed );
+			}
+		};
+		Throwable primary = null;
+		try {
+			run.start();
+			await( secondAdvance );
+			assertEquals( List.of( parent.meta().id() ), run.registered );
+			proceed.countDown();
+			run.finish();
+			assertEquals( List.of( parent.meta().id(), old.meta().id(), child.meta().id() ),
+					run.registered );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			proceed.countDown();
+			drain( primary, run );
+		}
+	}
+
+	/**
+	 * A prepared, unpolled AB request protects A across independent native pools;
+	 * disjoint C may pass, including through provider-free serial consumption.
+	 *
+	 * @param parallel Whether the newer runner uses native parallel mode
+	 * @throws Exception If native work does not drain
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void olderPreparedWholeSetProtectsNewerRunnerWithoutBlockingDisjointWork( boolean parallel )
+			throws Exception {
+		CountDownLatch held = new CountDownLatch( 1 );
+		CountDownLatch releaseHolder = new CountDownLatch( 1 );
+		CountDownLatch published = new CountDownLatch( 1 );
+		CountDownLatch pollOlder = new CountDownLatch( 1 );
+		CountDownLatch disjoint = new CountDownLatch( 1 );
+		CountDownLatch admitted = new CountDownLatch( 1 );
+		CountDownLatch releaseOlder = new CountDownLatch( 1 );
+		List<String> order = new CopyOnWriteArrayList<>();
+		Run holder = new Run( true, List.of( flow( "holder" ) ),
+				r -> r.resources( "B", f -> true, "fair-B" ), a -> {
+					held.countDown();
+					await( releaseHolder );
+				} );
+		Run older = new Run( true, List.of( flow( "older AB" ) ),
+				r -> r.resources( "AB", f -> true, "fair-A", "fair-B" ), a -> {
+					order.add( "AB" );
+					admitted.countDown();
+					await( releaseOlder );
+				} );
+		older.returning = () -> {
+			published.countDown();
+			await( pollOlder );
+		};
+		Flow c = flow( "0 disjoint C" );
+		Flow a = flow( "1 newer A" );
+		Run newer = new Run( parallel, List.of( a, c ), r -> r
+				.resources( "C", f -> f == c, "fair-C" )
+				.resources( "A", f -> f == a, "fair-A" ), assertion -> {
+					if( assertion.flow() == c ) {
+						order.add( "C" );
+						disjoint.countDown();
+					}
+					else {
+						assertEquals( List.of( "C", "AB" ), order );
+						order.add( "A" );
+					}
+				} );
+		Throwable primary = null;
+		try {
+			holder.start();
+			await( held );
+			older.start();
+			await( published );
+			newer.start();
+			await( disjoint );
+			assertEquals( List.of( c.meta().id() ), newer.registered );
+			assertEquals( List.of(), older.registered, "priority is not factory poll order" );
+			pollOlder.countDown();
+			releaseHolder.countDown();
+			await( admitted );
+			assertEquals( List.of( c.meta().id() ), newer.registered );
+			assertNotSame( older.pool, newer.pool );
+			assertNotSame( holder.pool, older.pool );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			pollOlder.countDown();
+			releaseHolder.countDown();
+			releaseOlder.countDown();
+			drain( primary, holder, older, newer );
+		}
+		assertEquals( List.of( "C", "AB", "A" ), order );
+	}
+
+	/**
+	 * Ready exclusion gates other runners before its own factory polls, including
+	 * EMPTY work, then drains and resumes without changing native execution mode.
+	 *
+	 * @param parallel Whether the newer runner uses native parallel mode
+	 * @param unknown  Whether exclusion is the UNKNOWN fallback
+	 * @throws Exception If native work does not drain
+	 */
+	@ParameterizedTest
+	@CsvSource({ "false,false", "true,false", "false,true", "true,true" })
+	void readyExclusiveDrainsAndResumesOtherPreparedRunners( boolean parallel, boolean unknown )
+			throws Exception {
+		CountDownLatch held = new CountDownLatch( 1 );
+		CountDownLatch releaseHolder = new CountDownLatch( 1 );
+		CountDownLatch published = new CountDownLatch( 1 );
+		CountDownLatch pollExclusive = new CountDownLatch( 1 );
+		CountDownLatch alone = new CountDownLatch( 1 );
+		CountDownLatch releaseExclusive = new CountDownLatch( 1 );
+		List<String> order = new CopyOnWriteArrayList<>();
+		Run holder = new Run( true, List.of( flow( "holder" ) ),
+				r -> r.independent( "empty", f -> true ), a -> {
+					order.add( "holder" );
+					held.countDown();
+					await( releaseHolder );
+				} );
+		Run exclusive = new Run( true, List.of( flow( "exclusive" ) ), r -> {
+			if( !unknown )
+				r.exclusive( "reset", f -> true );
+		}, a -> {
+			order.add( "exclusive" );
+			alone.countDown();
+			await( releaseExclusive );
+		} );
+		exclusive.returning = () -> {
+			published.countDown();
+			await( pollExclusive );
+		};
+		Run newer = new Run( parallel, List.of( flow( "newer" ) ),
+				r -> r.independent( "empty", f -> true ), a -> {
+					assertEquals( List.of( "holder", "exclusive" ), order );
+					order.add( "newer" );
+				} );
+		Throwable primary = null;
+		try {
+			holder.start();
+			await( held );
+			exclusive.start();
+			await( published );
+			newer.start();
+			await( newer.prepared );
+			assertEquals( List.of(), newer.registered );
+			assertReservation( false );
+			pollExclusive.countDown();
+			releaseHolder.countDown();
+			await( alone );
+			assertEquals( List.of(), newer.registered );
+			assertNotSame( exclusive.pool, newer.pool );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			pollExclusive.countDown();
+			releaseHolder.countDown();
+			releaseExclusive.countDown();
+			drain( primary, holder, exclusive, newer );
+		}
+		assertEquals( List.of( "holder", "exclusive", "newer" ), order );
+		assertEquals( unknown ? 1 : 0, exclusive.fallbacks.size() );
+	}
+
+	/**
 	 * Public diagnostics preserve member classification separately from the frozen
 	 * reservation actually used by both native modes.
 	 *
@@ -279,12 +565,14 @@ class NativeResourceAdmissionTest {
 			try {
 				holder.start();
 				await( held );
-				chain.start();
-				await( chain.prepared );
 				freeA.start();
 				await( free );
 				freeA.finish();
-				assertEquals( List.of(), chain.registered, "blocked chain held no partial A" );
+				chain.start();
+				await( chain.prepared );
+				assertEquals( List.of(), chain.registered, "whole chain still needs B" );
+				if( parallel )
+					assertReservation( false, "whole-A" );
 				releaseHolder.countDown();
 				await( first );
 				assertReservation( false, "whole-B" );
@@ -532,7 +820,8 @@ class NativeResourceAdmissionTest {
 
 	/**
 	 * Default chains drain existing cooperating work, then exclude a separately
-	 * launched EMPTY or disjoint-key runner through both members' outer cleanup.
+	 * launched EMPTY, disjoint-key or exclusive runner through both members' outer
+	 * cleanup. A newly ready exclusive cannot force continuation to reacquire.
 	 *
 	 * @param chainParallel   Mode of the actual chain factory
 	 * @param outsideParallel Mode of the outside factory
@@ -542,7 +831,7 @@ class NativeResourceAdmissionTest {
 	@CsvSource({ "false,false", "false,true", "true,false", "true,true" })
 	void defaultChainExcludesOtherPreparedScopesForItsWholeInterval(
 			boolean chainParallel, boolean outsideParallel ) throws Exception {
-		for( boolean empty : List.of( false, true ) ) {
+		for( String policy : List.of( "named", "empty", "exclusive" ) ) {
 			CountDownLatch held = new CountDownLatch( 1 );
 			CountDownLatch releaseHolder = new CountDownLatch( 1 );
 			CountDownLatch cleaning = new CountDownLatch( 1 );
@@ -582,7 +871,8 @@ class NativeResourceAdmissionTest {
 			};
 			Run outside = new Run( outsideParallel, List.of( flow( "outside" ) ), r -> r
 					.resources( "outside audit", f -> true,
-							empty ? new String[0] : new String[] { "disjoint" } ),
+							policy.equals( "empty" ) ? new String[0] : new String[] { "disjoint" } )
+					.exclusive( "outside reset", f -> policy.equals( "exclusive" ) ),
 					x -> {
 						later.countDown();
 						assertTrue( chainDone.get(), "outside use must follow the entire chain cleanup" );
@@ -753,13 +1043,14 @@ class NativeResourceAdmissionTest {
 			}
 		};
 		var scope = ResourceReservations.shared();
-		var outside = scope.register( scope.capacity( 1 ),
-				new ResourceRules().resources( "outside empty", f -> true ).resolve( null ), () -> {
-				} );
+		Request outside = null;
 		Throwable primary = null;
 		try {
 			run.start();
 			await( cleaning );
+			outside = scope.register( scope.capacity( 1 ),
+					new ResourceRules().resources( "outside empty", f -> true ).resolve( null ), () -> {
+					} );
 			assertEquals( List.of( a.meta().id() ), run.registered );
 			try( Grant unexpected = outside.tryAcquire() ) {
 				assertNull( unexpected, "outer cleanup remains part of the chain interval" );
@@ -780,7 +1071,8 @@ class NativeResourceAdmissionTest {
 		finally {
 			releaseCleanup.countDown();
 			releaseSecond.countDown();
-			outside.cancel();
+			if( outside != null )
+				outside.cancel();
 			try {
 				run.finish();
 			}
@@ -877,7 +1169,14 @@ class NativeResourceAdmissionTest {
 					assertNotNull( held );
 				run.start();
 				if( parallel ) {
-					await( independent );
+					if( shape.equals( "chain" ) ) {
+						await( run.prepared );
+						assertEquals( List.of(), run.registered,
+								"ready default-exclusive chain gates newer D while A's resource is held" );
+						assertEquals( 1, independent.getCount() );
+					}
+					else
+						await( independent );
 					assertEquals( 0, b.dependencies().count(), "B has no genuine prerequisite" );
 					assertFalse( run.registered.contains( a.meta().id() ), "A's own resource is held" );
 					assertFalse( run.registered.contains( b.meta().id() ),
@@ -1482,7 +1781,8 @@ class NativeResourceAdmissionTest {
 	}
 
 	/**
-	 * A blocked union leaves its free key available to unrelated work.
+	 * A blocked union protects its free key from newer conflicts, but not disjoint
+	 * C.
 	 * 
 	 * @throws Exception If either run fails to finish
 	 */
@@ -1509,6 +1809,7 @@ class NativeResourceAdmissionTest {
 		CountDownLatch release = new CountDownLatch( 1 );
 		CountDownLatch freeEntered = new CountDownLatch( 1 );
 		CountDownLatch blockedEntered = new CountDownLatch( 1 );
+		AtomicBoolean blockedDone = new AtomicBoolean();
 		Run first = new Run( firstParallel, List.of( flow( "holder" ) ),
 				r -> r.resources( "queue owner", f -> true, "resource-test-B" ),
 				a -> sut.use( Set.of( "B" ), () -> {
@@ -1516,7 +1817,8 @@ class NativeResourceAdmissionTest {
 					await( release );
 				} ) );
 		List<Flow> secondFlows = secondParallel
-				? List.of( flow( "blocked" ), flow( "free" ) )
+				? multi ? List.of( flow( "blocked" ), flow( "free" ), flow( "disjoint" ) )
+						: List.of( flow( "blocked" ), flow( "free" ) )
 				: List.of( flow( "blocked" ) );
 		Run second = new Run( secondParallel, secondFlows, r -> {
 			r.resources( "queue alias", f -> named( f, "blocked" ), new String( "resource-test-B" ) );
@@ -1525,16 +1827,26 @@ class NativeResourceAdmissionTest {
 				r.independent( "broad empty cannot erase either key", f -> true );
 			}
 			r.resources( "isolated A", f -> named( f, "free" ), "resource-test-A" );
+			r.resources( "disjoint C", f -> named( f, "disjoint" ), "resource-test-C" );
 		}, a -> {
 			if( named( a.flow(), "blocked" ) ) {
 				blockedEntered.countDown();
 				sut.use( multi ? Set.of( "A", "B" ) : Set.of( "B" ), () -> {
 				} );
+				blockedDone.set( true );
 			}
+			else if( named( a.flow(), "disjoint" ) )
+				sut.use( Set.of( "C" ), freeEntered::countDown );
 			else {
-				sut.use( Set.of( "A" ), freeEntered::countDown );
+				if( multi )
+					assertTrue( blockedDone.get(), "newer A must not bypass older AB" );
+				sut.use( Set.of( "A" ), () -> {
+					if( !multi )
+						freeEntered.countDown();
+				} );
 			}
 		} );
+		Throwable primary = null;
 		try {
 			first.start();
 			await( held );
@@ -1544,15 +1856,20 @@ class NativeResourceAdmissionTest {
 				await( freeEntered );
 				assertEquals( 1, blockedEntered.getCount(), "busy flow must not pass disjoint work" );
 				assertFalse( second.registered.contains( "blocked []" ), "reservation precedes emission" );
+				if( multi )
+					assertFalse( second.registered.contains( "free []" ), "older AB protects free A" );
 			}
 			else {
-				assertFalse( blockedEntered.await( 150, TimeUnit.MILLISECONDS ) );
+				assertEquals( 1, blockedEntered.getCount() );
 			}
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
 		}
 		finally {
 			release.countDown();
-			first.finish();
-			second.finish();
+			drain( primary, first, second );
 		}
 		assertNotSame( first.pool, second.pool, "supported separate actual Launcher pools" );
 		assertEquals( secondParallel ? 2 : 1, sut.peak );

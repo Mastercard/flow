@@ -64,7 +64,7 @@ class AbstractFlocessorTest {
 						.system( State.LESS, B ).reporting( Reporting.QUIETLY, "scoped-completion" )
 						.behaviour( a -> a.actual().response( a.expected().response().content() ) ) ) {
 					tf.execute();
-					assertEquals( "abc [] SUCCESS", tf.results() );
+					assertEquals( "abc [] SUCCESS", tf.results(), tf::events );
 					Reader report = new Reader( tf.report() );
 					assertEquals( Set.of( "PASS" ), report.read().entries.get( 0 ).tags );
 					tf.behaviour( a -> {
