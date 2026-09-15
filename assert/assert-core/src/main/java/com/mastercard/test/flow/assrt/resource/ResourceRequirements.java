@@ -61,6 +61,18 @@ public final class ResourceRequirements {
 	}
 
 	/**
+	 * Adds an ownership footprint without classifying an otherwise UNKNOWN flow.
+	 *
+	 * @param other Additional mandatory ownership, such as a fixture domain
+	 * @return The complete immutable union, retaining both audit sets
+	 */
+	public ResourceRequirements plus( ResourceRequirements other ) {
+		Set<String> isolation = new LinkedHashSet<>( isolationRules );
+		isolation.addAll( other.isolationRules );
+		return union( List.of( this, other ), false, isolation );
+	}
+
+	/**
 	 * @return Matching resource rule names, excluding whole-chain isolation audits
 	 */
 	public Set<String> rules() {

@@ -49,7 +49,7 @@ public final class FlowAdmission {
 
 	private final History history = new History();
 	private final ResourceReservations.Capacity capacity;
-	private final Runnable resourceChanged = this::wake;
+	private final Runnable resourceChanged = this::resourcesChanged;
 	private Thread factoryThread = Thread.currentThread();
 	private List<Node> nodes = List.of();
 	private final Map<String, Integer> nativeIds = new HashMap<>();
@@ -355,6 +355,7 @@ public final class FlowAdmission {
 			Grant grant = request.tryAcquire();
 			if( grant != null ) {
 				synchronized( history ) {
+					checkFixture();
 					if( stopped == null ) {
 						node.owner.grant = grant;
 						node.request = null;
@@ -372,6 +373,31 @@ public final class FlowAdmission {
 		node.owner.uses++;
 		ready.remove( index );
 		issued++;
+	}
+
+	/**
+	 * Returns a committed admission that the adapter proves never reached native
+	 * handoff. Stop first; this is neither a native terminal nor processing
+	 * evidence. Other live uses and explicitly retained uncertainty still own the
+	 * whole grant.
+	 *
+	 * @param index Proven un-emitted admission
+	 */
+	public void unused( int index ) {
+		Grant unused = null;
+		synchronized( history ) {
+			Node node = nodes.get( index );
+			if( stopped == null || !node.admitted || node.retired || node.id != null
+					|| node.started || node.entered || node.outcome != null )
+				throw fault( "Flow admission is not proven unused" );
+			node.retired = true;
+			if( --node.owner.uses == 0 ) {
+				unused = node.owner.grant;
+				node.owner.grant = null;
+			}
+		}
+		if( unused != null )
+			unused.close();
 	}
 
 	/**
@@ -425,6 +451,7 @@ public final class FlowAdmission {
 	 */
 	public boolean enter( int index, String id ) {
 		synchronized( history ) {
+			checkFixture();
 			if( stopped != null ) {
 				return false;
 			}
@@ -440,6 +467,22 @@ public final class FlowAdmission {
 	}
 
 	/**
+	 * Retrieves existing ownership from admission through native retirement,
+	 * including pre-body owner receipt delivery and post-body outer cleanup.
+	 *
+	 * @param index Admitted invocation index
+	 * @return Whole-unit grant, still retained by native completion accounting
+	 */
+	public Grant reservation( int index ) {
+		synchronized( history ) {
+			Node node = nodes.get( index );
+			if( !node.admitted || node.retired || node.owner.grant == null )
+				throw fault( "Flow has no current invocation reservation" );
+			return node.owner.grant;
+		}
+	}
+
+	/**
 	 * Publishes actual processing after synchronous bindings/capture/callbacks end.
 	 * Null classification is fatal/incomplete evidence, never SUCCESS.
 	 * 
@@ -451,6 +494,7 @@ public final class FlowAdmission {
 		Grant finished = null;
 		try {
 			synchronized( history ) {
+				checkFixture();
 				Node node = nodes.get( index );
 				if( !node.entered || node.safe && (node.processing != result || node.failure != failure) ) {
 					throw fault( "Conflicting Flow processing evidence" );
@@ -493,6 +537,7 @@ public final class FlowAdmission {
 		List<Node> planned;
 		try {
 			synchronized( history ) {
+				checkFixture();
 				planned = nodes;
 				Node node = nodes.get( index( id ) );
 				if( node.outcome != null ) {
@@ -535,7 +580,7 @@ public final class FlowAdmission {
 		if( !node.retired && node.outcome != null && (!node.entered || node.safe) ) {
 			node.retired = true;
 			node.owner.uses--;
-			if( node.last || stopped != null ) {
+			if( node.owner.uses == 0 && (node.last || stopped != null) ) {
 				Grant grant = node.owner.grant;
 				node.owner.grant = null;
 				return grant;
@@ -564,6 +609,7 @@ public final class FlowAdmission {
 	public boolean factoryFinished( Outcome outcome, Throwable failure ) {
 		try {
 			synchronized( history ) {
+				checkFixture();
 				if( factoryOutcome != null ) {
 					if( factoryOutcome != outcome || factoryFailure != failure ) {
 						throw fault( "Conflicting native Flow factory terminal" );
@@ -588,6 +634,7 @@ public final class FlowAdmission {
 	/** Detaches only after successful owned finalization. */
 	public void release() {
 		synchronized( history ) {
+			checkFixture();
 			if( factoryOutcome != Outcome.SUCCESSFUL || stopped != null || active != 0 ) {
 				throw fault( "Flow admission is not safely complete" );
 			}
@@ -632,9 +679,24 @@ public final class FlowAdmission {
 	}
 
 	private void checkActive() {
+		checkFixture();
 		if( !prepared || released || stopped != null ) {
 			throw new IllegalStateException( "Flow admission is not active", stopped );
 		}
+	}
+
+	private void checkFixture() {
+		if( capacity.uncertainty() != null )
+			stopLocked( capacity.uncertainty() );
+	}
+
+	private void resourcesChanged() {
+		// Reservation callbacks arrive outside all bookkeeping locks. The capacity
+		// latch also protects continuation if native completion races this callback.
+		if( capacity.uncertainty() != null )
+			stop( capacity.uncertainty() );
+		else
+			wake();
 	}
 
 	private IllegalStateException fault( String message ) {

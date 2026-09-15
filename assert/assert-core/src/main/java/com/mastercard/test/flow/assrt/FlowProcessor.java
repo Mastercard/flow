@@ -62,11 +62,11 @@ import com.mastercard.test.flow.util.Flows;
  * Each call to {@link #process(Flow)} creates only invocation-local evidence
  * and failures; it does not clone the model or create another runner.
  * <p>
- * This owner is serial: its applied-context map describes the actual SUT state,
- * not thread-local state or resource isolation. Selection can rebuild
- * dependency indexing, while History, applied contexts and the lazily created
- * report remain owned here. Enumeration neither completes a run nor closes its
- * report.
+ * Legacy callers retain their serial applied-context map. Cooperating prepared
+ * callers bind the actual fixture's ContextDomain instead; its map survives
+ * this processor and is accessed only under the complete fixture grant.
+ * Selection can rebuild dependency indexing; enumeration neither completes a
+ * run nor closes a report or fixture.
  */
 abstract class FlowProcessor {
 
@@ -74,6 +74,7 @@ abstract class FlowProcessor {
 	private final History history;
 	private Dependencies dependencies;
 	private final Map<Class<? extends Context>, Context> currentContext = new HashMap<>();
+	private ContextDomain contextDomain;
 	private Writer report;
 	private int active;
 	private boolean closed;
@@ -94,6 +95,13 @@ abstract class FlowProcessor {
 	 */
 	void freezeConfiguration() {
 		config = config.snapshot();
+	}
+
+	/**
+	 * @param domain Fixture-owned applied state, never cleared at runner completion
+	 */
+	void contextDomain( ContextDomain domain ) {
+		contextDomain = domain;
 	}
 
 	/** @return The live statefulness setting of the caller */
@@ -634,7 +642,7 @@ abstract class FlowProcessor {
 	private void applyContexts( Flow flow, List<RuntimeException> executionFailures ) {
 		try {
 			// work out the context updates
-			Set<Class<? extends Context>> unupdated = new HashSet<>( currentContext.keySet() );
+			Set<Class<? extends Context>> unupdated = new HashSet<>( currentContexts().keySet() );
 			Set<Context> contextUpdates = new TreeSet<>(
 					Comparator.comparing( ctx -> ctx.getClass().getName() ) );
 			flow.context()
@@ -670,16 +678,34 @@ abstract class FlowProcessor {
 		config.progress.context( ctx );
 		Class<? extends Context> ctxt = ctx.getClass();
 		Applicator<C> apl = (Applicator<C>) applicator( ctxt );
-		C current = (C) currentContext.get( ctxt );
-		apl.transition( current, ctx );
-		currentContext.put( ctxt, ctx );
+		C current = (C) currentContexts().get( ctxt );
+		transition( apl, current, ctx );
+		currentContexts().put( ctxt, ctx );
 	}
 
 	@SuppressWarnings("unchecked")
 	private <C extends Context> void removeContext( Class<C> ctxt ) {
 		Applicator<C> apl = applicator( ctxt );
-		C current = (C) currentContext.remove( ctxt );
-		apl.transition( current, null );
+		C current = (C) currentContexts().get( ctxt );
+		transition( apl, current, null );
+		currentContexts().remove( ctxt );
+	}
+
+	private Map<Class<? extends Context>, Context> currentContexts() {
+		return contextDomain == null ? currentContext : contextDomain.current();
+	}
+
+	private <C extends Context> void transition( Applicator<C> applicator, C from, C to ) {
+		try {
+			applicator.transition( from, to );
+		}
+		catch( Throwable failure ) {
+			// A failed state change has no completed-state contract. Keep the last
+			// successful context, but do not hand this possibly partial state onward.
+			if( contextDomain != null )
+				contextDomain.uncertain( failure );
+			throw failure;
+		}
 	}
 
 	private <C extends Context> Applicator<C> applicator( Class<C> ctxt ) {

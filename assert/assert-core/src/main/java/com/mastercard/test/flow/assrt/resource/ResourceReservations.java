@@ -3,7 +3,9 @@ package com.mastercard.test.flow.assrt.resource;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -19,6 +21,7 @@ public final class ResourceReservations {
 	private static final ResourceReservations SHARED = new ResourceReservations();
 	private final Set<Request> pending = new LinkedHashSet<>();
 	private final Set<String> held = new HashSet<>();
+	private final Map<ResourceRequirements, Throwable> unsafe = new LinkedHashMap<>();
 	private int active;
 	private boolean exclusive;
 
@@ -86,9 +89,17 @@ public final class ResourceReservations {
 	public static final class Capacity {
 		private final int limit;
 		private int active;
+		private volatile Throwable unsafe;
 
 		private Capacity( int limit ) {
 			this.limit = limit;
+		}
+
+		/**
+		 * @return First unsafe grant owned by this run, independently of pending work
+		 */
+		public Throwable uncertainty() {
+			return unsafe;
 		}
 	}
 
@@ -112,7 +123,18 @@ public final class ResourceReservations {
 		 */
 		public Grant tryAcquire() {
 			synchronized( ResourceReservations.this ) {
-				if( !pending.contains( this ) || capacity.active == capacity.limit || exclusive
+				if( !pending.contains( this ) )
+					return null;
+				if( capacity.unsafe != null )
+					throw new IllegalStateException( "Resource owner has uncertain fixture use",
+							capacity.unsafe );
+				for( Map.Entry<ResourceRequirements, Throwable> retained : unsafe.entrySet() ) {
+					if( conflicts( requirements, retained.getKey() ) )
+						throw new IllegalStateException(
+								"Resource ownership retained after uncertain fixture use",
+								retained.getValue() );
+				}
+				if( capacity.active == capacity.limit || exclusive
 						|| requirements.exclusive() && active != 0
 						|| requirements.keys().stream().anyMatch( held::contains ) ) {
 					return null;
@@ -120,8 +142,7 @@ public final class ResourceReservations {
 				for( Request older : pending ) {
 					if( older == this )
 						break;
-					if( older.requirements.exclusive() || requirements.exclusive()
-							|| older.requirements.keys().stream().anyMatch( requirements.keys()::contains ) )
+					if( conflicts( older.requirements, requirements ) )
 						return null;
 				}
 				pending.remove( this );
@@ -151,13 +172,64 @@ public final class ResourceReservations {
 		return new ArrayList<>( wakeups );
 	}
 
+	private static boolean conflicts( ResourceRequirements first, ResourceRequirements second ) {
+		return first.exclusive() || second.exclusive()
+				|| first.keys().stream().anyMatch( second.keys()::contains );
+	}
+
 	/** Ownership released only after proven unused or safely finished use. */
 	public final class Grant implements AutoCloseable {
 		private final Request request;
 		private boolean released;
+		private Throwable failure;
 
 		private Grant( Request request ) {
 			this.request = request;
+		}
+
+		/**
+		 * Verifies existing ownership without acquiring or waiting for anything.
+		 *
+		 * @param requirements Complete footprint to be used on the invocation thread
+		 */
+		public void check( ResourceRequirements requirements ) {
+			synchronized( ResourceReservations.this ) {
+				if( released || failure != null
+						|| requirements.exclusive() && !request.requirements.exclusive()
+						|| !request.requirements.keys().containsAll( requirements.keys() ) )
+					throw new IllegalStateException( "Fixture does not have a safe complete grant", failure );
+			}
+		}
+
+		/**
+		 * Latches uncertain fixture use and wakes conflicting waiters for diagnosis.
+		 * Even a later close cannot release this ownership. No recovery is implied.
+		 *
+		 * @param cause Original owner-supplied uncertainty evidence
+		 * @return The first cause retained for this exact grant
+		 */
+		public Throwable retain( Throwable cause ) {
+			List<Runnable> notifications;
+			synchronized( ResourceReservations.this ) {
+				Objects.requireNonNull( cause );
+				if( released )
+					throw new IllegalStateException( "Cannot retain released ownership", cause );
+				if( failure != null )
+					return failure;
+				failure = cause;
+				if( request.capacity.unsafe == null )
+					request.capacity.unsafe = failure;
+				// Retain the ownership diagnosis, not the request's run/model wakeup.
+				unsafe.put( request.requirements, failure );
+				Set<Runnable> wakeups = new LinkedHashSet<>();
+				// This request is no longer pending. Its owner must stop even when no
+				// other request exists; pending-waiter notification alone is insufficient.
+				wakeups.add( request.changed );
+				wakeups.addAll( notifications() );
+				notifications = new ArrayList<>( wakeups );
+			}
+			notifications.forEach( Runnable::run );
+			return failure;
 		}
 
 		/**
@@ -168,7 +240,7 @@ public final class ResourceReservations {
 		public void close() {
 			List<Runnable> notifications;
 			synchronized( ResourceReservations.this ) {
-				if( released ) {
+				if( released || failure != null ) {
 					return;
 				}
 				released = true;

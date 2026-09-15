@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -20,10 +21,12 @@ import org.opentest4j.TestAbortedException;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.assrt.AbstractFlocessor;
+import com.mastercard.test.flow.assrt.ContextDomain;
 import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.resource.ChainPlan;
 import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
 import com.mastercard.test.flow.assrt.resource.ResourceRules;
+import com.mastercard.test.flow.assrt.resource.ResourceReservations.Grant;
 
 /**
  * Self-typed sibling of {@link Flocessor}, supplied by {@link FlowExecution}.
@@ -38,6 +41,60 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	private final Map<Flow, ResourceRequirements> requirements = new IdentityHashMap<>();
 	private final Map<Flow, Integer> selectedIndices = new IdentityHashMap<>();
 	private ChainPlan chains;
+	private ContextDomain domain;
+	private BiConsumer<Flow, ContextDomain.Receipt> ownership;
+
+	/**
+	 * Binds all selected flows to the existing fixture's complete physical domain,
+	 * including possible prior-context removal for flows with no context. Declare
+	 * before owner lifecycle actions and tests(); it does not create or reset
+	 * state, classify UNKNOWN flows, or authorize reporting/capture/replay.
+	 *
+	 * @param domain Shared by every cooperating wrapper for this fixture's lifetime
+	 * @return this adapter
+	 */
+	public PreparedFlocessor contextDomain( ContextDomain domain ) {
+		beforeConfiguration();
+		Objects.requireNonNull( domain ).checkMode( owner.parallel() );
+		if( this.domain != null && this.domain != domain )
+			throw new IllegalStateException( "A runner cannot replace its actual fixture domain" );
+		this.domain = domain;
+		useContextDomain( domain );
+		declaredResources = true;
+		return this;
+	}
+
+	/**
+	 * Also supplies exact owner-evidence receipts before each native invocation is
+	 * emitted, outside all bookkeeping locks. The callback must be short and
+	 * nonthrowing; it must not perform fixture actions. Owners correlate the
+	 * supplied flow/receipt explicitly with their work, not by thread or a
+	 * current-user guess. Receipt uncertainty covers pre-body work and outer
+	 * cleanup, including evidence delivered by another thread before native
+	 * completion. It retains the existing whole-chain grant and stops this run;
+	 * ordinary safe cleanup throws do neither. A callback failure before native
+	 * handoff stops admission and returns only proven-unused ownership, never a
+	 * grant already marked uncertain or still used by another chain member.
+	 *
+	 * @param domain    Shared physical fixture domain
+	 * @param ownership Receives each selected Flow and its exact admitted receipt
+	 * @return this adapter
+	 */
+	public PreparedFlocessor contextDomain( ContextDomain domain,
+			BiConsumer<Flow, ContextDomain.Receipt> ownership ) {
+		contextDomain( domain );
+		this.ownership = Objects.requireNonNull( ownership );
+		return this;
+	}
+
+	/**
+	 * @param index Admitted member, not yet emitted to native execution
+	 * @param grant Existing whole reservation, never reacquired on a native worker
+	 */
+	void admitted( int index, Grant grant ) {
+		if( ownership != null )
+			ownership.accept( selectedFlows.get( index ), domain.receipt( grant ) );
+	}
 
 	/**
 	 * Permits outside overlap only after auditing each entire named chain's state,
@@ -207,14 +264,14 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	}
 
 	private void resolveResources( Flow flow ) {
-		requirements.put( flow, rules.resolve( flow ) );
-		// Explicit serial participation must not pretend that reservations
-		// implement cross-flow context ownership. Legacy serial
-		// configuration without these new declarations retains its existing behavior.
-		if( declaredResources && !owner.parallel()
+		ResourceRequirements resolved = rules.resolve( flow );
+		requirements.put( flow, domain == null ? resolved : resolved.plus( domain.requirements() ) );
+		// Labels alone cannot identify applied state. Existing undeclared serial
+		// configuration retains its legacy processor-local behavior.
+		if( domain == null && (declaredResources || owner.parallel())
 				&& (flow.context().findAny().isPresent() || flow.residue().findAny().isPresent()) ) {
 			throw new IllegalStateException(
-					"Flow serial resources do not yet own context or residue: "
+					"Flow resources require an actual fixture domain for context or residue: "
 							+ flow.meta().id() );
 		}
 	}
@@ -240,46 +297,62 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 		requirements.clear();
 		chains = null;
 		rules = null;
+		ownership = null;
+		useContextDomain( null );
+		domain = null;
 	}
 
 	/**
 	 * Processes the selected flow without capturing it in a native description.
 	 *
 	 * @param index The preparation-local flow index
+	 * @param grant The existing whole native reservation, retained through outer
+	 *              cleanup
 	 */
-	void processSelected( int index ) {
+	void processSelected( int index, Grant grant ) {
 		Flow flow = selectedFlows.get( index );
 		Result result = null;
 		Throwable failure = null;
-		try {
-			process( flow );
-			result = Result.SUCCESS;
+		try( ContextDomain.Use use = domain == null ? null : domain.enter( grant ) ) {
+			// Lease entry/exit are infrastructure, not Flow processing. In particular,
+			// late owner evidence may reject entry after the adapter's pre-use gate.
+			try {
+				process( flow );
+				result = Result.SUCCESS;
+			}
+			catch( IncompleteExecutionException e ) {
+				result = Result.SKIP;
+				throw e;
+			}
+			catch( AssertionError e ) {
+				result = Result.UNEXPECTED;
+				throw e;
+			}
+			catch( Exception e ) {
+				result = Result.ERROR;
+				throw e;
+			}
 		}
-		catch( IncompleteExecutionException e ) {
-			result = Result.SKIP;
-			failure = e;
-			throw e;
-		}
-		catch( AssertionError e ) {
-			result = Result.UNEXPECTED;
-			failure = e;
-			throw e;
-		}
-		catch( Exception e ) {
-			result = Result.ERROR;
-			failure = e;
-			throw e;
-		}
-		catch( Error e ) {
+		catch( Throwable e ) {
 			failure = e;
 			throw e;
 		}
 		finally {
-			if( owner.parallel() ) {
-				owner.processedParallel( index, result, failure );
+			try {
+				if( owner.parallel() ) {
+					owner.processedParallel( index, result, failure );
+				}
+				else if( result != null ) {
+					history.recordResult( flow, result );
+				}
+				else
+					owner.incompleteSerial();
 			}
-			else if( result != null ) {
-				history.recordResult( flow, result );
+			catch( Throwable cleanup ) {
+				if( failure == null )
+					throw cleanup;
+				if( failure != cleanup )
+					failure.addSuppressed( cleanup );
 			}
 		}
 	}

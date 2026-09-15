@@ -23,13 +23,16 @@ authoritative; no frozen feasibility evidence or design decision was rewritten.
 | 14 (code; native REPORT acceptance pending 23) | Canonical destination and identical-message participant precedence; retained synchronous binding operations, partial effects and order-only eligibility | `DependenciesTest`, `AbstractFlocessorTest`, `FlowAdmissionTest`, real serial/native publication and fault oracles |
 | 15 (supported execution slice) | Selected-only chain planning, whole-interval grants, default global exclusion, explicit whole-chain isolation audits and safe native member advancement | Core capacities 1/2/5; real serial/parallel scope, payload, cleanup, stop-gate and native-inline regressions; context/fixture integration remains 17 |
 | 16 | Atomic readiness-cohort publication; oldest-ready conflict protection, disjoint bypass, exclusive drain/resume and cancellation wakeups | `ResourcePlanningTest`, `FlowAdmissionTest`, actual separate native pools and serial/parallel cooperation; narrow race qualifications below |
+| 17 (supported partial slice) | Explicit actual-fixture domains, shared applied state, additive whole-grant ownership and receipt-based unsafe-use retention across native outer cleanup | `ContextFixtureTest`, `ResourcePlanningTest`, real serial/parallel Launchers and isolated unsafe controls; consumer audits and broader acceptance remain pending |
 
 The new caller permits `flow.parallel=true` only through the checked native owner.
 Named bulk `resources()`, `exclusive()` and `independent()` declarations are resolved
 once after dependency expansion. Unmatched work remains UNKNOWN/global-exclusive,
-including against explicitly known-empty work. Reporting/capture/replay/context
-and other unchecked parallel surfaces fail closed before SUT use. These temporary
-implementation boundaries are not permanent public support restrictions. There is
+including against explicitly known-empty work. Reporting/capture/replay remain
+guarded; contexts, residue, applicators, checkers and autonomous actors require
+explicit actual-fixture ownership. Other unchecked parallel surfaces fail closed
+before SUT use. These temporary implementation boundaries are not permanent public
+support restrictions. There is
 no workload-speedup or wall-clock scheduling guarantee.
 Report-only failure classification and run-owned final-only activation are unfinished.
 
@@ -121,9 +124,10 @@ results below predate this slice; the next full run is reserved for final integr
 - 05 needs the actual 6,000–7,000-flow consuming workload and resource-owner input.
   That environment was not supplied; the reported 52/25-minute observations are
   not new measurements or a diagnosed serial-tail cause.
-- 17–19 and 21–27 are not delivered. This includes actual context/fixture ownership,
-  bounded cancellation, correlated capture/cutoff, truthful stopped-run final
-  artifacts, integrated compatibility, performance assessment and rollout.
+- 17 has only the supported actual-fixture slice below, not complete acceptance.
+  18–19 and 21–27 are not delivered. Bounded cancellation, late-safe release,
+  correlated capture/cutoff, truthful stopped-run final artifacts, consumer-owner
+  audits, integrated compatibility, performance assessment and rollout remain open.
 
 The user was unavailable for the workload/host questions and instructed autonomous
 work. Missing human evidence is recorded as missing, not substituted with nested
@@ -156,6 +160,76 @@ original and reviewed evidence are archived separately; no historical IDE fixtur
 was altered. Human-only IntelliJ and 6,000-flow checks remain deferred until the end.
 
 ## Validation record
+
+### Actual-fixture context slice (17, partial)
+
+One explicit `ContextDomain` follows the physical fixture lifetime, not a runner,
+applicator wrapper, actor label or worker. Its authoritative applied-state map is
+shared across runners and fresh wrappers, including transitions to empty context
+that remove prior state. State changes only after successful actions. The implicit
+domain identity and additional physical-resource keys augment every flow's whole
+reservation before chain contraction; UNKNOWN remains conservative. The existing
+owner explicitly creates, resets and closes its fixture under ownership. Runner
+completion never resets it, including between chain members. Affinity rejects
+parallel mode before fixture creation; serial actions verify the actual owner thread.
+
+An exact whole-grant receipt is published before native emission, outside locks.
+Outer interceptors can report uncertainty from another diagnostic thread or after
+borrowed scope close while that exact grant remains owned. Original-run notification
+stops continuation even without a pending competitor; native success does not erase
+unsafe outer-cleanup evidence. Stale released receipts cannot poison a newer run.
+Callback failure retires only proven-unemitted use, preserves suppressed cleanup
+and returns only safely unused ownership. Borrowed `Use` never releases the external
+grant and rejects actions after its release. Scope/thread drainage failures retain
+ownership without reclassifying a safely completed Flow result as `ERROR`; ordinary
+safely completed assertion/outer failures permit reuse. No recovery/reset shortcut,
+fixture pool, worker lane or inferred ownership was added.
+
+The 67 context cases exercise 71 main-JVM Launchers: 69 native starts, 57 successes,
+four intentional failures, eight aborts and 61 body entries, plus two no-assertion
+callbacks. Twenty-six isolated unsafe child probes are counted separately, not added
+to those native totals. The inherited 72 resource cases remain 206 Launchers,
+577 starts, 547 successes, 20 intentional failures, ten aborts and 557 body entries.
+The exact narrow cross-thread admission-to-scope-entry race is source-guarded, not
+deterministically paused; actual native scope-failure controls prove retention at
+the public seam. Full cancellation/drain/late-safe proof remains tickets 18–19.
+
+Actual legacy examples on the initial ticket-17 binaries found/started Core 15
+(14 successes, one expected abort), Queue 15 (six successes, nine expected aborts)
+and Store seven (four successes, three expected aborts), with no failures. All five
+provoked-chain leaves passed. Later changes did not alter example code; these are
+historical example proofs, not new runs or migrations of their fixture owners.
+Real DB/browser owners, background quiescence and legacy cooperation still need
+consumer audits. Capture/report/replay remain guarded; distinct real parallel
+artifact/log attribution and retained-reference checks remain integration ticket 25.
+Native accumulated-reporting T30 and final-only activation remain ticket 23.
+IntelliJ, the manual 6,000-flow workload and the full suite remain pending.
+
+The parent independently reviewed the source. Final Standards/Spec reviews had
+zero hard findings and one low-priority duplicated-helper observation; the parent
+deduplicated only that helper, preserving the explicit suppressed-root oracle,
+then formatted the one changed file. The earlier formatter-failed broader attempt
+is retained, not counted as a pass. The second broader gate completed **472 cases:
+470 passed, two existing Windows symlink skips, zero failures/errors** (10 API,
+27 message, 201 core, 234 adapter), with `BUILD SUCCESS`. The known report-reuse
+failure did not recur; its cause remains **OPEN**, not fixed by these passes.
+
+Three repeats of the exact eight-class selector each passed **294 cases** (10 API,
+100 core, 184 adapter), with zero failures/errors/skips and recorded Maven exit 0.
+The earlier estimate of 344 was not used: the requested selector was unchanged.
+These gates used Azul Java 17.0.19 / JUnit 6.0.3, both skip flags and failure-ignore
+disabled, `surefire.failIfNoSpecifiedTests=false`, and the 39 real frontend assets.
+The current binaries were then installed with the same **294 passing cases** and
+Maven exit 0. The unchanged four-point packaged consumer passed on those same
+25 Flow JAR/POM files with 5.10.0/1.10.0 and 6.0.3/6.0.3, serial and parallel:
+eight outer passes, 246 native starts and 238 callback-UID comparisons. Its fresh
+XML, class-load traces and hash lists are retained separately from older archives.
+No artifact dependencies were changed and no additional ticket-17 context scenarios
+were added to that compatibility fixture. Scoped Standards/Spec findings are zero
+after the parent's helper deduplication; broader acceptance gaps above remain open.
+All 639 clean-export checks passed: 49 links, 49 snippets and 541 console-use checks.
+Before this three-line note, all 15 staged files and 49 tracked Markdown matched the tested export (normalized EOL).
+Evidence is frozen separately in `C:/Data/Code/flow-context17-packaged-20260915/`, including retained failures.
 
 ### Fair ready-admission slice
 

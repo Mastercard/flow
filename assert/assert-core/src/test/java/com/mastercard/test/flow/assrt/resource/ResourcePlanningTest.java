@@ -14,6 +14,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.mastercard.test.flow.Flow;
+import com.mastercard.test.flow.assrt.ContextDomain;
 import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations.Grant;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations.Request;
@@ -22,6 +23,103 @@ import com.mastercard.test.flow.assrt.resource.ResourceReservations.Request;
  * Pure public planning/reservation seam, shared by runners and fixture owners.
  */
 class ResourcePlanningTest {
+	/**
+	 * Borrowing cannot extend an external grant's physical ownership lifetime.
+	 *
+	 * @param capacity Core capacity, unrelated to any native worker count
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 2, 5 })
+	void borrowedUseCannotActAfterExternalGrantRelease( int capacity ) {
+		ContextDomain domain = new ContextDomain();
+		ResourceReservations resources = ResourceReservations.shared();
+		Request request = resources.register( resources.capacity( capacity ), domain.requirements(),
+				() -> {
+				} );
+		AtomicInteger actions = new AtomicInteger();
+		try {
+			try( Grant grant = request.tryAcquire() ) {
+				assertNotNull( grant );
+				try( var borrowed = domain.enter( grant ) ) {
+					grant.close();
+					assertThrows( IllegalStateException.class,
+							() -> borrowed.change( actions::incrementAndGet ) );
+					assertThrows( IllegalStateException.class,
+							() -> borrowed.reset( actions::incrementAndGet ) );
+					assertEquals( 0, actions.get(), "no fixture action on released ownership" );
+					assertNull( domain.uncertainty(), "rejected access did not perform unsafe work" );
+				}
+			}
+		}
+		finally {
+			request.cancel();
+		}
+		try( var next = domain.tryAcquire() ) {
+			assertNotNull( next );
+			next.change( actions::incrementAndGet );
+		}
+		assertEquals( 1, actions.get() );
+	}
+
+	/**
+	 * Fixture identity augments every reservation even for an empty-context flow.
+	 * Borrowed lifecycle access neither waits nor releases the admitted whole set.
+	 *
+	 * @param capacity Core execution capacity, independent of the native pool
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 2, 5 })
+	void domainOwnershipIsAdditiveAndBorrowedLifecycleCannotReleaseIt( int capacity ) {
+		ContextDomain domain = new ContextDomain( "whole table" );
+		ResourceRequirements independent = requirements();
+		ResourceRequirements combined = independent.plus( domain.requirements() );
+		assertFalse( combined.unknown() );
+		assertTrue( combined.keys().containsAll( domain.requirements().keys() ) );
+		assertTrue( new ResourceRules().resolve( null ).plus( domain.requirements() ).unknown(),
+				"a fixture footprint does not establish the rest of the flow's independence" );
+		ResourceReservations resources = ResourceReservations.shared();
+		Request first = resources.register( resources.capacity( capacity ), combined, () -> {
+		} );
+		Request conflict = resources.register( resources.capacity( capacity ), domain.requirements(),
+				() -> {
+				} );
+		try {
+			try( Grant grant = first.tryAcquire() ) {
+				assertNotNull( grant );
+				try( var use = domain.enter( grant ) ) {
+					try( var borrowed = domain.tryAcquire() ) {
+						assertNotNull( borrowed );
+						borrowed.change( () -> {
+						} );
+					}
+					try( Grant denied = conflict.tryAcquire() ) {
+						assertNull( denied );
+					}
+				}
+				try( Grant denied = conflict.tryAcquire() ) {
+					assertNull( denied, "body scope close is not native completion" );
+				}
+			}
+			try( Grant next = conflict.tryAcquire() ) {
+				assertNotNull( next );
+			}
+		}
+		finally {
+			first.cancel();
+			conflict.cancel();
+		}
+		AssertionError expected = new AssertionError( "probe failure" );
+		assertSame( expected, assertThrows( AssertionError.class, () -> {
+			try( var use = domain.tryAcquire() ) {
+				assertNotNull( use );
+				throw expected;
+			}
+		} ) );
+		try( var reused = domain.tryAcquire() ) {
+			assertNotNull( reused, "safely completed probe failure did not leak ownership" );
+		}
+	}
+
 	/**
 	 * Isolation is not a resource audit, even when another member is classified.
 	 */

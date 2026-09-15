@@ -59,6 +59,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 
 	private final FlowConfiguration config;
 	private final FlowProcessor processor;
+	private boolean ownedContext;
 
 	/**
 	 * Tracks the outcome of processing {@link Flow}s to inform further processing
@@ -355,16 +356,26 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 
 	/**
 	 * Temporary real-native tracer guard, not general parallel authorization.
-	 * Applied contexts, replay, capture and lazy report initialization have no
-	 * parallel owner in this slice. Invoke before any live admission.
+	 * Replay, capture and lazy report initialization remain guarded. Applied
+	 * contexts and residue require explicit actual fixture ownership.
 	 */
 	protected final void requireIndependentTracerConfiguration() {
 		if( config.reporting != Reporting.NEVER || config.logCapture != LogCapture.NO_OP
-				|| config.replay.hasData() || !config.applicators.isEmpty()
-				|| !config.checkers.isEmpty() || !config.autonomous.isEmpty() ) {
+				|| config.replay.hasData() || !ownedContext && (!config.applicators.isEmpty()
+						|| !config.checkers.isEmpty() || !config.autonomous.isEmpty()) ) {
 			throw new IllegalStateException( "Flow parallel tracer requires reporting NEVER, "
-					+ "NO_OP capture, no replay, applicators, checkers or autonomous actors" );
+					+ "NO_OP capture, no replay, and fixture ownership for applicators, checkers or autonomous actors" );
 		}
+	}
+
+	/**
+	 * Binds applied state without transferring fixture lifecycle responsibility.
+	 *
+	 * @param domain The existing fixture owner's shared identity, or null on detach
+	 */
+	protected final void useContextDomain( ContextDomain domain ) {
+		processor.contextDomain( domain );
+		ownedContext = domain != null;
 	}
 
 	/**

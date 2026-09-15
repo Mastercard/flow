@@ -83,9 +83,6 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 			ChainPlan chains ) {
 		for( int i = 0; i < flows.size(); i++ ) {
 			Flow flow = flows.get( i );
-			if( flow.context().findAny().isPresent() || flow.residue().findAny().isPresent() ) {
-				throw unsupported( flow, "context or residue (pending ticket 17)" );
-			}
 			for( Dependency dependency : flow.dependencies().toList() ) {
 				Flow source = dependency.source().flow();
 				if( source == null ) {
@@ -128,19 +125,37 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 
 			@Override
 			public boolean tryAdvance( Consumer<? super DynamicNode> action ) {
+				int index = FlowAdmission.WAITING;
+				boolean handedOff = false;
 				try {
-					int index = admission.next( () -> {
+					index = admission.next( () -> {
 						profile.checkAdmission();
 						checkAttachment();
 					} );
 					if( index == FlowAdmission.EXHAUSTED ) {
 						return false;
 					}
+					owner.admitted( index, admission.reservation( index ) );
+					handedOff = true;
 					action.accept( descriptions.get( index ) );
 					return true;
 				}
 				catch( RuntimeException | Error failure ) {
-					stop( failure );
+					try {
+						stop( failure );
+					}
+					catch( RuntimeException | Error cleanup ) {
+						if( cleanup != failure )
+							failure.addSuppressed( cleanup );
+					}
+					try {
+						if( index >= 0 && !handedOff )
+							admission.unused( index );
+					}
+					catch( RuntimeException | Error cleanup ) {
+						if( cleanup != failure )
+							failure.addSuppressed( cleanup );
+					}
 					throw failure;
 				}
 			}
@@ -181,7 +196,7 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 		if( !admission.enter( index, context.getUniqueId() ) ) {
 			throw new TestAbortedException( "Flow parallel admission stopped" );
 		}
-		owner.processParallel( index );
+		owner.processParallel( index, admission.reservation( index ) );
 	}
 
 	/**

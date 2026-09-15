@@ -106,8 +106,8 @@ Actual serial exhaustion and drained invocations, followed by the observed strea
 close, complete the prepared run. Early close or abandonment is diagnosed by its
 class-local lifecycle backstop; neither is converted into successful finalization.
 Reporting retains its current immediate behavior for the original serial caller.
-Resource declarations below add cooperating serial ownership; cancellation drainage,
-shared context/fixture lifecycle and integrated final-only reporting remain unfinished.
+Resource declarations and explicit fixture domains below add cooperating serial
+ownership; full cancellation drainage and integrated final-only reporting remain unfinished.
 
 Real Launcher regressions have exercised the serial caller on coherent JUnit
 5.10/Platform 1.10 and JUnit 6.0.3 stacks with Java 17. These are tested points,
@@ -168,17 +168,93 @@ and global-exclusion policy used by admission; `reservation(flow).isolationRules
 lists the matching whole-chain audit names separately from resource classification.
 Both queries use frozen preparation results and reject detached or unselected flows.
 
-Temporary tracer limits also reject reporting other than `Reporting.NEVER`, capture
-other than `LogCapture.NO_OP`, replay, contexts/applicators, residue/checkers,
-autonomous actors, foreign binding destinations, noncanonical prerequisites
-and non-class source URIs. These are fail-closed implementation
-boundaries, **not new permanent support restrictions**. Resource declarations do
-not authorize any of those unsupported surfaces. Explicit serial
-resource declarations also reject reports, capture, replay, applicators/checkers,
-autonomous actors and flows with contexts or residue: reservations do not establish
-shared applied-context ownership. Existing serial
+Temporary tracer limits reject reporting other than `Reporting.NEVER`, capture
+other than `LogCapture.NO_OP`, replay, foreign binding destinations, noncanonical
+prerequisites and non-class source URIs. Contexts/applicators, residue/checkers and
+autonomous actors require an explicit actual fixture domain, not just named resource
+rules. These are fail-closed implementation boundaries, **not new permanent support
+restrictions**. The same guards apply to explicit prepared serial cooperation.
+Existing serial
 configuration without new declarations retains its earlier processing behavior;
-cross-flow fixture/context lifetimes in that route are not covered by this slice.
+cross-runner fixture/context ownership is not retroactively inferred for that route.
+
+### Actual fixture domains
+
+The existing fixture owner creates one `ContextDomain` for the actual shared SUT
+state and keeps it for that physical lifetime. Every cooperating runner uses
+`contextDomain(domain)` **before fixture actions and `tests()`**. New applicator
+objects, tabs, runner lifetimes and different resource labels must not create fresh
+handles for the same state. `Context.domain()` identifies actors, not this physical
+domain. One handle conservatively covers every selected flow in its runner.
+
+The handle owns the authoritative applied-context map. Its implicit unique key and
+additional constructor keys are added to every selected flow's reservation,
+including empty-context flows that may remove earlier state. This preserves UNKNOWN
+classification and whole-chain exclusion. Shared-account/configuration keys can
+coordinate genuinely separate domains without merging their applied contexts.
+Successful transitions update the map; successful removal deletes it. Runner
+completion never clears the fixture state or resets between chain members.
+
+Existing owners use nonblocking `domain.tryAcquire()` for creation, reset and
+teardown: null means busy and **no fixture action is allowed**. Within a Flow
+invocation it borrows the current complete grant; closing that scope does not
+release native outer cleanup or chain ownership. `Use.change(action)` runs an
+existing lifecycle action; `Use.reset(action)` additionally records a clean context
+baseline only after the explicit action succeeds. Neither invents fixture actions
+or transfers lifecycle responsibility to Flow. Creation belongs before preparation;
+teardown belongs after the owner's actual last use, not in a description-stream
+close handler. A class finishing cannot acquire lifecycle ownership while another
+class still uses the domain.
+
+An owner may declare an actual required `Thread` in the domain constructor.
+Binding rejects initial parallel mode before subsequent fixture creation; serial
+binding and every use/lifecycle action check that exact thread. Declaring the
+handle after an arbitrary constructor or `@BeforeAll` already touched the fixture
+cannot retroactively establish ownership. No lanes, offloading or silent serial
+fallback are provided.
+
+Failed transitions and unhandled lifecycle-action failures conservatively retain
+the whole grant and diagnose later conflicts. Owner-supplied `uncertain(cause)`
+also records continued/uncertain use; a safely completed assertion failure does
+not. If a lifecycle failure is known safe, its existing owner must handle that
+inside the action rather than relying on a throwable class. There is no retry,
+repair, recreation, forced release or late-safe recovery in this slice. Full
+cancellation, bounded drainage and richer unsafe-owner diagnostics remain later work.
+
+The borrowed domain scope surrounds core processing, not arbitrary outer JUnit
+interceptors. Owners with external pre-body work or cleanup use
+`contextDomain(domain, (flow, receipt) -> ...)` to receive an exact whole-grant
+`ContextDomain.Receipt` **before native emission**. This short, nonthrowing callback
+runs outside bookkeeping locks; it publishes evidence ownership, not fixture actions.
+Correlate each receipt explicitly with the owner's work, and discard it after the
+supported invocation interval. Do not infer ownership from a thread, display name or
+the domain's currently active user.
+
+`receipt.uncertain(cause)` may deliver diagnostic evidence from another thread or
+after a borrowed `Use` closes, while that exact grant is still owned. `Use.receipt()`
+also captures evidence ownership during actual synchronous use. Evidence must arrive
+before native completion: it retains the whole grant and stops its owning run before
+chain continuation or finalization, even with no competing request pending. A released
+receipt rejects late evidence without poisoning a newer user; no recovery is implied.
+Receipt callback failure before native handoff retires only the proven-unemitted
+use; it cannot release explicit uncertainty or another live chain use. No native
+terminal or processing result is fabricated for that rejected publication.
+Actual fixture actions and applied-state access require a still-live complete grant,
+the owning thread and a current LIFO `Use` scope. A scope-close invariant failure
+retains the exact grant because drainage is unproved; entry/close failures do not
+reclassify genuine processing results as History ERROR. Native
+FAILED alone is not uncertainty, and ordinary safely completed outer cleanup failures
+still permit reuse. Nonthrowing evidence can stop a run even when its native leaf succeeds.
+
+The fake-fixture tests cover context removal across runners, residue and callbacks,
+native outer cleanup, default/isolated chains, cross-class teardown, shared tabs,
+separate sessions/shared accounts, actual serial affinity and zero-creation parallel
+rejection. They do not certify the consuming suite's resource audit or background
+quiescence. Existing service/mock/queue, DB and browser examples remain legacy
+serialized owners: their timers, handlers, whole-table observations and root-store
+cleanup have not been made automatically cooperating. Replay and report/capture
+integration remain guarded, including distinct artifact/log attribution for parallel
+browser sessions. No real browser, IDE or full-workload acceptance is claimed.
 
 ### Uninterrupted selected chains
 
@@ -209,10 +285,11 @@ execution and uses the next actual native factory advance as return proof. Stop
 prevents unused members from entering and retains uncertain use; safe late drainage
 never resumes admission. This is not the complete cancellation policy.
 
-Shared context transitions, residue, capture/report integration and fixture
-create/reset/teardown ownership remain separate guarded work. In particular,
+Explicit domains cover shared context transitions, residue and owner lifecycle
+actions. Capture/report integration remains guarded. In particular,
 parallel description-stream close can precede active native cleanup: it is not a
-safe fixture-teardown hook. No physical worker affinity is promised.
+safe fixture-teardown hook. Physical affinity is supported only on a verified actual
+serial owner, never by parallel worker assignment.
 
 ### Shared reservation scope and lifetime
 

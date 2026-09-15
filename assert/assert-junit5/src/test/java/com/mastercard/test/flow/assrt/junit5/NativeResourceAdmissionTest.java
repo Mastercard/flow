@@ -39,6 +39,7 @@ import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.extension.DynamicTestInvocationContext;
+import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
@@ -2351,11 +2352,16 @@ class NativeResourceAdmissionTest {
 		ForkJoinPool pool;
 		Runnable cleanup = () -> {
 		};
+		Runnable beforeBody = () -> {
+		};
+		Runnable afterAll = () -> {
+		};
 		private Runnable inline = () -> {
 		};
 		boolean rejectBody;
 		boolean skipBody;
 		FlowExecution handle;
+		private Throwable stopped;
 		private PreparedFlocessor runner;
 		private Stream<?> original;
 		private Stream<?> liveStream;
@@ -2439,6 +2445,24 @@ class NativeResourceAdmissionTest {
 		}
 
 		/**
+		 * Remembers failed setup even before the real factory publishes its handle.
+		 * Joining remains separate: callers must first stop all waiters, then release
+		 * their holder gates, then drain every Launcher.
+		 *
+		 * @param failure The primary probe failure, preserved by the caller
+		 */
+		void stop( Throwable failure ) {
+			FlowExecution closing;
+			synchronized( this ) {
+				if( stopped == null )
+					stopped = failure;
+				closing = handle;
+			}
+			if( closing != null )
+				closing.close();
+		}
+
+		/**
 		 * Waits for the actual Launcher result, including intentionally failed runs.
 		 * 
 		 * @throws Exception If the Launcher fails or exceeds its deadline
@@ -2492,7 +2516,12 @@ class NativeResourceAdmissionTest {
 	}
 
 	/** Uses public native contexts to select the run and hold post-body cleanup. */
-	public static final class FixtureContext implements InvocationInterceptor {
+	public static final class FixtureContext implements InvocationInterceptor, AfterAllCallback {
+		@Override
+		public void afterAll( ExtensionContext context ) {
+			RUNS.get( context.getConfigurationParameter( "resource.run" ).orElseThrow() ).afterAll.run();
+		}
+
 		@Override
 		@SuppressWarnings("unchecked")
 		public <T> T interceptTestFactoryMethod( Invocation<T> invocation,
@@ -2532,6 +2561,7 @@ class NativeResourceAdmissionTest {
 			assertEquals( run.parallel ? ExecutionMode.CONCURRENT : ExecutionMode.SAME_THREAD,
 					context.getExecutionMode() );
 			try {
+				run.beforeBody.run();
 				if( run.rejectBody )
 					throw new IllegalStateException( "native rejection before Flow entry" );
 				if( run.skipBody )
@@ -2553,7 +2583,15 @@ class NativeResourceAdmissionTest {
 	 */
 	static Stream<DynamicNode> prepare( FlowExecution execution ) {
 		Run run = FACTORY.get();
-		run.handle = execution;
+		Throwable stopped;
+		synchronized( run ) {
+			run.handle = execution;
+			stopped = run.stopped;
+		}
+		if( stopped != null ) {
+			execution.close();
+			throw new IllegalStateException( "Probe stopped before preparation", stopped );
+		}
 		run.factoryThread = Thread.currentThread();
 		run.pool = ForkJoinTask.getPool();
 		PreparedFlocessor runner = execution.flocessor( "resource admission", new Mdl() {
