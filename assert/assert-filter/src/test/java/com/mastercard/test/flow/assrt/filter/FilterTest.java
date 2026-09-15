@@ -307,9 +307,9 @@ class FilterTest {
 		// generate three reports
 
 		Path noResults = reportDir.resolve( "noResults" );
-		try( Writer nrw = new Writer( "model", "noResults", noResults ) ) {
-			mdl.flows().forEach( nrw::with );
-		}
+		Writer nrw = new Writer( "model", "noResults",
+				noResults );
+		mdl.flows().forEach( nrw::with );
 
 		Deque<String> resultTags = new ArrayDeque<>( Arrays.asList(
 				Writer.ERROR_TAG,
@@ -319,31 +319,31 @@ class FilterTest {
 				"do_not_tag" ) );
 
 		Path earlier = reportDir.resolve( "earlier" );
-		try( Writer ew = new Writer( "model", "earlier", earlier ) ) {
-			// this time we add result tags, flow cde should get PASS
-			mdl.flows().forEach( f -> ew.with( f, fd -> {
-				String t = resultTags.removeFirst();
-				if( !"do_not_tag".equals( t ) ) {
-					fd.tags.add( t );
-				}
-				resultTags.addLast( t );
-			} ) );
-		}
+		Writer ew = new Writer( "model", "earlier",
+				earlier );
+		// this time we add result tags, flow cde should get PASS
+		mdl.flows().forEach( f -> ew.with( f, fd -> {
+			String t = resultTags.removeFirst();
+			if( !"do_not_tag".equals( t ) ) {
+				fd.tags.add( t );
+			}
+			resultTags.addLast( t );
+		} ) );
 
 		// cycle the tag list...
 		resultTags.addLast( resultTags.removeFirst() );
 
 		Path later = reportDir.resolve( "later" );
-		try( Writer lw = new Writer( "model", "later", later ) ) {
-			// . .. so that this time flow bcd gets PASS
-			mdl.flows().forEach( f -> lw.with( f, fd -> {
-				String t = resultTags.removeFirst();
-				if( !"do_not_tag".equals( t ) ) {
-					fd.tags.add( t );
-				}
-				resultTags.addLast( t );
-			} ) );
-		}
+		Writer lw = new Writer( "model", "later",
+				later );
+		// . .. so that this time flow bcd gets PASS
+		mdl.flows().forEach( f -> lw.with( f, fd -> {
+			String t = resultTags.removeFirst();
+			if( !"do_not_tag".equals( t ) ) {
+				fd.tags.add( t );
+			}
+			resultTags.addLast( t );
+		} ) );
 
 		new FltrTst( mdl )
 				.loadFailuresIndices( noResults )

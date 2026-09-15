@@ -55,67 +55,33 @@ Update/publication failures are latched: subsequent update/close calls throw an
 Closing is not proof that the surrounding test run has completed; the caller must
 stop submissions and drain its work first. Direct Writer failures remain visible.
 
-### Destination ownership and completion publication
+### Sequential replacement and completion publication
 
-Every writer, including an immediate writer, must be closed. Construction resolves
-existing filesystem aliases and normalized paths, then acquires a mandatory,
-nonblocking file lock before clearing or initializing output. A live competitor
-fails reporting without deleting the owner's report. Closed, inactive reports
-remain replaceable at the configured destination; output is not archived or moved.
-The lock lives beside, not inside, the replaced report tree. Lock files remain on
-disk after release: their existence is not ownership. A small JVM-local guard
-prevents opening/closing a second descriptor that could invalidate a process's
-file lock on some platforms; it is not a substitute for the filesystem lock.
-Unsupported or failed filesystem claims fail closed, without a temporary-directory
-registry or unlocked fallback.
+Supported reporting assumes a single active writer per actual output namespace
+and publication location: no competing writer may replace the same destination,
+an overlapping parent/child destination, or the publication location. Overlap is
+unsupported and may delete, mix or misleadingly publish output. Neither safe
+last-writer-wins nor deterministic collision failure is promised. There are no
+cross-run locks, rejection registries or automatic serialization. This does not
+relax shared SUT resource, chain, context, fixture or cancellation coordination
+across cooperating runners; multiple producers may still share one writer.
 
-Ancestor/descendant destinations also conflict. With its own sidecar held, a writer
-probes existing ancestor claims and scans its existing output tree for descendant
-claims before clearing it. A late descendant sees the ancestor's held claim; an
-earlier descendant's held sidecar is found by the ancestor's scan. A descendant
-paused while a finishing ancestor removes its newly opened sidecar must fail
-linked-file validation before writing or publishing. Probes use the
-same atomic local guard and filesystem lock, do not create missing ancestor claims,
-and ignore unlocked stale claims. The one-time scan does not follow directory
-symlinks; there is no per-flow scan or shared ancestor lock registry.
-
-Claims capture `BasicFileAttributes.fileKey()` before opening the existing sidecar
-(created without truncation when needed), then validate the linked key after all
-ownership checks, including probes and short publication claims. Key-based providers
-must retain a file's identity while its inode is open, as on POSIX filesystems;
-the JDK's [file-key contract](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/attribute/BasicFileAttributes.html#fileKey()) alone does not guarantee this for every provider.
-Null keys fail closed except on native Windows: when `os.name` starts with `Windows`
-and the path uses `FileSystems.getDefault()`, claims instead require the public JDK
-17 [`ExtendedOpenOption.NOSHARE_DELETE`](https://github.com/openjdk/jdk17u/blob/master/src/jdk.unsupported/share/classes/com/sun/nio/file/ExtendedOpenOption.java)
-to prevent deletion/replacement throughout the open handle's lifetime. This assumes
-an accurate OS property and the unmodified native default provider; other providers
-require usable keys. Unsupported options fail closed without retrying an unlocked
-open. Channel close releases its lock; an uncertain close retains the local guard
-and failure rather than treating a later no-op close as successful disposal.
-
-Cooperating processes must address the same canonical filesystem namespace and
-honor its locks; shared-filesystem support depends on the provider's cross-process
-lock semantics. Do not remove or replace sidecars, whose reserved names are
-`.<destination>.flow-writer.lock` and `.latest.flow-publication.lock`, except as part
-of replacing an inactive ancestor after its ownership checks.
-This does not promise protection from older/noncooperating writers, external tree
-deletion, mount/alias changes, crash durability, recovery or immediate lock release
-after forced process termination. Readers/replay inputs remain read-only and must
-not be chosen as replacement output by their callers.
-
-Initialization failure releases its claim and preserves surviving partial files.
-Update failure retains ownership until the caller closes; failed close safely
-releases it but continues to report the original failure. Finalization failure also
-releases safely disposable ownership, without retrying or deleting useful details.
+Construction resolves existing filesystem aliases before replacing output.
+Sequential runs replace existing output at the requested destination without
+nonempty-directory rejection, relocation, backup or recovery. Readers/replay
+inputs remain read-only and must not be chosen as replacement output. Hard
+termination may leave useful details but does not guarantee a browsable final-only
+index or crash recovery. Failed initialization/finalization preserves surviving
+partial files; it does not retry into apparent success.
 
 `writer.onClose(Consumer<Path>)` registers one synchronous completion action. The
-existing `close()` finalizes the report, invokes the action with its canonical path,
-then releases ownership. No action runs after failed detail/index finalization.
+existing `close()` finalizes the report, then invokes the action with its canonical
+path, creating the configured advertisement parent first if needed. No action runs
+after failed detail/index finalization or publication setup.
 The action must finish all publication-related use before returning; asynchronous
 work must not escape that scope. Repeated successful close does not invoke it again;
-an action failure is latched, not retried or rolled back. Configured publication actions
-and owned-link withdrawal share a short-lived nonblocking filesystem claim, so
-competing publication fails observably rather than racing link replacement.
+an action failure is latched, not retried or rolled back. Immediate reads do not
+require close, but completion actions do; final-only indexes also require close.
 
 Before replacing a destination, Writer withdraws its configured `latest` symlink
 only if it resolves to that canonical destination; unrelated links and ordinary
@@ -126,15 +92,15 @@ after close. Ordinary files/directories chosen as explicit output remain replace
 The five-argument constructor
 `Writer(model, test, root, indexing, latest)` supplies that location before clearing;
 existing constructors default to a sibling. Only the advertisement's parent is
-canonicalized, not its possibly foreign link target. Withdrawal and publication
-lock that parent's sidecar and check ancestor ownership; a competing writer cannot
-replace the publication parent while the action is active.
+canonicalized, not its possibly foreign link target.
 
 Writer does not create an advertisement itself. Completion actions advertising
 `latest` must use the configured location and preserve unrelated references/ordinary
-files. Automatic run naming, caller drainage,
-final-only activation and latest/browse integration remain runner work; legacy
-assertion adapters still use immediate reporting.
+files. Automatic run naming and replay-source separation remain unchanged. Caller
+drainage, exactly-once initialization before concurrent bodies, final-only activation
+and latest/browse integration remain runner work; legacy assertion adapters still
+use immediate reporting. Parallel reporting remains guarded pending ticket 23's
+run-owned integration and the real caller/host acceptance gates.
 
 ## Testing
 

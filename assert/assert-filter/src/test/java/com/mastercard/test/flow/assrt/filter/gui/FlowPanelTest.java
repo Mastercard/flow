@@ -362,10 +362,9 @@ class FlowPanelTest {
 				Writer.FAIL_TAG,
 				Writer.PASS_TAG,
 				Writer.SKIP_TAG ) );
-		try( Writer w = new Writer( "model", "test",
-				Paths.get( "target", "mctf", "FlowPanelTest", "failures" ) ) ) {
-			mdl.flows().forEach( f -> w.with( f, fd -> fd.tags.add( resultTags.removeFirst() ) ) );
-		}
+		Writer w = new Writer( "model", "test",
+				Paths.get( "target", "mctf", "FlowPanelTest", "failures" ) );
+		mdl.flows().forEach( f -> w.with( f, fd -> fd.tags.add( resultTags.removeFirst() ) ) );
 
 		new FilterGuiHarness()
 				.buildFlows()

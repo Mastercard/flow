@@ -2,8 +2,62 @@
 
 This branch is a **partial implementation**, not an accepted parallel release.
 The original review baseline is `483c5428c2f1fb517c12f7f63200b39066059e17`.
-The approved 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remain
-authoritative; no frozen feasibility evidence or design decision was rewritten.
+The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remain
+authoritative subject to explicit approved amendments. Frozen feasibility evidence
+and the original decision records remain historical.
+
+## Approved report-scope amendment — 2026-09-15
+
+The user approved [single-active-writer reporting](.scratch/parallel-flow-design/spec.md#report-scope-amendment-2026-09-15)
+and requested [ticket 28: Simplify single-run report ownership](.scratch/parallel-flow-implementation/issues/28-simplify-single-run-report-ownership.md).
+Cross-run report locks, rejection registries and competing-publication protection
+are removal targets, not requirements to restore during other work. Final-only
+indexing, direct immediate compatibility, within-run safety and sequential
+replacement/latest behavior remain required. Compare code, tests and documentation
+with `main` and restore simpler earlier forms only where the removed requirement
+was their sole justification. Preserve active work and independently required fixes.
+
+Ticket 28's simplification is implemented; ticket 23's run-owned reporting integration
+still depends on its retained contract. The delivered ticket-04 claims and their
+test/platform evidence below describe the original implemented contract, not the
+current implementation. All other slice evidence and open failures remain unchanged;
+removing a requirement is not a diagnosis or resolution of a recorded test failure.
+
+### Ticket 28 implementation evidence
+
+Cross-run claim files, the local registry, ancestor/descendant probes, lock identity
+and Windows delete-denial machinery, competing-publication claims and their release
+bookkeeping are removed. No replacement coordinator or duplicate rejection was added.
+Supported reporting assumes no competing active writers in the same/overlapping
+output namespace or publication location; unsupported overlap may delete, mix or
+misleadingly publish output. Shared SUT/resource/fixture/Stop coordination is unchanged.
+
+Sequential path/latest handling remains in the existing filesystem abstraction.
+Immediate reads, within-writer synchronization/detail protection, detached snapshots,
+canonical final links, strict atomic final-only publication and observable failures
+remain. Claim-only test scopes were restored to earlier forms; actual completion,
+publication callbacks, capture cleanup and runner lifetimes were retained. Parallel
+reporting remains guarded pending 23; this slice does not enable it early.
+
+The focused Java gate passed **194 cases: 179 passed, 15 platform skips, zero
+failures/errors**, with actual Java 17 compilation, both skip flags and failure-ignore
+false. Frontend tests passed **72 cases**, with the real 39-entry report asset manifest.
+The known repeated-report failure did not recur and remains **OPEN**; the separate
+packaged-consumer failure/evidence is not resolved or waived by this reporting gate.
+Twelve sequential symlink cases and three existing platform cases were skipped on
+Windows. Actual occupied-index publication failure and injected filesystem failures
+passed. No POSIX, new host, packaged-consumer or full-reactor acceptance is claimed;
+the user reserved the full reactor for final integration.
+
+The [amendment implementation record](report/report-core/AMENDMENT.md) records exact
+comparison revisions, changed/restored/retained files, source counts and commands.
+The publication-parent regression is repaired: directory setup occurs before the
+completion callback, and failures latch without invoking or retrying that action.
+Independent current-index review found Standards 0 / Spec 0 scoped defects.
+The exact staged source, excluding unfinished Stop/consumer changes, compiled fresh
+and passed **837 focused cases: 822 passed, 15 skipped, zero failures/errors**,
+including 640 documentation checks. This remains a selected gate, not the full reactor.
+Historical claim-delivery evidence below is intentionally retained.
 
 ## Delivered code slices
 

@@ -11,13 +11,16 @@ import org.junit.jupiter.api.Test;
 import com.mastercard.test.flow.report.ReportTestUtil.Served;
 
 /**
- * Exercises ownership of reports created by the browser test fixture.
+ * Exercises sequential report reuse and failures through the browser fixture.
  */
 @SuppressWarnings("static-method")
 class ReportTestUtilTest {
 
+	/**
+	 * @throws Exception On report serving or cleanup failure
+	 */
 	@Test
-	void releasesWriterBeforeServing() throws Exception {
+	void servesSequentialReplacements() throws Exception {
 		try( Served first = ReportTestUtil.serve( "helper-reuse", Mdl.BASIS );
 				Served second = ReportTestUtil.serve( "helper-reuse", Mdl.CHILD ) ) {
 			assertEquals( 1234567890123L, new Reader( URI.create( first.url() ) ).read().meta.timestamp );
@@ -25,8 +28,13 @@ class ReportTestUtilTest {
 		}
 	}
 
+	/**
+	 * Cleanup must not replace the population failure.
+	 *
+	 * @throws Exception On report serving or cleanup failure
+	 */
 	@Test
-	void releasesWriterWhenPopulationFails() throws Exception {
+	void preservesPopulationFailure() throws Exception {
 		IllegalStateException failure = new IllegalStateException( "population failed" );
 		assertSame( failure, assertThrows( IllegalStateException.class,
 				() -> ReportTestUtil.serve( "helper-failure", "model", writer -> {

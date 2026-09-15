@@ -45,11 +45,10 @@ import com.mastercard.test.flow.util.Bytes;
 /**
  * For writing a new report
  * <p>
- * Every writer claims its canonical destination before replacement and retains
- * ownership until close, including immediate writers. Cooperating writers
- * reject overlapping ancestor/descendant destinations. Callers must not remove
- * claim files or change filesystem aliases while writers are active; claims do
- * not protect against noncooperating deletion or replacement.
+ * Callers must use a single active writer per output namespace and publication
+ * location. Competing writers, including overlapping parent/child destinations,
+ * are unsupported and may delete, mix or misleadingly publish output. Updates
+ * from multiple producers on the same writer are supported.
  * </p>
  */
 public class Writer implements AutoCloseable {
@@ -103,7 +102,7 @@ public class Writer implements AutoCloseable {
 	private final String testTitle;
 	private final Path root;
 	private final Path requestedRoot;
-	private final ReportClaim claim;
+	private final Path latest;
 	private final Map<Flow, IndexedFlowData> data = new LinkedHashMap<>();
 	private final Map<String, IndexedFlowData> detailOwners = new HashMap<>();
 	private final JsApp app;
@@ -183,17 +182,11 @@ public class Writer implements AutoCloseable {
 		requestedRoot = root;
 		this.indexing = Objects.requireNonNull( indexing, "indexing" );
 		this.files = Objects.requireNonNull( files, "files" );
-		claim = new ReportClaim( root, latest );
-		this.root = claim.root();
-		try {
-			claim.withdrawLatest();
-			files.clear( this.root );
-			app = new JsApp( "/com/mastercard/test/flow/report", this.root.resolve( "res" ), files );
-		}
-		catch( RuntimeException | Error e ) {
-			releaseAfterFailure( e );
-			throw e;
-		}
+		this.root = QuietFiles.wrap( () -> ReportFiles.canonical( root.toAbsolutePath() ) );
+		this.latest = QuietFiles.wrap( () -> ReportFiles.latest( this.root, latest ) );
+		files.withdrawLatest( root, this.root, this.latest );
+		files.clear( this.root );
+		app = new JsApp( "/com/mastercard/test/flow/report", this.root.resolve( "res" ), files );
 	}
 
 	/**
@@ -385,14 +378,11 @@ public class Writer implements AutoCloseable {
 
 	/**
 	 * Registers one synchronous publication action for successful finalization. It
-	 * runs inside close, with destination ownership retained, before release. The
-	 * action must finish its use before returning and must not wait for another
-	 * thread to use this writer. A thrown failure is latched and is not retried.
-	 * Publication actions use a nonblocking filesystem claim; a busy claim fails
-	 * reporting rather than invoking the action. Actions advertising latest must
-	 * use the location supplied at construction (a sibling by default), preserve
-	 * unrelated references and ordinary files, and handle their own partial side
-	 * effects.
+	 * runs inside close and must finish its use before returning, not wait for
+	 * another thread to use this writer. A thrown failure is latched and is not
+	 * retried. Actions advertising latest must use the location supplied at
+	 * construction (a sibling by default), preserve unrelated references and
+	 * ordinary files, and handle their own partial side effects.
 	 *
 	 * @param action Receives the canonical report destination
 	 * @return This writer
@@ -412,15 +402,12 @@ public class Writer implements AutoCloseable {
 	 * successful repeated close does nothing; further updates are rejected. After
 	 * an update or publication fails, subsequent close/update calls throw an
 	 * exception whose cause is the original failure, without retrying IO. Failed
-	 * close disposes safely releasable ownership without declaring success.
+	 * finalization does not invoke the publication action.
 	 */
 	@Override
 	public synchronized void close() {
 		if( state == State.CLOSED ) {
 			return;
-		}
-		if( state == State.FAILED ) {
-			releaseAfterFailure( failure );
 		}
 		requireOpen();
 		state = State.FINALIZING;
@@ -430,27 +417,15 @@ public class Writer implements AutoCloseable {
 				publishIndex();
 			}
 			if( publication != null ) {
-				try( ReportClaim advertisement = claim.publication() ) {
-					publication.accept( root );
-				}
+				QuietFiles.createDirectories( latest.getParent() );
+				publication.accept( root );
 			}
-			claim.close();
 			state = State.CLOSED;
 		}
 		catch( RuntimeException | Error e ) {
 			state = State.FAILED;
 			failure = e;
-			releaseAfterFailure( e );
 			throw e;
-		}
-	}
-
-	private void releaseAfterFailure( Throwable problem ) {
-		try {
-			claim.close();
-		}
-		catch( RuntimeException | Error cleanup ) {
-			problem.addSuppressed( cleanup );
 		}
 	}
 

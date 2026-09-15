@@ -10,8 +10,6 @@ import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -20,9 +18,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Assertions;
@@ -333,63 +328,31 @@ class ReportingTest {
 	}
 
 	/**
-	 * Live reporting does not publish latest; completion shares its ownership with
-	 * other report destinations, even after temporary runtime options have ended.
+	 * Completion retains its configured destination after temporary options end.
 	 *
 	 * @param name Report name beneath the configured artifact directory
 	 * @param dir  Isolated artifact directory
-	 * @throws Exception On worker failure
 	 */
 	@ParameterizedTest
 	@ValueSource(strings = { "report", "sub/path/report" })
-	void latestPublicationOwnership( String name, @TempDir Path dir ) throws Exception {
-		CountDownLatch publishing = new CountDownLatch( 1 );
-		CountDownLatch release = new CountDownLatch( 1 );
-		var worker = Executors.newSingleThreadExecutor();
-		try( Writer blocker = new Writer( "model", "blocker", dir.resolve( "other/report" ),
-				Writer.Indexing.IMMEDIATE, dir.resolve( "latest" ) ).onClose( path -> {
-					publishing.countDown();
-					try {
-						assertTrue( release.await( 10, TimeUnit.SECONDS ) );
-					}
-					catch( InterruptedException e ) {
-						Thread.currentThread().interrupt();
-						throw new AssertionError( e );
-					}
-				} ) ) {
-			var close = worker.submit( blocker::close );
-			try {
-				assertTrue( publishing.await( 10, TimeUnit.SECONDS ) );
-				TestFlocessor tf = new TestFlocessor( "publication", TestModel.abc() )
-						.system( State.FUL, B )
-						.reporting( QUIETLY )
-						.behaviour( assrt -> assrt.actual().response( assrt.expected().response().content() ) );
-				IllegalStateException failure = assertThrows( IllegalStateException.class, () -> {
-					try( tf ) {
-						try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
-								Temporary reportName = AssertionOptions.REPORT_NAME.temporarily( name ) ) {
-							tf.execute();
-							assertEquals( "abc [] SUCCESS", tf.results() );
-							Reader reader = new Reader( tf.report() );
-							Entry entry = reader.read().entries.get( 0 );
-							assertTrue( entry.tags.contains( "PASS" ) );
-							assertTrue( reader.detail( entry ).tags.contains( "PASS" ) );
-						}
-					}
-				} );
-				assertSame( failure, assertThrows( IllegalStateException.class, tf::close ).getCause() );
-				assertEquals( "publication", new Reader( tf.report() ).read().meta.testTitle );
-			}
-			finally {
-				release.countDown();
-				close.get( 10, TimeUnit.SECONDS );
+	void completionAfterOptionsEnd( String name, @TempDir Path dir ) {
+		TestFlocessor tf = new TestFlocessor( "publication", TestModel.abc() )
+				.system( State.FUL, B )
+				.reporting( QUIETLY )
+				.behaviour( assrt -> assrt.actual().response( assrt.expected().response().content() ) );
+		try( tf ) {
+			try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
+					Temporary reportName = AssertionOptions.REPORT_NAME.temporarily( name ) ) {
+				tf.execute();
+				assertEquals( "abc [] SUCCESS", tf.results() );
+				Reader reader = new Reader( tf.report() );
+				Entry entry = reader.read().entries.get( 0 );
+				assertTrue( entry.tags.contains( "PASS" ) );
+				assertTrue( reader.detail( entry ).tags.contains( "PASS" ) );
+				assertFalse( Files.exists( dir.resolve( "latest" ), LinkOption.NOFOLLOW_LINKS ) );
 			}
 		}
-		finally {
-			release.countDown();
-			worker.shutdownNow();
-			assertTrue( worker.awaitTermination( 10, TimeUnit.SECONDS ) );
-		}
+		assertEquals( "publication", new Reader( dir.resolve( name ) ).read().meta.testTitle );
 	}
 
 	/**

@@ -62,8 +62,8 @@ close the runner. Configuration remains live until explicit completion.
 `close()` rejects active processing rather than waiting or cancelling it. Otherwise
 it permanently prevents further SUT calls, even with `Reporting.NEVER`, and closes
 only an already-created report. Successful close is idempotent; failed reporting
-remains observable on repeated close. Omitting completion leaves report ownership
-open. This does not add a public close method to `PreparedFlocessor`.
+remains observable on repeated close. Omitting completion prevents completion-time
+publication. This does not add a public close method to `PreparedFlocessor`.
 
 ## Prepared caller (implementation preview)
 

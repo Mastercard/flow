@@ -86,5 +86,5 @@ runner; `@BeforeClass` is too late because parameter enumeration happens first.
 `close()` rejects active processing rather than waiting or cancelling it. Otherwise
 it permanently prevents further SUT calls, even with `Reporting.NEVER`, and closes
 only an already-created report. Successful close is idempotent; failed reporting
-remains observable on repeated close. Omitting completion leaves report ownership
-open.
+remains observable on repeated close. Omitting completion skips the report's
+successful-finalization action, including latest-link publication.

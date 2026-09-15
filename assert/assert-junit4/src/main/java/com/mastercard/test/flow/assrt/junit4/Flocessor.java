@@ -70,7 +70,7 @@ public class Flocessor extends AbstractFlocessor<Flocessor> implements AutoClose
 	/**
 	 * Permanently stops processing and closes any existing report. Call from
 	 * {@code @AfterClass}, after all parameterized cases have finished, not after
-	 * parameter enumeration. Omitting this call leaves report ownership open.
+	 * parameter enumeration. Omitting this call skips completion publication.
 	 *
 	 * @throws IllegalStateException if an invocation or completion is still active,
 	 *                               or reporting has failed; a reporting failure

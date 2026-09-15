@@ -67,8 +67,8 @@ public class Flocessor extends AbstractFlocessor<Flocessor> implements AutoClose
 	/**
 	 * Permanently stops processing and closes any existing report. Call from
 	 * {@code @AfterAll}, after all dynamic tests have finished. Factory return and
-	 * stream closure do not prove completion. Omitting this call leaves report
-	 * ownership open.
+	 * stream closure do not prove completion. Omitting this call skips completion
+	 * publication.
 	 *
 	 * @throws IllegalStateException if an invocation or completion is still active,
 	 *                               or reporting has failed; a reporting failure
