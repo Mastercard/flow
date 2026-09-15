@@ -23,12 +23,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import com.mastercard.test.flow.Actor;
@@ -362,6 +365,206 @@ class AbstractFlocessorTest {
 				assertEquals( Set.of( "FAIL" ), report.detail( index.entries.get( 0 ) ).tags );
 				assertEquals( Set.of( "PASS" ), report.detail( index.entries.get( 1 ) ).tags );
 			}
+		}
+	}
+
+	/**
+	 * A binding error stops that publication but reporting still compares later
+	 * messages. Earlier writes and mutation side effects are never rolled back.
+	 *
+	 * @param reporting Immediate or accumulated mode
+	 * @param fault     The synchronous publication operation that fails
+	 */
+	@ParameterizedTest
+	@CsvSource({ "NEVER,peer", "NEVER,get", "NEVER,mutation", "NEVER,set", "NEVER,set-after",
+			"QUIETLY,peer", "QUIETLY,get", "QUIETLY,mutation", "QUIETLY,set", "QUIETLY,set-after" })
+	void publicationErrorRetainsEarlierWritesAndAccumulatesOnlyWhenConfigured( Reporting reporting,
+			String fault ) {
+		Thread caller = Thread.currentThread();
+		RuntimeException original = new IllegalStateException( "publication " + fault );
+		List<String> operations = new ArrayList<>();
+		List<String> cleanup = new ArrayList<>();
+		AtomicInteger gets = new AtomicInteger();
+		AtomicInteger mutations = new AtomicInteger();
+		AtomicInteger sets = new AtomicInteger();
+		AtomicBoolean armed = new AtomicBoolean();
+		Text request = new Text( "request" ) {
+			@Override
+			public Text child() {
+				return this;
+			}
+
+			@Override
+			public Text peer( byte[] bytes ) {
+				assertSame( caller, Thread.currentThread() );
+				operations.add( "peer" );
+				if( fault.equals( "peer" ) )
+					throw original;
+				return new Text( bytes ) {
+					@Override
+					protected Object access( String field ) {
+						assertSame( caller, Thread.currentThread() );
+						int call = gets.incrementAndGet();
+						operations.add( "get" + call );
+						if( call == 2 && fault.equals( "get" ) )
+							throw original;
+						return "write" + call;
+					}
+				};
+			}
+		};
+		Text destination = new Text( "initial" ) {
+			@Override
+			public Text child() {
+				return this;
+			}
+
+			@Override
+			public Text set( String field, Object value ) {
+				if( !armed.get() )
+					return super.set( field, value );
+				assertSame( caller, Thread.currentThread() );
+				int call = sets.incrementAndGet();
+				operations.add( "set" + call );
+				if( call == 2 && fault.equals( "set" ) )
+					throw original;
+				super.set( field, value );
+				if( call == 2 && fault.equals( "set-after" ) )
+					throw original;
+				return this;
+			}
+		};
+		Flow producer = Creator.build( f -> f.meta( m -> m.description( "producer" ) )
+				.call( i -> i.from( A ).to( B ).request( request )
+						.response( new Text( "response" ) ) ) );
+		Flow sink = Creator.build( f -> {
+			f.meta( m -> m.description( "sink" ) ).call( i -> i.from( A ).to( B )
+					.request( destination ).response( new Text( "pending" ) ) );
+			for( int binding = 1; binding <= 3; binding++ ) {
+				f.dependency( producer, d -> d.from( i -> true, REQUEST, ".+" ).mutate( value -> {
+					assertSame( caller, Thread.currentThread() );
+					int call = mutations.incrementAndGet();
+					operations.add( "mutation" + call );
+					if( call == 2 && fault.equals( "mutation" ) )
+						throw original;
+					return value;
+				} ).to( i -> true, REQUEST, ".+" ) );
+			}
+			f.dependency( producer, d -> d.from( i -> true, RESPONSE, ".+" ).mutate( value -> {
+				assertSame( caller, Thread.currentThread() );
+				operations.add( "response" );
+				return "later write";
+			} ).to( i -> true, RESPONSE, ".+" ) );
+		} );
+		destination.set( ".+", "initial" );
+		armed.set( true );
+		try( TestFlocessor runner = new TestFlocessor( "binding error",
+				new Mdl().withFlows( producer, sink ) )
+						.system( State.FUL, B )
+						.reporting( reporting, "binding-error-" + reporting + "-" + fault )
+						.logs( new LogCapture() {
+							@Override
+							public void start( Flow flow ) {
+								assertSame( producer, flow );
+								assertSame( caller, Thread.currentThread() );
+								cleanup.add( "start" );
+							}
+
+							@Override
+							public Stream<com.mastercard.test.flow.report.data.LogEvent> end( Flow flow ) {
+								assertSame( producer, flow );
+								assertSame( caller, Thread.currentThread() );
+								cleanup.add( "end" );
+								return Stream.<com.mastercard.test.flow.report.data.LogEvent>empty()
+										.onClose( () -> {
+											assertSame( caller, Thread.currentThread() );
+											cleanup.add( "close" );
+										} );
+							}
+						} ).listening( new Listener() {
+							@Override
+							public void flowComplete( Flow flow ) {
+								assertSame( producer, flow );
+								assertSame( caller, Thread.currentThread() );
+								cleanup.add( "complete" );
+							}
+						} )
+						.behaviour( a -> {
+							assertSame( caller, Thread.currentThread() );
+							operations.add( "body" );
+							a.actual().request( "request".getBytes( UTF_8 ) )
+									.response( "unexpected response".getBytes( UTF_8 ) );
+						} ) ) {
+			assertEquals( List.of( producer, sink ), runner.flows().toList() );
+			var failure = assertThrows( IllegalArgumentException.class,
+					() -> runner.process( producer ) );
+			assertSame( original, failure.getCause().getCause(),
+					"execution error outranks later comparison failure" );
+			assertEquals(
+					fault.equals( "peer" ) ? "initial" : fault.equals( "set-after" ) ? "write2" : "write1",
+					sink.root().request().assertable() );
+			assertEquals( reporting == Reporting.NEVER ? "response" : "later write",
+					sink.root().response().assertable() );
+			List<String> expected = new ArrayList<>( switch( fault ) {
+				case "peer" -> List.of( "body", "peer" );
+				case "get" -> List.of( "body", "peer", "get1", "mutation1", "set1", "get2" );
+				case "mutation" -> List.of( "body", "peer", "get1", "mutation1", "set1", "get2",
+						"mutation2" );
+				default -> List.of( "body", "peer", "get1", "mutation1", "set1", "get2", "mutation2",
+						"set2" );
+			} );
+			if( reporting == Reporting.QUIETLY )
+				expected.add( "response" );
+			assertEquals( expected, operations, "no third binding, retry or replay" );
+			assertEquals( 4, sink.dependencies().count() );
+			assertEquals( reporting == Reporting.NEVER ? 0 : 1,
+					runner.events().lines().filter( l -> l.startsWith( "COMPARE" ) ).count() );
+			assertEquals( reporting == Reporting.NEVER ? List.of()
+					: List.of( "start", "end", "close", "complete" ), cleanup );
+			if( reporting == Reporting.NEVER )
+				assertNull( runner.report() );
+			else {
+				Reader reader = new Reader( runner.report() );
+				Index index = reader.read();
+				assertEquals( 1, index.entries.size() );
+				FlowData detail = reader.detail( index.entries.get( 0 ) );
+				assertEquals( Set.of( "ERROR" ), detail.tags );
+				assertEquals( "unexpected response", detail.root.response.full.actual );
+				assertTrue( detail.logs.stream()
+						.anyMatch( log -> log.message.contains( "publication " + fault ) ) );
+			}
+			runner.close();
+			assertThrows( IllegalStateException.class, () -> runner.process( producer ) );
+			assertEquals( expected, operations, "completion does not rerun publication" );
+		}
+	}
+
+	/** Binding reads the unmasked peer before comparing a masked request. */
+	@Test
+	void intraFlowBindingPublishesUnmaskedActualBeforeResponseComparison() {
+		com.mastercard.test.flow.Unpredictable token = () -> "token";
+		Thread caller = Thread.currentThread();
+		List<Object> values = new ArrayList<>();
+		Flow flow = Creator.build( f -> f.meta( m -> m.description( "self" ) )
+				.call( i -> i.from( A ).to( B )
+						.request(
+								new Text( "expected-token" ).masking( token, m -> m.replace( ".+", "masked" ) ) )
+						.response( new Text( "pending" ) ) )
+				.dependency( null, d -> d.from( i -> true, REQUEST, ".+" ).mutate( value -> {
+					assertSame( caller, Thread.currentThread() );
+					values.add( value );
+					return value;
+				} ).to( i -> true, RESPONSE, ".+" ) ) );
+		try( TestFlocessor runner = new TestFlocessor( "masked self publication",
+				new Mdl().withFlows( flow ) )
+						.system( State.FUL, B ).reporting( Reporting.NEVER ).masking( token )
+						.behaviour( a -> a.actual().request( "raw-token".getBytes( UTF_8 ) )
+								.response( "raw-token".getBytes( UTF_8 ) ) ) ) {
+			runner.execute();
+			assertEquals( "self [] SUCCESS", runner.results() );
+			assertEquals( List.of( "raw-token" ), values );
+			assertEquals( "raw-token", flow.root().response().assertable() );
+			assertEquals( 2, runner.events().lines().filter( l -> l.startsWith( "COMPARE" ) ).count() );
 		}
 	}
 

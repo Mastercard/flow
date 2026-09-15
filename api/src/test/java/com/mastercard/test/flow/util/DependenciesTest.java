@@ -9,10 +9,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 
 import java.util.Optional;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -116,6 +122,77 @@ class DependenciesTest {
 						// mask out the dynamic class name from mockito
 						.replaceAll( "(\\] ).*?( from)", "$1msg_type$2" ) );
 		assertSame( npe, iae.getCause() );
+	}
+
+	/**
+	 * Synchronous failure retains earlier writes and even a setter's own partial
+	 * change. Repeated scheduling pairs must not erase any binding operation.
+	 *
+	 * @param fault The operation that throws
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = { "peer", "get", "mutation", "set", "set-after" })
+	void publicationFaultsPreservePartialWritesAndOriginalCaller( String fault ) {
+		Mocks mocks = new Mocks();
+		Thread caller = Thread.currentThread();
+		RuntimeException original = new IllegalStateException( fault );
+		List<String> operations = new ArrayList<>();
+		AtomicInteger gets = new AtomicInteger();
+		AtomicInteger mutations = new AtomicInteger();
+		AtomicInteger sets = new AtomicInteger();
+		AtomicReference<Object> sink = new AtomicReference<>( "initial" );
+		Mockito.when( mocks.snk.dependencies() )
+				.thenReturn( Stream.of( mocks.dep, mocks.dep, mocks.dep ) );
+		Mockito.when( mocks.srcMsg.peer( mocks.actual ) ).thenAnswer( invocation -> {
+			assertSame( caller, Thread.currentThread() );
+			operations.add( "peer" );
+			if( fault.equals( "peer" ) )
+				throw original;
+			return mocks.peer;
+		} );
+		Mockito.when( mocks.peer.get( "source field" ) ).thenAnswer( invocation -> {
+			assertSame( caller, Thread.currentThread() );
+			int call = gets.incrementAndGet();
+			operations.add( "get" + call );
+			if( call == 2 && fault.equals( "get" ) )
+				throw original;
+			return "value" + call;
+		} );
+		Mockito.when( mocks.dep.mutation() ).thenReturn( value -> {
+			assertSame( caller, Thread.currentThread() );
+			int call = mutations.incrementAndGet();
+			operations.add( "mutation" + call );
+			if( call == 2 && fault.equals( "mutation" ) )
+				throw original;
+			return value;
+		} );
+		Mockito.when( mocks.snkMsg.set( Mockito.eq( "sink field" ), Mockito.any() ) )
+				.thenAnswer( invocation -> {
+					assertSame( caller, Thread.currentThread() );
+					int call = sets.incrementAndGet();
+					operations.add( "set" + call );
+					if( call == 2 && fault.equals( "set" ) )
+						throw original;
+					sink.set( invocation.getArgument( 1 ) );
+					if( call == 2 && fault.equals( "set-after" ) )
+						throw original;
+					return mocks.snkMsg;
+				} );
+		Dependencies publisher = new Dependencies( mocks.flows() );
+		var failure = assertThrows( IllegalArgumentException.class,
+				() -> publisher.publish( mocks.src, mocks.srcNtr, mocks.srcMsg, mocks.actual ) );
+		assertSame( original, failure.getCause() );
+		assertEquals(
+				fault.equals( "peer" ) ? "initial" : fault.equals( "set-after" ) ? "value2" : "value1",
+				sink.get() );
+		List<String> expected = switch( fault ) {
+			case "peer" -> List.of( "peer" );
+			case "get" -> List.of( "peer", "get1", "mutation1", "set1", "get2" );
+			case "mutation" -> List.of( "peer", "get1", "mutation1", "set1", "get2", "mutation2" );
+			default -> List.of( "peer", "get1", "mutation1", "set1", "get2", "mutation2", "set2" );
+		};
+		assertEquals( expected, operations,
+				"no retry, rollback, replay or third binding after failure" );
 	}
 
 	/**

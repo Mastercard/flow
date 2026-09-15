@@ -3,7 +3,6 @@ package com.mastercard.test.flow.assrt.junit5;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Spliterator;
@@ -23,14 +22,12 @@ import org.opentest4j.TestAbortedException;
 
 import com.mastercard.test.flow.Dependency;
 import com.mastercard.test.flow.Flow;
-import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.assrt.FlowAdmission;
 import com.mastercard.test.flow.assrt.FlowAdmission.Outcome;
 import com.mastercard.test.flow.assrt.History;
 import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.Order;
 import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
-import com.mastercard.test.flow.util.Flows;
 
 /**
  * Native identity/profile adapter over shared-core admission. Original bodies
@@ -85,36 +82,20 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 	 */
 	void prepare( List<Flow> flows, List<DynamicNode> nodes,
 			List<ResourceRequirements> requirements ) {
-		Map<Message, Flow> messages = new IdentityHashMap<>();
 		for( int i = 0; i < flows.size(); i++ ) {
 			Flow flow = flows.get( i );
 			if( flow.context().findAny().isPresent() || flow.residue().findAny().isPresent()
 					|| flow.meta().tags().stream().anyMatch( t -> t.startsWith( Order.CHAIN_TAG_PREFIX ) ) ) {
 				throw unsupported( flow, "context, residue or chain (pending tickets 15/17)" );
 			}
-			Flows.interactions( flow ).forEach( interaction -> {
-				for( Message message : new Message[] { interaction.request(), interaction.response() } ) {
-					if( message != null && messages.putIfAbsent( message, flow ) != null ) {
-						throw unsupported( flow, "shared message instance (pending ticket 14)" );
-					}
-				}
-			} );
-			Flow predecessor = null;
 			for( Dependency dependency : flow.dependencies().toList() ) {
 				Flow source = dependency.source().flow();
 				if( source == null ) {
 					throw unsupported( flow, "absent prerequisite" );
 				}
-				if( source == flow ) {
-					throw unsupported( flow, "intra-flow publication (pending ticket 14)" );
-				}
-				if( predecessor != null && predecessor != source ) {
-					throw unsupported( flow, "fan-in publication (pending ticket 14)" );
-				}
 				if( dependency.sink().flow() != null && dependency.sink().flow() != flow ) {
 					throw unsupported( flow, "foreign binding destination (pending ticket 14)" );
 				}
-				predecessor = source;
 			}
 			DynamicTest description = (DynamicTest) nodes.get( i );
 			URI uri = description.getTestSourceUri().orElseThrow(

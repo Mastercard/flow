@@ -38,11 +38,209 @@ import com.mastercard.test.flow.assrt.resource.ResourceReservations;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations.Grant;
 import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.builder.Deriver;
+import com.mastercard.test.flow.msg.txt.Text;
+import com.mastercard.test.flow.util.Transmission.Type;
 
 /**
  * Pure prepared-run seam; real native execution is exercised in the adapter.
  */
 class FlowAdmissionTest {
+	/**
+	 * A blocked first publisher cannot be overtaken, but its error is not data for
+	 * B.
+	 *
+	 * @param capacity Core/serial outstanding capacity
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 2, 5 })
+	void canonicalPublicationWaitsBeforeAdmissionWithoutAddingHistoryDependencies( int capacity ) {
+		Flow a = publicationFlow( "A" );
+		Flow b = publicationFlow( "B" );
+		Flow c = Creator.build( f -> f.meta( m -> m.description( "C" ) )
+				.call( i -> i.from( TestModel.Actors.A ).to( TestModel.Actors.B )
+						.request( new Text( "pending" ) ).response( new Text( "pending" ) ) )
+				.dependency( a, d -> d.from( i -> true, Type.RESPONSE, ".+" )
+						.to( i -> true, Type.REQUEST, ".+" ) )
+				.dependency( b, d -> d.from( i -> true, Type.RESPONSE, ".+" )
+						.to( i -> true, Type.RESPONSE, ".+" ) ) );
+		List<Flow> flows = List.of( a, b, c, publicationFlow( "D" ) );
+		ResourceRules rules = new ResourceRules().resources( "isolated", f -> true )
+				.resources( "A prerequisite resource", f -> f == a, "publication-A" );
+		var scope = ResourceReservations.shared();
+		var holder = scope.register( scope.capacity( 1 ), rules.resolve( a ), () -> {
+		} );
+		FlowAdmission run = new FlowAdmission( capacity );
+		run.prepare( flows, flows.stream().map( rules::resolve ).toList() );
+		try( Grant held = holder.tryAcquire() ) {
+			assertNotNull( held );
+			assertEquals( 0, b.dependencies().count(), "B is genuinely dependency-ready" );
+			assertEquals( 3, run.poll(), "only unrelated D may pass resource-blocked A" );
+			enter( run, 3 );
+			complete( run, 3 );
+			assertEquals( WAITING, run.poll(), "B waits before dispatch, not on a worker" );
+		}
+		finally {
+			holder.cancel();
+		}
+		assertEquals( 0, run.poll() );
+		enter( run, 0 );
+		RuntimeException failure = new IllegalArgumentException( "publication failed" );
+		run.processed( 0, Result.ERROR, failure );
+		assertEquals( WAITING, run.poll(), "processing return is not safe native completion" );
+		run.finished( "0", FlowAdmission.Outcome.FAILED, failure );
+		assertEquals( 1, run.poll() );
+		assertTrue( run.history().skipReason( b, State.FUL, Set.of( TestModel.Actors.B ) ).isEmpty() );
+		assertEquals( 0, b.dependencies().count() );
+		enter( run, 1 );
+		complete( run, 1 );
+		assertEquals( 2, run.poll() );
+		assertTrue( run.history().skipReason( c, State.FUL, Set.of( TestModel.Actors.B ) ).isPresent(),
+				"the genuine failed source still suppresses C" );
+		enter( run, 2 );
+		run.processed( 2, Result.SKIP, null );
+		run.finished( "2", FlowAdmission.Outcome.ABORTED, null );
+		assertEquals( 3, run.successorVisits(), "two data edges and one order-only pair" );
+		finish( run );
+	}
+
+	private static Flow publicationFlow( String name ) {
+		return Creator.build( f -> f.meta( m -> m.description( name ) )
+				.call( i -> i.from( TestModel.Actors.A ).to( TestModel.Actors.B )
+						.request( new Text( "request" ) ).response( new Text( name ) ) ) );
+	}
+
+	/**
+	 * Writer ordering alone cannot protect a consumer of the same mutable message.
+	 *
+	 * @param capacity Core/serial outstanding capacity
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 2, 5 })
+	void sharedMessageConsumersWaitForCanonicalWritersAcrossDestinations( int capacity ) {
+		Flow a = publicationFlow( "A" );
+		Flow b = publicationFlow( "B" );
+		Text shared = new Text( "pending" ) {
+			@Override
+			public Text child() {
+				return this;
+			}
+		};
+		Flow c = publicationSink( "C", a, shared );
+		Flow d = publicationSink( "D", b, shared );
+		assertSame( c.root().request(), d.root().request() );
+		FlowAdmission run = prepare( capacity, List.of( a, b, c, d, publicationFlow( "E" ) ) );
+		assertEquals( 0, run.poll() );
+		enter( run, 0 );
+		complete( run, 0 );
+		assertEquals( 1, run.poll() );
+		enter( run, 1 );
+		try {
+			if( capacity > 1 ) {
+				assertEquals( 4, run.poll(), "C must not consume while B can mutate D's alias" );
+				enter( run, 4 );
+				complete( run, 4 );
+			}
+			assertEquals( WAITING, run.poll() );
+		}
+		finally {
+			complete( run, 1 );
+		}
+		for( int i : capacity == 1 ? List.of( 2, 3, 4 ) : List.of( 2, 3 ) ) {
+			assertEquals( i, run.poll() );
+			enter( run, i );
+			assertEquals( i == (capacity == 1 ? 4 : 3) ? EXHAUSTED : WAITING, run.poll() );
+			complete( run, i );
+		}
+		assertEquals( 5, run.successorVisits() );
+		finish( run );
+	}
+
+	private static Flow publicationSink( String name, Flow source, Text message ) {
+		return Creator.build( f -> f.meta( m -> m.description( name ) )
+				.call( i -> i.from( TestModel.Actors.A ).to( TestModel.Actors.B )
+						.request( message ).response( new Text( "response" ) ) )
+				.dependency( source, d -> d.from( i -> true, Type.RESPONSE, ".+" )
+						.to( i -> true, Type.REQUEST, ".+" ) ) );
+	}
+
+	/**
+	 * Multiple destination memberships do not serialize the whole connected graph.
+	 *
+	 * @param capacity Core/serial outstanding capacity
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 2, 5 })
+	void overlappingDestinationGroupsLeaveNonconflictingProducersConcurrent( int capacity ) {
+		Flow a = publicationFlow( "A" );
+		Flow b = publicationFlow( "B" );
+		Flow c = publicationFlow( "C" );
+		Flow x = fanIn( "X", List.of( a, c ), 1 );
+		Flow y = fanIn( "Y", List.of( b, c ), 1 );
+		FlowAdmission run = prepare( capacity, List.of( a, b, c, x, y ) );
+		assertEquals( 0, run.poll() );
+		enter( run, 0 );
+		try {
+			if( capacity > 1 ) {
+				assertEquals( 1, run.poll(), "B shares a graph component with A, but not a destination" );
+				enter( run, 1 );
+				complete( run, 1 );
+			}
+			assertEquals( WAITING, run.poll(), "C participates in both destination groups" );
+		}
+		finally {
+			complete( run, 0 );
+		}
+		for( int i = capacity == 1 ? 1 : 2; i < 5; i++ ) {
+			assertEquals( i, run.poll() );
+			enter( run, i );
+			complete( run, i );
+		}
+		assertEquals( 6, run.successorVisits() );
+		finish( run );
+	}
+
+	/**
+	 * Retained group edges grow with memberships, not all producer pairs.
+	 *
+	 * @param size     Number of producers
+	 * @param capacity Core/serial outstanding capacity
+	 */
+	@ParameterizedTest
+	@CsvSource({ "100,1", "100,2", "100,5", "1000,1", "1000,2", "1000,5" })
+	void publicationGroupsKeepOnlyAdjacentCanonicalEdgesAndEveryBinding( int size, int capacity ) {
+		List<Flow> producers = IntStream.range( 0, size ).mapToObj( i -> publicationFlow( "p" + i ) )
+				.toList();
+		Flow sink = fanIn( "sink", producers, 2 );
+		List<Flow> flows = new ArrayList<>( producers );
+		flows.add( sink );
+		FlowAdmission run = prepare( capacity, flows );
+		for( int i = 0; i < flows.size(); i++ ) {
+			assertEquals( i, run.poll() );
+			enter( run, i );
+			try {
+				assertEquals( i == size ? EXHAUSTED : WAITING, run.poll() );
+			}
+			finally {
+				complete( run, i );
+			}
+		}
+		assertEquals( 2L * size, sink.dependencies().count() );
+		assertEquals( 2L * size - 1, run.successorVisits(), "K hard edges plus K-1 order-only pairs" );
+		finish( run );
+	}
+
+	private static Flow fanIn( String name, List<Flow> sources, int multiplicity ) {
+		return Creator.build( f -> {
+			f.meta( m -> m.description( name ) )
+					.call( i -> i.from( TestModel.Actors.A ).to( TestModel.Actors.B )
+							.request( new Text( "pending" ) ).response( new Text( "response" ) ) );
+			for( Flow source : sources )
+				for( int binding = 0; binding < multiplicity; binding++ )
+					f.dependency( source, d -> d.from( i -> true, Type.RESPONSE, ".+" )
+							.to( i -> true, Type.REQUEST, ".+" ) );
+		} );
+	}
+
 	/**
 	 * The logical window is an exact core bound, independent of Jupiter scheduling.
 	 */
@@ -247,9 +445,9 @@ class FlowAdmissionTest {
 		enter( reversed, 1 );
 		complete( reversed, 1 );
 		finish( reversed );
-		Flw hardAncestor = new Flw( "hard ancestor []" );
-		Flw hardChild = new Flw( "hard child []" ).basis( hardAncestor );
-		hardAncestor.depedency( hardChild ).depedency( hardChild );
+		Flw hardChild = emptyFlow( "hard child []" );
+		Flow hardAncestor = flow( "hard ancestor", hardChild, hardChild );
+		hardChild.basis( hardAncestor );
 		FlowAdmission hard = prepare( 2, List.of( hardChild, hardAncestor ) );
 		assertEquals( 0, hard.poll() );
 		enter( hard, 0 );
@@ -323,10 +521,10 @@ class FlowAdmissionTest {
 	/** Sibling branches must not be serialized behind one another. */
 	@Test
 	void basisBranchesProceedWhileAnUnrelatedSiblingIsHeld() {
-		Flw root = new Flw( "root []" );
-		Flw left = new Flw( "left []" ).basis( root );
-		Flw right = new Flw( "right []" ).basis( root );
-		Flw leaf = new Flw( "right leaf []" ).basis( right );
+		Flw root = emptyFlow( "root []" );
+		Flw left = emptyFlow( "left []" ).basis( root );
+		Flw right = emptyFlow( "right []" ).basis( root );
+		Flw leaf = emptyFlow( "right leaf []" ).basis( right );
 		FlowAdmission run = prepare( 5, List.of( root, left, right, leaf ) );
 		assertEquals( 0, run.poll() );
 		enter( run, 0 );
@@ -350,6 +548,11 @@ class FlowAdmissionTest {
 
 	private static Flow basisFlow( String name, Flow basis, AtomicInteger calls, int limit ) {
 		return new Flw( name + " []" ) {
+			@Override
+			public com.mastercard.test.flow.Interaction root() {
+				return null;
+			}
+
 			@Override
 			public Flow basis() {
 				assertTrue( calls.incrementAndGet() <= limit, "repeated ancestry traversal is not linear" );
@@ -404,6 +607,12 @@ class FlowAdmissionTest {
 	void planningAndHistoryTraverseTheModelOutsideBookkeeping() {
 		FlowAdmission run = new FlowAdmission( 1 );
 		Flw first = new Flw( "first []" ) {
+			@Override
+			public com.mastercard.test.flow.Interaction root() {
+				assertFalse( Thread.holdsLock( run.history() ) );
+				return null;
+			}
+
 			@Override
 			public Flow basis() {
 				assertFalse( Thread.holdsLock( run.history() ) );
@@ -513,6 +722,15 @@ class FlowAdmissionTest {
 				f.prerequisite( prerequisite );
 			}
 		} );
+	}
+
+	private static Flw emptyFlow( String name ) {
+		return new Flw( name ) {
+			@Override
+			public com.mastercard.test.flow.Interaction root() {
+				return null;
+			}
+		};
 	}
 
 	private static FlowAdmission prepare( int capacity, List<Flow> flows ) {

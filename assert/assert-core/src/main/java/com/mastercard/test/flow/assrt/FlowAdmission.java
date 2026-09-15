@@ -11,13 +11,17 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Stream;
 
 import com.mastercard.test.flow.Flow;
+import com.mastercard.test.flow.Interaction;
+import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations.Grant;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations.Request;
+import com.mastercard.test.flow.util.Flows;
 
 /**
  * Internal prepared-run admission shared by native adapters. The existing
@@ -103,6 +107,7 @@ public final class FlowAdmission {
 					} );
 		}
 		basisPrecedence( flows, indices, planned );
+		publicationPrecedence( flows, indices, planned );
 		synchronized( history ) {
 			if( prepared || released || stopped != null ) {
 				throw new IllegalStateException( "Flow admission cannot be prepared", stopped );
@@ -120,6 +125,49 @@ public final class FlowAdmission {
 	private static void precedence( List<Node> planned, int before, int after ) {
 		if( planned.get( before ).successors.add( after ) )
 			planned.get( after ).remaining++;
+	}
+
+	private static void publicationPrecedence( List<Flow> flows, Map<Flow, Integer> indices,
+			List<Node> planned ) {
+		Map<Flow, NavigableSet<Integer>> destinations = new IdentityHashMap<>();
+		Map<Message, NavigableSet<Integer>> participants = new IdentityHashMap<>();
+		for( Flow flow : flows ) {
+			int owner = indices.get( flow );
+			Interaction root = flow.root();
+			Stream<Interaction> interactions = root == null ? Stream.empty()
+					: Stream.concat( Stream.of( root ), Flows.descendents( root ) );
+			interactions.forEach( interaction -> {
+				for( Message message : new Message[] { interaction.request(), interaction.response() } ) {
+					if( message != null )
+						participants.computeIfAbsent( message, m -> new TreeSet<>() ).add( owner );
+				}
+			} );
+			flow.dependencies().filter( d -> d.source().isComplete() && d.sink().isComplete() )
+					.forEach( dependency -> {
+						int publisher = indices.get( dependency.source().flow() );
+						destinations.computeIfAbsent( dependency.sink().flow(), f -> new TreeSet<>() )
+								.add( publisher );
+						dependency.source().getMessage().ifPresent( message -> participants
+								.computeIfAbsent( message, m -> new TreeSet<>() ).add( publisher ) );
+						dependency.sink().getMessage().ifPresent( message -> participants
+								.computeIfAbsent( message, m -> new TreeSet<>() ).add( publisher ) );
+					} );
+		}
+		// Whole-flow destination groups do not protect aliases read by another flow.
+		// Include actual message users as well as publishers, in the same serial order.
+		orderGroups( destinations.values(), planned );
+		orderGroups( participants.values(), planned );
+	}
+
+	private static void orderGroups( Iterable<NavigableSet<Integer>> groups, List<Node> planned ) {
+		for( NavigableSet<Integer> ranks : groups ) {
+			Integer previous = null;
+			for( int rank : ranks ) {
+				if( previous != null )
+					precedence( planned, previous, rank );
+				previous = rank;
+			}
+		}
 	}
 
 	private static void basisPrecedence( List<Flow> flows, Map<Flow, Integer> indices,

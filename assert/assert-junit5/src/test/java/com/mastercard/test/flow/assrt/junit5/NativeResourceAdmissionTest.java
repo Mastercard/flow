@@ -2,6 +2,8 @@ package com.mastercard.test.flow.assrt.junit5;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
+import static com.mastercard.test.flow.util.Transmission.Type.REQUEST;
+import static com.mastercard.test.flow.util.Transmission.Type.RESPONSE;
 
 import java.lang.reflect.Method;
 import java.nio.file.Files;
@@ -21,6 +23,8 @@ import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -46,6 +50,7 @@ import org.junit.platform.launcher.core.LauncherFactory;
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 
 import com.mastercard.test.flow.Flow;
+import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.Assertion;
 import com.mastercard.test.flow.assrt.junit5.mock.Actrs;
@@ -66,6 +71,522 @@ class NativeResourceAdmissionTest {
 	private static final Map<String, Run> RUNS = new ConcurrentHashMap<>();
 	private static final AtomicInteger IDS = new AtomicInteger();
 	private static final ThreadLocal<Run> FACTORY = new ThreadLocal<>();
+
+	/**
+	 * B has no prerequisite or resource wait of its own, but cannot overtake A's
+	 * synchronous publication. D proves the factory can make independent progress.
+	 *
+	 * @param shape Overlapping fields or distinct messages within the destination
+	 * @throws Exception If a real Launcher fails to drain
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = { "same-field", "different-fields", "parent-child", "different-messages" })
+	void canonicalPublishersMatchSerialValuesWhenBIsReadyBeforeA( String shape ) throws Exception {
+		List<List<String>> observations = new ArrayList<>();
+		for( boolean parallel : List.of( false, true ) ) {
+			boolean fields = shape.equals( "different-fields" ) || shape.equals( "parent-child" );
+			String first = fields ? shape.equals( "parent-child" ) ? "left=A,right=A" : "left=A" : "A";
+			String second = fields ? "right=B" : "B";
+			Flow a = ParallelBindingFixture.create( "A", first );
+			Flow b = ParallelBindingFixture.create( "B", second );
+			Map<Flow, Thread> callers = new ConcurrentHashMap<>();
+			List<String> writes = new CopyOnWriteArrayList<>();
+			Flow c = Creator.build( f -> {
+				f.meta( m -> m.description( "C" ) ).call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+						.request( new Fields( fields ? "left=old,right=old" : "pending" ) )
+						.response( new ParallelBindingFixture.Text( "response" ) ) );
+				for( Flow source : List.of( a, b ) ) {
+					for( int binding = 0; binding < 2; binding++ ) {
+						f.dependency( source, d -> d.from( i -> true,
+								RESPONSE, ".+" )
+								.mutate( value -> {
+									assertSame( callers.get( source ), Thread.currentThread() );
+									writes.add( value.toString() );
+									return value;
+								} )
+								.to( i -> true,
+										shape.equals( "different-messages" ) && source == b ? RESPONSE : REQUEST,
+										fields && source == b ? "right=[^,]+"
+												: shape.equals( "different-fields" ) ? "left=[^,]+" : ".+" ) );
+					}
+				}
+			} );
+			c.root().request().set( ".+", fields ? "left=old,right=old" : "pending" );
+			c.root().response().set( ".+", "response" );
+			CountDownLatch independent = new CountDownLatch( 1 );
+			Run run = new Run( parallel, List.of( c, b, a, flow( "D" ) ), r -> r
+					.independent( "audited model messages and synchronous callbacks", f -> true )
+					.resources( "A's own prerequisite resource", f -> f == a, "native-publication-A" ),
+					x -> {
+						callers.put( x.flow(), Thread.currentThread() );
+						if( x.flow() == c ) {
+							assertEquals(
+									fields ? "left=A,right=B" : shape.equals( "different-messages" ) ? "A" : "B",
+									x.expected().request().assertable() );
+							assertEquals( shape.equals( "different-messages" ) ? "B" : "response",
+									x.expected().response().assertable() );
+						}
+						if( named( x.flow(), "D" ) )
+							independent.countDown();
+					} );
+			var rules = new ResourceRules().resources( "external fixture owner", f -> true,
+					"native-publication-A" );
+			var scope = ResourceReservations.shared();
+			var holder = scope.register( scope.capacity( 1 ), rules.resolve( a ), () -> {
+			} );
+			Grant held = parallel ? holder.tryAcquire() : null;
+			Throwable primary = null;
+			try( held ) {
+				if( parallel )
+					assertNotNull( held );
+				run.start();
+				if( parallel ) {
+					await( independent );
+					assertEquals( 0, b.dependencies().count(), "B has no genuine prerequisite" );
+					assertFalse( run.registered.contains( "A []" ), "A's own resource is held" );
+					assertFalse( run.registered.contains( "B []" ), "ready B must not even be emitted" );
+					assertEquals( List.of(), writes );
+				}
+			}
+			catch( Throwable failure ) {
+				primary = failure;
+				throw failure;
+			}
+			finally {
+				try {
+					holder.cancel();
+				}
+				catch( Throwable cleanup ) {
+					if( primary == null ) {
+						primary = cleanup;
+						throw cleanup;
+					}
+					if( primary != cleanup )
+						primary.addSuppressed( cleanup );
+				}
+				finally {
+					try {
+						run.finish();
+					}
+					catch( Throwable cleanup ) {
+						if( primary == null )
+							throw cleanup;
+						if( primary != cleanup )
+							primary.addSuppressed( cleanup );
+					}
+				}
+			}
+			assertEquals( List.of( first, first, second, second ), writes,
+					"every binding runs exactly once" );
+			assertEquals( 4, c.dependencies().count() );
+			assertDoesNotThrow( run.handle::close );
+			observations.add( List.copyOf( writes ) );
+		}
+		assertEquals( observations.get( 0 ), observations.get( 1 ) );
+	}
+
+	/**
+	 * Fixture message with observable overlapping regex fields and no hidden
+	 * backing aliases.
+	 */
+	private static final class Fields extends ParallelBindingFixture.Text {
+		private Fields( String value ) {
+			super( value );
+		}
+
+		@Override
+		public Message child() {
+			return new Fields( assertable() );
+		}
+
+		@Override
+		public Message set( String field, Object value ) {
+			return super.set( ".+", assertable().replaceAll( field,
+					java.util.regex.Matcher.quoteReplacement( value.toString() ) ) );
+		}
+	}
+
+	/**
+	 * C's source has finished, but B still owns the same message through D. C must
+	 * not read that alias until B's native publication has drained.
+	 *
+	 * @throws Exception If the real Launcher fails to drain
+	 */
+	@Test
+	void sharedDestinationReadersCannotOverlapAnotherDestinationsWriter() throws Exception {
+		for( boolean parallel : List.of( false, true ) ) {
+			Flow a = ParallelBindingFixture.create( "A", "A" );
+			Flow b = ParallelBindingFixture.create( "B", "B" );
+			var shared = new ParallelBindingFixture.Text( "pending" ) {
+				@Override
+				public com.mastercard.test.flow.Message child() {
+					return this;
+				}
+			};
+			CountDownLatch writing = new CountDownLatch( 1 );
+			CountDownLatch release = new CountDownLatch( 1 );
+			CountDownLatch independent = new CountDownLatch( 1 );
+			List<String> reads = new CopyOnWriteArrayList<>();
+			List<Flow> flows = new ArrayList<>( List.of( a, b ) );
+			for( Flow source : List.of( a, b ) ) {
+				flows.add( Creator.build( f -> f.meta( m -> m.description( source == a ? "C" : "D" ) )
+						.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN ).request( shared )
+								.response( new ParallelBindingFixture.Text( "response" ) ) )
+						.dependency( source, d -> d.from( i -> true,
+								com.mastercard.test.flow.util.Transmission.Type.RESPONSE, ".+" )
+								.mutate( value -> {
+									if( parallel && source == b ) {
+										writing.countDown();
+										await( release );
+									}
+									return value;
+								} ).to( i -> true, com.mastercard.test.flow.util.Transmission.Type.REQUEST,
+										".+" ) ) ) );
+			}
+			assertSame( flows.get( 2 ).root().request(), flows.get( 3 ).root().request() );
+			flows.add( flow( "E" ) );
+			Run run = new Run( parallel, flows,
+					r -> r.independent( "known message aliases; otherwise isolated synchronous use",
+							f -> true ),
+					x -> {
+						if( named( x.flow(), "C" ) || named( x.flow(), "D" ) )
+							reads
+									.add( x.flow().meta().description() + ":" + x.expected().request().assertable() );
+						if( named( x.flow(), "E" ) ) {
+							if( parallel )
+								await( writing );
+							independent.countDown();
+						}
+					} );
+			Throwable primary = null;
+			try {
+				run.start();
+				if( parallel ) {
+					await( independent );
+					assertEquals( List.of(), reads );
+					assertFalse( run.registered.contains( "C []" ), "producer-only A->B is insufficient" );
+					assertFalse( run.registered.contains( "D []" ) );
+				}
+			}
+			catch( Throwable failure ) {
+				primary = failure;
+				throw failure;
+			}
+			finally {
+				release.countDown();
+				try {
+					run.finish();
+				}
+				catch( Throwable cleanup ) {
+					if( primary == null )
+						throw cleanup;
+					if( primary != cleanup )
+						primary.addSuppressed( cleanup );
+				}
+			}
+			assertEquals( List.of( "C:B", "D:B" ), reads );
+			assertDoesNotThrow( run.handle::close );
+		}
+	}
+
+	/**
+	 * A participates in both destination groups, but B and C do not conflict with
+	 * each other. Real publication must preserve both groups without a component
+	 * barrier or moving callbacks off their original producing threads.
+	 *
+	 * @throws Exception If the real Launcher fails to drain
+	 */
+	@Test
+	void multiDestinationProducerPreservesSerialValuesWithoutSerializingItsComponent()
+			throws Exception {
+		for( boolean parallel : List.of( false, true ) ) {
+			Map<String, Thread> callers = new ConcurrentHashMap<>();
+			Map<String, List<String>> operations = new ConcurrentHashMap<>();
+			AtomicBoolean armed = new AtomicBoolean();
+			List<Flow> producers = new ArrayList<>();
+			for( String name : List.of( "A", "B", "C" ) ) {
+				operations.put( name, new CopyOnWriteArrayList<>() );
+				var response = new ParallelBindingFixture.Text( name ) {
+					@Override
+					public Message child() {
+						return this;
+					}
+
+					@Override
+					public Message peer( byte[] bytes ) {
+						assertSame( callers.get( name ), Thread.currentThread() );
+						operations.get( name ).add( "peer" );
+						return new ParallelBindingFixture.Text( new String( bytes,
+								java.nio.charset.StandardCharsets.UTF_8 ) ) {
+							@Override
+							public Object get( String field ) {
+								assertSame( callers.get( name ), Thread.currentThread() );
+								operations.get( name ).add( "get" );
+								return super.get( field );
+							}
+						};
+					}
+				};
+				producers.add( Creator.build( f -> f.meta( m -> m.description( name ) )
+						.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+								.request( new ParallelBindingFixture.Text( "request" ) ).response( response ) ) ) );
+			}
+			Flow a = producers.get( 0 );
+			List<Flow> destinations = new ArrayList<>();
+			for( String destination : List.of( "X", "Y" ) ) {
+				var request = new ParallelBindingFixture.Text( "pending" ) {
+					@Override
+					public Message child() {
+						return this;
+					}
+
+					@Override
+					public Message set( String field, Object value ) {
+						if( armed.get() ) {
+							assertSame( callers.get( value ), Thread.currentThread() );
+							operations.get( value ).add( "set:" + destination );
+						}
+						return super.set( field, value );
+					}
+				};
+				destinations.add( Creator.build( f -> {
+					f.meta( m -> m.description( destination ) )
+							.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN ).request( request )
+									.response( new ParallelBindingFixture.Text( "response" ) ) );
+					for( Flow source : List.of( a, producers.get( destination.equals( "X" ) ? 1 : 2 ) ) )
+						for( int binding = 0; binding < 2; binding++ )
+							f.dependency( source, d -> d.from( i -> true, RESPONSE, ".+" )
+									.mutate( value -> {
+										String name = source.meta().description();
+										assertSame( callers.get( name ), Thread.currentThread() );
+										operations.get( name ).add( "mutation:" + destination );
+										return value;
+									} ).to( i -> true, REQUEST, ".+" ) );
+				} ) );
+				request.set( ".+", "pending" );
+			}
+			armed.set( true );
+			CountDownLatch independent = new CountDownLatch( 1 );
+			CountDownLatch successors = new CountDownLatch( 2 );
+			CountDownLatch release = new CountDownLatch( 1 );
+			List<String> reads = new CopyOnWriteArrayList<>();
+			List<Flow> flows = new ArrayList<>( destinations );
+			flows.addAll( List.of( producers.get( 2 ), producers.get( 1 ), a ) );
+			flows.add( flow( "D" ) );
+			Run run = new Run( parallel, flows, r -> r
+					.independent( "owned messages and synchronous callbacks", f -> true )
+					.resources( "A's own resource", f -> f == a, "multi-destination-A" ), x -> {
+						String name = x.flow().meta().description();
+						assertNull( callers.put( name, Thread.currentThread() ), "one body per flow" );
+						if( name.equals( "D" ) )
+							independent.countDown();
+						if( parallel && (name.equals( "B" ) || name.equals( "C" )) ) {
+							successors.countDown();
+							await( release );
+						}
+						if( name.equals( "X" ) || name.equals( "Y" ) ) {
+							assertEquals( name.equals( "X" ) ? "B" : "C",
+									x.expected().request().assertable() );
+							reads.add( name + ":" + x.expected().request().assertable() );
+						}
+					} );
+			var rules = new ResourceRules().resources( "external fixture owner", f -> true,
+					"multi-destination-A" );
+			var scope = ResourceReservations.shared();
+			var holder = scope.register( scope.capacity( 1 ), rules.resolve( a ), () -> {
+			} );
+			Grant held = parallel ? holder.tryAcquire() : null;
+			Throwable primary = null;
+			try( held ) {
+				if( parallel )
+					assertNotNull( held );
+				run.start();
+				if( parallel ) {
+					await( independent );
+					assertEquals( List.of( "D []" ), run.registered );
+					assertTrue( operations.values().stream().allMatch( List::isEmpty ) );
+					assertEquals( List.of( "pending", "pending" ), destinations.stream()
+							.map( f -> f.root().request().assertable() ).toList() );
+					held.close();
+					await( successors );
+					assertEquals( List.of( "A", "A" ), destinations.stream()
+							.map( f -> f.root().request().assertable() ).toList(),
+							"both successors enter after A, before either publishes" );
+					assertEquals( List.of(), reads );
+				}
+			}
+			catch( Throwable failure ) {
+				primary = failure;
+				throw failure;
+			}
+			finally {
+				release.countDown();
+				try {
+					holder.cancel();
+				}
+				catch( Throwable cleanup ) {
+					if( primary == null ) {
+						primary = cleanup;
+						throw cleanup;
+					}
+					if( primary != cleanup )
+						primary.addSuppressed( cleanup );
+				}
+				finally {
+					try {
+						run.finish();
+					}
+					catch( Throwable cleanup ) {
+						if( primary == null )
+							throw cleanup;
+						if( primary != cleanup )
+							primary.addSuppressed( cleanup );
+					}
+				}
+			}
+			assertEquals( List.of( "X:B", "Y:C" ), reads.stream().sorted().toList() );
+			assertEquals( List.of( "peer", "get", "mutation", "set", "get", "mutation", "set",
+					"get", "mutation", "set", "get", "mutation", "set" ),
+					operations.get( "A" ).stream()
+							.map( operation -> operation.replaceAll( ":[XY]", "" ) ).toList() );
+			for( String destination : List.of( "X", "Y" ) )
+				assertEquals( List.of( "mutation:" + destination, "set:" + destination,
+						"mutation:" + destination, "set:" + destination ),
+						operations.get( "A" ).stream()
+								.filter( operation -> operation.endsWith( ":" + destination ) ).toList() );
+			assertEquals( List.of( "peer", "get", "mutation:X", "set:X", "get", "mutation:X", "set:X" ),
+					operations.get( "B" ) );
+			assertEquals( List.of( "peer", "get", "mutation:Y", "set:Y", "get", "mutation:Y", "set:Y" ),
+					operations.get( "C" ) );
+			assertEquals( 6, callers.size() );
+			assertEquals( 8, destinations.stream().mapToLong( f -> f.dependencies().count() ).sum() );
+			assertEquals( 1, run.closes.get() );
+			assertDoesNotThrow( run.handle::close );
+		}
+	}
+
+	/**
+	 * Immediate publication errors fail A, not its order-only successor B. The
+	 * genuine data consumer C still aborts, with every partial write left intact.
+	 *
+	 * @param fault The failing synchronous operation
+	 * @throws Exception If the actual Launcher fails to drain
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = { "peer", "get", "mutation", "set", "set-after" })
+	void publicationFaultsRetainPartialEffectsAndDoNotSuppressOrderOnlySuccessors( String fault )
+			throws Exception {
+		for( boolean parallel : List.of( false, true ) ) {
+			RuntimeException original = new IllegalStateException( "publication " + fault );
+			AtomicReference<Thread> caller = new AtomicReference<>();
+			AtomicBoolean armed = new AtomicBoolean();
+			AtomicInteger gets = new AtomicInteger();
+			AtomicInteger mutations = new AtomicInteger();
+			AtomicInteger sets = new AtomicInteger();
+			List<String> operations = new CopyOnWriteArrayList<>();
+			List<String> partial = new CopyOnWriteArrayList<>();
+			var sourceMessage = new ParallelBindingFixture.Text( "A" ) {
+				@Override
+				public com.mastercard.test.flow.Message child() {
+					return this;
+				}
+
+				@Override
+				public com.mastercard.test.flow.Message peer( byte[] bytes ) {
+					assertSame( caller.get(), Thread.currentThread() );
+					operations.add( "peer" );
+					if( fault.equals( "peer" ) )
+						throw original;
+					return new ParallelBindingFixture.Text( "A" ) {
+						@Override
+						public Object get( String field ) {
+							assertSame( caller.get(), Thread.currentThread() );
+							int call = gets.incrementAndGet();
+							operations.add( "get" + call );
+							if( call == 2 && fault.equals( "get" ) )
+								throw original;
+							return "A" + call;
+						}
+					};
+				}
+			};
+			var sinkMessage = new ParallelBindingFixture.Text( "initial" ) {
+				@Override
+				public com.mastercard.test.flow.Message child() {
+					return this;
+				}
+
+				@Override
+				public com.mastercard.test.flow.Message set( String field, Object value ) {
+					if( !armed.get() || !value.toString().startsWith( "A" ) )
+						return super.set( field, value );
+					assertSame( caller.get(), Thread.currentThread() );
+					int call = sets.incrementAndGet();
+					operations.add( "set" + call );
+					if( call == 2 && fault.equals( "set" ) )
+						throw original;
+					super.set( field, value );
+					if( call == 2 && fault.equals( "set-after" ) )
+						throw original;
+					return this;
+				}
+			};
+			Flow a = Creator.build( f -> f.meta( m -> m.description( "A" ) )
+					.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+							.request( new ParallelBindingFixture.Text( "request" ) )
+							.response( sourceMessage ) ) );
+			Flow b = ParallelBindingFixture.create( "B", "B" );
+			Flow c = Creator.build( f -> {
+				f.meta( m -> m.description( "C" ) ).call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+						.request( sinkMessage ).response( new ParallelBindingFixture.Text( "response" ) ) );
+				for( int binding = 0; binding < 3; binding++ )
+					f.dependency( a, d -> d.from( i -> true,
+							com.mastercard.test.flow.util.Transmission.Type.RESPONSE, ".+" ).mutate( value -> {
+								assertSame( caller.get(), Thread.currentThread() );
+								int call = mutations.incrementAndGet();
+								operations.add( "mutation" + call );
+								if( call == 2 && fault.equals( "mutation" ) )
+									throw original;
+								return value;
+							} ).to( i -> true, com.mastercard.test.flow.util.Transmission.Type.REQUEST, ".+" ) );
+				f.dependency( b, d -> d.from( i -> true,
+						com.mastercard.test.flow.util.Transmission.Type.RESPONSE, ".+" ).mutate( value -> {
+							partial.add( sinkMessage.assertable() );
+							return value;
+						} ).to( i -> true, com.mastercard.test.flow.util.Transmission.Type.REQUEST, ".+" ) );
+			} );
+			sinkMessage.set( ".+", "initial" );
+			armed.set( true );
+			Run run = new Run( parallel, List.of( c, b, a, flow( "D" ) ),
+					r -> r.independent( "audited synchronous fault fixture", f -> true ), x -> {
+						if( x.flow() == a )
+							caller.set( Thread.currentThread() );
+					} );
+			run.start();
+			run.awaitCompletion();
+			assertEquals( 4, run.getSummary().getTestsStartedCount() );
+			assertEquals( 2, run.getSummary().getTestsSucceededCount() );
+			assertEquals( 1, run.getSummary().getTestsFailedCount() );
+			assertEquals( 1, run.getSummary().getTestsAbortedCount() );
+			assertEquals( 3, run.bodies.get(), "B and independent D enter; genuine consumer C does not" );
+			var failure = run.getSummary().getFailures().get( 0 );
+			assertEquals( "A []", failure.getTestIdentifier().getDisplayName() );
+			assertSame( original, failure.getException().getCause().getCause() );
+			assertEquals( List.of( fault.equals( "peer" ) ? "initial"
+					: fault.equals( "set-after" ) ? "A2" : "A1" ), partial );
+			assertEquals( "B", sinkMessage.assertable(), "eligible B publishes after A's failure" );
+			assertEquals( 0, b.dependencies().count(), "order-only must not enter History" );
+			assertEquals( 4, c.dependencies().count() );
+			List<String> expected = switch( fault ) {
+				case "peer" -> List.of( "peer" );
+				case "get" -> List.of( "peer", "get1", "mutation1", "set1", "get2" );
+				case "mutation" -> List.of( "peer", "get1", "mutation1", "set1", "get2", "mutation2" );
+				default -> List.of( "peer", "get1", "mutation1", "set1", "get2", "mutation2", "set2" );
+			};
+			assertEquals( expected, operations );
+			assertDoesNotThrow( run.handle::close );
+		}
+	}
 
 	/**
 	 * Jupiter may fill the logical window or execute inline first. Neither choice

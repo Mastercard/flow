@@ -163,8 +163,8 @@ value if diagnostics are needed after the run detaches.
 
 Temporary tracer limits also reject reporting other than `Reporting.NEVER`, capture
 other than `LogCapture.NO_OP`, replay, contexts/applicators, residue/checkers,
-autonomous actors, chains, shared message instances, fan-in, intra-flow publication,
-noncanonical prerequisites and non-class source URIs. These are fail-closed implementation
+autonomous actors, chains, foreign binding destinations, noncanonical prerequisites
+and non-class source URIs. These are fail-closed implementation
 boundaries, **not new permanent support restrictions**. Resource declarations do
 not authorize any of those unsupported surfaces or promote chains. Explicit serial
 resource declarations also reject reports, capture, replay, applicators/checkers,
@@ -245,7 +245,7 @@ traversal, callbacks and SUT work are not included in the readiness bound. Core
 measurements cover 100, 1,000 and 7,000 nodes in fork, chain and two-predecessor graphs,
 plus deep/inverted basis paths and siblings sharing absent bases, counting basis
 lookups and retained-edge visits; these are operation-count evidence, not a
-whole-run speedup or a workload benchmark. Native fan-in remains guarded.
+whole-run speedup or a workload benchmark.
 
 Legacy `Flocessor` users do not automatically participate. Use the prepared serial
 caller with the same declarations for explicit serial cooperation, or explicitly
@@ -281,6 +281,31 @@ Those ineligible selected flows take their real native abort path without SUT ca
 Native failure (or an extension suppressing an exception) never rewrites Flow History;
 missing processing is not success. Fatal/protocol faults stop admission rather than
 pretend normal completion.
+
+Audited fan-in, identical-message aliases and valid intra-flow bindings are now
+enabled. Canonical order-only constraints group producers by destination **Flow**,
+including different fields/messages and every destination of a multi-destination
+producer. Identical **Message** participants include readers as well as writers,
+so a destination cannot consume an alias while another producer mutates it.
+Only scheduling pairs are deduplicated: every binding still performs synchronous
+peer/get/mutation/set on its original producer thread, with no replay or rollback.
+Order-only constraints do not change `History` eligibility; a failed A alone does
+not suppress otherwise eligible B. Hidden shared backing and callback state still
+require resource auditing, not just distinct message identities.
+
+T29 tests hold A's own resource while independent D progresses, then check literal
+serial/native payloads and operation counts. With A writing X/Y, B writing X and C
+writing Y, B/C can overlap after A; the connected component is not serialized.
+Publication planning is exercised through core admission at capacities 1, 2 and 5.
+
+Native **reporting-enabled T30 remains blocked by ticket 23**. After run-owned
+reporting is enabled, the real factory/Launcher must repeat peer/get/mutation/set/
+set-after faults under accumulation against the serial/core oracle: partial writes,
+later-message publication/comparisons, callback counts and producer threads, original
+primary cause, order-only versus genuine dependency outcomes, and safely finalized
+report payloads/cleanup. Include valid intra-flow updates and masks. Current API and
+native immediate-failure checks, plus core `NEVER`/`QUIETLY` coverage of all five
+stages, do not satisfy that remaining native integration gate.
 
 Native inline completion is supported; there is no second body pool or idle-worker
 estimate. At 12/20 Jupiter may execute inline before filling the 24-grant bound; the

@@ -20,14 +20,15 @@ authoritative; no frozen feasibility evidence or design decision was rewritten.
 | 10 (automated portion) | Standalone consumer of locally installed Flow POM/BOM/JARs; real model, binding, native overlap, provider-free serial and exact callback UID checks on consumer-selected JUnit stacks | `assert/assert-junit5/src/it/packaged-consumer`; artifact hashes, JVM class-load traces and native summaries |
 | 11 | Named rule union/provenance, UNKNOWN global exclusion, shared same-JVM whole-resource-set and execution-slot reservation before native emission; prepared serial/parallel cooperation | `ResourcePlanningTest`, `NativeResourceAdmissionTest`, serial cleanup and actual packaged consumer regressions |
 | 13 | Shared-core dependency-ready admission, coherent processing/native accounting, sparse canonical basis visibility, direct successor release and idempotent evidence | `FlowAdmissionTest`, actual serial/native `FlowParallelBindingTest` oracles, resource/queueing and packaged-consumer regressions |
+| 14 (code; native REPORT acceptance pending 23) | Canonical destination and identical-message participant precedence; retained synchronous binding operations, partial effects and order-only eligibility | `DependenciesTest`, `AbstractFlocessorTest`, `FlowAdmissionTest`, real serial/native publication and fault oracles |
 
 The new caller permits `flow.parallel=true` only through the checked native owner.
 Named bulk `resources()`, `exclusive()` and `independent()` declarations are resolved
 once after dependency expansion. Unmatched work remains UNKNOWN/global-exclusive,
-including against explicitly known-empty work. Reporting/capture/replay/context/chain/
-fan-in and other unchecked parallel surfaces fail closed before SUT use. These temporary
+including against explicitly known-empty work. Reporting/capture/replay/context/chain
+and other unchecked parallel surfaces fail closed before SUT use. These temporary
 implementation boundaries are not permanent public support restrictions. There is
-no completed fairness, general producer-publication or workload-speedup claim.
+no completed fairness or workload-speedup claim.
 Report-only failure classification and run-owned final-only activation are unfinished.
 
 ## Blocking work and unpassed gates
@@ -108,8 +109,7 @@ results below predate this slice; the next full run is reserved for final integr
 - 05 needs the actual 6,000–7,000-flow consuming workload and resource-owner input.
   That environment was not supplied; the reported 52/25-minute observations are
   not new measurements or a diagnosed serial-tail cause.
-- 14–19 and 21–27 are not delivered. This includes canonical conflicting-producer
-  publication, uninterrupted chain reservations, fairness,
+- 15–19 and 21–27 are not delivered. This includes uninterrupted chain reservations, fairness,
   bounded cancellation, correlated capture/cutoff, truthful stopped-run final
   artifacts, integrated compatibility, performance assessment and rollout.
 
@@ -144,6 +144,44 @@ original and reviewed evidence are archived separately; no historical IDE fixtur
 was altered. Human-only IntelliJ and 6,000-flow checks remain deferred until the end.
 
 ## Validation record
+
+### Canonical publication slice
+
+Preparation adds adjacent canonical precedence within destination-flow and identical
+message participant groups. Readers participate as well as writers, preventing a
+destination from reading a message while another destination's producer mutates it.
+Overlapping groups do not serialize an entire connected component. These edges are
+order-only: they do not add dependencies or change History eligibility. The existing
+publisher, processor and History are unchanged; every binding still runs synchronously
+on its producer thread before masking/comparison, without rollback or replay.
+Hidden shared backing state still requires the resource audit.
+
+T29 uses actual serial/native publication for same/different fields, parent-child
+paths, different messages, shared-message readers/writers and multiple destinations.
+In the latter, A writes X/Y, B writes X and C writes Y: independent D progresses
+while A is held, B/C can overlap afterward, all eight bindings run, and final payloads
+are X=B/Y=C. Core planning also runs at capacities 1/2/5. Primary-preserving teardown
+was verified with a negative control that disabled publication precedence; its
+assertion remained primary and later drainage failures were suppressed.
+
+T30 covers peer/get/mutation/set/set-after faults in the API, core immediate and
+accumulated modes, and native immediate execution. Literal partial writes, later
+message behavior, operation counts, producer-thread/cause identity and unchanged
+order-only eligibility are checked. **Native accumulated-reporting T30 is not passed**:
+ticket 23 must exercise the complete stage/mode matrix, intra-flow/masking behavior,
+native attribution, partial effects and safely finalized reports through real Launcher
+execution. Core reporting tests do not replace that integration obligation.
+
+The broader Java 17 / JUnit 6.0.3 gate completed **312 cases: 310 passed, two existing
+Windows symlink skips, zero failures/errors** (10 API, 27 message, 150 core, 125 adapter).
+Three 162-test repeats and a further 162-test install gate passed without skips or
+failures. Both skip flags and failure-ignore were disabled, with 39 real frontend
+assets. Both independent review axes found zero actionable issues after corrections.
+All four same-binary packaged-consumer configurations passed on 5.10/1.10 and 6.0.3,
+serial and parallel. No new full-suite, manual-host or workload acceptance is claimed.
+All 636 clean-export documentation checks passed; every tracked Markdown and staged
+source matched that tested export after line-ending normalization. The separate
+publication14 archive retains 36 evidence files and their fingerprints.
 
 ### Dependency-ready admission slice
 
@@ -188,8 +226,9 @@ After refreshing generated source anchors, all 636 clean-export documentation
 checks passed. Current logs and artifact fingerprints are archived separately at
 `C:/Data/Code/flow-admission13-packaged-20260915/`; earlier archives are unchanged.
 This does not discharge retained-registration/model-reference, manual IntelliJ,
-full Stop or workload acceptance. Native fan-in/shared-message/intra-flow publication
-remain guarded for ticket 14; chain/context/capture/report integration is later work.
+full Stop or workload acceptance. That slice still guarded native fan-in/shared-message/
+intra-flow publication; ticket 14's work is recorded above. Chain/context/capture/report
+integration remains later work.
 
 ### Resource admission slice
 

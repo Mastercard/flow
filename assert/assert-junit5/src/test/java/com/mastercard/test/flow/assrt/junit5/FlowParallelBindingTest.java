@@ -320,17 +320,45 @@ class FlowParallelBindingTest {
 	 */
 	@Test
 	void allPreparationMustBeAuditedBeforeAnySutUse() {
-		for( String mode : List.of( "report", "capture", "chain", "fanin", "alias",
+		for( String mode : List.of( "report", "capture", "chain",
 				"transform" ) ) {
 			Evidence e = execute( mode, "true", 3 );
 			assertFalse( e.failures.isEmpty(), mode );
 			assertEquals( 0, e.starts.size(), mode );
 			assertFalse( e.events.stream().anyMatch( s -> s.startsWith( "body:" ) ), mode );
-			if( mode.equals( "alias" ) || mode.equals( "fanin" ) )
-				assertTrue( e.failures.stream().anyMatch( failure -> failure.toString()
-						.contains(
-								mode.equals( "alias" ) ? "shared message instance" : "fan-in publication" ) ),
-						e.failures::toString );
+		}
+	}
+
+	/**
+	 * Audited fan-in and identical messages retain every real invocation.
+	 *
+	 * @param scenario Fan-in or shared-message model
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = { "fanin", "alias" })
+	void auditedPublicationPreservesEveryNativeInvocation( String scenario ) {
+		Evidence e = execute( scenario, "true", 12 );
+		assertEquals( List.of(), e.failures );
+		assertEquals( 3, e.starts.size() );
+		assertEquals( 3, e.results.size() );
+		assertEquals( "published", e.bound );
+		assertDoesNotThrow( e.handle::close );
+	}
+
+	/**
+	 * Self bindings publish the request before the response comparison, without a
+	 * self-wait.
+	 */
+	@Test
+	void intraFlowPublicationIsSynchronousOnTheNativeCaller() {
+		for( String mode : List.of( "false", "true" ) ) {
+			Evidence e = execute( "intraflow", mode, 12 );
+			assertEquals( List.of(), e.failures );
+			assertEquals( List.of( "A []:SUCCESSFUL" ), e.results );
+			assertEquals( 1, e.starts.size() );
+			assertEquals( 1, e.events.stream().filter( s -> s.equals( "mutate:request" ) ).count() );
+			assertEquals( "published", e.bound );
+			assertDoesNotThrow( e.handle::close );
 		}
 	}
 
@@ -697,6 +725,18 @@ class ParallelBindingFixture {
 		if( e.scenario.startsWith( "duplicate" ) ) {
 			flows = List.of( a );
 		}
+		if( e.scenario.equals( "intraflow" ) ) {
+			flows = List.of( Creator.build( f -> f.meta( m -> m.description( "A" ) )
+					.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+							.request( new Text( "request" ) ).response( new Text( "response" ) ) )
+					.dependency( null, d -> d.from( i -> true, REQUEST, ".+" ).mutate( value -> {
+						assertTrue( e.threads.contains( Thread.currentThread() ), "original SUT caller" );
+						e.events.add( "mutate:request" );
+						assertEquals( "request", value );
+						e.bound = "published";
+						return e.bound;
+					} ).to( i -> true, RESPONSE, ".+" ) ) ) );
+		}
 		if( e.scenario.equals( "fork" ) ) {
 			Flow d = Creator.build( f -> f.meta( m -> m.description( "D" ) ).prerequisite( a )
 					.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
@@ -736,6 +776,11 @@ class ParallelBindingFixture {
 				assertEquals( token, FlowExtension.invocationContext().getUniqueId() );
 			e.threads.add( Thread.currentThread() );
 			e.events.add( "body:" + name );
+			if( e.scenario.equals( "intraflow" ) ) {
+				assertion.actual().request( "request".getBytes( UTF_8 ) )
+						.response( "published".getBytes( UTF_8 ) );
+				return;
+			}
 			if( e.scenario.startsWith( "oracle" ) ) {
 				if( e.scenario.equals( "oracle-timeout" ) && name.equals( "failure" ) ) {
 					Thread caller = Thread.currentThread();
