@@ -105,9 +105,9 @@ retroactively to the legacy caller.
 Actual serial exhaustion and drained invocations, followed by the observed stream
 close, complete the prepared run. Early close or abandonment is diagnosed by its
 class-local lifecycle backstop; neither is converted into successful finalization.
-Reporting retains its current immediate behavior. Unclassified resource ownership,
-general resource scheduling, cancellation drainage and integrated final-only
-reporting remain separate unfinished delivery work.
+Reporting retains its current immediate behavior for the original serial caller.
+Resource declarations below add cooperating serial ownership; cancellation drainage,
+whole-chain/context ownership and integrated final-only reporting remain unfinished.
 
 Real Launcher regressions have exercised the serial caller on coherent JUnit
 5.10/Platform 1.10 and JUnit 6.0.3 stacks with Java 17. These are tested points,
@@ -132,20 +132,118 @@ nested workloads and separate-thread timeouts are rejected before original facto
 execution. Public checks do not prove every live pool constructor setting or the
 behavior of arbitrary third-party extensions.
 
-Before `tests()`, use `independent("named resource audit", predicate)` only for
-flows actually assessed as having no shared resources, hidden state, surviving
-asynchronous use or physical-worker affinity requirements. Audit the SUT, messages,
-listeners and callbacks, not just model contexts. Every selected flow must match
-at least one named rule; all predicates run during preparation. Missing coverage
-is UNKNOWN and fails before any SUT use. `State.LESS` and empty contexts do not
-establish independence.
+Before `tests()`, configure named bulk declarations using existing flow metadata,
+IDs or interactions:
+
+- `resources("queue audit", predicate, "actual-queue-identity", "actual-account-identity")`
+  declares the complete set of capacity-one shared-state identities.
+- `exclusive("fixture reset", predicate)` conflicts with all cooperating work.
+- `independent("empty resource audit", predicate)` remains source-compatible and
+  declares a known empty set, equivalent to `resources` with no keys.
+
+All matching rules combine by union; exclusive dominates, and an empty declaration
+cannot erase another restriction. No matching rule means **UNKNOWN global-exclusive**,
+not rejection and not independence. UNKNOWN also conflicts with known-empty work.
+Parallel requests publish one `flow.resources.fallback` factory report entry before
+native emission, with the unclassified count, up to five bounded identity previews
+and the exclusion policy; all-unclassified selections are identified as serial.
+Classified and provider-free serial runs emit no fallback entry.
+`State.LESS`, absent contexts, different actor names and different wrapper objects
+do not establish isolation. Equal string keys must describe the same actual state;
+different strings are justified only by a real isolation audit. Audit messages,
+listeners, callbacks and cleanup as well as the SUT. No declaration authorizes
+surviving asynchronous use or required physical-worker affinity.
+
+Predicates run once per selected or dependency-expanded flow, before chain
+contraction and before any SUT use. Nothing adds Flow fields or identity-bearing
+tags. After `tests()`, `requirements(flow)` returns the stored immutable
+`ResourceRequirements`: `keys()`, `rules()`, `unknown()` and `exclusive()` expose
+the union and every matching rule name without rerunning predicates. Retain the
+value if diagnostics are needed after the run detaches.
 
 Temporary tracer limits also reject reporting other than `Reporting.NEVER`, capture
 other than `LogCapture.NO_OP`, replay, contexts/applicators, residue/checkers,
 autonomous actors, chains, basis, shared message instances, fan-in, noncanonical
 prerequisites and non-class source URIs. These are fail-closed implementation
-boundaries, **not new permanent support restrictions**. General resource rules,
-reservations, chains and cancellation are not implemented by `independent()`.
+boundaries, **not new permanent support restrictions**. Resource declarations do
+not authorize any of those unsupported surfaces or promote chains. Explicit serial
+resource declarations also reject reports, capture, replay, applicators/checkers,
+autonomous actors and flows with contexts, residue or chain membership: per-flow
+reservations are not whole-chain or applied-context ownership. Existing serial
+configuration without new declarations retains its earlier processing behavior;
+cross-flow fixture/context lifetimes in that route are not covered by this slice.
+
+### Shared reservation scope and lifetime
+
+Prepared runners use the same assertion-core `ResourceReservations.shared()` scope,
+including provider-free serial execution. Creating a second runner or Launcher does
+not create a separate resource scope. Cross-runner tests use separate supported
+native pools, not multiple factories competing in one pool.
+
+The entire named set and one run-owned execution slot are acquired atomically before
+native emission. A blocked `{A, B}` request holds neither free A nor a slot while B
+is busy. Known-empty work also consumes a slot. The parallel emission window is
+twice the checked native target (24 outstanding grants at target 12), allowing the
+native queued/inline saturation path; this is a logical bound, not an idle-worker
+estimate or a change to the configured 12-target/20-maximum pool. Serial capacity
+is one. Only the actual factory consumer may wait, using change notifications with
+an event counter to prevent lost wakeups; no body executor or blocked-flow tasks
+are created. Reservation operations and notifications run outside run-state locks,
+and notifications also run outside reservation locks.
+
+Parallel release requires native terminal evidence and drained synchronous
+processing/cleanup. Native rejection before guarded Flow entry may return a proven
+unused grant, but still diagnoses the incomplete run. Serial release uses the next
+actual SAME_THREAD factory advance, after the previous native invocation (including
+outer interceptor cleanup) has returned. This can retire unused ownership after
+pre-body rejection without treating omitted Flow processing as successful drainage.
+Jupiter can buffer a description before invoking it: `action.accept()` return,
+body return, arbitrary stream close, stop and future cancellation are not proof.
+An abandoned buffered/emitted description without native return evidence retains
+uncertain ownership; retained UNKNOWN ownership can block even known-empty work.
+The unsafe serial cleanup regressions assert that retention in isolated JVMs rather
+than resetting the shared scope or weakening the ownership rule.
+
+Live-stream close and the public serial `close()` backstop share disposal bookkeeping:
+both stop admission and withdraw a pending request, waking the factory without waiting
+for the resource holder. A tentative grant racing disposal is returned only if it was
+never emitted. Neither route cleans the original fixture or detaches the runner while
+an issued grant remains unsafe. A rejected live close retains original cleanup for the
+backstop, because JDK stream close handlers run only once even when they throw. The
+next actual native advance can retire the grant after a safe handoff return, but stop
+remains incomplete; it cannot finalize a report or hide original-stream cleanup
+failures. This is the existing lifecycle backstop, not general cancellation.
+
+The native close regressions retain the outer factory interceptor's live stream and
+hold post-body cleanup. Predispatch disposal uses a test-local native stream gate;
+an additional close/admission race must finish while another real run still holds
+the resource. This replaces the timed join/private-stack check, but does not prove
+that every race reaches the exact wait transition. Public core request-cancellation
+tests cover withdrawal separately. Runner attachment claims once, constructs replay
+outside the owner monitor, then publishes only if still live. That lock boundary is
+source-verified with existing replay regressions, not a blocked-filesystem race test:
+the current replay path has no injectable blocking-read seam.
+
+The public core interface also permits an explicit cooperating fixture owner to
+create a `Capacity`, `register` a dependency-ready whole-set request, `tryAcquire`
+a `Grant`, cancel an ungranted request, and close a proven unused or safely finished
+grant. Wakeups must be short and nonthrowing. This does **not** move fixture creation,
+reset or teardown responsibility into Flow. Pending request positions are stable;
+scope-wide oldest-ready conflicting fairness and exclusive drain gates remain
+ticket 16 work, so starvation is not yet prevented.
+
+Admission is not claimed to be linear: a blocked prefix of B ready nodes can be
+retried for each of D disjoint admissions (B×D attempts), and grant release scans
+pending requests to deduplicate coordinator wakeups. Ownership-version-aware scan
+progress and relevant-ready invalidation remain ticket 13/16 performance work;
+this correctness fix does not introduce a general scheduler.
+
+Legacy `Flocessor` users do not automatically participate. Use the prepared serial
+caller with the same declarations for explicit serial cooperation, or explicitly
+integrate ownership through the core interface. Unrelated Jupiter tests, background
+users, separate classloader copies and external processes are outside this guarantee.
+For example, an undeclared background queue consumer can still invalidate a correctly
+reserved flow. Matching a rule is not proof that the resource audit is complete.
 
 Direct execution preserves the original Launcher request and listeners. An
 identity-owned discovery preview may be consumed once in the same live explicit
@@ -164,7 +262,11 @@ forced release or successful report finalization.
 
 Real Launcher tests cover A-to-B message binding while independent C remains active,
 real dependent aborts, callback context/restoration, native inline execution and
-provider-free serial behavior. Baseline-compiled binaries have been run on coherent
+provider-free serial behavior. Resource regressions additionally exercise equal-key
+exclusion, disjoint overlap, atomic multi-key admission, UNKNOWN/empty/exclusive
+precedence, once-only dependency-expanded resolution, native cleanup and serial/
+parallel cooperation through separate real 12/20 pools. Baseline-compiled binaries
+from the earlier tracer have been run on coherent
 5.10/1.10 and 6.0.3 stacks.
 
 ### Automated packaged consumer gate
@@ -183,7 +285,9 @@ callback's invocation UID must match the listener's started-leaf UID for that fl
 Fresh Surefire XML, resolved dependency provenance, JAR/POM hashes and actual JVM
 class-loading checks are retained. Repetition does not prove registration or model
 disposal: the automated **no safely disposable retained registrations** criterion
-remains unverified for the later integrated ticket 25 gate. Ticket 10 is not fully
+remains unverified for the later integrated ticket 25 gate. The resource-enabled
+binaries have also passed this four-point matrix after local installation; the
+earlier tracer/package artifact hashes remain historical. Ticket 10 is not fully
 passed. These are exact tested points, not a support range or a full parallel
 release. Intended IntelliJ Run/Debug/selection/navigation/Stop and the manual
 6,000-flow workload remain pending, deferred until the end by user decision; nested

@@ -119,6 +119,15 @@ abstract class FlowProcessor {
 
 	/** @return Selected flows in the legacy execution order */
 	Stream<Flow> flows() {
+		return flows( flow -> {
+			/* Legacy selection has no declaration resolver. */ } );
+	}
+
+	/**
+	 * @param prepare Per-flow preparation before chain ordering
+	 * @return Selected and dependency-expanded flows in canonical order
+	 */
+	Stream<Flow> flows( Consumer<Flow> prepare ) {
 		// per system properties, find out which flows we want to exercise and save
 		// those settings for future runs
 		config.progress.filtering();
@@ -165,6 +174,7 @@ abstract class FlowProcessor {
 		}
 
 		// gather the data dependencies for processing
+		toRun.forEach( prepare );
 		dependencies = new Dependencies( toRun.stream() );
 
 		// find the execution order

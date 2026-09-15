@@ -141,11 +141,23 @@ class FlowParallelBindingTest {
 	 */
 	@Test
 	void allPreparationMustBeAuditedBeforeAnySutUse() {
-		for( String mode : List.of( "unknown", "partial", "report", "capture", "chain", "fanin",
+		for( String mode : List.of( "report", "capture", "chain", "fanin",
 				"transform" ) ) {
 			Evidence e = execute( mode, "true", 3 );
 			assertFalse( e.failures.isEmpty(), mode );
 			assertFalse( e.events.stream().anyMatch( s -> s.startsWith( "body:" ) ), mode );
+		}
+	}
+
+	/** Missing declarations serialize through global exclusivity, not rejection. */
+	@Test
+	void unknownAndPartialAuditsStillExecuteEverySelectedFlow() {
+		for( String mode : List.of( "unknown", "partial" ) ) {
+			Evidence e = execute( mode, "true", 3 );
+			assertEquals( List.of(), e.failures, mode );
+			assertEquals( 3, e.results.size(), mode );
+			assertEquals( 3, e.starts.size(), mode );
+			assertEquals( "published", e.bound );
 		}
 	}
 

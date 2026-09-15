@@ -2,7 +2,7 @@ package com.mastercard.test.flow.assrt.junit5;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -21,6 +21,9 @@ import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.assrt.AbstractFlocessor;
 import com.mastercard.test.flow.assrt.History.Result;
+import com.mastercard.test.flow.assrt.Order;
+import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
+import com.mastercard.test.flow.assrt.resource.ResourceRules;
 
 /**
  * Self-typed sibling of {@link Flocessor}, supplied by {@link FlowExecution}.
@@ -29,8 +32,10 @@ import com.mastercard.test.flow.assrt.History.Result;
 public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor> {
 	private final FlowExecution owner;
 	private boolean prepared;
+	private boolean declaredResources;
 	private final List<Flow> selectedFlows = new ArrayList<>();
-	private final Map<String, Predicate<Flow>> independence = new LinkedHashMap<>();
+	private ResourceRules rules = new ResourceRules();
+	private final Map<Flow, ResourceRequirements> requirements = new IdentityHashMap<>();
 
 	/**
 	 * Declares an assessed empty resource set using a named bulk rule. The audit
@@ -41,22 +46,69 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	 * independence. Rules are resolved once during preparation and never on native
 	 * workers.
 	 * <p>
-	 * Temporary ticket08 tracer only: no chains, basis, contexts, residue, replay,
-	 * capture, reports, shared message instances or fan-in; class source URIs and
-	 * at most one distinct external predecessor per flow. No general resource
-	 * reservation, affinity, cancellation or fairness implementation is implied.
+	 * Equivalent to a known empty {@link #resources(String, Predicate, String...)}
+	 * declaration. It cannot erase restrictions from other matching rules.
 	 *
 	 * @param rule    Unique nonblank audit name
 	 * @param matches Selected flows affirmatively assessed as independent
 	 * @return this adapter
 	 */
 	public PreparedFlocessor independent( String rule, Predicate<Flow> matches ) {
+		return resources( rule, matches );
+	}
+
+	/**
+	 * Declares capacity-one shared state by reusable immutable identity. All
+	 * matching rules are unioned; unmatched flows remain global-exclusive UNKNOWN.
+	 * These declarations cooperate across prepared serial and parallel runners in
+	 * this JVM, not legacy runners or unrelated/background users. Audit complete
+	 * synchronous use and cleanup; distinct names alone do not establish isolation
+	 * or affinity.
+	 *
+	 * @param rule    Unique nonblank diagnostic name
+	 * @param matches Flows covered by this audit
+	 * @param keys    Identities of the actual shared mutable state; empty is
+	 *                known-empty
+	 * @return this adapter
+	 */
+	public PreparedFlocessor resources( String rule, Predicate<Flow> matches, String... keys ) {
 		beforeConfiguration();
-		if( Objects.requireNonNull( rule ).isBlank() || independence.containsKey( rule ) ) {
-			throw new IllegalArgumentException( "Independence rule must be named and unique: " + rule );
-		}
-		independence.put( rule, Objects.requireNonNull( matches ) );
+		rules.resources( rule, matches, keys );
+		declaredResources = true;
 		return this;
+	}
+
+	/**
+	 * Declares exclusion against all cooperating work, including known-empty work.
+	 *
+	 * @param rule    Unique nonblank diagnostic name
+	 * @param matches Flows requiring exclusive use
+	 * @return this adapter
+	 */
+	public PreparedFlocessor exclusive( String rule, Predicate<Flow> matches ) {
+		beforeConfiguration();
+		rules.exclusive( rule, matches );
+		declaredResources = true;
+		return this;
+	}
+
+	/**
+	 * Retrieves the stored preparation result without reevaluating predicates.
+	 *
+	 * @param flow A selected or dependency-expanded flow in this live preparation
+	 * @return Its resolved resource identities, policy and matching rule names
+	 */
+	public ResourceRequirements requirements( Flow flow ) {
+		return Objects.requireNonNull( requirements.get( flow ),
+				"Flow is not prepared or was detached" );
+	}
+
+	/**
+	 * @param index Preparation-local flow index
+	 * @return Its stored requirements
+	 */
+	ResourceRequirements requirements( int index ) {
+		return requirements( selectedFlows.get( index ) );
 	}
 
 	/**
@@ -78,12 +130,12 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	public Stream<DynamicNode> tests() {
 		beforeConfiguration();
 		prepared = true;
-		if( owner.parallel() ) {
+		if( owner.parallel() || declaredResources ) {
 			requireIndependentTracerConfiguration();
 		}
 		List<DynamicNode> nodes = new ArrayList<>();
 		Set<String> identities = new HashSet<>();
-		try( Stream<Flow> selected = prepareFlows() ) {
+		try( Stream<Flow> selected = prepareFlows( this::resolveResources ) ) {
 			for( Flow flow : selected.collect( Collectors.toList() ) ) {
 				int index = nodes.size();
 				String id = flow.meta().id();
@@ -98,20 +150,25 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 			}
 		}
 		if( owner.parallel() ) {
-			Map<String, Predicate<Flow>> rules = new LinkedHashMap<>( independence );
-			for( Flow flow : selectedFlows ) {
-				boolean covered = false;
-				for( Predicate<Flow> rule : rules.values() ) {
-					covered |= rule.test( flow );
-				}
-				if( !covered ) {
-					throw new IllegalStateException( "Flow parallel tracer UNKNOWN resource audit: "
-							+ flow.meta().id() + "; independence rules=" + rules.keySet() );
-				}
-			}
-			owner.prepareParallel( selectedFlows, nodes );
+			owner.prepareParallel( selectedFlows, nodes,
+					selectedFlows.stream().map( requirements::get ).toList() );
 		}
 		return owner.describe( nodes );
+	}
+
+	private void resolveResources( Flow flow ) {
+		requirements.put( flow, rules.resolve( flow ) );
+		// Explicit serial participation must not pretend that per-flow reservations
+		// implement cross-flow context or whole-chain ownership. Legacy serial
+		// configuration without these new declarations retains its existing behavior.
+		if( declaredResources && !owner.parallel()
+				&& (flow.context().findAny().isPresent() || flow.residue().findAny().isPresent()
+						|| flow.meta().tags().stream()
+								.anyMatch( t -> t.startsWith( Order.CHAIN_TAG_PREFIX ) )) ) {
+			throw new IllegalStateException(
+					"Flow serial resources do not yet own context, residue or chain: "
+							+ flow.meta().id() );
+		}
 	}
 
 	@Override
@@ -131,7 +188,8 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	/** Clears the prepared invocation table after owned use has drained. */
 	void detach() {
 		selectedFlows.clear();
-		independence.clear();
+		requirements.clear();
+		rules = null;
 	}
 
 	/**

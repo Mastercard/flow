@@ -7,7 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Method;
+import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DynamicNode;
@@ -24,6 +27,8 @@ import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.Reporting;
 import com.mastercard.test.flow.assrt.junit5.mock.Actrs;
 import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
+import com.mastercard.test.flow.assrt.resource.ResourceReservations;
+import com.mastercard.test.flow.assrt.resource.ResourceRules;
 
 /**
  * Real Launcher cleanup failures and genuinely empty, repeatable serial runs.
@@ -31,21 +36,81 @@ import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
 @SuppressWarnings("static-method")
 class SerialCleanupTest {
 	/**
-	 * Verifies primary-failure preservation and one-time cleanup across exit paths.
+	 * Preserves primary failures and invokes cleanup only after safe disposal.
 	 *
-	 * @param mode Completion, validation rejection, early closure, or consumer
-	 *             failure
+	 * @param mode Completion, validation rejection, early closure, buffering or
+	 *             consumer failure
 	 */
 	@ParameterizedTest
-	@ValueSource(strings = { "complete", "validation", "early", "consumer" })
-	void cleanupFailurePreservesPrimaryAndRemovesClassBackstop( String mode ) {
+	@ValueSource(strings = { "complete", "reentrant", "validation", "early", "consumer", "buffered" })
+	void cleanupFailurePreservesPrimaryAndSafeOwnership( String mode ) {
+		if( mode.equals( "consumer" ) || mode.equals( "buffered" ) ) {
+			// This path deliberately abandons an emitted UNKNOWN grant without any
+			// native return proof. Verify retention in another JVM, not by resetting
+			// the shared scope or making subsequent tests inherit unsafe ownership.
+			try {
+				Path output = Files.createTempFile( "flow-unsafe-cleanup-", ".log" );
+				Process process = new ProcessBuilder(
+						Path.of( System.getProperty( "java.home" ), "bin", "java" ).toString(),
+						"-cp",
+						System.getProperty( "surefire.test.class.path",
+								System.getProperty( "java.class.path" ) ),
+						SerialCleanupTest.class.getName(), mode ).redirectErrorStream( true )
+								.redirectOutput( output.toFile() ).start();
+				try {
+					assertTrue( process.waitFor( 20, TimeUnit.SECONDS ), "unsafe cleanup child timed out" );
+					String evidence = Files.readString( output );
+					assertEquals( 0, process.exitValue(), evidence );
+					System.out.print( evidence );
+				}
+				finally {
+					if( process.isAlive() )
+						process.destroyForcibly();
+					Files.deleteIfExists( output );
+				}
+			}
+			catch( Exception failure ) {
+				throw new AssertionError( failure );
+			}
+			return;
+		}
+		verifyCleanup( mode );
+	}
+
+	/**
+	 * Isolates deliberately unsafe ownership, including retained original cleanup.
+	 *
+	 * @param args The unsafe consumption mode
+	 */
+	public static void main( String[] args ) {
+		verifyCleanup( args[0] );
+		assertUnknownRetained();
+		System.out.println( "Unsafe serial " + args[0]
+				+ ": cleanup deferred, zero bodies, UNKNOWN retained against EMPTY" );
+	}
+
+	private static void assertUnknownRetained() {
+		ResourceReservations scope = ResourceReservations.shared();
+		var request = scope.register( scope.capacity( 1 ),
+				new ResourceRules().resources( "known empty", f -> true ).resolve( null ), () -> {
+				} );
+		try( var grant = request.tryAcquire() ) {
+			assertNull( grant, "abandoned UNKNOWN must conservatively block even known-empty work" );
+		}
+		finally {
+			request.cancel();
+		}
+	}
+
+	private static void verifyCleanup( String mode ) {
 		FailingCleanupFactory.mode = mode;
 		FailingCleanupFactory.closes = 0;
 		FailingCleanupFactory.bodies = 0;
 		List<Throwable> failures = PreparedFlowLifecycleTest.launch( FailingCleanupFactory.class );
-		assertEquals( 1, failures.size(), failures::toString );
+		boolean unsafe = mode.equals( "consumer" ) || mode.equals( "buffered" );
+		assertEquals( unsafe ? 2 : 1, failures.size(), failures::toString );
 		Throwable primary = failures.get( 0 );
-		if( mode.equals( "complete" ) ) {
+		if( mode.equals( "complete" ) || mode.equals( "reentrant" ) ) {
 			assertSame( FailingCleanupFactory.cleanup, primary );
 			assertEquals( 2, FailingCleanupFactory.bodies );
 		}
@@ -53,16 +118,32 @@ class SerialCleanupTest {
 			assertEquals( 0, FailingCleanupFactory.bodies );
 			assertTrue( primary.getMessage().contains( mode.equals( "validation" )
 					? "Return exactly"
-					: mode.equals( "early" ) ? "Incomplete Flow" : "consumer failure" ),
+					: mode.equals( "consumer" ) ? "consumer failure" : "Incomplete Flow" ),
 					primary::toString );
 			Throwable closing = mode.equals( "consumer" ) ? primary.getSuppressed()[0] : primary;
-			assertSame( FailingCleanupFactory.cleanup, closing.getSuppressed()[0] );
+			if( unsafe ) {
+				assertEquals( 0, closing.getSuppressed().length, "original cleanup is not yet safe" );
+				Throwable backstop = failures.get( 1 );
+				while( backstop.getCause() != null )
+					backstop = backstop.getCause();
+				assertTrue( backstop.getMessage().contains( "Incomplete Flow" ),
+						failures::toString );
+			}
+			else {
+				assertSame( FailingCleanupFactory.cleanup, closing.getSuppressed()[0] );
+			}
 			assertNull( FailingCleanupFactory.runner.report(),
 					"rejection must not initialize reporting" );
 		}
-		assertEquals( 1, FailingCleanupFactory.closes );
-		FailingCleanupFactory.handle.close();
-		assertEquals( 1, FailingCleanupFactory.closes );
+		assertEquals( unsafe ? 0 : 1, FailingCleanupFactory.closes );
+		if( unsafe ) {
+			assertThrows( IllegalStateException.class, FailingCleanupFactory.handle::close );
+			assertUnknownRetained();
+		}
+		else {
+			FailingCleanupFactory.handle.close();
+		}
+		assertEquals( unsafe ? 0 : 1, FailingCleanupFactory.closes );
 	}
 
 	/** Supplies a serial fixture whose cleanup always throws the same failure. */
@@ -103,6 +184,8 @@ class SerialCleanupTest {
 			return (mode.equals( "validation" ) ? tests.filter( n -> false ) : tests)
 					.onClose( () -> {
 						closes++;
+						if( mode.equals( "reentrant" ) )
+							handle.close();
 						throw cleanup;
 					} );
 		}
@@ -122,6 +205,13 @@ class SerialCleanupTest {
 					live.forEach( n -> {
 						throw new IllegalArgumentException( "consumer failure" );
 					} );
+				}
+			}
+			if( FailingCleanupFactory.mode.equals( "buffered" ) ) {
+				try( Stream<?> live = (Stream<?>) returned ) {
+					assertTrue( live.iterator().hasNext() );
+					assertEquals( 0, FailingCleanupFactory.bodies );
+					assertUnknownRetained();
 				}
 			}
 			return returned;

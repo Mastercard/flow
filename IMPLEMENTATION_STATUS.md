@@ -18,13 +18,15 @@ authoritative; no frozen feasibility evidence or design decision was rewritten.
 | 08 (checked tracer) | Same-caller real parallel processing, A-to-B binding with controlled independent C, one readiness waiter, admission before emission, native terminal plus drainage | `FlowParallelBindingTest` through real Launcher |
 | 09 (partial) | Early service-loaded public Launcher decorator; exact call/preview ownership; actual pool and metadata guards; optional isolated JUnit 6 overload | `FlowLauncherBridgeTest`, `FlowLauncherSixTest`, `FlowNativeProfileTest`, `FlowNativeCallTest` |
 | 10 (automated portion) | Standalone consumer of locally installed Flow POM/BOM/JARs; real model, binding, native overlap, provider-free serial and exact callback UID checks on consumer-selected JUnit stacks | `assert/assert-junit5/src/it/packaged-consumer`; artifact hashes, JVM class-load traces and native summaries |
+| 11 | Named rule union/provenance, UNKNOWN global exclusion, shared same-JVM whole-resource-set and execution-slot reservation before native emission; prepared serial/parallel cooperation | `ResourcePlanningTest`, `NativeResourceAdmissionTest`, serial cleanup and actual packaged consumer regressions |
 
-The new caller permits `flow.parallel=true` only through the checked native tracer.
-Named bulk `independent()` declarations must affirmatively audit every selected
-flow; missing coverage remains UNKNOWN. Reporting/capture/replay/context/chain/
-fan-in and other unchecked surfaces fail closed before SUT use. These temporary
+The new caller permits `flow.parallel=true` only through the checked native owner.
+Named bulk `resources()`, `exclusive()` and `independent()` declarations are resolved
+once after dependency expansion. Unmatched work remains UNKNOWN/global-exclusive,
+including against explicitly known-empty work. Reporting/capture/replay/context/chain/
+fan-in and other unchecked parallel surfaces fail closed before SUT use. These temporary
 implementation boundaries are not permanent public support restrictions. There is
-no general resource scheduler, resource-isolation or workload-speedup claim.
+no completed fairness, general dependency scheduler or workload-speedup claim.
 Report-only failure classification and run-owned final-only activation are unfinished.
 
 ## Blocking work and unpassed gates
@@ -105,8 +107,8 @@ results below predate this slice; the next full run is reserved for final integr
 - 05 needs the actual 6,000–7,000-flow consuming workload and resource-owner input.
   That environment was not supplied; the reported 52/25-minute observations are
   not new measurements or a diagnosed serial-tail cause.
-- 11, 13–19 and 21–27 are not delivered. This includes same-JVM resource ownership,
-  general dependency-ready resource admission, uninterrupted chain reservations, fairness,
+- 13–19 and 21–27 are not delivered. This includes general dependency-ready
+  admission, uninterrupted chain reservations, fairness,
   bounded cancellation, correlated capture/cutoff, truthful stopped-run final
   artifacts, integrated compatibility, performance assessment and rollout.
 
@@ -141,6 +143,54 @@ original and reviewed evidence are archived separately; no historical IDE fixtur
 was altered. Human-only IntelliJ and 6,000-flow checks remain deferred until the end.
 
 ## Validation record
+
+### Resource admission slice
+
+Rules combine all matching capacity-one identities and exclusive policy; an empty
+declaration cannot erase another rule. Immutable per-flow diagnostics retain the
+matching rule names without changing model tags, identities or report schemas.
+The shared core scope reserves an entire set plus one run slot atomically. Parallel
+outstanding grants are bounded at twice the native target (24 for 12/20), a logical
+emission window, not an estimate of free workers. Serial capacity is one. Only the
+actual factory may wait, with counter-guarded notifications; no extra body pool or
+per-blocked-flow task was added. Reservation effects run outside both locks.
+
+Serial ownership remains held beyond buffered emission and guarded body return.
+The next actual SAME_THREAD factory advance proves native return, including outer
+cleanup or pre-body rejection. Both stream close and handle close now share pending
+withdrawal, wakeup and unsafe-use retention. A rejected one-shot stream close retains
+its original cleanup/backstop. Runner/replay construction also stays outside the
+bookkeeping monitor. Review found these lifecycle defects and regression tests
+reproduced them before correction; final independent follow-up found no new issue.
+
+The final focused install gate passed **176 tests**. Before the diagnostic follow-up,
+a relevant **63-test subset passed three times**; afterward, **92 tests passed three
+times**, all without failures/errors/skips on Java 17 with real report assets.
+Held live-stream cleanup, rejection/no-op/error, UNKNOWN/empty reuse and disposal
+controls use actual native execution. Unsafe buffered ownership is checked in
+bounded child JVMs without resetting the shared scope. Exact wait-transition and
+post-acquisition/pre-emission pauses remain unproved deterministically; replay's
+outside-lock construction is source-verified with nine replay regressions, not a
+blocked-IO experiment. No report-hash differential or heap-retention proof is claimed.
+
+The final spec review caught missing emitted UNKNOWN fallback diagnostics. Parallel
+factories now publish one native `flow.resources.fallback` entry before native
+consumption, outside bookkeeping locks. It includes count, global exclusion policy
+and at most five bounded identity previews. Actual Launcher regressions went red
+for absence and unbounded output, then green for delivery, bounds, mixed audits and
+quiet classified/serial controls. Independent follow-up found no actionable
+standards or spec issue.
+
+Newly installed resource-enabled binaries also passed all four standalone consumer
+points: both JUnit stacks, serial and parallel, with identical Flow artifacts within
+this matrix. Earlier artifact hashes identify earlier binaries and remain historical.
+The clean-export documentation gate passed all 634 checks. Matrix outputs and install
+logs are archived separately at `C:/Data/Code/flow-resource-packaged-20260915/`, with
+the final diagnostic-complete binaries under `diagnostic-followup/`.
+Context/fixture lifetime, chains, fairness and full cancellation remain later slices.
+Legacy/nonparticipating/background users and other classloader copies/processes are
+outside automatic resource cooperation. A blocked ready prefix can still be retried
+across disjoint admissions; resource reconsideration is not claimed linear.
 
 All focused Maven tests used the relevant upstream reactor, Java 17, both
 `skipTests=false` and `maven.test.skip=false`, and the existing Java formatter.

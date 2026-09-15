@@ -6,7 +6,9 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
+import java.util.NavigableSet;
+import java.util.TreeSet;
+import java.util.concurrent.ForkJoinTask;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.function.Consumer;
@@ -25,14 +27,18 @@ import com.mastercard.test.flow.Dependency;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.assrt.Order;
+import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
+import com.mastercard.test.flow.assrt.resource.ResourceReservations;
+import com.mastercard.test.flow.assrt.resource.ResourceReservations.Grant;
+import com.mastercard.test.flow.assrt.resource.ResourceReservations.Request;
 import com.mastercard.test.flow.util.Flows;
 
 /**
- * Temporary checked ticket08 frontier: explicitly independent synchronous work,
- * at most one external predecessor, no chain/context/basis/residue or message
- * aliasing. Not a resource scheduler. Exactly one factory iterator may wait;
- * native workers execute original bodies with no offload or idle estimates.
- * Native FAILED is evidence separate from the processor's History.
+ * Checked synchronous work with shared whole-set admission, at most one
+ * external predecessor, no chain/context/basis/residue or message aliasing.
+ * Exactly one factory iterator may wait; native workers execute original bodies
+ * with no offload or idle estimates. Native FAILED is evidence separate from
+ * the processor's History.
  */
 final class FlowParallelOwner implements FlowNativeCall.Observer {
 	private final Object lock = new Object();
@@ -45,7 +51,7 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 	private final List<Node> nodes = new ArrayList<>();
 	private final Map<String, Node> names = new HashMap<>();
 	private final Map<String, Node> nativeIds = new HashMap<>();
-	private final PriorityQueue<Integer> ready = new PriorityQueue<>();
+	private final NavigableSet<Integer> ready = new TreeSet<>();
 	private Throwable stopped;
 	private boolean prepared;
 	private boolean streamClosed;
@@ -54,6 +60,9 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 	private int issued;
 	private int terminal;
 	private int active;
+	private final ResourceReservations.Capacity capacity;
+	private final Runnable resourceChanged = this::wake;
+	private long changes;
 
 	/**
 	 * Captures the factory identity, thread and checked native execution profile.
@@ -64,6 +73,10 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 	FlowParallelOwner( FlowExecution owner, ExtensionContext context ) {
 		this.owner = owner;
 		profile = FlowNativeProfile.enter( context );
+		// Bound outstanding emissions, not an estimate of idle workers. A window
+		// of two native targets permits Jupiter's queued/inline saturation path.
+		capacity = ResourceReservations.shared()
+				.capacity( 2 * ForkJoinTask.getPool().getParallelism() );
 		factoryId = context.getUniqueId();
 		factoryThread = Thread.currentThread();
 	}
@@ -92,8 +105,10 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 	 *
 	 * @param flows        Selected flows in canonical prerequisite order
 	 * @param descriptions Corresponding owned dynamic tests
+	 * @param requirements Resolved resource requirements in the same order
 	 */
-	void prepare( List<Flow> flows, List<DynamicNode> descriptions ) {
+	void prepare( List<Flow> flows, List<DynamicNode> descriptions,
+			List<ResourceRequirements> requirements ) {
 		Map<Flow, Integer> indices = new IdentityHashMap<>();
 		Map<Message, Flow> messages = new IdentityHashMap<>();
 		for( int i = 0; i < flows.size(); i++ ) {
@@ -117,7 +132,7 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 			if( !"class".equals( uri.getScheme() ) ) {
 				throw unsupported( flow, "non-class source URI" );
 			}
-			Node node = new Node( description, ClassSource.from( uri ) );
+			Node node = new Node( description, ClassSource.from( uri ), requirements.get( i ) );
 			nodes.add( node );
 			names.put( description.getDisplayName(), node );
 		}
@@ -213,19 +228,65 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 		for( ;; ) {
 			profile.checkAdmission();
 			checkAttachment();
+			long observed;
 			synchronized( lock ) {
 				checkActive();
 				if( issued == nodes.size() ) {
 					return null;
 				}
-				if( !ready.isEmpty() ) {
-					Node node = nodes.get( ready.remove() );
-					node.admitted = true; // Empty, explicitly audited resource grant.
-					issued++;
-					return node;
+				observed = changes;
+			}
+			for( int previous = -1;; ) {
+				Integer index;
+				Node node;
+				Request request;
+				synchronized( lock ) {
+					checkActive();
+					index = ready.higher( previous );
+					if( index == null ) {
+						break;
+					}
+					previous = index;
+					node = nodes.get( index );
+					request = node.request;
 				}
+				if( request == null ) {
+					request = ResourceReservations.shared().register( capacity, node.requirements,
+							resourceChanged );
+					boolean keep;
+					synchronized( lock ) {
+						keep = stopped == null;
+						if( keep ) {
+							node.request = request;
+						}
+					}
+					if( !keep ) {
+						request.cancel();
+						continue;
+					}
+				}
+				Grant grant = request.tryAcquire();
+				if( grant != null ) {
+					synchronized( lock ) {
+						if( stopped == null ) {
+							node.grant = grant;
+							node.request = null;
+							node.admitted = true;
+							ready.remove( index );
+							issued++;
+							return node;
+						}
+					}
+					// Never emitted: no native/user callback can have used this grant.
+					grant.close();
+				}
+			}
+			synchronized( lock ) {
+				checkActive();
 				try {
-					lock.wait();
+					if( changes == observed ) {
+						lock.wait();
+					}
 				}
 				catch( InterruptedException failure ) {
 					Thread.currentThread().interrupt();
@@ -271,11 +332,16 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 			throw failure;
 		}
 		finally {
+			Grant finished;
 			synchronized( lock ) {
 				node.safe = true;
 				active--;
-				lock.notifyAll();
+				finished = finishedGrant( node );
 			}
+			if( finished != null ) {
+				finished.close();
+			}
+			wake();
 		}
 	}
 
@@ -306,12 +372,50 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 	 */
 	void stop( Throwable failure ) {
 		synchronized( lock ) {
+			stopLocked( failure );
+		}
+		cancelPending();
+	}
+
+	private void stopLocked( Throwable failure ) {
+		if( stopped == null ) {
+			stopped = failure;
+		}
+		ready.clear();
+		changes++;
+		lock.notifyAll();
+	}
+
+	private void cancelPending() {
+		List<Request> cancelled = new ArrayList<>();
+		synchronized( lock ) {
 			if( stopped == null ) {
-				stopped = failure;
+				return;
 			}
-			ready.clear();
+			for( Node node : nodes ) {
+				if( node.request != null ) {
+					cancelled.add( node.request );
+					node.request = null;
+				}
+			}
+		}
+		cancelled.forEach( Request::cancel );
+	}
+
+	private void wake() {
+		synchronized( lock ) {
+			changes++;
 			lock.notifyAll();
 		}
+	}
+
+	private static Grant finishedGrant( Node node ) {
+		if( node.result != null && (!node.entered || node.safe) ) {
+			Grant grant = node.grant;
+			node.grant = null;
+			return grant;
+		}
+		return null;
 	}
 
 	@Override
@@ -348,7 +452,7 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 		Node node = nativeIds.get( id.getUniqueId() );
 		if( node == null ) {
 			IllegalStateException failure = new IllegalStateException( "Unbound native Flow: " + id );
-			stop( failure );
+			stopLocked( failure );
 			throw failure;
 		}
 		return node;
@@ -356,25 +460,37 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 
 	@Override
 	public void finished( TestIdentifier id, TestExecutionResult result ) {
-		synchronized( lock ) {
-			Node node = bound( id );
-			if( node.result != null ) {
-				if( node.result.getStatus() != result.getStatus()
-						|| !node.result.getThrowable().equals( result.getThrowable() ) ) {
-					stop( new IllegalStateException( "Conflicting native Flow terminal: " + id ) );
+		Grant finished = null;
+		try {
+			synchronized( lock ) {
+				Node node = bound( id );
+				if( node.result != null ) {
+					if( node.result.getStatus() != result.getStatus()
+							|| !node.result.getThrowable().equals( result.getThrowable() ) ) {
+						stopLocked( new IllegalStateException( "Conflicting native Flow terminal: " + id ) );
+					}
+					return;
 				}
-				return;
+				node.result = result;
+				terminal++;
+				if( !node.entered || !node.safe ) {
+					stopLocked(
+							new IllegalStateException(
+									"Native terminal without drained Flow processing: " + id ) );
+				}
+				else if( stopped == null ) {
+					ready.addAll( node.successors );
+				}
+				finished = finishedGrant( node );
+				changes++;
+				lock.notifyAll();
 			}
-			node.result = result;
-			terminal++;
-			if( !node.entered || !node.safe ) {
-				stop(
-						new IllegalStateException( "Native terminal without drained Flow processing: " + id ) );
+		}
+		finally {
+			if( finished != null ) {
+				finished.close();
 			}
-			else if( stopped == null ) {
-				ready.addAll( node.successors );
-			}
-			lock.notifyAll();
+			cancelPending();
 		}
 	}
 
@@ -393,10 +509,12 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 					&& active == 0 && stopped == null
 					&& result.getStatus() == TestExecutionResult.Status.SUCCESSFUL;
 			if( !complete ) {
-				stop( new IllegalStateException( "Incomplete native Flow factory", result.getThrowable()
-						.orElse( null ) ) );
+				stopLocked(
+						new IllegalStateException( "Incomplete native Flow factory", result.getThrowable()
+								.orElse( null ) ) );
 			}
 		}
+		cancelPending();
 		if( complete ) {
 			checkAttachment();
 			attachment.release();
@@ -420,16 +538,19 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 	 *                               owner
 	 */
 	void close() {
+		IllegalStateException failure;
 		synchronized( lock ) {
 			if( released ) {
 				return;
 			}
-			stop( new IllegalStateException( "Flow parallel class backstop reached" ) );
-			throw new IllegalStateException( "Incomplete Flow parallel tracer: prepared=" + prepared
+			stopLocked( new IllegalStateException( "Flow parallel class backstop reached" ) );
+			failure = new IllegalStateException( "Incomplete Flow parallel tracer: prepared=" + prepared
 					+ ", issued=" + issued + ", terminal=" + terminal + ", active=" + active
 					+ ", factoryTerminal=" + factoryTerminal + "; no forced release or finalization",
 					stopped );
 		}
+		cancelPending();
+		throw failure;
 	}
 
 	private static final class Node {
@@ -437,6 +558,9 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 		final DynamicTest description;
 		/** Expected native registration source. */
 		final ClassSource source;
+		final ResourceRequirements requirements;
+		Request request;
+		Grant grant;
 		/** Canonical indices made ready by this node's drained native terminal. */
 		final List<Integer> successors = new ArrayList<>();
 		/** Native unique ID assigned by validated registration. */
@@ -455,12 +579,14 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 		/**
 		 * Captures immutable description identity before admission.
 		 *
-		 * @param description The original native test
-		 * @param source      The expected class source
+		 * @param description  The original native test
+		 * @param source       The expected class source
+		 * @param requirements Stored preparation-time resource requirements
 		 */
-		Node( DynamicTest description, ClassSource source ) {
+		Node( DynamicTest description, ClassSource source, ResourceRequirements requirements ) {
 			this.description = description;
 			this.source = source;
+			this.requirements = requirements;
 		}
 	}
 }

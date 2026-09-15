@@ -67,6 +67,14 @@ class SysOutTest {
 				"System.out",
 				"evidence.summary.getSummary().printTo( new PrintWriter( System.out, true ) );",
 				"evidence.summary.getSummary().printFailuresTo( new PrintWriter( System.out, true ) );" );
+		// Resource controls report native counts and isolated unsafe-retention
+		// evidence.
+		accept( "../assert/assert-junit5/src/test/java/com/mastercard/test/flow/assrt/junit5/"
+				+ "NativeResourceAdmissionTest.java", "System.out.printf(" );
+		accept( "../assert/assert-junit5/src/test/java/com/mastercard/test/flow/assrt/junit5/"
+				+ "SerialCleanupTest.java",
+				"System.out.print( evidence );",
+				"System.out.println( \"Unsafe serial \" + args[0]" );
 	}
 
 	private static void accept( String file, String... line ) {

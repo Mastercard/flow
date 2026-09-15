@@ -325,8 +325,20 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return Selected flows in canonical serial order
 	 */
 	protected final Stream<Flow> prepareFlows() {
+		return prepareFlows( flow -> {
+			/* No additional preparation for legacy adapters. */ } );
+	}
+
+	/**
+	 * Resolves per-flow declarations after selection/dependency expansion, before
+	 * canonical ordering contracts chains. The callback must not execute SUT work.
+	 *
+	 * @param prepare Called once for each selected or required flow
+	 * @return Selected flows in canonical serial order
+	 */
+	protected final Stream<Flow> prepareFlows( Consumer<Flow> prepare ) {
 		processor.freezeConfiguration();
-		return processor.flows();
+		return processor.flows( prepare );
 	}
 
 	/**

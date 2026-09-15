@@ -71,6 +71,7 @@ public final class FlowExtension implements ParameterResolver, InvocationInterce
 		T original;
 		try {
 			original = invocation.proceed();
+			handle.reportResourceFallback( context );
 		}
 		catch( Throwable failure ) {
 			handle.stopParallel( failure );
