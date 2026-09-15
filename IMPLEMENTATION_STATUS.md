@@ -17,6 +17,7 @@ authoritative; no frozen feasibility evidence or design decision was rewritten.
 | 20 | Successfully begun capture ends/materializes/closes once within invocation before Writer callbacks; capture-only diagnostics; primary-error preservation; merged-source drainage | `CaptureScopeTest`, `LogCaptureTest`, `MergeTest`, `PreparedCaptureTest` |
 | 08 (checked tracer) | Same-caller real parallel processing, A-to-B binding with controlled independent C, one readiness waiter, admission before emission, native terminal plus drainage | `FlowParallelBindingTest` through real Launcher |
 | 09 (partial) | Early service-loaded public Launcher decorator; exact call/preview ownership; actual pool and metadata guards; optional isolated JUnit 6 overload | `FlowLauncherBridgeTest`, `FlowLauncherSixTest`, `FlowNativeProfileTest`, `FlowNativeCallTest` |
+| 10 (automated portion) | Standalone consumer of locally installed Flow POM/BOM/JARs; real model, binding, native overlap, provider-free serial and exact callback UID checks on consumer-selected JUnit stacks | `assert/assert-junit5/src/it/packaged-consumer`; artifact hashes, JVM class-load traces and native summaries |
 
 The new caller permits `flow.parallel=true` only through the checked native tracer.
 Named bulk `independent()` declarations must affirmatively audit every selected
@@ -97,8 +98,10 @@ results below predate this slice; the next full run is reserved for final integr
   callback-context restoration, basic entry-stop gating and normal owned drainage.
   Exceptional stop/drain remains incomplete and is not force-finalized.
 - 09's principal ownership/selection/pool guards are implemented; its complete
-  adversarial acceptance is still partial. 10's published-consumer and
-  intended-IDE Run/Debug/navigation/selection/Stop gate has **not passed**.
+  adversarial acceptance is still partial. 10's packaged-consumer portion is now
+  exercised, but its intended-IDE Run/Debug/navigation/selection/Stop gate has
+  **not passed**. Safely disposable retained registration/model-reference cleanup
+  also remains an unverified acceptance item; repeat/re-entry guards do not prove it.
 - 05 needs the actual 6,000–7,000-flow consuming workload and resource-owner input.
   That environment was not supplied; the reported 52/25-minute observations are
   not new measurements or a diagnosed serial-tail cause.
@@ -109,7 +112,33 @@ results below predate this slice; the next full run is reserved for final integr
 
 The user was unavailable for the workload/host questions and instructed autonomous
 work. Missing human evidence is recorded as missing, not substituted with nested
-Launcher tests. No workload, publishing or rollout action was performed.
+Launcher tests. No workload, remote publishing or rollout action was performed.
+
+### Packaged consumer evidence
+
+The standalone consumer has no Flow parent or direct JUnit dependencies. Consumer
+JUnit BOM management precedes the Flow BOM; actual loaded versions and installed
+JAR code sources are checked. The same 25 Flow JAR/POM hashes passed Java 17.0.19
+with Jupiter/Platform **5.10.0/1.10.0** and **6.0.3/6.0.3**, serial and parallel:
+eight outer tests assert **246 real native starts** and **238 actual callback UID
+comparisons**. Deliberate failure/abort controls are counted separately from test
+failures. Both serial JVM traces exclude the parallel provider/owner/helper; both
+baseline traces exclude the optional JUnit 6 helper. This is not a version range,
+split-classloader, remote-release, IDE or general cancellation claim.
+
+Review removed a typed internal engine-class reference in favor of public engine
+service discovery and strengthened the actual-body UID oracle. Factory-UID and
+wrong-leaf-UID mutations each failed, even with external failure-ignore enabled;
+the script disables failure-ignore and requires a fresh two-test, zero-failure XML
+report. Thirty-four repeats are only repeatable-execution/idempotent-close/re-entry
+evidence, not retained-reference disposal proof. Final follow-up found no residual
+scoped source defect. All **629 clean-export documentation checks** passed, and
+intentional provenance output uses the existing exact-file/line allowlist.
+
+Commands, artifact provenance, exact outcomes and remaining checks are retained in
+[the consumer gate](assert/assert-junit5/src/it/packaged-consumer/README.md). The
+original and reviewed evidence are archived separately; no historical IDE fixture
+was altered. Human-only IntelliJ and 6,000-flow checks remain deferred until the end.
 
 ## Validation record
 

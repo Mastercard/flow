@@ -165,5 +165,26 @@ forced release or successful report finalization.
 Real Launcher tests cover A-to-B message binding while independent C remains active,
 real dependent aborts, callback context/restoration, native inline execution and
 provider-free serial behavior. Baseline-compiled binaries have been run on coherent
-5.10/1.10 and 6.0.3 stacks. Published-consumer and intended-IDE Run/Debug/selection/
-navigation/Stop acceptance remain open; do not infer them from nested Launcher runs.
+5.10/1.10 and 6.0.3 stacks.
+
+### Automated packaged consumer gate
+
+The [standalone consumer](src/it/packaged-consumer/README.md) installs and consumes
+normal Flow `1.1.8-SNAPSHOT` JARs/POMs/BOM, without a Flow parent, `systemPath` or
+reactor test helpers. Its repeatable commands verify the same repository-built Flow
+binaries on Java 17 with consumer-selected JUnit **5.10.0/Platform 1.10.0** and
+**6.0.3**, in separate provider-free serial and checked-parallel JVMs. Import the
+consumer's JUnit BOM **before** the Flow BOM so Flow's inherited build-time management
+does not override that selection.
+
+Native summaries assert nonempty real models, binding/overlap, outcomes, factory
+terminal, repeated execution, idempotent close and re-entry guards. Each real Flow
+callback's invocation UID must match the listener's started-leaf UID for that flow.
+Fresh Surefire XML, resolved dependency provenance, JAR/POM hashes and actual JVM
+class-loading checks are retained. Repetition does not prove registration or model
+disposal: the automated **no safely disposable retained registrations** criterion
+remains unverified for the later integrated ticket 25 gate. Ticket 10 is not fully
+passed. These are exact tested points, not a support range or a full parallel
+release. Intended IntelliJ Run/Debug/selection/navigation/Stop and the manual
+6,000-flow workload remain pending, deferred until the end by user decision; nested
+Launcher evidence does not complete those manual gates.

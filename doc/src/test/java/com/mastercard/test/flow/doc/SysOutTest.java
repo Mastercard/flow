@@ -59,6 +59,14 @@ class SysOutTest {
 					"listener.getSummary().printTo( new PrintWriter( System.out, true ) );",
 					"listener.getSummary().printFailuresTo( new PrintWriter( System.out, true ) );" );
 		}
+		// The standalone consumer records actual JAR provenance and native outcomes.
+		accept( "../assert/assert-junit5/src/it/packaged-consumer/src/test/java/consumer/"
+				+ "PackagedConsumerTest.java",
+				"System.out.println( \"FLOW-FILE \" + path + \" SHA256=\" + HexFormat.of().formatHex(",
+				"System.out.println( \"ARTIFACT \" + type.getName() + \" \" + path + \" SHA256=\"",
+				"System.out",
+				"evidence.summary.getSummary().printTo( new PrintWriter( System.out, true ) );",
+				"evidence.summary.getSummary().printFailuresTo( new PrintWriter( System.out, true ) );" );
 	}
 
 	private static void accept( String file, String... line ) {
