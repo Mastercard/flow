@@ -95,8 +95,13 @@ existing constructors default to a sibling. Only the advertisement's parent is
 canonicalized, not its possibly foreign link target.
 
 Writer does not create an advertisement itself. Completion actions advertising
-`latest` must use the configured location and preserve unrelated references/ordinary
-files. Automatic run naming and replay-source separation remain unchanged. Caller
+`latest` use the configured location. After successful finalization, the assertion
+runner may replace an existing symlink there, even one pointing to an older report;
+it removes only the link, never that link's target report. Ordinary files and
+directories at the advertisement location are preserved. This publication step is
+distinct from the destination-specific withdrawal before replacement and from an
+explicit `latest` output path. Automatic run naming and replay-source separation
+remain unchanged. Caller
 drainage, exactly-once initialization before concurrent bodies, final-only activation
 and latest/browse integration remain runner work; legacy assertion adapters still
 use immediate reporting. Parallel reporting remains guarded pending ticket 23's

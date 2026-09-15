@@ -381,8 +381,9 @@ public class Writer implements AutoCloseable {
 	 * runs inside close and must finish its use before returning, not wait for
 	 * another thread to use this writer. A thrown failure is latched and is not
 	 * retried. Actions advertising latest must use the location supplied at
-	 * construction (a sibling by default), preserve unrelated references and
-	 * ordinary files, and handle their own partial side effects.
+	 * construction (a sibling by default). They may replace an existing symlink,
+	 * but preserve its target and ordinary files/directories at that location.
+	 * Actions handle their own partial side effects.
 	 *
 	 * @param action Receives the canonical report destination
 	 * @return This writer
