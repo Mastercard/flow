@@ -115,6 +115,11 @@ class FlowNativeCallTest {
 			assertEquals( List.of(), execute( request, call ) );
 			assertTrue( NativeReceiptFixture.events.earlyReleaseRejected );
 			assertEquals( 1, NativeReceiptFixture.events.factoryTerminals );
+			assertEquals( 2, NativeReceiptFixture.events.enclosing.size(),
+					"retained attachment receives the actual class and engine terminals" );
+			assertTrue( NativeReceiptFixture.events.enclosing.stream()
+					.allMatch( parent -> NativeReceiptFixture.events.registered.stream()
+							.allMatch( child -> child.startsWith( parent + "/" ) ) ) );
 			call.close();
 			IllegalStateException failure = assertThrows( IllegalStateException.class,
 					NativeReceiptFixture.events.attachment::check );
@@ -186,6 +191,7 @@ class FlowNativeCallTest {
 
 	static final class Events implements FlowNativeCall.Observer {
 		final List<String> registered = new ArrayList<>();
+		final List<String> enclosing = new ArrayList<>();
 		final List<String> started = new ArrayList<>();
 		final List<String> finished = new ArrayList<>();
 		final List<Integer> lines = new ArrayList<>();
@@ -228,6 +234,11 @@ class FlowNativeCallTest {
 			if( releaseAtFactoryTerminal ) {
 				attachment.release();
 			}
+		}
+
+		@Override
+		public void enclosingFinished( TestIdentifier id, TestExecutionResult result ) {
+			enclosing.add( id.getUniqueId() );
 		}
 	}
 

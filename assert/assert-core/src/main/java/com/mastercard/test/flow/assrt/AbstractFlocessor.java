@@ -57,7 +57,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		FUL
 	}
 
-	private final FlowConfiguration config;
+	private FlowConfiguration config;
 	private final FlowProcessor processor;
 	private boolean ownedContext;
 
@@ -430,5 +430,15 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @param actual   The actual message content
 	 */
 	protected abstract void compare( String message, String expected, String actual );
+
+	/**
+	 * Drops a prepared adapter's invocation/configuration references only after its
+	 * native owner proves drainage. This neither publishes a stopped report nor
+	 * changes legacy runner completion semantics.
+	 */
+	protected final void detachProcessing() {
+		processor.detach();
+		config = null;
+	}
 
 }

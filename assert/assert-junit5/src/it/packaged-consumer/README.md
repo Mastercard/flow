@@ -71,8 +71,11 @@ is **not** the real-flow oracle.
 * Parallel uses the intended JAR `ServiceLoader` entry, early hook enablement and
   explicit independence audit under the sole-factory standard fixed 12/20 profile.
   Latches prove A and C overlap, predecessor native finish precedes B, and B finishes
-  while C remains active. C also remains active after stream close: factory return,
-  description enumeration and stream closure cannot masquerade as terminal drainage.
+  while C remains active. An outer public factory interceptor observes closure of
+  Flow's live native-consumed stream, distinct from the original description source.
+  C waits for that native close, not deferred source cleanup. The test requires
+  native close before C ends and original-source cleanup only after C's native
+  finish: enumeration closure cannot masquerade as terminal drainage.
 * Native names, model class/positive source lines, positive individual durations and
   the actual invocation context are checked. A listener records each started leaf's
   display name and UID. Inside the real Flow callback, `flow.meta().id()` looks up
@@ -81,9 +84,9 @@ is **not** the real-flow oracle.
   original native invocation without replacing or offloading it; its context is
   cleared afterwards.
 * Normal, processing-error/dependent-abort and empty runs observe factory terminal
-  and stream cleanup. Post-run handle close is idempotent; handle reuse and retained
-  executable re-entry fail. Thirty-four same-JVM parallel repeats provide a short
-  repeated-execution smoke check. Together these prove repeated execution,
+  and exactly one close of each stream. Post-run handle close is idempotent; handle
+  reuse and retained executable re-entry fail. Thirty-four same-JVM parallel repeats
+  provide a short repeated-execution smoke check. Together these prove repeated execution,
   idempotent close and re-entry guards, **not registration disposal or heap
   reachability**. Source review found no production leak: `FlowNativeCall.PENDING`
   is removed at attachment independently of later owner release; the handshake
@@ -177,6 +180,42 @@ class-load logs, and the two `wrong-factory-uid/` and `wrong-leaf-uid/` controls
 all five final scope files; `artifacts.sha256` covers the follow-up archive.
 The printed provenance is intentional; the parent documentation stdout check's
 exact allowlist remains separate follow-up work, not a check passed here.
+
+### Ticket 18 source-cleanup oracle correction
+
+The original 5.10 parallel failure was a fixture circular wait, not evidence that
+native enumeration remained open: C waited for the original description source to
+close, while safe disposal now correctly waits for C's native terminal. An
+observation-only failing run saw live native-stream closure before C timed out and
+original-source cleanup afterwards. The correction observes those two streams
+separately through an outer public factory interceptor. It retains the real binding,
+overlap, outcome and UID oracles, requires original cleanup after C's native finish,
+and checks exactly one close of each stream. No timeout or production guard is relaxed.
+
+The red/full-class, red/exact-method and observation-only red runs, then the focused
+green and four-point matrix, are archived separately under
+`C:/Data/Code/flow-stop18-packaged-diagnosis/`. The archived matrix passed eight outer
+tests, 246 native starts and 238 body UID checks against identical installed ticket-18
+artifacts across the two JUnit stacks. Those artifacts still contained the report
+claims subsequently removed by amendment 28; this historical matrix is not validation
+of the current combined source. The original failed evidence remains intact.
+
+### Current combined-source verification: 2026-09-16
+
+The reviewed ticket-18 source plus committed amendment 28 was installed locally
+after the 26-class Stop/lifecycle gate passed 522 cases (520 passed, two existing
+Windows skips, zero failures/errors). The unchanged verifier then passed all four
+points: each fresh XML has two tests and zero failures/errors/skips, with identical
+25-file Flow artifact hashes. Serial/provider-free and optional JUnit6 helper
+class-load checks passed. The installed report JAR was checked to exclude the
+retired claim class, rather than reusing the older diagnosis build.
+
+Java 17.0.19, both test-skip flags and failure-ignore false; real 39 report assets.
+Adapter JAR SHA-256: `cb3d49b804232d189bc316e4fc0d023675bf96aa8132dfed4890b206568e5022`.
+Fresh logs, XML, hashes, class-load traces and the tested consumer source are under
+`C:/Data/Code/flow-stop18-commit-20260916/`. This resolves the specific stream-oracle
+failure, not the separate report-reuse failure, complete Stop/cancellation coverage,
+IDE/retained-reference acceptance or workload performance.
 
 ### Baseline public API references
 

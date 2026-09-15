@@ -9,6 +9,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Stream;
@@ -58,12 +59,21 @@ public final class FlowAdmission {
 	private boolean streamClosed;
 	private boolean released;
 	private boolean pendingCancelled;
+	private boolean cancelling;
 	private Outcome factoryOutcome;
 	private Throwable factoryFailure;
+	private boolean factoryEnded;
 	private Throwable stopped;
 	private int issued;
 	private int terminal;
 	private int active;
+	private int retired;
+	private Runnable drained;
+	private int selected;
+	private int entered;
+	private int completed;
+	private boolean incomplete;
+	private List<String> affected = List.of();
 	private long changes;
 	private long successorVisits;
 
@@ -131,6 +141,7 @@ public final class FlowAdmission {
 				throw new IllegalStateException( "Flow admission cannot be prepared", stopped );
 			}
 			nodes = planned;
+			selected = planned.size();
 			prepared = true;
 		}
 		publishReady( planned, roots );
@@ -154,7 +165,7 @@ public final class FlowAdmission {
 			}
 		}
 		if( !keep )
-			requests.forEach( Request::cancel );
+			effects( null, requests.stream().<Runnable>map( r -> r::cancel ).toArray( Runnable[]::new ) );
 	}
 
 	private static void precedence( List<Node> planned, int before, int after ) {
@@ -347,6 +358,8 @@ public final class FlowAdmission {
 				previous = index;
 				node = nodes.get( index );
 				if( node.owner.grant != null ) {
+					if( node.owner.grant.operations() != 0 )
+						continue;
 					admit( node, index );
 					return index;
 				}
@@ -363,7 +376,7 @@ public final class FlowAdmission {
 						return index;
 					}
 				}
-				grant.close(); // Never emitted, hence proven unused.
+				settle( null, grant ); // Never emitted, hence proven unused.
 			}
 		}
 	}
@@ -391,13 +404,13 @@ public final class FlowAdmission {
 					|| node.started || node.entered || node.outcome != null )
 				throw fault( "Flow admission is not proven unused" );
 			node.retired = true;
+			retired++;
 			if( --node.owner.uses == 0 ) {
 				unused = node.owner.grant;
 				node.owner.grant = null;
 			}
 		}
-		if( unused != null )
-			unused.close();
+		settle( null, unused );
 	}
 
 	/**
@@ -435,7 +448,7 @@ public final class FlowAdmission {
 	public void started( String id ) {
 		synchronized( history ) {
 			Node node = nodes.get( index( id ) );
-			if( node.outcome != null && !node.started ) {
+			if( node.skipped != null || node.covered || node.outcome != null && !node.started ) {
 				throw fault( "Native Flow start after terminal" );
 			}
 			node.started = true;
@@ -461,6 +474,7 @@ public final class FlowAdmission {
 				throw fault( "Flow executable differs from its owned native binding" );
 			}
 			node.entered = true;
+			entered++;
 			active++;
 			return true;
 		}
@@ -492,6 +506,7 @@ public final class FlowAdmission {
 	 */
 	public void processed( int index, Result result, Throwable failure ) {
 		Grant finished = null;
+		Throwable primary = null;
 		try {
 			synchronized( history ) {
 				checkFixture();
@@ -513,16 +528,18 @@ public final class FlowAdmission {
 									: failure );
 				}
 				node.safe = true;
+				completed++;
 				active--;
 				finished = finishedGrant( node );
 				wake();
 			}
 		}
+		catch( RuntimeException | Error thrown ) {
+			primary = thrown;
+			throw thrown;
+		}
 		finally {
-			if( finished != null ) {
-				finished.close();
-			}
-			cancelPending();
+			settle( primary, finished );
 		}
 	}
 
@@ -532,7 +549,9 @@ public final class FlowAdmission {
 	 * @param failure Actual failure
 	 */
 	public void finished( String id, Outcome outcome, Throwable failure ) {
+		Objects.requireNonNull( outcome );
 		Grant finished = null;
+		Throwable primary = null;
 		List<Integer> cohort = new ArrayList<>();
 		List<Node> planned;
 		try {
@@ -540,6 +559,8 @@ public final class FlowAdmission {
 				checkFixture();
 				planned = nodes;
 				Node node = nodes.get( index( id ) );
+				if( node.skipped != null )
+					throw fault( "Native finish conflicts with skip" );
 				if( node.outcome != null ) {
 					if( node.outcome != outcome || node.nativeFailure != failure ) {
 						throw fault( "Conflicting native Flow terminal" );
@@ -568,17 +589,20 @@ public final class FlowAdmission {
 			// see a half-published cohort, and continuations keep their existing grant.
 			publishReady( planned, cohort );
 		}
+		catch( RuntimeException | Error thrown ) {
+			primary = thrown;
+			throw thrown;
+		}
 		finally {
-			if( finished != null ) {
-				finished.close();
-			}
-			cancelPending();
+			settle( primary, finished );
 		}
 	}
 
 	private Grant finishedGrant( Node node ) {
-		if( !node.retired && node.outcome != null && (!node.entered || node.safe) ) {
+		if( !node.retired && (node.outcome != null || node.skipped != null || node.covered)
+				&& (!node.entered || node.safe) ) {
 			node.retired = true;
+			retired++;
 			node.owner.uses--;
 			if( node.owner.uses == 0 && (node.last || stopped != null) ) {
 				Grant grant = node.owner.grant;
@@ -589,11 +613,72 @@ public final class FlowAdmission {
 		return null;
 	}
 
+	/**
+	 * Records an actual skipped leaf without inventing a native outcome or History.
+	 *
+	 * @param id     Registered native identity
+	 * @param reason Actual native skip reason
+	 */
+	public void skipped( String id, String reason ) {
+		Objects.requireNonNull( reason );
+		Grant unused = null;
+		Throwable primary = null;
+		try {
+			synchronized( history ) {
+				Node node = nodes.get( index( id ) );
+				if( node.started || node.entered || node.outcome != null
+						|| node.skipped != null && !node.skipped.equals( reason ) )
+					throw fault( "Conflicting native Flow skip" );
+				if( node.skipped != null )
+					return;
+				node.skipped = reason;
+				stopLocked( new IllegalStateException( "Native Flow skipped: " + reason ) );
+				unused = finishedGrant( node );
+			}
+		}
+		catch( RuntimeException | Error thrown ) {
+			primary = thrown;
+			throw thrown;
+		}
+		finally {
+			settle( primary, unused );
+		}
+	}
+
+	/**
+	 * Actual enclosing terminal/skip proves the native scope ended, not individual
+	 * descendant statuses or processing. Entered work and operations still drain.
+	 *
+	 * @param cause Diagnostic from the exact enclosing native scope
+	 */
+	public void enclosingFinished( Throwable cause ) {
+		Objects.requireNonNull( cause );
+		List<Grant> unused = new ArrayList<>();
+		synchronized( history ) {
+			if( factoryEnded )
+				return;
+			factoryEnded = true;
+			incomplete = true;
+			stopLocked( cause );
+			for( Node node : nodes ) {
+				if( node.admitted && !node.retired ) {
+					node.covered = true;
+					Grant grant = finishedGrant( node );
+					if( grant != null )
+						unused.add( grant );
+				}
+			}
+		}
+		effects( null, this::cancelPending,
+				() -> closeGrants( unused ), this::drain );
+	}
+
 	/** Records enumeration close, which is not native completion. */
 	public void enumerationClosed() {
 		synchronized( history ) {
 			streamClosed = true;
 			if( !prepared || issued != nodes.size() || stopped != null ) {
+				incomplete = true;
 				throw fault( "Incomplete Flow parallel enumeration" );
 			}
 		}
@@ -607,6 +692,8 @@ public final class FlowAdmission {
 	 * @return Whether normal finalization is now owned by this caller
 	 */
 	public boolean factoryFinished( Outcome outcome, Throwable failure ) {
+		Objects.requireNonNull( outcome );
+		Throwable primary = null;
 		try {
 			synchronized( history ) {
 				checkFixture();
@@ -618,37 +705,168 @@ public final class FlowAdmission {
 				}
 				factoryOutcome = outcome;
 				factoryFailure = failure;
+				factoryEnded = true;
+				// A factory can finish with filtered dynamic descriptions and no child
+				// callback. Cover only native scope lifetime, never missing outcomes.
+				for( Node node : nodes )
+					if( node.admitted && !node.retired && node.outcome == null && node.skipped == null )
+						node.covered = true;
 				boolean complete = prepared && streamClosed && issued == nodes.size() && terminal == issued
-						&& active == 0 && stopped == null && outcome == Outcome.SUCCESSFUL;
+						&& active == 0 && capacity.owned() == 0 && stopped == null
+						&& outcome == Outcome.SUCCESSFUL;
 				if( !complete ) {
+					incomplete = true;
 					stopLocked( new IllegalStateException( "Incomplete native Flow factory", failure ) );
 				}
 				return complete;
 			}
 		}
+		catch( RuntimeException | Error thrown ) {
+			primary = thrown;
+			throw thrown;
+		}
 		finally {
-			cancelPending();
+			effects( primary, this::cancelPending, this::retireFinished, this::drain );
 		}
 	}
 
-	/** Detaches only after successful owned finalization. */
-	public void release() {
+	private void retireFinished() {
+		List<Grant> unused = new ArrayList<>();
 		synchronized( history ) {
-			checkFixture();
-			if( factoryOutcome != Outcome.SUCCESSFUL || stopped != null || active != 0 ) {
-				throw fault( "Flow admission is not safely complete" );
+			for( Node node : nodes ) {
+				Grant grant = finishedGrant( node );
+				if( grant != null )
+					unused.add( grant );
 			}
-			released = true;
-			nodes = List.of();
-			nativeIds.clear();
-			history.clear();
-			factoryThread = null;
+		}
+		closeGrants( unused );
+	}
+
+	private static void closeGrants( List<Grant> grants ) {
+		effects( null, grants.stream().<Runnable>map( g -> g::close ).toArray( Runnable[]::new ) );
+	}
+
+	private void settle( Throwable primary, Grant finished ) {
+		effects( primary, () -> {
+			if( finished != null )
+				finished.close();
+		}, this::cancelPending, this::drain );
+	}
+
+	// State changes already committed under History cannot be rolled back when a
+	// notification fails. Attempt every outside-lock effect, preserving its caller.
+	private static void effects( Throwable primary, Runnable... actions ) {
+		Throwable first = primary;
+		for( Runnable action : actions ) {
+			try {
+				action.run();
+			}
+			catch( RuntimeException | Error failure ) {
+				if( first == null )
+					first = failure;
+				else if( first != failure )
+					first.addSuppressed( failure );
+			}
+		}
+		if( primary == null ) {
+			if( first instanceof RuntimeException failure )
+				throw failure;
+			if( first instanceof Error failure )
+				throw failure;
+		}
+	}
+
+	/**
+	 * @return Whether actual evidence permits disposal, not successful reporting
+	 */
+	public boolean disposable() {
+		synchronized( history ) {
+			return !cancelling && active == 0 && capacity.owned() == 0 && issued == retired;
+		}
+	}
+
+	/**
+	 * Registers the adapter's terminal disposal once. Late exact operation proof
+	 * may invoke it after the Launcher returns; no native result is replayed.
+	 *
+	 * @param action Cleanup performed outside admission and reservation locks
+	 */
+	public void whenDrained( Runnable action ) {
+		synchronized( history ) {
+			if( drained != null || released )
+				throw new IllegalStateException( "Flow disposal already registered" );
+			drained = Objects.requireNonNull( action );
+		}
+		drain();
+	}
+
+	private void drain() {
+		Runnable action = null;
+		synchronized( history ) {
+			if( factoryEnded && disposable() ) {
+				action = drained;
+				drained = null;
+			}
+		}
+		if( action != null )
+			action.run();
+	}
+
+	/** @return The first stop cause, independently of native outcomes */
+	public Throwable stopCause() {
+		synchronized( history ) {
+			return stopped;
+		}
+	}
+
+	/** @return A bounded snapshot, retaining no Flow, native context or Writer */
+	public ExecutionStatus status() {
+		synchronized( history ) {
+			return new ExecutionStatus( released ? ExecutionStatus.State.QUIESCENT
+					: stopped == null ? ExecutionStatus.State.ACTIVE : ExecutionStatus.State.STOPPING,
+					stopped, incomplete, selected, issued, entered, completed, terminal, capacity.owned(),
+					released ? affected
+							: nodes.stream().filter( n -> !n.safe || !n.retired )
+									.limit( 5 ).map( n -> n.label ).toList() );
+		}
+	}
+
+	/** Detaches only safely disposable references, also after a stopped run. */
+	public void release() {
+		Throwable primary = null;
+		try {
+			synchronized( history ) {
+				checkFixture();
+				// No issued leaves is not terminal evidence: prepared roots can still
+				// own pending priority gates. Only a completed Stop permits unused disposal.
+				if( !disposable() || stopped != null && !pendingCancelled
+						|| !factoryEnded && (stopped == null || issued != 0) ) {
+					throw fault( "Flow admission is not safely complete" );
+				}
+				affected = status().affected();
+				released = true;
+				nodes = List.of();
+				nativeIds.clear();
+				ready.clear();
+				history.clear();
+				factoryThread = null;
+			}
+		}
+		catch( RuntimeException | Error thrown ) {
+			primary = thrown;
+			throw thrown;
+		}
+		finally {
+			settle( primary, null );
 		}
 	}
 
 	/** @param failure First cause that irreversibly closes admission */
 	public void stop( Throwable failure ) {
+		Objects.requireNonNull( failure );
 		synchronized( history ) {
+			if( released )
+				return;
 			stopLocked( failure );
 		}
 		cancelPending();
@@ -663,6 +881,7 @@ public final class FlowAdmission {
 		}
 		stop( new IllegalStateException( "Flow parallel class backstop reached" ) );
 		synchronized( history ) {
+			incomplete = true;
 			throw new IllegalStateException( "Incomplete Flow parallel admission: prepared=" + prepared
 					+ ", issued=" + issued + ", terminal=" + terminal + ", active=" + active
 					+ "; no forced release or finalization", stopped );
@@ -693,10 +912,12 @@ public final class FlowAdmission {
 	private void resourcesChanged() {
 		// Reservation callbacks arrive outside all bookkeeping locks. The capacity
 		// latch also protects continuation if native completion races this callback.
-		if( capacity.uncertainty() != null )
-			stop( capacity.uncertainty() );
-		else
-			wake();
+		effects( null, () -> {
+			if( capacity.uncertainty() != null )
+				stop( capacity.uncertainty() );
+			else
+				wake();
+		}, this::drain );
 	}
 
 	private IllegalStateException fault( String message ) {
@@ -709,6 +930,7 @@ public final class FlowAdmission {
 		if( stopped == null ) {
 			stopped = failure;
 		}
+		incomplete = true;
 		ready.clear();
 		wake();
 	}
@@ -716,6 +938,7 @@ public final class FlowAdmission {
 	private void cancelPending() {
 		List<Request> cancelled = new ArrayList<>();
 		List<Grant> unused = new ArrayList<>();
+		Throwable cause;
 		synchronized( history ) {
 			if( stopped == null || pendingCancelled ) {
 				return;
@@ -723,19 +946,32 @@ public final class FlowAdmission {
 			// Stop prevents retaining new requests, so one sweep also covers later
 			// drainage without scanning every node again on each completion.
 			pendingCancelled = true;
+			cancelling = true;
+			cause = stopped;
 			for( Node node : nodes ) {
 				if( node.request != null ) {
 					cancelled.add( node.request );
 					node.request = null;
 				}
-				if( node.owner == node && node.grant != null && node.uses == 0 ) {
-					unused.add( node.grant );
-					node.grant = null;
+				if( node.owner == node && node.grant != null ) {
+					if( node.uses == 0 ) {
+						unused.add( node.grant );
+						node.grant = null;
+					}
 				}
 			}
 		}
-		cancelled.forEach( Request::cancel );
-		unused.forEach( Grant::close );
+		effects( null,
+				() -> effects( null,
+						cancelled.stream().<Runnable>map( r -> r::cancel ).toArray( Runnable[]::new ) ),
+				() -> capacity.stopping( cause ), () -> closeGrants( unused ), () -> {
+					synchronized( history ) {
+						cancelling = false;
+					}
+					// Proof can precede an extracted grant's close. Registering terminal
+					// disposal checks the other order; this check covers completed effects.
+					drain();
+				} );
 	}
 
 	private void wake() {
@@ -747,6 +983,7 @@ public final class FlowAdmission {
 
 	private static final class Node {
 		private final Flow flow;
+		private final String label;
 		private final ResourceRequirements requirements;
 		private final Set<Integer> successors = new HashSet<>();
 		private int remaining;
@@ -765,9 +1002,13 @@ public final class FlowAdmission {
 		private Throwable failure;
 		private Outcome outcome;
 		private Throwable nativeFailure;
+		private String skipped;
+		private boolean covered;
 
 		private Node( Flow flow, ResourceRequirements requirements ) {
 			this.flow = flow;
+			String id = flow.meta().id();
+			label = id.length() > 120 ? id.substring( 0, 117 ) + "..." : id;
 			this.requirements = requirements;
 		}
 	}

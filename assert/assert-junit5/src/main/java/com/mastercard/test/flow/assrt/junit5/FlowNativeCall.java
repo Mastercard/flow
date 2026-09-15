@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
@@ -54,6 +56,7 @@ final class FlowNativeCall implements TestExecutionListener, AutoCloseable {
 	private TestPlan plan;
 	/** The factory identifier bound from that actual plan. */
 	private TestIdentifier factory;
+	private final Set<String> ancestors = new HashSet<>();
 	/** The currently attached notification owner, if any. */
 	private Attachment attachment;
 	/** First notification/protocol failure, retained for explicit checks. */
@@ -77,6 +80,14 @@ final class FlowNativeCall implements TestExecutionListener, AutoCloseable {
 
 		/** @param result The actual terminal factory outcome */
 		void factoryFinished( TestExecutionResult result );
+
+		/**
+		 * @param id     Actual ancestor from this exact call's executing plan
+		 * @param result Its supplied result, not a fabricated factory result
+		 */
+		default void enclosingFinished( TestIdentifier id, TestExecutionResult result ) {
+			// Owners without retained use need no enclosing completion action.
+		}
 
 		/**
 		 * Rejects unaccounted subtree skips unless the owner explicitly handles them.
@@ -251,6 +262,9 @@ final class FlowNativeCall implements TestExecutionListener, AutoCloseable {
 				}
 				plan = actual;
 				factory = candidate;
+				for( TestIdentifier parent = actual.getParent( candidate ).orElse( null ); parent != null;
+						parent = actual.getParent( parent ).orElse( null ) )
+					ancestors.add( parent.getUniqueId() );
 			}
 		}
 		catch( Throwable failure ) {
@@ -287,6 +301,7 @@ final class FlowNativeCall implements TestExecutionListener, AutoCloseable {
 	public void executionFinished( TestIdentifier id, TestExecutionResult result ) {
 		deliver( id, o -> o.finished( id, result ), false );
 		deliver( id, o -> o.factoryFinished( result ), true );
+		deliverAncestor( id, o -> o.enclosingFinished( id, result ) );
 	}
 
 	@Override
@@ -294,6 +309,22 @@ final class FlowNativeCall implements TestExecutionListener, AutoCloseable {
 		deliver( id, o -> o.skipped( id, reason ), false );
 		// Actual subtree evidence, not invented descendant finishes.
 		deliver( id, o -> o.skipped( id, reason ), true );
+		deliverAncestor( id, o -> o.skipped( id, reason ) );
+	}
+
+	private void deliverAncestor( TestIdentifier id, Consumer<Observer> event ) {
+		Attachment target;
+		synchronized( this ) {
+			target = ancestors.contains( id.getUniqueId() ) ? attachment : null;
+		}
+		if( target != null ) {
+			try {
+				target.notify( event, true );
+			}
+			catch( Throwable failure ) {
+				fail( failure );
+			}
+		}
 	}
 
 	private void deliver( TestIdentifier id, Consumer<Observer> event, boolean terminal ) {
@@ -338,6 +369,9 @@ final class FlowNativeCall implements TestExecutionListener, AutoCloseable {
 	private synchronized void detach( Attachment value ) {
 		if( attachment == value ) {
 			attachment = null;
+			ancestors.clear();
+			if( closed )
+				factory = null;
 		}
 	}
 
@@ -348,13 +382,15 @@ final class FlowNativeCall implements TestExecutionListener, AutoCloseable {
 		}
 		closed = true;
 		plan = null;
-		factory = null;
 		if( attachment != null ) {
 			// Call return cannot finalize or force-release owned use. The owner
 			// retains its attachment and sees this failure at its backstop check.
 			fail( new IllegalStateException( "Flow native owner did not drain and release" ) );
-			attachment = null;
 		}
+		else
+			factory = null;
+		if( attachment == null )
+			ancestors.clear();
 	}
 
 	private static final class Receipt {

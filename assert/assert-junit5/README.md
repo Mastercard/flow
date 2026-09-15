@@ -218,8 +218,8 @@ the whole grant and diagnose later conflicts. Owner-supplied `uncertain(cause)`
 also records continued/uncertain use; a safely completed assertion failure does
 not. If a lifecycle failure is known safe, its existing owner must handle that
 inside the action rather than relying on a throwable class. There is no retry,
-repair, recreation, forced release or late-safe recovery in this slice. Full
-cancellation, bounded drainage and richer unsafe-owner diagnostics remain later work.
+repair, recreation or forced release of this irreversible uncertainty. Exact
+operation receipts below distinguish remaining use from damaged fixture state.
 
 The borrowed domain scope surrounds core processing, not arbitrary outer JUnit
 interceptors. Owners with external pre-body work or cleanup use
@@ -255,6 +255,48 @@ serialized owners: their timers, handlers, whole-table observations and root-sto
 cleanup have not been made automatically cooperating. Replay and report/capture
 integration remain guarded, including distinct artifact/log attribution for parallel
 browser sessions. No real browser, IDE or full-workload acceptance is claimed.
+
+### Explicit Stop and remaining ownership
+
+`FlowExecution.stop(cause)` requires a non-null cause, irreversibly closes admission,
+wakes the existing factory waiter and withdraws pending reservations. The first
+cause wins. Already-admitted wrappers that have not entered Flow processing take
+their real native abort path. Stop does not cancel peer runs, interrupt pooled
+threads, manufacture History results or turn stream close into native completion.
+Actual child skip and enclosing-scope terminal evidence can retire unused native
+ownership without inventing descendant outcomes.
+
+Before background use escapes, its existing owner registers `receipt.operation()`
+(or `Grant.operation()` at the reservation seam). Call that exact operation's
+`complete()` only after its actual use and required cleanup have ended. It is
+deliberately not `AutoCloseable`: a cancelled future, timeout, request return or
+native terminal is not such proof. Multiple operations retain their whole grant
+until all finish, and chain continuation waits on the same factory waiter. These
+receipts do not authorize fixture access on another thread or establish an audit
+for unregistered asynchronous work.
+
+After Stop, outstanding operations retain ownership with a visible pre-use
+diagnostic for conflicting cooperating runs. Late exact proof can release that
+remaining ownership and safely dispose original stream/model tables; it cannot
+restart admission, repair `uncertain(cause)`, erase Stop or rewrite earlier native
+results. Original cleanup waits for actual native/body/operation drainage. Genuine
+incompleteness and cleanup failures use the live factory or class-local exceptional
+backstop where reachable, not just listener exceptions.
+
+`execution.status()` supplies an immutable, bounded `ExecutionStatus` independently
+of Writer success: ACTIVE, STOPPING or QUIESCENT, the first cause, latched
+incompleteness, processing/native/remaining-owner counts and at most five shortened
+identities. Serial native-terminal count is `-1`, not an invented listener mirror.
+QUIESCENT means owned work and required cleanup ended, not that the selection
+passed. Stop after quiescence is a no-op. Retained unsafe owners are not forcibly
+released to make disposal appear successful; stopped reporting is not finalized as
+successful merely to discard references.
+
+Ticket 19 still owns native-token query propagation, cooperative cancellation
+callbacks, check cadence and the reachable owner drain budget. There is no new
+watchdog/executor, uniform Launcher/remote/IDE shutdown guarantee or hard-kill
+cleanup promise here. Report/capture/replay guards and consumer resource-audit
+limits remain unchanged.
 
 ### Uninterrupted selected chains
 
@@ -476,6 +518,8 @@ does not override that selection.
 Native summaries assert nonempty real models, binding/overlap, outcomes, factory
 terminal, repeated execution, idempotent close and re-entry guards. Each real Flow
 callback's invocation UID must match the listener's started-leaf UID for that flow.
+The consumer distinguishes live native-stream closure while C is active from
+original-source cleanup after C's native finish; neither is substituted for the other.
 Fresh Surefire XML, resolved dependency provenance, JAR/POM hashes and actual JVM
 class-loading checks are retained. Repetition does not prove registration or model
 disposal: the automated **no safely disposable retained registrations** criterion

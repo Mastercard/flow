@@ -7,6 +7,7 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
 
 import java.io.PrintWriter;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.extension.DynamicTestInvocationContext;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
+import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.platform.engine.TestEngine;
 import org.junit.platform.engine.TestExecutionResult;
@@ -159,7 +161,13 @@ class PackagedConsumerTest {
 					assertTrue(
 							evidence.events.indexOf( "finish:B []" ) < evidence.events.indexOf( "end:C" ) );
 					assertTrue(
-							evidence.events.indexOf( "stream-close" ) < evidence.events.indexOf( "end:C" ) );
+							evidence.events.indexOf( "native-stream-close" ) < evidence.events
+									.indexOf( "end:C" ) );
+					assertTrue(
+							evidence.events.indexOf( "end:C" ) < evidence.events.indexOf( "finish:C []" ) );
+					assertTrue(
+							evidence.events.indexOf( "finish:C []" ) < evidence.events
+									.indexOf( "source-close" ) );
 				}
 				else {
 					List<String> nativeEvents = evidence.events.stream()
@@ -207,7 +215,8 @@ class PackagedConsumerTest {
 		assertEquals( count, evidence.nativeIds.size() );
 		assertEquals( count, evidence.durations.size() );
 		assertTrue( evidence.durations.values().stream().allMatch( n -> n > 0 ) );
-		assertTrue( evidence.events.contains( "stream-close" ) );
+		assertEquals( 1, evidence.events.stream().filter( "native-stream-close"::equals ).count() );
+		assertEquals( 1, evidence.events.stream().filter( "source-close"::equals ).count() );
 		assertTrue( evidence.events.contains( "factory-terminal" ) );
 		if( count == 0 )
 			assertFalse( evidence.events.stream().anyMatch( s -> s.startsWith( "body:" ) ) );
@@ -255,9 +264,6 @@ class PackagedConsumerTest {
 			evidence.rejected = rejected;
 		}
 		finally {
-			evidence.cEntered.countDown();
-			evidence.bFinished.countDown();
-			evidence.streamClosed.countDown();
 			if( previous == null )
 				System.clearProperty( HOOK );
 			else
@@ -302,10 +308,12 @@ class PackagedConsumerTest {
 		final CountDownLatch cEntered = new CountDownLatch( 1 );
 		/** Keeps C active until B's native finish, not just its body return. */
 		final CountDownLatch bFinished = new CountDownLatch( 1 );
-		/** Keeps C active past description-stream closure. */
-		final CountDownLatch streamClosed = new CountDownLatch( 1 );
+		/** Keeps C active past live native-stream closure, not source cleanup. */
+		final CountDownLatch nativeStreamClosed = new CountDownLatch( 1 );
 		/** Retained executable descriptions for the post-run re-entry check. */
 		List<DynamicNode> descriptions;
+		/** Original source retained to distinguish it from live native consumption. */
+		Stream<DynamicNode> original;
 		/** Factory-owned handle retained for idempotent close and reuse rejection. */
 		FlowExecution handle;
 		/** Establishes the serial body/listener thread identity oracle. */
@@ -368,6 +376,30 @@ class PackagedConsumerTest {
 		static final ThreadLocal<String> CURRENT = new ThreadLocal<>();
 
 		/**
+		 * Observes the live stream returned by Flow's inner factory interceptor, not
+		 * the original description source retained for safe cleanup.
+		 *
+		 * @param invocation The original factory interceptor chain
+		 * @param method     The actual factory method
+		 * @param context    The actual factory context
+		 * @return The same live stream with an additional close observation
+		 * @throws Throwable If the factory or stream identity check fails
+		 */
+		@Override
+		public <T> T interceptTestFactoryMethod( Invocation<T> invocation,
+				ReflectiveInvocationContext<Method> method, ExtensionContext context ) throws Throwable {
+			T returned = invocation.proceed();
+			var evidence = BindingFactory.evidence;
+			Stream<?> live = (Stream<?>) returned;
+			assertNotSame( evidence.original, live, "outer interceptor receives live consumption" );
+			live.onClose( () -> {
+				evidence.events.add( "native-stream-close" );
+				evidence.nativeStreamClosed.countDown();
+			} );
+			return returned;
+		}
+
+		/**
 		 * Preserves the original invocation on its Jupiter thread while exposing its
 		 * context identity for comparison with independent listener evidence.
 		 *
@@ -414,8 +446,8 @@ class PackagedConsumerTest {
 /**
  * The same composed registration and late-model handle is used for every run.
  */
-@FlowTest
 @ExtendWith(PackagedConsumerTest.ContextCheck.class)
+@FlowTest
 class BindingFactory {
 	/**
 	 * Installed before each Launcher call; parallel bodies share that call's state.
@@ -455,7 +487,8 @@ class BindingFactory {
 						if( name.equals( "C" ) ) {
 							e.cEntered.countDown();
 							PackagedConsumerTest.await( e.bFinished );
-							PackagedConsumerTest.await( e.streamClosed );
+							PackagedConsumerTest.await( e.nativeStreamClosed );
+							assertFalse( e.events.contains( "source-close" ), "source cleanup before C drained" );
 							e.events.add( "end:C" );
 						}
 					}
@@ -470,10 +503,10 @@ class BindingFactory {
 		e.descriptions = tests.toList();
 		assertFalse( e.events.stream().anyMatch( s -> s.startsWith( "body:" ) ) );
 		e.events.add( "factory-return" );
-		return e.descriptions.stream().onClose( () -> {
-			e.events.add( "stream-close" );
-			e.streamClosed.countDown();
+		e.original = e.descriptions.stream().onClose( () -> {
+			e.events.add( "source-close" );
 		} );
+		return e.original;
 	}
 }
 

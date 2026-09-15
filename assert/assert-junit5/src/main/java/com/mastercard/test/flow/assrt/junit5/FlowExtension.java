@@ -46,11 +46,21 @@ public final class FlowExtension implements ParameterResolver, InvocationInterce
 		ExtensionContext.Store store = classContext.getStore( OWNERS );
 		String key = context.getUniqueId();
 		FlowExecution handle = new FlowExecution( () -> store.remove( key ) );
-		store.put( key, handle );
+		store.put( key, new Owner( handle ) );
 		if( parallel( context ) ) {
 			handle.attachParallel( context );
 		}
 		return handle;
+	}
+
+	/** Distinguishes actual store teardown from an explicit public handle close. */
+	@SuppressWarnings("deprecation")
+	private record Owner(FlowExecution execution)
+			implements ExtensionContext.Store.CloseableResource, AutoCloseable {
+		@Override
+		public void close() {
+			execution.backstop();
+		}
 	}
 
 	@Override
@@ -74,7 +84,13 @@ public final class FlowExtension implements ParameterResolver, InvocationInterce
 			handle.reportResourceFallback( context );
 		}
 		catch( Throwable failure ) {
-			handle.stopParallel( failure );
+			try {
+				handle.stop( failure );
+			}
+			catch( Throwable cleanup ) {
+				if( cleanup != failure )
+					failure.addSuppressed( cleanup );
+			}
 			throw failure;
 		}
 		finally {
@@ -142,10 +158,10 @@ public final class FlowExtension implements ParameterResolver, InvocationInterce
 				candidate = candidate.getParent().orElse( null ) ) {
 			for( ExtensionContext ancestor = candidate; ancestor != null;
 					ancestor = ancestor.getParent().orElse( null ) ) {
-				FlowExecution found = ancestor.getStore( OWNERS )
-						.get( candidate.getUniqueId(), FlowExecution.class );
+				Owner found = ancestor.getStore( OWNERS )
+						.get( candidate.getUniqueId(), Owner.class );
 				if( found != null ) {
-					owner = found;
+					owner = found.execution();
 					factory = candidate;
 					break;
 				}

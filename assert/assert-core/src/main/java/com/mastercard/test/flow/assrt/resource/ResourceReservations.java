@@ -21,7 +21,7 @@ public final class ResourceReservations {
 	private static final ResourceReservations SHARED = new ResourceReservations();
 	private final Set<Request> pending = new LinkedHashSet<>();
 	private final Set<String> held = new HashSet<>();
-	private final Map<ResourceRequirements, Throwable> unsafe = new LinkedHashMap<>();
+	private final Map<Object, Retention> unsafe = new LinkedHashMap<>();
 	private int active;
 	private boolean exclusive;
 
@@ -88,7 +88,8 @@ public final class ResourceReservations {
 	/** Run-local execution slots; their bookkeeping belongs to the shared scope. */
 	public static final class Capacity {
 		private final int limit;
-		private int active;
+		private final Set<Grant> grants = new LinkedHashSet<>();
+		private volatile int active;
 		private volatile Throwable unsafe;
 
 		private Capacity( int limit ) {
@@ -100,6 +101,25 @@ public final class ResourceReservations {
 		 */
 		public Throwable uncertainty() {
 			return unsafe;
+		}
+
+		/** @return Whole grants still owned, including explicitly retained use */
+		public int owned() {
+			return active;
+		}
+
+		/**
+		 * Includes operations whose native grant close was requested before Stop.
+		 *
+		 * @param cause Exact owning run's stop cause
+		 */
+		public void stopping( Throwable cause ) {
+			Objects.requireNonNull( cause );
+			List<Grant> owned;
+			synchronized( SHARED ) {
+				owned = new ArrayList<>( grants );
+			}
+			signalAll( owned.stream().<Runnable>map( grant -> () -> grant.stopping( cause ) ).toList() );
 		}
 	}
 
@@ -128,11 +148,11 @@ public final class ResourceReservations {
 				if( capacity.unsafe != null )
 					throw new IllegalStateException( "Resource owner has uncertain fixture use",
 							capacity.unsafe );
-				for( Map.Entry<ResourceRequirements, Throwable> retained : unsafe.entrySet() ) {
-					if( conflicts( requirements, retained.getKey() ) )
+				for( Retention retained : unsafe.values() ) {
+					if( conflicts( requirements, retained.requirements ) )
 						throw new IllegalStateException(
 								"Resource ownership retained after uncertain fixture use",
-								retained.getValue() );
+								retained.cause );
 				}
 				if( capacity.active == capacity.limit || exclusive
 						|| requirements.exclusive() && active != 0
@@ -150,7 +170,9 @@ public final class ResourceReservations {
 				exclusive = requirements.exclusive();
 				active++;
 				capacity.active++;
-				return new Grant( this );
+				Grant grant = new Grant( this );
+				capacity.grants.add( grant );
+				return grant;
 			}
 		}
 
@@ -162,7 +184,7 @@ public final class ResourceReservations {
 					return;
 				notifications = notifications();
 			}
-			notifications.forEach( Runnable::run );
+			signalAll( notifications );
 		}
 	}
 
@@ -172,19 +194,126 @@ public final class ResourceReservations {
 		return new ArrayList<>( wakeups );
 	}
 
+	private static void signalAll( List<Runnable> notifications ) {
+		Throwable first = null;
+		for( Runnable notification : notifications ) {
+			try {
+				notification.run();
+			}
+			catch( RuntimeException | Error failure ) {
+				if( first == null )
+					first = failure;
+				else if( first != failure )
+					first.addSuppressed( failure );
+			}
+		}
+		if( first instanceof RuntimeException failure )
+			throw failure;
+		if( first instanceof Error failure )
+			throw failure;
+	}
+
 	private static boolean conflicts( ResourceRequirements first, ResourceRequirements second ) {
 		return first.exclusive() || second.exclusive()
 				|| first.keys().stream().anyMatch( second.keys()::contains );
 	}
 
+	private record Retention(ResourceRequirements requirements, Throwable cause) {
+	}
+
+	/**
+	 * Exact outstanding-operation proof. Obtain before use escapes the synchronous
+	 * scope. This is deliberately not AutoCloseable: scope exit, cancelled futures
+	 * and request return are not evidence that the operation ended.
+	 */
+	public final class Operation {
+		private Grant grant;
+
+		private Operation( Grant grant ) {
+			this.grant = grant;
+		}
+
+		/**
+		 * Reports actual cessation of this operation and its required cleanup. Repeat
+		 * proof is harmless. It cannot repair damaged fixture state, finish another
+		 * operation, or bypass the grant's native/body/chain close gate.
+		 */
+		public void complete() {
+			List<Runnable> notifications;
+			synchronized( ResourceReservations.this ) {
+				if( grant == null )
+					return;
+				Grant completed = grant;
+				grant = null;
+				completed.operations--;
+				if( completed.operations == 0 && completed.failure == null )
+					unsafe.remove( completed.identity );
+				completed.releaseIfDrained();
+				notifications = completed.notifications();
+			}
+			signalAll( notifications );
+		}
+	}
+
 	/** Ownership released only after proven unused or safely finished use. */
 	public final class Grant implements AutoCloseable {
 		private final Request request;
+		private final Object identity = new Object();
 		private boolean released;
+		private boolean closing;
+		private volatile int operations;
+		private Throwable stopped;
 		private Throwable failure;
 
 		private Grant( Request request ) {
 			this.request = request;
+		}
+
+		/**
+		 * @return Exact outstanding operations, readable without nesting owner locks
+		 */
+		public int operations() {
+			return operations;
+		}
+
+		/** @return A receipt acquired before this exact owner's operation escapes */
+		public Operation operation() {
+			synchronized( ResourceReservations.this ) {
+				if( released || closing || failure != null || stopped != null )
+					throw new IllegalStateException( "Operation requires live safe ownership", failure );
+				operations++;
+				return new Operation( this );
+			}
+		}
+
+		/**
+		 * Marks outstanding operations explicitly unsafe after observed Stop. No
+		 * operation is cancelled or completed here. Call outside owner locks.
+		 *
+		 * @param cause First owning run's stop cause
+		 */
+		public void stopping( Throwable cause ) {
+			List<Runnable> notifications;
+			synchronized( ResourceReservations.this ) {
+				Objects.requireNonNull( cause );
+				if( released || stopped != null )
+					return;
+				stopped = cause;
+				if( operations == 0 )
+					return;
+				if( request.capacity.unsafe == null )
+					request.capacity.unsafe = cause;
+				unsafe.putIfAbsent( identity, new Retention( request.requirements, cause ) );
+				notifications = notifications();
+			}
+			signalAll( notifications );
+		}
+
+		private List<Runnable> notifications() {
+			Set<Runnable> wakeups = new LinkedHashSet<>();
+			wakeups.add( request.changed );
+			wakeups.addAll( ResourceReservations.this.notifications() );
+			return new ArrayList<>( wakeups );
 		}
 
 		/**
@@ -220,15 +349,15 @@ public final class ResourceReservations {
 				if( request.capacity.unsafe == null )
 					request.capacity.unsafe = failure;
 				// Retain the ownership diagnosis, not the request's run/model wakeup.
-				unsafe.put( request.requirements, failure );
+				unsafe.putIfAbsent( identity, new Retention( request.requirements, failure ) );
 				Set<Runnable> wakeups = new LinkedHashSet<>();
 				// This request is no longer pending. Its owner must stop even when no
 				// other request exists; pending-waiter notification alone is insufficient.
 				wakeups.add( request.changed );
-				wakeups.addAll( notifications() );
+				wakeups.addAll( ResourceReservations.this.notifications() );
 				notifications = new ArrayList<>( wakeups );
 			}
-			notifications.forEach( Runnable::run );
+			signalAll( notifications );
 			return failure;
 		}
 
@@ -240,19 +369,27 @@ public final class ResourceReservations {
 		public void close() {
 			List<Runnable> notifications;
 			synchronized( ResourceReservations.this ) {
-				if( released || failure != null ) {
+				if( closing ) {
 					return;
 				}
-				released = true;
-				held.removeAll( request.requirements.keys() );
-				if( request.requirements.exclusive() ) {
-					exclusive = false;
-				}
-				active--;
-				request.capacity.active--;
-				notifications = notifications();
+				closing = true;
+				releaseIfDrained();
+				notifications = ResourceReservations.this.notifications();
 			}
-			notifications.forEach( Runnable::run );
+			signalAll( notifications );
+		}
+
+		private void releaseIfDrained() {
+			if( !closing || released || failure != null || operations != 0 )
+				return;
+			released = true;
+			unsafe.remove( identity );
+			held.removeAll( request.requirements.keys() );
+			if( request.requirements.exclusive() )
+				exclusive = false;
+			active--;
+			request.capacity.active--;
+			request.capacity.grants.remove( this );
 		}
 	}
 }

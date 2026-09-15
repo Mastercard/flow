@@ -53,6 +53,505 @@ import com.mastercard.test.flow.builder.Creator;
  */
 class ContextFixtureTest {
 	/**
+	 * Preparation can commit pending ownership before the genuine factory throws.
+	 * Stop cleanup must remain secondary to that exact factory Throwable.
+	 *
+	 * @throws Exception If the native Launcher fails to drain
+	 */
+	@Test
+	void originalFactoryFailureSurvivesStopCallbackFailure() throws Exception {
+		var scope = ResourceReservations.shared();
+		var observer = new AtomicReference<ResourceReservations.Request>();
+		var calls = new AtomicInteger();
+		var original = new IllegalStateException( "factory failed after preparation" );
+		var callback = new IllegalArgumentException( "Stop notification failed" );
+		Run run = new Run( true, List.of( flow( "pending A", null ), flow( "pending B", null ) ), r -> {
+			r.independent( "empty", f -> true );
+			try( var descriptions = r.tests() ) {
+				observer.set( scope.register( scope.capacity( 1 ),
+						new ResourceRules().resources( "observer", f -> true ).resolve( null ), () -> {
+							if( calls.incrementAndGet() == 1 )
+								throw callback;
+						} ) );
+				throw original;
+			}
+		}, a -> {
+		} );
+		Throwable primary = null;
+		try {
+			run.start();
+			run.awaitCompletion();
+			var factoryFailure = run.getSummary().getFailures().stream()
+					.filter( f -> f.getTestIdentifier().getDisplayName().equals( "flows(FlowExecution)" ) )
+					.findFirst().orElseThrow();
+			assertSame( original, factoryFailure.getException() );
+			assertEquals( List.of( callback ), List.of( original.getSuppressed() ) );
+			assertSame( original, run.handle.status().cause() );
+			assertEquals( "QUIESCENT", run.handle.status().state().name() );
+			assertTrue( run.handle.status().incomplete() );
+			assertEquals( 0, run.bodies.get() );
+			assertEquals( 0, run.getSummary().getTestsStartedCount() );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			calls.set( 100 );
+			if( observer.get() != null )
+				observer.get().cancel();
+			if( primary != null )
+				stop( primary, run );
+			try {
+				if( run.execution != null )
+					run.awaitCompletion();
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+			var reuse = scope.register( scope.capacity( 1 ),
+					new ResourceRules().exclusive( "fresh exclusive", f -> true ).resolve( null ), () -> {
+					} );
+			try( var grant = reuse.tryAcquire() ) {
+				assertNotNull( grant );
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+			finally {
+				reuse.cancel();
+			}
+		}
+	}
+
+	/**
+	 * A real factory terminal must register cleanup despite a failing withdrawal
+	 * callback; the enclosing class terminal must not be needed to repair it.
+	 *
+	 * @throws Exception If the native Launcher fails to drain
+	 */
+	@Test
+	void factoryTerminalStillDisposesAfterWithdrawalCallbackFailure() throws Exception {
+		var scope = ResourceReservations.shared();
+		var observer = new AtomicReference<ResourceReservations.Request>();
+		var callbacks = new AtomicInteger();
+		var closesAtClassCleanup = new AtomicInteger( -1 );
+		var original = new IllegalStateException( "original factory failure" );
+		var callback = new IllegalArgumentException( "withdrawal callback failure" );
+		Run run = new Run( true, List.of( flow( "pending A", null ), flow( "pending B", null ) ),
+				r -> r.independent( "empty", f -> true ), a -> {
+				} );
+		run.returning = () -> {
+			observer.set( scope.register( scope.capacity( 1 ),
+					new ResourceRules().resources( "observer", f -> true ).resolve( null ), () -> {
+						if( callbacks.incrementAndGet() == 1 )
+							throw callback;
+					} ) );
+			throw original;
+		};
+		run.afterAll = () -> closesAtClassCleanup.set( run.closes.get() );
+		Throwable primary = null;
+		try {
+			run.start();
+			run.awaitCompletion();
+			assertEquals( 1, closesAtClassCleanup.get(), "factory terminal must finish its effects" );
+			assertTrue( run.failures.stream().anyMatch( f -> f == original ) );
+			assertTrue( contains( run.handle.status().cause(), original ) );
+			assertTrue( contains( run.handle.status().cause(), callback ),
+					"callback cleanup failure remains visible from the original cause" );
+			assertEquals( 0, run.bodies.get() );
+			assertEquals( 0, run.getSummary().getTestsStartedCount() );
+			assertEquals( 1, run.closes.get() );
+			assertEquals( "QUIESCENT", run.handle.status().state().name() );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			callbacks.set( 100 );
+			if( observer.get() != null )
+				observer.get().cancel();
+			if( primary != null )
+				stop( primary, run );
+			try {
+				if( run.execution != null )
+					run.awaitCompletion();
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+			var reuse = scope.register( scope.capacity( 1 ),
+					new ResourceRules().exclusive( "fresh exclusive", f -> true ).resolve( null ), () -> {
+					} );
+			try( var grant = reuse.tryAcquire() ) {
+				assertNotNull( grant );
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+			finally {
+				reuse.cancel();
+			}
+		}
+	}
+
+	/**
+	 * Original cleanup is real remaining work and its failure must be observable.
+	 *
+	 * @param parallel Native mode
+	 * @param stopped  Whether an earlier Stop must remain primary
+	 * @throws Exception If the Launcher fails to drain
+	 */
+	@ParameterizedTest
+	@CsvSource({ "false,false", "false,true", "true,false", "true,true" })
+	void cleanupFailureIsVisibleAndQuiescenceWaitsForCleanup( boolean parallel, boolean stopped )
+			throws Exception {
+		var cause = new IllegalStateException( "original stop" );
+		var cleanupFailure = new IllegalStateException( "original stream cleanup failed" );
+		var cleanupEntered = new CountDownLatch( 1 );
+		var cleanupReturn = new CountDownLatch( 1 );
+		var current = new AtomicReference<Run>();
+		Run run = new Run( parallel, List.of( flow( "completed body", null ) ),
+				r -> r.independent( "empty", f -> true ), a -> {
+					if( stopped )
+						current.get().handle.stop( cause );
+				} );
+		current.set( run );
+		run.streamCleanup = () -> {
+			cleanupEntered.countDown();
+			await( cleanupReturn );
+			throw cleanupFailure;
+		};
+		Throwable primary = null;
+		try {
+			run.start();
+			await( cleanupEntered );
+			assertTrue( !run.handle.status().state().name().equals( "QUIESCENT" ),
+					"cleanup has not returned" );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			if( primary != null )
+				stop( primary, run );
+			cleanupReturn.countDown();
+			try {
+				if( run.execution != null )
+					run.awaitCompletion();
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+		}
+		assertEquals( 1, run.bodies.get() );
+		assertEquals( 1, run.closes.get() );
+		assertTrue( run.failures.stream().anyMatch( f -> contains( f, cleanupFailure ) ),
+				"a swallowed native listener exception is insufficient" );
+		assertSame( stopped ? cause : cleanupFailure, run.handle.status().cause() );
+		assertTrue( run.handle.status().incomplete() );
+		assertEquals( "QUIESCENT", run.handle.status().state().name() );
+	}
+
+	/**
+	 * Fatal synchronous exit stops admission without making a History ERROR.
+	 *
+	 * @param parallel Actual native mode
+	 * @throws Exception If native work fails to drain
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void fatalExitPreservesTheOriginalStopCause( boolean parallel ) throws Exception {
+		Fixture fixture = new Fixture();
+		LinkageError cause = new LinkageError( "fatal controlled operation" );
+		Run run = new Run( parallel, List.of( flow( "A fatal", null ), flow( "B not invoked", null ) ),
+				r -> r.contextDomain( fixture.domain ).independent( "fixture", f -> true ), a -> {
+					throw cause;
+				} );
+		run.cleanup = () -> run.handle.stop( new IllegalStateException( "later outer cleanup stop" ) );
+		run.start();
+		run.awaitCompletion();
+		assertEquals( 1, run.bodies.get() );
+		assertEquals( 1, run.getSummary().getTestsFailedCount() );
+		assertSame( cause, run.handle.status().cause() );
+		if( parallel )
+			assertSame( cause,
+					assertThrows( IllegalStateException.class, run.handle::close ).getCause() );
+		assertEquals( "QUIESCENT", run.handle.status().state().name() );
+		assertEquals( 1, run.handle.status().entered() );
+		assertEquals( 1, run.handle.status().completed() );
+		assertEquals( 1, run.closes.get() );
+		try( var use = fixture.domain.tryAcquire() ) {
+			assertNotNull( use, "fatal classification is not evidence of ongoing use" );
+		}
+	}
+
+	/**
+	 * @param parallel Native mode
+	 * @param prepared Stop after descriptions exist rather than before tests()
+	 * @throws Exception If the Launcher fails to finish
+	 */
+	@ParameterizedTest
+	@CsvSource({ "false,false", "false,true", "true,false", "true,true" })
+	void explicitStopBeforePreparationOrAdmission( boolean parallel, boolean prepared )
+			throws Exception {
+		RuntimeException cause = new IllegalStateException( "stop before native admission" );
+		AtomicReference<Run> current = new AtomicReference<>();
+		Run run = new Run( parallel, List.of( flow( "unsubmitted", null ) ), r -> {
+			r.independent( "empty", f -> true );
+			if( !prepared )
+				current.get().handle.stop( cause );
+		}, a -> {
+			throw new AssertionError( "stopped selection must not execute" );
+		} );
+		current.set( run );
+		if( prepared )
+			run.returning = () -> run.handle.stop( cause );
+		run.start();
+		run.awaitCompletion();
+		assertEquals( 0, run.getSummary().getTestsStartedCount() );
+		assertEquals( 0, run.bodies.get() );
+		assertEquals( prepared ? 1 : 0, run.closes.get() );
+		assertSame( cause, run.handle.status().cause() );
+		assertEquals( "QUIESCENT", run.handle.status().state().name() );
+		assertTrue( run.handle.status().incomplete() );
+		run.handle.stop( new IllegalStateException( "later stop" ) );
+		assertSame( cause, run.handle.status().cause() );
+	}
+
+	/**
+	 * T20: a cancelled future and native return leave an actual fake operation
+	 * live. Only its final completion proof permits a fresh C, never continuation
+	 * B.
+	 *
+	 * @param parallel A's native mode
+	 * @param peerMode C's separate native pool mode
+	 * @param chain    Whether B shares A's whole-chain reservation
+	 * @throws Exception If a controlled operation or Launcher fails to drain
+	 */
+	@ParameterizedTest
+	@CsvSource({ "false,false,false", "false,true,false", "true,false,false", "true,true,false",
+			"false,false,true", "false,true,true", "true,false,true", "true,true,true" })
+	void cancelledFutureRetainsOwnershipUntilActualOperationEnds( boolean parallel, boolean peerMode,
+			boolean chain )
+			throws Exception {
+		Fixture fixture = new Fixture();
+		Flow a = Creator.build( f -> f.meta( m -> m.description( "A operation" )
+				.tags( t -> {
+					if( chain )
+						t.add( "chain:operation" );
+				} ) )
+				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+						.request( new Msg( "A" ) ).response( new Msg( "literal response" ) ) ) );
+		Flow b = Creator.build( f -> f.meta( m -> m.description( "B never enters" )
+				.tags( t -> {
+					if( chain )
+						t.add( "chain:operation" );
+				} ) )
+				.prerequisite( a ).call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+						.request( new Msg( "B" ) ).response( new Msg( "literal response" ) ) ) );
+		AtomicReference<ContextDomain.Receipt> receipt = new AtomicReference<>();
+		CountDownLatch background = new CountDownLatch( 1 );
+		CountDownLatch nativeCleanup = new CountDownLatch( 1 );
+		CountDownLatch nativeReturn = new CountDownLatch( 1 );
+		CountDownLatch endOperation = new CountDownLatch( 1 );
+		AtomicReference<FutureTask<Void>> future = new AtomicReference<>();
+		AtomicReference<Thread> worker = new AtomicReference<>();
+		AtomicReference<Throwable> operationFailure = new AtomicReference<>();
+		RuntimeException cause = new IllegalStateException( "A cancellation requested" );
+		Run first = new Run( parallel, List.of( a, b ), r -> r.contextDomain( fixture.domain,
+				( flow, owned ) -> receipt.set( owned ) ).independent( "fixture", f -> true )
+				.isolatedChains( "owned shared fixture", "operation" ),
+				assertion -> {
+					assertSame( a, assertion.flow(), "stopped B cannot enter" );
+					var operation = receipt.get().operation();
+					FutureTask<Void> task = new FutureTask<>( () -> {
+						try {
+							background.countDown();
+							await( endOperation );
+						}
+						finally {
+							try {
+								operation.complete();
+							}
+							catch( Throwable failure ) {
+								operationFailure.set( failure );
+								throw failure;
+							}
+						}
+						return null;
+					} );
+					Thread thread = new Thread( task, "actual-owned-background-operation" );
+					future.set( task );
+					worker.set( thread );
+					thread.start();
+					await( background );
+				} );
+		first.cleanup = () -> {
+			nativeCleanup.countDown();
+			await( nativeReturn );
+		};
+		Run waiting = new Run( peerMode, List.of( flow( "C conflicting", null ) ), r -> r
+				.contextDomain( fixture.domain ).independent( "fixture", f -> true ), assertion -> {
+				} );
+		Throwable primary = null;
+		try {
+			first.start();
+			await( nativeCleanup );
+			waiting.start();
+			await( waiting.prepared );
+			assertEquals( 0, waiting.bodies.get(), "healthy live owner queues C" );
+			assertTrue( future.get().cancel( false ) );
+			assertTrue( future.get().isDone(), "future completion is not operation completion" );
+			assertEquals( "ACTIVE", first.handle.status().state().name() );
+			first.handle.stop( cause );
+			var stopping = first.handle.status();
+			assertEquals( "STOPPING", stopping.state().name() );
+			assertSame( cause, stopping.cause() );
+			assertEquals( 1, stopping.owners() );
+			waiting.awaitCompletion();
+			assertEquals( 0, waiting.bodies.get() );
+			assertTrue( waiting.failures.stream().anyMatch( f -> contains( f, cause ) ),
+					"unsafe conflict wakes C with A's cause, not ordinary busy" );
+			nativeReturn.countDown();
+			first.awaitCompletion();
+			assertEquals( 1, first.bodies.get() );
+			assertEquals( 0, first.closes.get(), "native return leaves background ownership live" );
+			assertEquals( "STOPPING", first.handle.status().state().name() );
+			assertTrue( first.handle.status().incomplete() );
+			assertTrue( worker.get().isAlive() );
+			assertNull( fixture.domain.uncertainty(), "ongoing use is not damaged fixture state" );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			// Stop every potential waiter before either holder gate is released.
+			Throwable reason = primary == null ? cause : primary;
+			stop( reason, waiting );
+			stop( reason, first );
+			nativeReturn.countDown();
+			endOperation.countDown();
+			for( Run run : List.of( first, waiting ) ) {
+				try {
+					if( run.execution != null )
+						run.awaitCompletion();
+				}
+				catch( Throwable cleanup ) {
+					if( primary == null )
+						primary = cleanup;
+					else if( primary != cleanup )
+						primary.addSuppressed( cleanup );
+				}
+			}
+			if( worker.get() != null ) {
+				try {
+					worker.get().join( 5000 );
+					assertTrue( !worker.get().isAlive(), "actual operation must drain" );
+					assertNull( operationFailure.get(), "cancelled FutureTask cannot hide cleanup failure" );
+				}
+				catch( Throwable cleanup ) {
+					if( primary == null )
+						primary = cleanup;
+					else if( primary != cleanup )
+						primary.addSuppressed( cleanup );
+				}
+			}
+		}
+		if( primary != null )
+			throw new AssertionError( "controlled drainage failed", primary );
+		assertEquals( 1, first.closes.get(), "late exact proof performs safe disposal once" );
+		assertEquals( "QUIESCENT", first.handle.status().state().name() );
+		assertSame( cause, first.handle.status().cause() );
+		assertTrue( first.handle.status().incomplete(), "late proof cannot erase incompleteness" );
+		assertEquals( 0, first.handle.status().owners() );
+		first.handle.stop( new IllegalStateException( "after quiescence" ) );
+		assertSame( cause, first.handle.status().cause() );
+		Run fresh = new Run( peerMode, List.of( flow( "fresh C", null ) ), r -> r
+				.contextDomain( fixture.domain ).independent( "fixture", f -> true ), assertion -> {
+				} );
+		fresh.start();
+		fresh.finish();
+	}
+
+	/**
+	 * Stop is an explicit request, not exceptional close or native completion.
+	 *
+	 * @param parallel Actual native mode
+	 * @throws Exception If native cleanup fails to drain
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void explicitStopAbortsAnAdmittedUnenteredBody( boolean parallel ) throws Exception {
+		Fixture fixture = new Fixture();
+		CountDownLatch queued = new CountDownLatch( 1 );
+		CountDownLatch release = new CountDownLatch( 1 );
+		RuntimeException cause = new IllegalStateException( "operator stop" );
+		Run run = new Run( parallel, List.of( flow( "queued", null ) ), r -> r
+				.contextDomain( fixture.domain ).independent( "fixture", f -> true ), a -> {
+				} );
+		run.beforeBody = () -> {
+			queued.countDown();
+			await( release );
+		};
+		Throwable primary = null;
+		try {
+			run.start();
+			await( queued );
+			run.handle.stop( cause );
+			run.handle.stop( new IllegalStateException( "later request" ) );
+			assertEquals( 0, run.bodies.get() );
+			assertEquals( 0, run.closes.get(), "original cleanup cannot race native use" );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			if( primary != null )
+				stop( primary, run );
+			release.countDown();
+			try {
+				if( run.execution != null )
+					run.awaitCompletion();
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+		}
+		assertEquals( 1, run.getSummary().getTestsStartedCount() );
+		assertEquals( 1, run.getSummary().getTestsAbortedCount() );
+		assertEquals( 0, run.bodies.get() );
+		assertEquals( 1, run.closes.get() );
+		assertTrue( run.failures.stream().anyMatch( f -> contains( f, cause ) ),
+				"native/class diagnosis must preserve the first explicit cause" );
+		try( var use = fixture.domain.tryAcquire() ) {
+			assertNotNull( use, "actual native return proved the queued use ended" );
+		}
+	}
+
+	/**
 	 * Receipt publication is not native handoff, including a chain continuation.
 	 *
 	 * @param parallel Actual native mode
@@ -450,7 +949,7 @@ class ContextFixtureTest {
 			"before,false", "before,true", "after,false", "after,true",
 			"before-cross,false", "before-cross,true", "after-cross,false", "after-cross,true",
 			"after-borrowed,false", "after-borrowed,true", "after-single,false", "after-single,true",
-			"after-signal,false", "after-signal,true" })
+			"after-signal,false", "after-signal,true", "operation,false", "operation,true" })
 	void uncertainStateNeverPassesToTheNextUser( String mode, boolean parallel ) throws Exception {
 		Path output = Files.createTempFile( "flow-context17-" + mode, ".log" );
 		Process process = new ProcessBuilder(
@@ -494,6 +993,30 @@ class ContextFixtureTest {
 		if( args[0].startsWith( "before" ) || args[0].startsWith( "after" )
 				|| args[0].startsWith( "publication" ) ) {
 			outerUncertainty( fixture, failure, args[0], Boolean.parseBoolean( args[1] ) );
+		}
+		else if( args[0].equals( "operation" ) ) {
+			AtomicReference<ContextDomain.Receipt> receipt = new AtomicReference<>();
+			Run run = new Run( Boolean.parseBoolean( args[1] ), List.of( flow( "damaged", null ) ),
+					r -> r.contextDomain( fixture.domain, ( f, owned ) -> receipt.set( owned ) )
+							.independent( "fixture", f -> true ),
+					a -> {
+						var operation = receipt.get().operation();
+						try {
+							receipt.get().uncertain( failure );
+						}
+						finally {
+							operation.complete();
+						}
+						operation.complete();
+					} );
+			run.start();
+			run.awaitCompletion();
+			assertEquals( 1, run.bodies.get() );
+			assertEquals( 1, run.handle.status().owners() );
+			assertEquals( "STOPPING", run.handle.status().state().name() );
+			assertSame( failure, run.handle.status().cause() );
+			assertEquals( 0, run.closes.get(), "operation cessation cannot repair damaged state" );
+			assertThrows( IllegalStateException.class, run.handle::close );
 		}
 		else if( args[0].equals( "removal" ) ) {
 			boolean parallel = Boolean.parseBoolean( args[1] );

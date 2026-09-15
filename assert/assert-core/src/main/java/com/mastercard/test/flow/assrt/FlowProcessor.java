@@ -928,6 +928,24 @@ abstract class FlowProcessor {
 	}
 
 	/**
+	 * Disposes safely drained invocation state without advertising report success.
+	 */
+	void detach() {
+		synchronized( this ) {
+			if( active != 0 || closing )
+				throw new IllegalStateException( "Cannot detach active Flow processing" );
+			closed = true;
+			config = null;
+			dependencies = null;
+			contextDomain = null;
+			currentContext.clear();
+		}
+		synchronized( history ) {
+			history.clear();
+		}
+	}
+
+	/**
 	 * Disposes an existing immediate writer at proven owned completion. Does not
 	 * initialize a writer or promise enabled-empty/final-only runner reporting.
 	 * Legacy adapters deliberately do not call this on enumeration.

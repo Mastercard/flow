@@ -46,6 +46,681 @@ import com.mastercard.test.flow.util.Transmission.Type;
  */
 class FlowAdmissionTest {
 	/**
+	 * Zero issued leaves do not prove that prepared pending requests are gone.
+	 *
+	 * @param size      Selected count, -1 before preparation, -2 for failed
+	 *                  preparation
+	 * @param stopFirst Whether explicit Stop precedes the first disposal attempt
+	 */
+	@ParameterizedTest
+	@CsvSource({ "-1,false", "0,false", "3,false", "-1,true", "0,true", "3,true", "-2,true" })
+	void prematureReleaseCannotDiscardPendingRequests( int size, boolean stopFirst ) {
+		var run = new FlowAdmission( 1 );
+		var scope = ResourceReservations.shared();
+		Flow flow = emptyFlow( "unadmitted []" );
+		var rules = new ResourceRules().resources( "shared fixture", f -> true, "early-release" );
+		Throwable primary = null;
+		try {
+			Throwable cause = new IllegalStateException( "cancelled before admission" );
+			if( size == -2 )
+				cause = assertThrows( IllegalArgumentException.class, () -> run.prepare(
+						List.of( flow, flow ), List.of( rules.resolve( flow ), rules.resolve( flow ) ) ) );
+			else if( size >= 0 ) {
+				List<Flow> flows = IntStream.range( 0, size )
+						.<Flow>mapToObj( i -> i == 0 ? flow : emptyFlow( "pending " + i + " []" ) ).toList();
+				run.prepare( flows, flows.stream().map( rules::resolve ).toList() );
+			}
+			if( !stopFirst )
+				cause = assertThrows( IllegalStateException.class, run::release );
+			assertNotEquals( ExecutionStatus.State.QUIESCENT, run.status().state() );
+			run.stop( cause );
+			assertSame( cause, run.stopCause() );
+			assertTrue( run.status().incomplete() );
+			assertEquals( Math.max( 0, size ), run.status().selected() );
+			assertEquals( 0, run.status().admitted() );
+			assertEquals( 0, run.status().entered() );
+			assertEquals( 0, run.status().completed() );
+			assertEquals( 0, run.status().nativeTerminals() );
+			assertEquals( Result.PENDING, run.history().get( flow ) );
+			run.release();
+			assertEquals( ExecutionStatus.State.QUIESCENT, run.status().state() );
+			assertSame( cause, run.status().cause() );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			cleanup( run, List.of(), List.of(), primary );
+			var reuse = scope.register( scope.capacity( 1 ),
+					new ResourceRules().exclusive( "fresh reuse", f -> true ).resolve( null ), () -> {
+					} );
+			try( Grant grant = reuse.tryAcquire() ) {
+				assertNotNull( grant, "even rejected disposal must leave no orphaned priority gate" );
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+			finally {
+				reuse.cancel();
+			}
+		}
+	}
+
+	/** Normal empty selection still requires an explicit factory terminal. */
+	@Test
+	void emptySelectionCompletesOnlyAtFactoryTerminal() {
+		var run = new FlowAdmission( 1 );
+		Throwable primary = null;
+		try {
+			run.prepare( List.of(), List.of() );
+			run.enumerationClosed();
+			assertEquals( ExecutionStatus.State.ACTIVE, run.status().state() );
+			assertTrue( run.factoryFinished( SUCCESSFUL, null ) );
+			run.release();
+			assertEquals( ExecutionStatus.State.QUIESCENT, run.status().state() );
+			assertFalse( run.status().incomplete() );
+			assertNull( run.stopCause() );
+			assertEquals( 0, run.status().nativeTerminals() );
+			run.close();
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			cleanup( run, List.of(), List.of(), primary );
+		}
+	}
+
+	/**
+	 * Rejected disposal must withdraw every request even when notifications fail.
+	 */
+	@Test
+	void prematureReleasePreservesFaultAndAttemptsEveryWithdrawal() {
+		var run = new FlowAdmission( 1 );
+		var scope = ResourceReservations.shared();
+		var rules = new ResourceRules().resources( "shared fixture", f -> true, "release-fault" );
+		List<Flow> flows = List.of( emptyFlow( "A []" ), emptyFlow( "B []" ), emptyFlow( "C []" ) );
+		List<ResourceReservations.Request> observers = new ArrayList<>();
+		var calls = new AtomicInteger();
+		var callback = new IllegalArgumentException( "first withdrawal notification" );
+		var later = new IllegalArgumentException( "second withdrawal notification" );
+		Throwable primary = null;
+		try {
+			run.prepare( flows, flows.stream().map( rules::resolve ).toList() );
+			observers.add( scope.register( scope.capacity( 1 ), rules.resolve( null ), () -> {
+				assertFalse( Thread.holdsLock( run.history() ) );
+				assertFalse( Thread.holdsLock( scope ) );
+				assertFalse( run.disposable(), "withdrawal batch is still in flight" );
+				assertThrows( IllegalStateException.class, run::release );
+				assertEquals( ExecutionStatus.State.STOPPING, run.status().state() );
+				switch( calls.incrementAndGet() ) {
+					case 1 -> throw callback;
+					case 2 -> throw later;
+					default -> {
+					}
+				}
+			} ) );
+			var failure = assertThrows( IllegalStateException.class, run::release );
+			assertSame( failure, run.stopCause() );
+			assertEquals( "Flow admission is not safely complete", failure.getMessage() );
+			assertEquals( List.of( callback ), List.of( failure.getSuppressed() ) );
+			assertEquals( List.of( later ), List.of( callback.getSuppressed() ) );
+			assertEquals( 3, calls.get(), "all pending requests must be withdrawn before returning" );
+			assertEquals( ExecutionStatus.State.STOPPING, run.status().state() );
+			assertEquals( 0, run.status().admitted() );
+			assertEquals( 0, run.status().completed() );
+			assertEquals( 0, run.status().nativeTerminals() );
+			flows.forEach( flow -> assertEquals( Result.PENDING, run.history().get( flow ) ) );
+			run.release();
+			assertEquals( ExecutionStatus.State.QUIESCENT, run.status().state() );
+			assertSame( failure, run.status().cause() );
+			assertTrue( run.status().incomplete() );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			observers.forEach( ResourceReservations.Request::cancel );
+			cleanup( run, List.of(), List.of(), primary );
+			var reuse = scope.register( scope.capacity( 1 ),
+					new ResourceRules().exclusive( "fresh reuse", f -> true ).resolve( null ), () -> {
+					} );
+			try( Grant grant = reuse.tryAcquire() ) {
+				assertNotNull( grant, "callback failures cannot orphan pending requests" );
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+			finally {
+				reuse.cancel();
+			}
+		}
+	}
+
+	/** Retention and one grant's close cannot skip other extracted safe grants. */
+	@Test
+	void stopClosesEverySafeGrantAfterRetentionCallbackFailure() {
+		Flow a = emptyFlow( "A [chain:AB]" );
+		Flow b = emptyFlow( "B [chain:AB]" );
+		Flow c = emptyFlow( "C [chain:CD]" );
+		Flow d = emptyFlow( "D [chain:CD]" );
+		Flow live = emptyFlow( "live []" );
+		List<Flow> flows = List.of( a, b, c, d, live );
+		var rules = new ResourceRules().resources( "empty", f -> true )
+				.isolatedChains( "separate chain fixtures", "AB", "CD" );
+		var run = new FlowAdmission( 3 );
+		var scope = ResourceReservations.shared();
+		List<Integer> admitted = new ArrayList<>();
+		List<Integer> entered = new ArrayList<>();
+		List<ResourceReservations.Request> observers = new ArrayList<>();
+		ResourceReservations.Operation operation = null;
+		var retentionFailure = new IllegalArgumentException( "retention callback" );
+		var closeFailure = new IllegalStateException( "safe close callback" );
+		var cause = new IllegalStateException( "original Stop" );
+		var calls = new AtomicInteger();
+		var closes = new AtomicInteger();
+		Throwable primary = null;
+		try {
+			run.prepare( flows, rules.chains( flows, flows.stream().map( rules::resolve ).toList() ) );
+			for( int expected : new int[] { 0, 2, 4 } ) {
+				int index = poll( run, admitted );
+				assertEquals( expected, index );
+				enter( run, index );
+				entered.add( index );
+			}
+			for( int index : new int[] { 0, 2 } ) {
+				complete( run, index );
+				admitted.remove( Integer.valueOf( index ) );
+			}
+			operation = run.reservation( 4 ).operation();
+			observers.add( scope.register( scope.capacity( 1 ), rules.resolve( null ), () -> {
+				assertFalse( Thread.holdsLock( run.history() ) );
+				assertFalse( Thread.holdsLock( scope ) );
+				switch( calls.incrementAndGet() ) {
+					case 1 -> throw retentionFailure;
+					case 2 -> throw closeFailure;
+					default -> {
+					}
+				}
+			} ) );
+			assertSame( retentionFailure, assertThrows( IllegalArgumentException.class,
+					() -> run.stop( cause ) ) );
+			assertEquals( List.of( closeFailure ), List.of( retentionFailure.getSuppressed() ) );
+			assertEquals( 3, calls.get(), "retention plus both extracted grant closes" );
+			assertEquals( 1, run.status().owners(), "only live native use remains" );
+			run.factoryFinished( SUCCESSFUL, null );
+			run.whenDrained( () -> {
+				closes.incrementAndGet();
+				run.release();
+			} );
+			operation.complete();
+			assertEquals( 0, closes.get(), "operation proof does not end active processing" );
+			run.processed( 4, Result.SUCCESS, null );
+			admitted.clear();
+			assertEquals( 1, closes.get() );
+			assertEquals( ExecutionStatus.State.QUIESCENT, run.status().state() );
+			assertSame( cause, run.status().cause() );
+			assertTrue( run.status().incomplete() );
+			assertEquals( 3, run.status().entered(), "neither chain continuation entered" );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			calls.set( 100 );
+			observers.forEach( ResourceReservations.Request::cancel );
+			cleanup( run, admitted, entered, primary );
+			if( operation != null )
+				operation.complete();
+			var reuse = scope.register( scope.capacity( 1 ),
+					new ResourceRules().exclusive( "fresh reuse", f -> true ).resolve( null ), () -> {
+					} );
+			try( Grant grant = reuse.tryAcquire() ) {
+				assertNotNull( grant );
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+			finally {
+				reuse.cancel();
+			}
+		}
+	}
+
+	/**
+	 * Committed retirement survives wakeup errors without masking a protocol fault.
+	 *
+	 * @param event Factory/scope termination or conflicting skip after native start
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = { "factory", "enclosing", "conflict" })
+	void terminalEffectsSurviveCallbackFailure( String event ) {
+		var run = new FlowAdmission( 2 );
+		var scope = ResourceReservations.shared();
+		var rules = new ResourceRules().resources( "empty", f -> true );
+		List<Flow> flows = List.of( emptyFlow( "A []" ), emptyFlow( "B []" ),
+				emptyFlow( "C []" ), emptyFlow( "D []" ) );
+		List<Integer> admitted = new ArrayList<>();
+		List<ResourceReservations.Request> observers = new ArrayList<>();
+		var callback = new IllegalArgumentException( "terminal withdrawal notification" );
+		var later = new IllegalStateException( "later terminal withdrawal notification" );
+		var cause = new IllegalStateException( "enclosing terminal" );
+		var calls = new AtomicInteger();
+		var closes = new AtomicInteger();
+		Throwable primary = null;
+		try {
+			run.prepare( flows, flows.stream().map( rules::resolve ).toList() );
+			assertEquals( 0, poll( run, admitted ) );
+			assertEquals( 1, poll( run, admitted ) );
+			run.registered( 0, "0" );
+			run.registered( 1, "1" );
+			if( event.equals( "conflict" ) )
+				run.started( "0" );
+			run.whenDrained( () -> {
+				closes.incrementAndGet();
+				run.release();
+			} );
+			observers.add( scope.register( scope.capacity( 1 ), rules.resolve( null ), () -> {
+				assertFalse( Thread.holdsLock( run.history() ) );
+				assertFalse( Thread.holdsLock( scope ) );
+				assertEquals( 0, closes.get(), "no disposal inside a committed effect batch" );
+				int call = calls.incrementAndGet();
+				if( call == 1 )
+					throw callback;
+				if( call == 2 )
+					throw later;
+			} ) );
+			RuntimeException thrown = assertThrows( RuntimeException.class, () -> {
+				switch( event ) {
+					case "factory" -> run.factoryFinished( SUCCESSFUL, null );
+					case "enclosing" -> run.enclosingFinished( cause );
+					default -> run.skipped( "0", "invalid after start" );
+				}
+			} );
+			assertEquals( List.of( later ), List.of( callback.getSuppressed() ) );
+			if( event.equals( "conflict" ) ) {
+				assertSame( run.stopCause(), thrown );
+				assertEquals( "Conflicting native Flow skip", thrown.getMessage() );
+				assertEquals( List.of( callback ), List.of( thrown.getSuppressed() ) );
+				assertEquals( 0, closes.get(), "a conflict is not a native terminal" );
+				assertEquals( 2, run.status().owners() );
+				run.enclosingFinished( cause );
+			}
+			else
+				assertSame( callback, thrown );
+			admitted.clear();
+			assertEquals( 1, closes.get() );
+			assertEquals( ExecutionStatus.State.QUIESCENT, run.status().state() );
+			assertTrue( run.status().incomplete() );
+			assertEquals( 0, run.status().nativeTerminals(), "scope end invents no leaf outcomes" );
+			assertEquals( 0, run.status().completed() );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			observers.forEach( ResourceReservations.Request::cancel );
+			cleanup( run, admitted, List.of(), primary );
+			var reuse = scope.register( scope.capacity( 1 ),
+					new ResourceRules().exclusive( "fresh reuse", f -> true ).resolve( null ), () -> {
+					} );
+			try( Grant grant = reuse.tryAcquire() ) {
+				assertNotNull( grant );
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+			finally {
+				reuse.cancel();
+			}
+		}
+	}
+
+	/**
+	 * A committed withdrawal batch must finish even when different wakeups fail.
+	 */
+	@Test
+	void stopAttemptsEveryWithdrawalAndRetainsLiveOwnership() {
+		List<Flow> flows = List.of( emptyFlow( "active []" ), emptyFlow( "pending B []" ),
+				emptyFlow( "pending C []" ), emptyFlow( "pending D []" ) );
+		var rules = new ResourceRules().resources( "shared", f -> true, "stop-batch" );
+		FlowAdmission run = new FlowAdmission( 1 );
+		var scope = ResourceReservations.shared();
+		List<ResourceReservations.Request> observers = new ArrayList<>();
+		List<Integer> admitted = new ArrayList<>();
+		List<Integer> entered = new ArrayList<>();
+		ResourceReservations.Operation operation = null;
+		var first = new IllegalStateException( "first withdrawal callback" );
+		var later = new IllegalArgumentException( "later withdrawal callback" );
+		var cause = new IllegalStateException( "original stop" );
+		AtomicInteger notifications = new AtomicInteger();
+		AtomicInteger laterNotifications = new AtomicInteger();
+		Throwable primary = null;
+		try {
+			run.prepare( flows, flows.stream().map( rules::resolve ).toList() );
+			assertEquals( 0, poll( run, admitted ) );
+			enter( run, 0 );
+			entered.add( 0 );
+			operation = run.reservation( 0 ).operation();
+			observers.add( scope.register( scope.capacity( 1 ), rules.resolve( null ), () -> {
+				assertFalse( Thread.holdsLock( run.history() ) );
+				assertFalse( Thread.holdsLock( scope ) );
+				if( notifications.incrementAndGet() == 1 )
+					throw first;
+			} ) );
+			observers.add( scope.register( scope.capacity( 1 ), rules.resolve( null ), () -> {
+				if( laterNotifications.incrementAndGet() == 2 )
+					throw later;
+			} ) );
+			assertSame( first, assertThrows( IllegalStateException.class, () -> run.stop( cause ) ) );
+			assertEquals( List.of( later ), List.of( first.getSuppressed() ) );
+			assertEquals( 4, notifications.get(), "three withdrawals and outstanding-use retention" );
+			assertEquals( 4, laterNotifications.get() );
+			assertSame( cause, run.stopCause() );
+			assertSame( cause, assertThrows( IllegalStateException.class,
+					observers.get( 0 )::tryAcquire ).getCause(), "active operation is explicitly unsafe" );
+			run.stop( later );
+			assertFalse( run.disposable() );
+			assertEquals( 1, run.status().owners() );
+			complete( run, 0 );
+			admitted.remove( Integer.valueOf( 0 ) );
+			assertFalse( run.disposable(), "native completion still cannot end the operation" );
+			operation.complete();
+			assertTrue( run.disposable() );
+			assertSame( cause, run.stopCause() );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			// Disarm both fault notifications before draining the owned use. Even a
+			// failed oracle checks same-JVM reuse before rethrowing its original failure.
+			notifications.set( 100 );
+			laterNotifications.set( 100 );
+			observers.forEach( ResourceReservations.Request::cancel );
+			cleanup( run, admitted, entered, primary );
+			if( operation != null )
+				operation.complete();
+			var reuse = scope.register( scope.capacity( 1 ),
+					new ResourceRules().exclusive( "fresh reuse", f -> true ).resolve( null ), () -> {
+					} );
+			try( Grant grant = reuse.tryAcquire() ) {
+				assertNotNull( grant, "all extracted pending ages must have been withdrawn" );
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+			finally {
+				reuse.cancel();
+			}
+		}
+	}
+
+	/**
+	 * Withdrawal notification pauses Stop after it extracts an unused chain grant.
+	 * Factory termination and exact proof must work on either side of its close.
+	 *
+	 * @param proofBeforeClose Whether the last operation ends inside the
+	 *                         notification
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { true, false })
+	void stopDrainsExtractedChainGrant( boolean proofBeforeClose ) {
+		Flow first = Creator.build( f -> f.meta( m -> m.description( "A" )
+				.tags( t -> t.add( "chain:drain" ) ) ) );
+		Flow second = Creator.build( f -> f.meta( m -> m.description( "B" )
+				.tags( t -> t.add( "chain:drain" ) ) ).prerequisite( first ) );
+		List<Flow> flows = List.of( first, second, emptyFlow( "pending []" ) );
+		var rules = new ResourceRules().resources( "empty", f -> true );
+		FlowAdmission run = new FlowAdmission( 1 );
+		var scope = ResourceReservations.shared();
+		AtomicReference<ResourceReservations.Request> observer = new AtomicReference<>();
+		List<Integer> admitted = new ArrayList<>();
+		List<Integer> entered = new ArrayList<>();
+		AtomicInteger closes = new AtomicInteger();
+		Stream<?> stream = Stream.empty().onClose( closes::incrementAndGet );
+		ResourceReservations.Operation operation = null;
+		Throwable cause = new IllegalStateException( "stop in chain gap" );
+		Throwable primary = null;
+		try {
+			run.prepare( flows, rules.chains( flows, flows.stream().map( rules::resolve ).toList() ) );
+			assertEquals( 0, poll( run, admitted ) );
+			enter( run, 0 );
+			entered.add( 0 );
+			operation = run.reservation( 0 ).operation();
+			complete( run, 0 );
+			admitted.remove( Integer.valueOf( 0 ) );
+			var proof = operation;
+			observer.set( scope.register( scope.capacity( 1 ), rules.resolve( null ), () -> {
+				observer.get().cancel();
+				assertFalse( run.factoryFinished( SUCCESSFUL, null ) );
+				run.whenDrained( () -> {
+					stream.close();
+					run.release();
+				} );
+				if( proofBeforeClose )
+					proof.complete();
+				assertEquals( 1, run.status().owners(), "Stop has not closed its extracted grant" );
+				assertEquals( 0, closes.get() );
+			} ) );
+			run.stop( cause );
+			if( !proofBeforeClose ) {
+				assertEquals( ExecutionStatus.State.STOPPING, run.status().state() );
+				assertEquals( 0, closes.get() );
+				operation.complete();
+			}
+			assertEquals( 1, closes.get(), "no further resource event should be needed" );
+			assertEquals( ExecutionStatus.State.QUIESCENT, run.status().state() );
+			assertEquals( 1, run.status().entered(), "B never enters" );
+			assertSame( cause, run.status().cause() );
+			assertTrue( run.status().incomplete() );
+			operation.complete();
+			run.stop( new IllegalStateException( "later" ) );
+			assertEquals( 1, closes.get() );
+			assertSame( cause, run.status().cause() );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			if( observer.get() != null )
+				observer.get().cancel();
+			cleanup( run, admitted, entered, primary );
+			if( operation != null )
+				operation.complete();
+			stream.close();
+			var reuse = scope.register( scope.capacity( 1 ),
+					new ResourceRules().exclusive( "fresh reuse", f -> true ).resolve( null ), () -> {
+					} );
+			try( Grant grant = reuse.tryAcquire() ) {
+				assertNotNull( grant, "even a failed oracle must leave the shared scope reusable" );
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+			finally {
+				reuse.cancel();
+			}
+		}
+	}
+
+	/** Bounded immutable snapshots outlive disposed model and native tables. */
+	@Test
+	void stoppedSnapshotsRemainBoundedAndDoNotInventNativeEvidence() {
+		List<Flow> flows = IntStream.range( 0, 8 )
+				.<Flow>mapToObj( i -> emptyFlow( i + "long identity".repeat( 20 ) + " []" ) ).toList();
+		FlowAdmission run = prepare( 2, flows );
+		var before = run.status();
+		Throwable cause = new IllegalStateException( "stopped before admission" );
+		try {
+			assertThrows( NullPointerException.class, () -> run.enclosingFinished( null ) );
+			assertEquals( ExecutionStatus.State.ACTIVE, run.status().state() );
+			run.stop( cause );
+			var stopped = run.status();
+			assertTrue( stopped.incomplete() );
+			assertEquals( 5, stopped.affected().size() );
+			assertTrue( stopped.affected().stream().allMatch( id -> id.length() <= 120 ) );
+			assertThrows( UnsupportedOperationException.class, () -> stopped.affected().clear() );
+			run.enclosingFinished( cause );
+			run.release();
+			assertEquals( ExecutionStatus.State.QUIESCENT, run.status().state() );
+			assertSame( cause, run.status().cause() );
+			assertEquals( 8, run.status().selected() );
+			assertEquals( 0, run.status().admitted() );
+			assertEquals( 0, run.status().completed() );
+			assertEquals( 0, run.status().nativeTerminals() );
+			assertEquals( ExecutionStatus.State.ACTIVE, before.state(), "snapshot is not a live view" );
+			run.stop( new IllegalStateException( "after quiescence" ) );
+			assertSame( cause, run.status().cause() );
+		}
+		finally {
+			run.stop( cause );
+		}
+	}
+
+	/**
+	 * Native completion does not let a chain bypass its outstanding operation.
+	 *
+	 * @param stopped Whether Stop arrives after native completion
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void chainOperationMustDrainBeforeContinuation( boolean stopped ) {
+		Flow first = Creator.build( f -> f.meta( m -> m.description( "A" )
+				.tags( t -> t.add( "chain:operation" ) ) ) );
+		Flow second = Creator.build( f -> f.meta( m -> m.description( "B" )
+				.tags( t -> t.add( "chain:operation" ) ) ).prerequisite( first ) );
+		FlowAdmission run = new FlowAdmission( 2 );
+		List<Flow> flows = List.of( first, second );
+		var rules = new ResourceRules().resources( "empty", f -> true );
+		run.prepare( flows, new com.mastercard.test.flow.assrt.resource.ChainPlan( flows,
+				flows.stream().map( rules::resolve ).toList() ) );
+		List<Integer> admitted = new ArrayList<>();
+		List<Integer> entered = new ArrayList<>();
+		ResourceReservations.Operation operation = null;
+		Throwable primary = null;
+		boolean finalized = false;
+		try {
+			assertEquals( 0, poll( run, admitted ) );
+			enter( run, 0 );
+			entered.add( 0 );
+			operation = run.reservation( 0 ).operation();
+			complete( run, 0 );
+			admitted.remove( Integer.valueOf( 0 ) );
+			assertEquals( WAITING, poll( run, admitted ), "native return is not operation proof" );
+			Throwable cause = new IllegalStateException( "stop after native return" );
+			if( stopped )
+				run.stop( cause );
+			operation.complete();
+			if( stopped ) {
+				assertThrows( IllegalStateException.class, run::poll );
+				assertSame( cause, run.stopCause() );
+				assertTrue( run.disposable() );
+			}
+			else {
+				assertEquals( 1, poll( run, admitted ) );
+				enter( run, 1 );
+				entered.add( 1 );
+				complete( run, 1 );
+				admitted.remove( Integer.valueOf( 1 ) );
+				finish( run );
+				finalized = true;
+			}
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			if( !finalized )
+				cleanup( run, admitted, entered, primary );
+			if( operation != null )
+				operation.complete();
+		}
+	}
+
+	/**
+	 * Body and native return cannot complete an explicitly outstanding operation.
+	 *
+	 * @param capacity Outstanding grant limit
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 2, 5 })
+	void exactOperationProofRetiresOnlyRemainingOwnership( int capacity ) {
+		FlowAdmission run = prepare( capacity, List.of( emptyFlow( "A []" ) ) );
+		assertEquals( 0, run.poll() );
+		enter( run, 0 );
+		var operation = run.reservation( 0 ).operation();
+		RuntimeException cause = new IllegalStateException( "cancel request returned" );
+		var scope = ResourceReservations.shared();
+		var request = scope.register( scope.capacity( 1 ),
+				new ResourceRules().exclusive( "conflicting C", f -> true ).resolve( null ), () -> {
+				} );
+		try {
+			run.stop( cause );
+			complete( run, 0 );
+			assertFalse( run.disposable(), "native return is not background completion" );
+			assertSame( cause,
+					assertThrows( IllegalStateException.class, request::tryAcquire ).getCause() );
+			operation.complete();
+			operation.complete();
+			assertTrue( run.disposable() );
+			try( Grant granted = request.tryAcquire() ) {
+				assertNotNull( granted, "positive exact proof permits C, not restarting A" );
+			}
+			assertSame( cause, run.stopCause() );
+			assertThrows( IllegalStateException.class, run::poll );
+		}
+		finally {
+			request.cancel();
+			run.stop( cause );
+			complete( run, 0 );
+			operation.complete();
+		}
+	}
+
+	/** A null stop cannot silently clear readiness while leaving admission open. */
+	@Test
+	void nullStopIsRejectedWithoutChangingAdmission() {
+		FlowAdmission run = prepare( 1, List.of( emptyFlow( "still active []" ) ) );
+		try {
+			assertThrows( NullPointerException.class, () -> run.stop( null ) );
+			assertEquals( 0, run.poll() );
+			enter( run, 0 );
+			complete( run, 0 );
+			finish( run );
+		}
+		finally {
+			run.stop( new IllegalStateException( "test cleanup" ) );
+		}
+	}
+
+	/**
 	 * All joint successors precede a request created by the parent's release
 	 * listener, without making the completing worker wait for admission.
 	 *

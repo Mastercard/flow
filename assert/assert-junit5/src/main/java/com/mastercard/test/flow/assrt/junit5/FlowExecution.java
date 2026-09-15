@@ -14,10 +14,12 @@ import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.junit.jupiter.api.function.Executable;
+import org.opentest4j.TestAbortedException;
 
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.assrt.History;
+import com.mastercard.test.flow.assrt.ExecutionStatus;
 import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.resource.ChainPlan;
 import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
@@ -47,6 +49,16 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 	private long resourceChanges;
 	private Grant serialGrant;
 	private Throwable fixtureFailure;
+	private Throwable stopCause;
+	private boolean backstopReported;
+	private boolean failureReported;
+	private boolean disposing;
+	private boolean serialClosed;
+	private boolean incomplete;
+	private int selected;
+	private int entered;
+	private int completed;
+	private ExecutionStatus finalStatus;
 	private Request serialRequest;
 	private boolean serialHandoff;
 	private boolean serialHandoffFailed;
@@ -71,8 +83,7 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 	}
 
 	/**
-	 * Revalidates parallel ownership before invoking the factory; serial is
-	 * unchanged.
+	 * Checks the actual factory owner before configuration or consumption.
 	 *
 	 * @param context The factory about to execute
 	 */
@@ -104,14 +115,99 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 	}
 
 	/**
-	 * Stops further parallel admission without forcing ownership release.
+	 * Irreversibly closes this run's admission and wakes its factory. This is a
+	 * request, not proof of body, native, background-operation or cleanup drainage.
+	 * No pooled thread is interrupted and no peer run is cancelled.
 	 *
-	 * @param failure The reason admission cannot safely continue
+	 * @param cause Non-null first cause, preserved across repeated requests
 	 */
-	void stopParallel( Throwable failure ) {
-		if( parallel() ) {
-			parallelOwner.stop( failure );
+	public void stop( Throwable cause ) {
+		Objects.requireNonNull( cause );
+		FlowParallelOwner parallel;
+		synchronized( resourceWake ) {
+			if( released )
+				return;
+			parallel = parallelOwner;
 		}
+		// Core processing/native evidence may already have stopped parallel
+		// admission. Preserve that authoritative first cause in the handle too.
+		effects( null, () -> {
+			if( parallel != null )
+				parallel.stop( cause );
+		}, () -> stopLocal( parallel == null ? cause : parallel.status().cause() ) );
+	}
+
+	private void stopLocal( Throwable cause ) {
+		if( cause == null )
+			return; // Native disposal won the race with this Stop request.
+		Request pending;
+		synchronized( resourceWake ) {
+			if( released )
+				return;
+			if( stopCause == null )
+				stopCause = cause;
+			cause = stopCause;
+			broken = true;
+			incomplete = true;
+			pending = serialRequest;
+			serialRequest = null;
+			resourceChanges++;
+			resourceWake.notifyAll();
+		}
+		Throwable stopped = cause;
+		effects( null, () -> {
+			if( pending != null )
+				pending.cancel();
+		}, () -> serialCapacity.stopping( stopped ) );
+	}
+
+	// Complete committed ownership effects outside the handle monitor. A failing
+	// wakeup must not prevent Stop latching or safe disposal, nor mask its caller.
+	private static void effects( Throwable primary, Runnable... actions ) {
+		Throwable first = primary;
+		for( Runnable action : actions ) {
+			try {
+				action.run();
+			}
+			catch( RuntimeException | Error failure ) {
+				if( first == null )
+					first = failure;
+				else if( first != failure )
+					first.addSuppressed( failure );
+			}
+		}
+		if( primary == null ) {
+			if( first instanceof RuntimeException failure )
+				throw failure;
+			if( first instanceof Error failure )
+				throw failure;
+		}
+	}
+
+	/**
+	 * @return Immutable bounded evidence; QUIESCENT means owned use ended, never
+	 *         that the selection passed. Serial has no invented native-status
+	 *         mirror.
+	 */
+	public ExecutionStatus status() {
+		FlowParallelOwner parallel;
+		synchronized( resourceWake ) {
+			if( finalStatus != null )
+				return finalStatus;
+			parallel = parallelOwner;
+			if( parallel == null )
+				return serialStatus();
+		}
+		return parallel.status();
+	}
+
+	private ExecutionStatus serialStatus() {
+		return new ExecutionStatus( released ? ExecutionStatus.State.QUIESCENT
+				: broken ? ExecutionStatus.State.STOPPING : ExecutionStatus.State.ACTIVE,
+				stopCause, incomplete, selected, issued, entered, completed, -1, serialCapacity.owned(),
+				descriptions == null ? List.of()
+						: descriptions.stream().skip( completed ).limit( 5 )
+								.map( DynamicNode::getDisplayName ).toList() );
 	}
 
 	/**
@@ -148,19 +244,40 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 		parallelOwner.processed( index, result, failure );
 	}
 
-	/** Stops provider-free consumption without inventing a processing result. */
-	void incompleteSerial() {
-		synchronized( resourceWake ) {
-			broken = true;
-		}
+	/**
+	 * @param cause Fatal/incomplete processing evidence, never a fabricated result
+	 */
+	void incompleteSerial( Throwable cause ) {
+		stop( cause == null ? new IllegalStateException( "Missing Flow processing outcome" ) : cause );
 	}
 
 	/**
 	 * Finalizes the runner and detaches this handle after proven native drainage.
 	 */
-	void completeParallel() {
-		runner.complete();
-		release();
+	void disposeParallel( boolean complete, ExecutionStatus status ) {
+		try {
+			if( complete )
+				runner.complete();
+		}
+		catch( Throwable failure ) {
+			synchronized( resourceWake ) {
+				if( stopCause == null )
+					stopCause = failure;
+				else if( stopCause != failure )
+					stopCause.addSuppressed( failure );
+				status = new ExecutionStatus( ExecutionStatus.State.QUIESCENT, stopCause, true,
+						status.selected(), status.admitted(), status.entered(), status.completed(),
+						status.nativeTerminals(), 0, status.affected() );
+			}
+		}
+		finally {
+			synchronized( resourceWake ) {
+				finalStatus = status;
+			}
+			// Listener exceptions can be swallowed. Keep the small failing backstop
+			// even though model/native tables are now safely disposable.
+			release();
+		}
 	}
 
 	/** @param removeBackstop Removes this owner from its class-local store */
@@ -237,6 +354,7 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 		synchronized( resourceWake ) {
 			requireFactory();
 			descriptions = new ArrayList<>( nodes );
+			selected = nodes.size();
 		}
 		return nodes.stream();
 	}
@@ -317,13 +435,19 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 			}
 		}
 		catch( RuntimeException | Error failure ) {
-			stopParallel( failure );
+			effects( failure, () -> stop( failure ) );
+			if( !parallel() ) {
+				synchronized( resourceWake ) {
+					backstopReported = true; // The live factory is already failing with this cause.
+					failureReported = true;
+				}
+			}
 			try( Stream<?> original = source ) {
 				throw failure;
 			}
 			finally {
 				if( !parallel() ) {
-					release();
+					effects( failure, this::release );
 				}
 				else {
 					synchronized( resourceWake ) {
@@ -392,8 +516,7 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 						}
 						requirements = runner.reservation( issued );
 					}
-					if( grant == null )
-						grant = reserveSerial( requirements );
+					grant = reserveSerial( requirements, grant );
 					synchronized( resourceWake ) {
 						requireConsumption();
 						index = issued++;
@@ -416,6 +539,7 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 							serialGrant = null;
 						}
 					}
+					effects( failure, () -> stop( failure ) );
 					throw failure;
 				}
 				finally {
@@ -439,14 +563,10 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 		return StreamSupport.stream( consumption, false ).onClose( this::consumptionClosed );
 	}
 
-	private Grant reserveSerial( ResourceRequirements requirements ) {
-		Request request = ResourceReservations.shared().register( serialCapacity, requirements, () -> {
-			synchronized( resourceWake ) {
-				checkFixture();
-				resourceChanges++;
-				resourceWake.notifyAll();
-			}
-		} );
+	private Grant reserveSerial( ResourceRequirements requirements, Grant retained ) {
+		Request request = retained == null ? ResourceReservations.shared().register( serialCapacity,
+				requirements, this::serialResourcesChanged ) : null;
+		Throwable primary = null;
 		try {
 			synchronized( resourceWake ) {
 				requireConsumption();
@@ -458,8 +578,8 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 					requireConsumption();
 					observed = resourceChanges;
 				}
-				Grant grant = request.tryAcquire();
-				if( grant != null ) {
+				Grant grant = retained == null ? request.tryAcquire() : retained;
+				if( grant != null && grant.operations() == 0 ) {
 					return grant;
 				}
 				synchronized( resourceWake ) {
@@ -472,7 +592,14 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 		}
 		catch( InterruptedException failure ) {
 			Thread.currentThread().interrupt();
-			throw new IllegalStateException( "Flow serial resource admission interrupted", failure );
+			var interrupted = new IllegalStateException( "Flow serial resource admission interrupted",
+					failure );
+			primary = interrupted;
+			throw interrupted;
+		}
+		catch( RuntimeException | Error failure ) {
+			primary = failure;
+			throw failure;
 		}
 		finally {
 			synchronized( resourceWake ) {
@@ -480,7 +607,10 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 					serialRequest = null;
 				}
 			}
-			request.cancel();
+			effects( primary, () -> {
+				if( request != null )
+					request.cancel();
+			} );
 		}
 	}
 
@@ -522,12 +652,17 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 		}
 		PreparedFlocessor processing;
 		synchronized( resourceWake ) {
+			if( stopCause != null && live && index == drained && index < issued ) {
+				drained++;
+				throw new TestAbortedException( "Flow serial admission stopped", stopCause );
+			}
 			requireConsumption();
 			if( active || index != drained || index >= issued ) {
 				throw new IllegalStateException(
 						"Flow executable is outside its owned synchronous consumption" );
 			}
 			active = true;
+			entered++;
 			processing = runner;
 		}
 		try {
@@ -536,6 +671,7 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 		finally {
 			synchronized( resourceWake ) {
 				active = false;
+				completed++;
 				drained++;
 			}
 		}
@@ -545,7 +681,7 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 		checkFixture();
 		if( !live || configuring || broken || Thread.currentThread() != factoryThread ) {
 			throw new IllegalStateException(
-					"Flow executable is outside its owned synchronous consumption" );
+					"Flow executable is outside its owned synchronous consumption", stopCause );
 		}
 	}
 
@@ -554,7 +690,22 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 			broken = true;
 			if( fixtureFailure == null )
 				fixtureFailure = serialCapacity.uncertainty();
+			if( stopCause == null )
+				stopCause = fixtureFailure;
 		}
+	}
+
+	private void serialResourcesChanged() {
+		boolean dispose;
+		synchronized( resourceWake ) {
+			checkFixture();
+			resourceChanges++;
+			resourceWake.notifyAll();
+			dispose = serialClosed && !released && !active && serialGrant == null
+					&& serialCapacity.owned() == 0;
+		}
+		if( dispose )
+			disposeSerial( false, true );
 	}
 
 	private void consumptionClosed() {
@@ -568,6 +719,10 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 	 * @param consumption Whether this is the live stream's one-shot close callback
 	 */
 	private void disposeSerial( boolean consumption ) {
+		disposeSerial( consumption, false );
+	}
+
+	private void disposeSerial( boolean consumption, boolean late ) {
 		Request pending;
 		Stream<?> cleanup;
 		PreparedFlocessor completing;
@@ -576,14 +731,16 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 		String diagnostic;
 		synchronized( resourceWake ) {
 			checkFixture();
-			if( released || consumption && !live ) {
+			if( released || disposing || consumption && !live ) {
 				return;
 			}
+			serialClosed = true;
 			fixtureCause = fixtureFailure;
-			unsafe = active || serialGrant != null || fixtureCause != null;
+			unsafe = active || serialGrant != null || serialCapacity.owned() != 0;
 			boolean complete = consumption && exhausted && !broken && !unsafe
 					&& descriptions != null && drained == descriptions.size();
 			broken |= !complete;
+			incomplete |= !complete;
 			pending = serialRequest;
 			serialRequest = null;
 			resourceChanges++;
@@ -593,40 +750,67 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 							+ (descriptions == null ? "none" : descriptions.size())
 							+ ", issued=" + issued + ", drained=" + drained + ", active=" + active
 							+ ", exhausted=" + exhausted + "; no successful completion or report finalization";
+			if( !complete && stopCause == null )
+				stopCause = new IllegalStateException( diagnostic );
 			cleanup = unsafe ? null : originalStream;
 			completing = unsafe ? null : runner;
 			if( !unsafe ) {
 				// Claim disposal before invoking user cleanup, including reentrant close.
-				released = true;
+				disposing = true;
 				live = false;
 				originalStream = null;
 			}
 		}
-		if( pending != null ) {
-			pending.cancel();
-		}
-		if( unsafe ) {
-			// Body return and stream close cannot prove native return. Keep the
-			// original cleanup and backstop even when the JDK consumes its onClose.
-			throw new IllegalStateException( diagnostic, fixtureCause );
-		}
-		try( Stream<?> original = cleanup ) {
-			if( diagnostic != null ) {
-				throw new IllegalStateException( diagnostic );
+		effects( null, () -> {
+			if( pending != null )
+				pending.cancel();
+		}, () -> {
+			if( unsafe ) {
+				var failure = new IllegalStateException( diagnostic, fixtureCause );
+				effects( failure, () -> serialCapacity.stopping( stopCause ) );
+				// Body return and stream close cannot prove native return. Keep the
+				// original cleanup and backstop even when the JDK consumes its onClose.
+				throw failure;
 			}
-			// This is actual exhausted SAME_THREAD processing plus owned drainage.
-			// It is not stream-return/native-factory-terminal equivalence.
-			completing.complete();
-		}
-		finally {
-			release();
-		}
+			Throwable primary = null;
+			try( Stream<?> original = cleanup ) {
+				if( diagnostic != null && !late ) {
+					synchronized( resourceWake ) {
+						backstopReported = true;
+						failureReported = true;
+					}
+					throw new IllegalStateException( diagnostic, stopCause );
+				}
+				// This is actual exhausted SAME_THREAD processing plus owned drainage.
+				// It is not stream-return/native-factory-terminal equivalence.
+				if( diagnostic == null )
+					completing.complete();
+			}
+			catch( Throwable failure ) {
+				primary = failure;
+				synchronized( resourceWake ) {
+					if( stopCause == null )
+						stopCause = failure;
+					else if( late && stopCause != failure )
+						stopCause.addSuppressed( failure );
+					incomplete = true;
+					backstopReported |= !late;
+					failureReported |= !late;
+				}
+				throw failure;
+			}
+			finally {
+				effects( primary, this::release );
+			}
+		} );
 	}
 
 	private void release() {
 		Runnable remove;
 		synchronized( resourceWake ) {
 			released = true;
+			if( finalStatus == null )
+				finalStatus = serialStatus();
 			parallelOwner = null;
 			live = false;
 			configuring = false;
@@ -637,8 +821,9 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 			}
 			runner = null;
 			factoryThread = null;
-			remove = removeBackstop;
-			removeBackstop = null;
+			remove = stopCause == null || backstopReported ? removeBackstop : null;
+			if( remove != null )
+				removeBackstop = null;
 		}
 		if( remove != null ) {
 			remove.run();
@@ -653,13 +838,29 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 	@Override
 	public void close() {
 		FlowParallelOwner parallel;
+		Runnable remove = null;
+		Throwable stopped = null;
 		synchronized( resourceWake ) {
+			backstopReported = true;
 			if( released ) {
-				return;
+				if( stopCause == null || failureReported )
+					return;
+				stopped = stopCause;
+				remove = removeBackstop;
+				removeBackstop = null;
 			}
 			parallel = parallelOwner;
 			if( parallel != null ) {
 				broken = true; // Also reject a runner still being constructed outside this lock.
+			}
+		}
+		if( stopped != null ) {
+			try {
+				throw new IllegalStateException( "Incomplete stopped Flow execution", stopped );
+			}
+			finally {
+				if( remove != null )
+					remove.run();
 			}
 		}
 		if( parallel != null ) {
@@ -668,5 +869,16 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 		else {
 			disposeSerial( false );
 		}
+	}
+
+	/**
+	 * Store teardown is real evidence that its removal callback is no longer
+	 * usable.
+	 */
+	void backstop() {
+		synchronized( resourceWake ) {
+			removeBackstop = null;
+		}
+		close();
 	}
 }

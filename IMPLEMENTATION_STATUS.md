@@ -78,6 +78,7 @@ Historical claim-delivery evidence below is intentionally retained.
 | 15 (supported execution slice) | Selected-only chain planning, whole-interval grants, default global exclusion, explicit whole-chain isolation audits and safe native member advancement | Core capacities 1/2/5; real serial/parallel scope, payload, cleanup, stop-gate and native-inline regressions; context/fixture integration remains 17 |
 | 16 | Atomic readiness-cohort publication; oldest-ready conflict protection, disjoint bypass, exclusive drain/resume and cancellation wakeups | `ResourcePlanningTest`, `FlowAdmissionTest`, actual separate native pools and serial/parallel cooperation; narrow race qualifications below |
 | 17 (supported partial slice) | Explicit actual-fixture domains, shared applied state, additive whole-grant ownership and receipt-based unsafe-use retention across native outer cleanup | `ContextFixtureTest`, `ResourcePlanningTest`, real serial/parallel Launchers and isolated unsafe controls; consumer audits and broader acceptance remain pending |
+| 18 (supported Stop/ownership slice) | Irreversible admission Stop, bounded Writer-independent status, exact remaining-operation receipts and evidence-gated late disposal without repairing unsafe fixture state | `FlowAdmissionTest`, `ResourcePlanningTest`, `ContextFixtureTest`, `NativeResourceAdmissionTest`, `FlowNativeCallTest`; native-token/cooperative channels and owner wait budget remain 19 |
 
 The new caller permits `flow.parallel=true` only through the checked native owner.
 Named bulk `resources()`, `exclusive()` and `independent()` declarations are resolved
@@ -169,17 +170,20 @@ results below predate this slice; the next full run is reserved for final integr
 - 08's restricted real-Flow tracer now covers the early call association, actual
   A→B binding with controlled independent native overlap, admission grants,
   callback-context restoration, basic entry-stop gating and normal owned drainage.
-  Exceptional stop/drain remains incomplete and is not force-finalized.
+  Ticket 18 adds explicit exceptional Stop and exact late-drain proof below;
+  bounded cancellation channels remain 19 and nothing is force-finalized.
 - 09's principal ownership/selection/pool guards are implemented; its complete
   adversarial acceptance is still partial. 10's packaged-consumer portion is now
   exercised, but its intended-IDE Run/Debug/navigation/selection/Stop gate has
-  **not passed**. Safely disposable retained registration/model-reference cleanup
-  also remains an unverified acceptance item; repeat/re-entry guards do not prove it.
+  **not passed**. Ticket 18 exercises safely disposable model/native-table cleanup
+  at the supported lifecycle seam; whole-consumer retained-reference acceptance
+  remains 25, and the packaged fixture's repeat/re-entry guards do not prove it.
 - 05 needs the actual 6,000–7,000-flow consuming workload and resource-owner input.
   That environment was not supplied; the reported 52/25-minute observations are
   not new measurements or a diagnosed serial-tail cause.
 - 17 has only the supported actual-fixture slice below, not complete acceptance.
-  18–19 and 21–27 are not delivered. Bounded cancellation, late-safe release,
+  18 has only the supported Stop/ownership slice below; 19 and 21–27 are not
+  delivered. Bounded cancellation, integrated late-safe release,
   correlated capture/cutoff, truthful stopped-run final artifacts, consumer-owner
   audits, integrated compatibility, performance assessment and rollout remain open.
 
@@ -214,6 +218,132 @@ original and reviewed evidence are archived separately; no historical IDE fixtur
 was altered. Human-only IntelliJ and 6,000-flow checks remain deferred until the end.
 
 ## Validation record
+
+### Explicit Stop and remaining ownership (18, supported slice)
+
+Public `FlowExecution.stop(cause)` closes admission irreversibly, wakes the existing
+factory waiter and withdraws pending requests without cancelling peer runs.
+`status()` returns bounded, immutable `ExecutionStatus` evidence independent of
+Writer success: **ACTIVE**, **STOPPING**, **QUIESCENT**, the first cause, latched
+incompleteness and separate processing/native/remaining-owner counts. At most five
+identity prefixes are retained; serial native terminals are `-1`, not a fabricated
+listener mirror. QUIESCENT means owned use and required cleanup ended, not success.
+Late proof never erases the first cause or incomplete evidence or restarts admission.
+These are bounded diagnostics, **not an owner wait budget**.
+
+Queued wrappers take their real native abort path after observed Stop. Actual
+registered-child skips and actual enclosing-scope terminal/ancestor evidence retire
+only proven-unused ownership; no descendant callback, native outcome or History
+result is invented for never-invoked work. Ordinary safely completed errors preserve
+existing dependency behavior and unrelated progress rather than blanket fail-fast.
+The real cancellation-driven child-skip control has one registered/skipped leaf,
+zero native starts/terminals and zero History entries, followed by safe reuse.
+Ancestor routing uses actual plan parents and enclosing terminals; there is no
+fabricated post-attachment ancestor-skip control. Not every registration/terminal
+race is deterministically paused; those narrow guards remain source reasoning.
+
+Before background use escapes, its existing owner must register an exact
+`receipt.operation()` or `Grant.operation()` and call that operation's `complete()`
+only after actual use and required cleanup end. Future cancellation, timeout,
+interruption, request return and native terminal alone are not proof. Multiple
+operations retain the whole grant and whole-chain continuation waits for all of
+them. After Stop, conflicting users get a visible original-cause pre-use diagnostic.
+Safe late proof releases only remaining ownership; permanent
+`ContextDomain.uncertain(cause)` is irreparable and cannot be cleared by a receipt.
+Unregistered background work is not made safe or audited by this API.
+
+Disposal waits for actual body/native/operation drainage and original cleanup
+before safe quiescence drops model, configuration, History and native-table
+references. Unsafe owners are retained, never force-released for leak checks.
+Genuine incompleteness remains visible through the live factory or real class-store
+exceptional backstop. Actual store teardown retires its removal callback, so late
+proof does not query a closed store; a closed-store exception is not the backstop.
+Stopped reporting is not finalized merely to discard references.
+
+Eight T20 controls cover every serial/parallel owner/competitor pair with prerequisite
+and whole-chain work: cancellation of a real future cannot free A for C, B never
+enters after Stop, and only controlled operation completion permits disposal and
+fresh C use. The fake worker is released and joined in teardown. Permanent unsafe
+fixture controls remain isolated child probes, not recovered grants or added native
+main-JVM counts. Current Maven core/adapter tests use JUnit 6.0.3; they are not new
+JUnit 5.10 core source-compatibility proof.
+
+The supplied independent full reviews found Standards 0 and two Spec P1 findings:
+missing final drainage after committed effects and failure to attempt every Stop
+notification. Both were fixed with outside-lock all-attempt effects and retained
+primary/suppressed failures. A subsequent public premature-release P2 finding was
+fixed: no-issued-leaf state is not terminal proof, pending priority must be withdrawn,
+and reentrant disposal is blocked while the committed Stop batch remains in flight.
+The parent read the actual release source; supplied final targeted follow-ups report
+Standards 0 / Spec 0. This validation pass makes no new independent-review claim.
+
+Historical 504-case passes include a repeat after the earlier two-line stop/disposal
+guard. The later 513-case broader pass preceded the final nine release-guard cases;
+the subsequent 306-case narrow pass included those nine. These are prior-source
+gates, not substitutes for the final broader and repeated counts below. Failed and
+incomplete attempts remain evidence, not passing counts.
+
+The final 26-class broader gate passed **522 cases: 520 passed, two existing Windows
+symlink skips, zero failures/errors** (10 API, 27 message, 226 core, 259 adapter).
+Three repeats of the exact nine-class selector each passed **350 cases** (10 API,
+125 core, 215 adapter), with zero failures/errors/skips. The install gate passed
+the same 350 cases. All five gates recorded exit 0 with Azul Java 17.0.19 / JUnit
+6.0.3, both skip flags and failure-ignore false, `surefire.failIfNoSpecifiedTests=false`
+and the 39 real frontend assets; no full suite was run.
+The known report-reuse failure did not recur; its cause remains **OPEN**, unchanged
+and not fixed by these passes.
+
+**Original packaged-consumer failure (retained evidence):** the unchanged consumer
+on the then-installed ticket-18 binaries passed the 5.10.0/1.10.0 serial point (two outer tests),
+then failed its parallel point (two outer tests, one failure, zero errors/skips).
+C failed with `controlled overlap timed out`; the outer success-count assertion
+reported `expected: <3> but was: <2>`. The script recorded exit 1 and stopped before
+either 6.0.3 point. The cause was undiagnosed at that gate; validation stopped
+without a retry, source/fixture change, staging or clean-export docs gate.
+Fresh failed XML, logs, class traces and current installed artifact hashes/binaries
+are preserved separately from stale matrix leftovers. This is not a passed four-point
+matrix or ticket-18 acceptance; the existing fixture is not exhaustive Stop coverage.
+
+Subsequent diagnosis established a fixture circular wait: C awaited the original
+description source's close, while ticket 18 correctly defers that cleanup until C's
+native terminal. An observation-only failing run recorded the distinct live native
+stream closing while C remained active, followed by C's timeout and only then source
+cleanup. The corrected public factory interceptor observes live-stream close;
+separate assertions still require original-source cleanup after C's native finish
+and exactly one close of each stream. No production lifecycle or timeout was weakened.
+The archived correction passed all four runtime/mode points against the same installed
+ticket-18 binaries. Those artifacts predate amendment 28, so they do not establish
+acceptance of the current combined tree. Original reds and the diagnosis remain under
+`C:/Data/Code/flow-stop18-packaged-diagnosis/`; the report-reuse failure above remains open.
+
+Current combined-source verification on 2026-09-16 passed the same 26-class gate
+and local install: **522 cases, 520 passed, two existing Windows skips, zero
+failures/errors**. The unchanged consumer verifier then passed all four points on
+the freshly installed artifacts, including amendment 28's claim-free report JAR:
+eight outer tests, identical 25-file artifact hashes, and the existing native
+count/UID and class-loading checks. Both skip flags and failure-ignore were false
+on Java 17.0.19. This diagnoses and resolves the specific consumer-oracle failure,
+not the independent report-reuse failure or the wider acceptance programme.
+Independent current-source reviews found Standards 0 / Spec 0 scoped defects.
+Logs and fresh consumer evidence are archived separately under
+`C:/Data/Code/flow-stop18-commit-20260916/`; historical failures remain unchanged.
+
+The exact staged tree `7af13d7f241a4f1d0128549f9ff7f4f0fcd28bad` then compiled fresh
+in `C:/Data/Code/flow-stop18-staged-mY5B4l` and passed **1,163 cases: 1,161 passed,
+two existing platform skips, zero failures/errors**. This combines the 522-case
+selector with 641 documentation checks (50 links, 50 snippets, 541 console-use
+checks) through `-pl doc -am test`, with both skip flags and failure-ignore false.
+All 813 indexed source/document files matched the export after line-ending
+normalization; only final evidence prose changed afterwards. This selected gate
+is not the full suite, IDE or workload acceptance.
+
+Ticket 19 still needs native-token query propagation, cooperative hooks, the accepted
+250 ms check cadence and reachable owner drain budget. No uniform Launcher, remote,
+IDE or hard-kill cleanup bound is claimed. Capture/report/replay remain guarded;
+ticket 23's original accumulated native REPORT T30 and final-only obligations are
+not waived. Ticket 17's real consumer DB/browser/background-owner audits and broader
+artifact/log/retained-reference integration remain 25. Intended IntelliJ checks,
+the manual 6,000-flow workload and the full suite remain deferred until the end.
 
 ### Actual-fixture context slice (17, partial)
 

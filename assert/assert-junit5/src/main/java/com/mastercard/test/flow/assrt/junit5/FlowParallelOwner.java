@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.ForkJoinTask;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -40,6 +41,7 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 	private final String factoryId;
 	private Stream<?> originalStream;
 	private FlowNativeCall.Attachment attachment;
+	private boolean disposalRegistered;
 	private final List<DynamicTest> descriptions = new ArrayList<>();
 	private final List<ClassSource> sources = new ArrayList<>();
 	private final Map<String, Integer> names = new HashMap<>();
@@ -59,6 +61,11 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 	/** @return The single core processing History */
 	History history() {
 		return admission.history();
+	}
+
+	/** @return Bounded evidence retained independently of report publication */
+	com.mastercard.test.flow.assrt.ExecutionStatus status() {
+		return admission.status();
 	}
 
 	/** @param context Actual factory context for the early receiver handshake */
@@ -161,15 +168,12 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 			}
 		};
 		return StreamSupport.stream( source, false ).onClose( () -> {
-			try( Stream<?> cleanup = originalStream ) {
+			try {
 				admission.enumerationClosed();
 			}
 			catch( RuntimeException | Error failure ) {
-				stop( failure );
+				stopAfter( failure );
 				throw failure;
-			}
-			finally {
-				originalStream = null;
 			}
 		} );
 	}
@@ -190,11 +194,11 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 			}
 		}
 		catch( RuntimeException | Error failure ) {
-			stop( failure );
+			stopAfter( failure );
 			throw failure;
 		}
 		if( !admission.enter( index, context.getUniqueId() ) ) {
-			throw new TestAbortedException( "Flow parallel admission stopped" );
+			throw new TestAbortedException( "Flow parallel admission stopped", admission.stopCause() );
 		}
 		owner.processParallel( index, admission.reservation( index ) );
 	}
@@ -216,7 +220,7 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 			attachment.check();
 		}
 		catch( RuntimeException | Error failure ) {
-			stop( failure );
+			stopAfter( failure );
 			throw failure;
 		}
 	}
@@ -244,7 +248,7 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 			admission.registered( validate( id, true ), id.getUniqueId() );
 		}
 		catch( RuntimeException | Error failure ) {
-			stop( failure );
+			stopAfter( failure );
 			throw failure;
 		}
 	}
@@ -256,7 +260,7 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 			admission.started( id.getUniqueId() );
 		}
 		catch( RuntimeException | Error failure ) {
-			stop( failure );
+			stopAfter( failure );
 			throw failure;
 		}
 	}
@@ -269,30 +273,140 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 					result.getThrowable().orElse( null ) );
 		}
 		catch( RuntimeException | Error failure ) {
-			stop( failure );
+			stopAfter( failure );
 			throw failure;
 		}
 	}
 
 	@Override
 	public void skipped( TestIdentifier id, String reason ) {
-		stop(
-				new IllegalStateException( "Unchecked native Flow subtree skip: " + id + ": " + reason ) );
+		try {
+			if( id.isTest() ) {
+				validate( id, false );
+				admission.skipped( id.getUniqueId(), reason );
+			}
+			else {
+				terminal( () -> {
+					admission.enclosingFinished(
+							new IllegalStateException( "Native Flow scope skipped: " + reason ) );
+					return false;
+				} );
+			}
+		}
+		catch( RuntimeException | Error failure ) {
+			stopAfter( failure );
+			throw failure;
+		}
 	}
 
 	@Override
 	public void factoryFinished( TestExecutionResult result ) {
-		if( admission.factoryFinished( Outcome.valueOf( result.getStatus().name() ),
-				result.getThrowable().orElse( null ) ) ) {
-			checkAttachment();
+		terminal( () -> admission.factoryFinished( Outcome.valueOf( result.getStatus().name() ),
+				result.getThrowable().orElse( null ) ) );
+	}
+
+	@Override
+	public void enclosingFinished( TestIdentifier id, TestExecutionResult result ) {
+		terminal( () -> {
+			admission.enclosingFinished( new IllegalStateException( "Native Flow enclosing scope ended: "
+					+ id.getUniqueId(), result.getThrowable().orElse( null ) ) );
+			return false;
+		} );
+	}
+
+	private void terminal( BooleanSupplier record ) {
+		boolean complete = false;
+		Throwable primary = null;
+		try {
+			complete = record.getAsBoolean();
+		}
+		catch( RuntimeException | Error failure ) {
+			primary = failure;
+			Throwable cause = admission.stopCause();
+			if( cause != null && cause != failure )
+				cause.addSuppressed( failure );
+			stopAfter( failure );
+			throw failure;
+		}
+		finally {
+			// Native terminal state committed even if one of its notifications failed.
+			// Keep the late-drain registration, without masking the native failure.
+			try {
+				disposeWhenDrained( complete );
+			}
+			catch( RuntimeException | Error cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+		}
+	}
+
+	private void stopAfter( Throwable failure ) {
+		try {
+			stop( failure );
+		}
+		catch( RuntimeException | Error cleanup ) {
+			if( cleanup != failure )
+				failure.addSuppressed( cleanup );
+		}
+	}
+
+	private void disposeWhenDrained( boolean complete ) {
+		synchronized( this ) {
+			if( disposalRegistered )
+				return;
+			disposalRegistered = true;
+		}
+		admission.whenDrained( () -> dispose( complete ) );
+	}
+
+	private void dispose( boolean complete ) {
+		Throwable failure = admission.stopCause();
+		try( Stream<?> cleanup = originalStream ) {
+			if( complete )
+				checkAttachment();
+		}
+		catch( Throwable cleanup ) {
+			if( failure == null )
+				failure = cleanup;
+			else if( failure != cleanup )
+				failure.addSuppressed( cleanup );
+		}
+		finally {
+			originalStream = null;
+		}
+		if( failure != null ) {
+			try {
+				owner.stop( failure );
+			}
+			catch( Throwable cleanup ) {
+				if( cleanup != failure )
+					failure.addSuppressed( cleanup );
+			}
+		}
+		try {
 			attachment.release();
-			owner.completeParallel();
 			admission.release();
 			descriptions.clear();
 			sources.clear();
 			names.clear();
 			profile = null;
 			attachment = null;
+			owner.disposeParallel( complete && failure == null, admission.status() );
+		}
+		catch( Throwable cleanup ) {
+			try {
+				owner.stop( cleanup );
+			}
+			catch( Throwable secondary ) {
+				if( secondary != cleanup )
+					cleanup.addSuppressed( secondary );
+			}
+			if( failure != null && failure != cleanup )
+				failure.addSuppressed( cleanup );
+			throw cleanup;
 		}
 	}
 

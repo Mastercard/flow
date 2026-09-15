@@ -160,6 +160,18 @@ public final class ContextDomain {
 		}
 
 		/**
+		 * Register before background use escapes. Only that operation's actual end and
+		 * required cleanup permit its completion proof; a cancelled future or local
+		 * return does not. Unlike uncertain state this obligation can drain.
+		 *
+		 * @return Exact whole-grant operation receipt, without authorizing thread
+		 *         access
+		 */
+		public ResourceReservations.Operation operation() {
+			return grant.operation();
+		}
+
+		/**
 		 * Irreversibly retains this exact whole grant and stops its owning run. May be
 		 * called from a diagnostic thread or after a borrowed Use closes, but must
 		 * precede native completion. A released grant rejects late evidence without

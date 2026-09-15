@@ -84,6 +84,37 @@ class NativeResourceAdmissionTest {
 	private static final ThreadLocal<Run> FACTORY = new ThreadLocal<>();
 
 	/**
+	 * Jupiter cancellation can skip a registered child without invoking its
+	 * wrapper. The skip is actual native evidence, not an invented ABORTED
+	 * terminal.
+	 *
+	 * @throws Exception If the real Launcher fails to drain
+	 */
+	@Test
+	void nativeSkippedChildRetiresUnusedOwnershipWithoutProcessingHistory() throws Exception {
+		Run run = new Run( true, List.of( flow( "native skipped" ) ),
+				r -> r.resources( "owned", f -> true, "stop18-native-skipped" ), a -> fail( "no body" ) );
+		run.cancellation = org.junit.platform.engine.CancellationToken.create();
+		run.registration = id -> run.cancellation.cancel();
+		run.start();
+		run.awaitCompletion();
+		assertEquals( 1, run.registered.size() );
+		assertEquals( 1, run.getSummary().getTestsSkippedCount() );
+		assertEquals( 0, run.getSummary().getTestsStartedCount() );
+		assertEquals( 0, run.getSummary().getTestsAbortedCount() );
+		assertEquals( 0, run.handle.status().completed() );
+		assertEquals( 0, run.handle.status().nativeTerminals() );
+		assertEquals( "QUIESCENT", run.handle.status().state().name() );
+		assertEquals( 0, run.handle.status().owners() );
+		assertEquals( 1, run.closes.get() );
+		Run reuse = new Run( true, List.of( flow( "reuse after native skip" ) ),
+				r -> r.resources( "owned", f -> true, "stop18-native-skipped" ), a -> {
+				} );
+		reuse.start();
+		reuse.finish();
+	}
+
+	/**
 	 * Removing a never-admitted exclusive wakes another real factory while the
 	 * original holder is still active; stopped enumeration never resumes.
 	 *
@@ -2329,6 +2360,7 @@ class NativeResourceAdmissionTest {
 	 * Each task calls a real Launcher; no test body is submitted to this thread.
 	 */
 	static final class Run extends SummaryGeneratingListener {
+		private org.junit.platform.engine.CancellationToken cancellation;
 		private boolean observed;
 		final String id = "resource-run-" + IDS.incrementAndGet();
 		final boolean parallel;
@@ -2417,7 +2449,13 @@ class NativeResourceAdmissionTest {
 					.build();
 			execution = new FutureTask<>( () -> {
 				try( session ) {
-					session.getLauncher().execute( request, this );
+					if( cancellation == null )
+						session.getLauncher().execute( request, this );
+					else
+						session.getLauncher()
+								.execute( org.junit.platform.launcher.core.LauncherExecutionRequestBuilder
+										.request( request ).cancellationToken( cancellation ).listeners( this )
+										.build() );
 				}
 				finally {
 					RUNS.remove( id );

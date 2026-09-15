@@ -23,6 +23,93 @@ import com.mastercard.test.flow.assrt.resource.ResourceReservations.Request;
  * Pure public planning/reservation seam, shared by runners and fixture owners.
  */
 class ResourcePlanningTest {
+	/** A failing owner callback must not strand another factory's wakeup. */
+	@Test
+	void operationProofNotifiesEveryWaiterAndPreservesCallbackFailure() {
+		var scope = ResourceReservations.shared();
+		var failure = new IllegalStateException( "owner cleanup failed" );
+		Request owner = scope.register( scope.capacity( 1 ), requirements(), () -> {
+			throw failure;
+		} );
+		AtomicInteger notifications = new AtomicInteger();
+		try( Grant grant = owner.tryAcquire() ) {
+			assertNotNull( grant );
+			var operation = grant.operation();
+			grant.close();
+			Request waiter = scope.register( scope.capacity( 1 ), requirements(),
+					notifications::incrementAndGet );
+			try {
+				assertSame( failure, assertThrows( IllegalStateException.class, operation::complete ) );
+				assertEquals( 1, notifications.get() );
+				try( Grant next = waiter.tryAcquire() ) {
+					assertNotNull( next, "callback failure cannot undo actual operation proof" );
+				}
+			}
+			finally {
+				waiter.cancel();
+				operation.complete();
+			}
+		}
+		finally {
+			owner.cancel();
+		}
+	}
+
+	/** Equal requirement values cannot merge different outstanding grant owners. */
+	@Test
+	void exactOperationsKeepIndependentRetentionsAndNativeCloseGates() {
+		var scope = ResourceReservations.shared();
+		var empty = requirements();
+		Request first = scope.register( scope.capacity( 1 ), empty, () -> {
+		} );
+		Request second = scope.register( scope.capacity( 1 ), empty, () -> {
+		} );
+		Request conflict = scope.register( scope.capacity( 1 ),
+				new ResourceRules().exclusive( "all owners", f -> true ).resolve( null ), () -> {
+				} );
+		Throwable a = new IllegalStateException( "owner A" );
+		Throwable b = new IllegalStateException( "owner B" );
+		try( Grant ga = first.tryAcquire(); Grant gb = second.tryAcquire() ) {
+			assertNotNull( ga );
+			assertNotNull( gb );
+			var a1 = ga.operation();
+			var a2 = ga.operation();
+			var b1 = gb.operation();
+			try {
+				ga.stopping( a );
+				gb.stopping( b );
+				ga.close();
+				gb.close();
+				a1.complete();
+				assertSame( a,
+						assertThrows( IllegalStateException.class, conflict::tryAcquire ).getCause() );
+				a2.complete();
+				assertSame( b,
+						assertThrows( IllegalStateException.class, conflict::tryAcquire ).getCause() );
+				a1.complete();
+				a2.complete();
+				assertSame( b,
+						assertThrows( IllegalStateException.class, conflict::tryAcquire ).getCause() );
+				b1.complete();
+				try( Grant granted = conflict.tryAcquire() ) {
+					assertNotNull( granted );
+				}
+				assertThrows( IllegalStateException.class, ga::operation );
+			}
+			finally {
+				conflict.cancel();
+				a1.complete();
+				a2.complete();
+				b1.complete();
+			}
+		}
+		finally {
+			first.cancel();
+			second.cancel();
+			conflict.cancel();
+		}
+	}
+
 	/**
 	 * Borrowing cannot extend an external grant's physical ownership lifetime.
 	 *

@@ -292,6 +292,7 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 
 	/** Clears the prepared invocation table after owned use has drained. */
 	void detach() {
+		detachProcessing();
 		selectedFlows.clear();
 		selectedIndices.clear();
 		requirements.clear();
@@ -346,7 +347,7 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 					history.recordResult( flow, result );
 				}
 				else
-					owner.incompleteSerial();
+					owner.incompleteSerial( failure );
 			}
 			catch( Throwable cleanup ) {
 				if( failure == null )
