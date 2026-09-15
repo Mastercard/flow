@@ -12,6 +12,7 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Stream;
 
 import com.mastercard.test.flow.Flow;
@@ -50,6 +51,7 @@ public final class FlowAdmission {
 
 	private final History history = new History();
 	private final ResourceReservations.Capacity capacity;
+	private final long cancellationRecheckMillis;
 	private final Runnable resourceChanged = this::resourcesChanged;
 	private Thread factoryThread = Thread.currentThread();
 	private List<Node> nodes = List.of();
@@ -76,10 +78,53 @@ public final class FlowAdmission {
 	private List<String> affected = List.of();
 	private long changes;
 	private long successorVisits;
+	private volatile BooleanSupplier cancellation;
+	private boolean cancellationBound;
+	/** Readiness work counters, guarded by History; not processing status. */
+	long resourceAttempts;
+	/** Wait returns without a readiness change, guarded by History. */
+	long unchangedWakes;
+	/** Wait returns that observe a readiness change, guarded by History. */
+	long eventWakes;
 
 	/** @param limit Maximum outstanding whole-set grants, not idle workers */
 	public FlowAdmission( int limit ) {
+		this( limit, 250 );
+	}
+
+	/** Controls only the existing wait interval, never an execution deadline. */
+	FlowAdmission( int limit, long cancellationRecheckMillis ) {
+		if( cancellationRecheckMillis <= 0 )
+			throw new IllegalArgumentException( "Cancellation recheck must be positive" );
+		this.cancellationRecheckMillis = cancellationRecheckMillis;
 		capacity = ResourceReservations.shared().capacity( limit );
+	}
+
+	/**
+	 * Binds the optional native execute-call query before preparation. An absent
+	 * channel stays absent and does not introduce timed readiness wakes.
+	 *
+	 * @param query Native cancellation query, or null on baseline runtimes
+	 */
+	public void cancellationQuery( BooleanSupplier query ) {
+		synchronized( history ) {
+			if( cancellationBound || prepared || released || stopped != null )
+				throw new IllegalStateException( "Flow cancellation query is already fixed" );
+			cancellationBound = true;
+			cancellation = query;
+		}
+	}
+
+	private void observeCancellation() {
+		BooleanSupplier query = cancellation;
+		if( query == null )
+			return;
+		synchronized( history ) {
+			if( stopped != null || released )
+				return;
+		}
+		if( query.getAsBoolean() )
+			stop( new IllegalStateException( "Native Flow cancellation requested" ) );
 	}
 
 	/** @return The same History used by actual processing and admission */
@@ -316,16 +361,28 @@ public final class FlowAdmission {
 			if( next != WAITING ) {
 				return next;
 			}
-			synchronized( history ) {
-				checkActive();
-				try {
-					if( changes == observed ) {
-						history.wait();
+			// Unchanged timer/spurious wakes never revalidate or retry the ready set.
+			for( ;; ) {
+				observeCancellation();
+				synchronized( history ) {
+					if( stopped != null )
+						throw new IllegalStateException( "Flow admission is not active", stopped );
+					if( changes != observed )
+						break;
+					try {
+						if( cancellation == null )
+							history.wait();
+						else
+							history.wait( cancellationRecheckMillis );
+						if( changes == observed )
+							unchangedWakes++;
+						else
+							eventWakes++;
 					}
-				}
-				catch( InterruptedException failure ) {
-					Thread.currentThread().interrupt();
-					throw new IllegalStateException( "Flow readiness interrupted", failure );
+					catch( InterruptedException failure ) {
+						Thread.currentThread().interrupt();
+						throw new IllegalStateException( "Flow readiness interrupted", failure );
+					}
 				}
 			}
 		}
@@ -342,6 +399,7 @@ public final class FlowAdmission {
 		if( Thread.currentThread() != factoryThread ) {
 			throw new IllegalStateException( "Flow admission is outside its factory" );
 		}
+		observeCancellation();
 		for( int previous = -1;; ) {
 			Integer index;
 			Node node;
@@ -364,6 +422,7 @@ public final class FlowAdmission {
 					return index;
 				}
 				request = node.request;
+				resourceAttempts++;
 			}
 			Grant grant = request.tryAcquire();
 			if( grant != null ) {
@@ -463,6 +522,7 @@ public final class FlowAdmission {
 	 * @return False when stopped; the adapter must take its genuine abort path
 	 */
 	public boolean enter( int index, String id ) {
+		observeCancellation();
 		synchronized( history ) {
 			checkFixture();
 			if( stopped != null ) {
@@ -850,6 +910,7 @@ public final class FlowAdmission {
 				ready.clear();
 				history.clear();
 				factoryThread = null;
+				cancellation = null;
 			}
 		}
 		catch( RuntimeException | Error thrown ) {
@@ -930,6 +991,7 @@ public final class FlowAdmission {
 		if( stopped == null ) {
 			stopped = failure;
 		}
+		cancellation = null;
 		incomplete = true;
 		ready.clear();
 		wake();

@@ -19,11 +19,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -45,6 +47,366 @@ import com.mastercard.test.flow.util.Transmission.Type;
  * Pure prepared-run seam; real native execution is exercised in the adapter.
  */
 class FlowAdmissionTest {
+	/**
+	 * The actual timed waiter samples the query but does not revalidate or revisit
+	 * pending resources on unchanged ticks, independently of selection size.
+	 *
+	 * @param size Number of blocked resource requests
+	 * @throws Exception If the controlled factory does not drain
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 1000 })
+	void unchangedCancellationTicksDoNotRetryReadiness( int size ) throws Exception {
+		var scope = ResourceReservations.shared();
+		var rules = new ResourceRules().resources( "K", f -> true, "cancel19-core" );
+		Flow first = flow( "held" );
+		var holder = scope.register( scope.capacity( 1 ), rules.resolve( first ), () -> {
+		} );
+		AtomicReference<FlowAdmission> owner = new AtomicReference<>();
+		AtomicInteger queries = new AtomicInteger();
+		AtomicInteger validations = new AtomicInteger();
+		AtomicBoolean cancelled = new AtomicBoolean();
+		CountDownLatch sampled = new CountDownLatch( 1 );
+		CountDownLatch resumeQuery = new CountDownLatch( 1 );
+		Throwable cleanupStop = new IllegalStateException( "test cleanup" );
+		FutureTask<Throwable> factory = new FutureTask<>( () -> {
+			FlowAdmission run = new FlowAdmission( 1 );
+			owner.set( run );
+			run.cancellationQuery( () -> {
+				assertFalse( Thread.holdsLock( run.history() ) );
+				if( queries.incrementAndGet() == 5 ) {
+					sampled.countDown();
+					await( resumeQuery );
+				}
+				return cancelled.get();
+			} );
+			Throwable primary = null;
+			try {
+				List<Flow> flows = IntStream.range( 0, size ).mapToObj( i -> flow( "blocked " + i ) )
+						.toList();
+				run.prepare( flows, flows.stream().map( rules::resolve ).toList() );
+				try {
+					int index = run.next( validations::incrementAndGet );
+					throw new AssertionError( "cancelled wait admitted work: " + index );
+				}
+				catch( IllegalStateException stopped ) {
+					assertSame( run.stopCause(), stopped.getCause() );
+					return run.stopCause();
+				}
+			}
+			catch( RuntimeException | Error failure ) {
+				primary = failure;
+				throw failure;
+			}
+			finally {
+				// This pure-core factory has ended without handing any admission to a body.
+				Throwable firstFailure = primary;
+				for( Runnable cleanup : List.<Runnable>of( () -> run.stop( cleanupStop ),
+						() -> run.enclosingFinished( cleanupStop ), run::release ) ) {
+					try {
+						cleanup.run();
+					}
+					catch( RuntimeException | Error failure ) {
+						if( firstFailure == null )
+							firstFailure = failure;
+						else if( firstFailure != failure )
+							firstFailure.addSuppressed( failure );
+					}
+				}
+				if( primary == null ) {
+					if( firstFailure instanceof RuntimeException failure )
+						throw failure;
+					if( firstFailure instanceof Error failure )
+						throw failure;
+				}
+			}
+		} );
+		Thread thread = new Thread( factory, "cancellation-ticks" );
+		Throwable primary = null;
+		try( Grant grant = holder.tryAcquire() ) {
+			assertNotNull( grant );
+			try {
+				thread.start();
+				assertTrue( sampled.await( 3, TimeUnit.SECONDS ),
+						"unchanged token rechecks never arrived" );
+				FlowAdmission run = owner.get();
+				synchronized( run.history() ) {
+					assertEquals( 1, validations.get() );
+					assertEquals( size, run.resourceAttempts );
+					assertEquals( 3, run.unchangedWakes );
+					assertEquals( 0, run.eventWakes );
+					assertEquals( 0, run.successorVisits() );
+				}
+				cancelled.set( true );
+				resumeQuery.countDown();
+				assertEquals( "Native Flow cancellation requested",
+						factory.get( 5, TimeUnit.SECONDS ).getMessage() );
+				assertEquals( 5, queries.get(), "a latched stop must not query again" );
+			}
+			catch( Throwable failure ) {
+				primary = failure;
+				throw failure;
+			}
+			finally {
+				Throwable firstFailure = primary;
+				for( Executable cleanup : List.<Executable>of( () -> {
+					if( owner.get() != null )
+						owner.get().stop( cleanupStop );
+				}, resumeQuery::countDown, () -> factory.get( 5, TimeUnit.SECONDS ), () -> {
+					thread.join( 1000 );
+					assertFalse( thread.isAlive() );
+				} ) ) {
+					try {
+						cleanup.execute();
+					}
+					catch( Throwable failure ) {
+						if( firstFailure == null )
+							firstFailure = failure;
+						else if( firstFailure != failure )
+							firstFailure.addSuppressed( failure );
+					}
+				}
+				if( primary == null && firstFailure != null ) {
+					if( firstFailure instanceof Exception failure )
+						throw failure;
+					throw (Error) firstFailure;
+				}
+			}
+		}
+		finally {
+			holder.cancel();
+		}
+	}
+
+	/**
+	 * Real notifications bypass even a deliberately long query interval. A naked
+	 * monitor notification is not a readiness change; absent queries park untimed.
+	 *
+	 * @param query Whether the actual channel is present
+	 * @param event The existing signal releasing the factory
+	 * @throws Exception If the controlled factory fails to drain
+	 */
+	@ParameterizedTest
+	@CsvSource({ "false,resource", "true,resource", "false,completion", "true,completion",
+			"false,stop", "true,stop", "false,interrupt", "true,interrupt" })
+	void unchangedWakeAndRealEventsKeepTheirSeparatePaths( boolean query, String event )
+			throws Exception {
+		var scope = ResourceReservations.shared();
+		var rules = new ResourceRules().resources( "K", f -> true, "cancel19-events" );
+		Flow first = flow( "first" );
+		boolean completion = event.equals( "completion" );
+		var holderRules = completion
+				? new ResourceRules().resources( "other", f -> true, "cancel19-other" )
+				: rules;
+		var holder = scope.register( scope.capacity( 1 ), holderRules.resolve( first ), () -> {
+		} );
+		AtomicReference<FlowAdmission> owner = new AtomicReference<>();
+		AtomicInteger validations = new AtomicInteger();
+		CountDownLatch prepared = new CountDownLatch( 1 );
+		CountDownLatch eventDelivered = new CountDownLatch( 1 );
+		Throwable cause = new IllegalStateException( "explicit event Stop" );
+		FutureTask<Integer> factory = new FutureTask<>( () -> {
+			FlowAdmission run = new FlowAdmission( 1, 60_000 );
+			owner.set( run );
+			if( query )
+				run.cancellationQuery( () -> {
+					assertFalse( Thread.holdsLock( run.history() ) );
+					return false;
+				} );
+			boolean entered = false;
+			try {
+				List<Flow> flows = completion ? List.of( first, flow( "next", first ) ) : List.of( first );
+				run.prepare( flows, flows.stream().map( rules::resolve ).toList() );
+				if( completion ) {
+					assertEquals( 0, run.poll() );
+					enter( run, 0 );
+					entered = true;
+				}
+				prepared.countDown();
+				try {
+					int index = run.next( validations::incrementAndGet );
+					enter( run, index );
+					complete( run, index );
+					return index;
+				}
+				catch( IllegalStateException stopped ) {
+					if( event.equals( "interrupt" ) ) {
+						assertInstanceOf( InterruptedException.class, stopped.getCause() );
+						assertTrue( Thread.currentThread().isInterrupted() );
+						run.stop( stopped ); // The adapter's existing exception path.
+						assertSame( stopped, run.stopCause() );
+					}
+					else
+						assertSame( cause, stopped.getCause() );
+					return WAITING;
+				}
+			}
+			finally {
+				// Stop wakes before its out-of-lock withdrawal batch has returned.
+				if( !event.equals( "interrupt" ) )
+					await( eventDelivered );
+				run.stop( cause );
+				if( entered )
+					complete( run, 0 );
+				run.enclosingFinished( cause );
+				run.release();
+			}
+		} );
+		Thread thread = new Thread( factory, "readiness-events" );
+		Throwable primary = null;
+		try( Grant grant = holder.tryAcquire() ) {
+			assertNotNull( grant );
+			try {
+				thread.start();
+				await( prepared );
+				FlowAdmission run = owner.get();
+				awaitReadinessWait( thread, run, query, 0 );
+				long attempts;
+				synchronized( run.history() ) {
+					attempts = run.resourceAttempts;
+					run.history().notifyAll();
+				}
+				awaitReadinessWait( thread, run, query, 1 );
+				synchronized( run.history() ) {
+					assertEquals( attempts, run.resourceAttempts );
+					assertEquals( 1, validations.get() );
+					assertEquals( 0, run.eventWakes );
+				}
+				switch( event ) {
+					case "resource":
+						grant.close();
+						break;
+					case "completion":
+						complete( run, 0 );
+						break;
+					case "stop":
+						run.stop( cause );
+						break;
+					case "interrupt":
+						thread.interrupt();
+						break;
+					default:
+						fail( event );
+				}
+				eventDelivered.countDown();
+				assertEquals( event.equals( "resource" ) ? 0 : completion ? 1 : WAITING,
+						factory.get( 5, TimeUnit.SECONDS ) );
+				if( event.equals( "interrupt" ) )
+					assertEquals( 0, run.eventWakes );
+				else
+					assertTrue( run.eventWakes > 0,
+							"processing, native completion and grant return can each signal readiness" );
+			}
+			catch( Throwable failure ) {
+				primary = failure;
+				throw failure;
+			}
+			finally {
+				try {
+					if( owner.get() != null )
+						owner.get().stop( cause );
+				}
+				finally {
+					eventDelivered.countDown();
+					try {
+						factory.get( 5, TimeUnit.SECONDS );
+						thread.join( 1000 );
+						assertFalse( thread.isAlive() );
+					}
+					catch( Throwable cleanup ) {
+						if( primary == null )
+							throw cleanup;
+						if( primary != cleanup )
+							primary.addSuppressed( cleanup );
+					}
+				}
+			}
+		}
+		finally {
+			holder.cancel();
+		}
+	}
+
+	private static void awaitReadinessWait( Thread thread, FlowAdmission run, boolean timed,
+			long unchanged ) {
+		long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos( 5 );
+		while( System.nanoTime() < deadline ) {
+			synchronized( run.history() ) {
+				if( run.unchangedWakes >= unchanged && thread.getState() == (timed
+						? Thread.State.TIMED_WAITING
+						: Thread.State.WAITING) )
+					return;
+			}
+			Thread.yield();
+		}
+		fail( "factory did not park in its readiness wait" );
+	}
+
+	/**
+	 * Optional query observation uses the existing irreversible Stop/body gate and
+	 * cannot replace an earlier cause or restart after the token clears.
+	 *
+	 * @param body     Whether admission has already handed off to native execution
+	 * @param explicit Whether an explicit Stop won before query observation
+	 */
+	@ParameterizedTest
+	@CsvSource({ "false,false", "true,false", "false,true", "true,true" })
+	void cancellationPreservesFirstCauseAndNeverReopensEntry( boolean body, boolean explicit ) {
+		FlowAdmission run = new FlowAdmission( 1 );
+		AtomicBoolean cancelled = new AtomicBoolean();
+		AtomicInteger queries = new AtomicInteger();
+		run.cancellationQuery( () -> {
+			assertFalse( Thread.holdsLock( run.history() ) );
+			queries.incrementAndGet();
+			return cancelled.get();
+		} );
+		assertThrows( IllegalStateException.class, () -> run.cancellationQuery( null ) );
+		Throwable first = new IllegalStateException( "earlier explicit cause" );
+		boolean admitted = false;
+		try {
+			Flow flow = flow( "gate" );
+			var rules = new ResourceRules().resources( "empty", f -> true );
+			run.prepare( List.of( flow ), List.of( rules.resolve( flow ) ) );
+			if( body ) {
+				assertEquals( 0, run.poll() );
+				admitted = true;
+				run.registered( 0, "0" );
+				run.started( "0" );
+			}
+			cancelled.set( true );
+			if( explicit )
+				run.stop( first );
+			if( body )
+				assertFalse( run.enter( 0, "0" ) );
+			else {
+				Throwable rejected = assertThrows( IllegalStateException.class, run::poll );
+				assertSame( run.stopCause(), rejected.getCause() );
+			}
+			Throwable observed = run.stopCause();
+			assertNotNull( observed );
+			if( explicit )
+				assertSame( first, observed );
+			else
+				assertEquals( "Native Flow cancellation requested", observed.getMessage() );
+			int count = queries.get();
+			cancelled.set( false );
+			assertFalse( run.enter( 0, "0" ) );
+			assertThrows( IllegalStateException.class, run::poll );
+			run.stop( new IllegalStateException( "later stop" ) );
+			assertSame( observed, run.stopCause() );
+			assertEquals( count, queries.get() );
+			assertEquals( (body ? 1 : 0) + (explicit ? 0 : 1), count );
+			assertEquals( 0, run.status().entered() );
+		}
+		finally {
+			run.stop( first );
+			if( admitted )
+				run.finished( "0", FlowAdmission.Outcome.ABORTED, run.stopCause() );
+			run.enclosingFinished( first );
+			run.release();
+		}
+	}
+
 	/**
 	 * Zero issued leaves do not prove that prepared pending requests are gone.
 	 *

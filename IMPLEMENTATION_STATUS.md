@@ -6,6 +6,106 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Optional native cancellation query — 2026-09-16
+
+Ticket 19's first vertical slice attaches the identical optional JUnit 6 native
+token to the exact execution call behind `BooleanSupplier`; JUnit-6-only linkage
+stays in `FlowLauncherSix`. Admission and pre-body entry observe it outside
+bookkeeping locks. Only an attached channel enables 250 ms rechecks in the existing
+readiness waiter. A generation-stable wake performs constant-size checks without
+validation, graph/resource scans, resolver reruns or new per-flow tasks. Real
+completion/resource/Stop notifications remain immediate. The first Stop cause is
+preserved, clearing the token cannot reopen entry, and query references clear on
+Stop or safe disposal. Native, body, operation and fixture ownership remain distinct.
+
+Controlled core tests cover selections of one and 1,000, unchanged notifications,
+token ticks, resource/completion/Stop/interrupt wakes and admission/pre-body races.
+Counters record actual resource attempts, unchanged wakes and event wakes; expected
+low overhead is **not measured CPU/wall-time acceptance**. Negative controls removing
+the timed wait or retrying readiness on unchanged wakes failed as intended. Review
+also exposed an unexpected-admission test teardown that could mask its assertion;
+Stop followed by actual pure-core enclosing completion now preserves the primary
+failure and suppresses cleanup failures. Temporary fault controls verified both
+sizes, thread joining, zero owners and fresh exclusive reuse, and were removed.
+
+Real Launcher tests cancel only the waiting run's native token in direct and preview
+requests while an independent holder remains live; no fabricated Stop is used to
+satisfy the assertion. The native consumption latch establishes arrival at
+consumption, **not exact parking inside native readiness**; controlled core tests
+separately prove parked timed rechecks. A held native pre-body interceptor also
+demonstrates that the query cannot execute inside that blocked callback/native join:
+after release it produces zero Flow bodies and one actual native abort, with original
+cleanup and ownership drainage. No host Stop or remote cessation guarantee follows.
+
+Validation after review fixes: **202/202** targeted admission/native-call/native-
+resource cases, then an upstream install gate of **384/384** across 12 classes, with
+zero failures/errors/skips. Zulu 17.0.19/Maven 3.6.3 compiled current sources, checked
+the existing formatter and copied 39 real report assets; test skips and failure-ignore
+were false. Append-only flow-cancel19 red/green/focused/review logs and the final
+flow-cancel19-install log are retained under C:/Data/Code. The installed current JARs
+passed the existing parent-free packaged-consumer matrix on JUnit 5.10/Platform 1.10
+and JUnit 6.0.3, provider-free serial and parallel: **four points, two tests each,
+zero failures/errors/skips**, identical Flow hashes, effective dependency versions
+and actual class loading. The matrix verifies compatibility, not query-specific
+cancellation; the real Launcher tests above exercise that feature on JUnit 6.
+
+**Still pending:** cooperative operation cancellation hooks, the configurable
+monotonic 30-second-default owner stop/drain budget and its deadline evidence,
+query-on/off performance measurement, final whole-repository regression, and
+intended-host IntelliJ Run/Debug/navigation/selection/Stop plus the user's 6,000-test
+workload. This is not full ticket-19 acceptance. The failed simplification mutation
+baselines and unresolved report-reuse failure below remain open.
+
+## Review-driven simplification baseline — 2026-09-16
+
+Tickets 29–32 were inspected in parallel against implementation endpoint
+`151778194e9dbe589aa5a30b9e8c4fae6446ebc9` and main
+`483c5428c2f1fb517c12f7f63200b39066059e17`. Their existing core, Writer and real
+Launcher seams remain the test surfaces; main-existing fixtures and assertions
+have not been moved or reduced. The two arriving user edits remain separate.
+
+Fresh unchanged-source focused regression: **574 cases, 559 passed, 15 Windows
+skips, zero failures/errors**, across 34 classes with upstream compilation and
+39 real report assets. The following fresh, non-incremental PIT baselines used
+Zulu 17.0.19, Maven 3.6.3, JUnit 6.0.3, PIT 1.25.8/Jupiter plugin 1.2.3, eight
+threads and the unchanged module targets, mutators, exclusions and thresholds.
+Both test-skip flags and failure-ignore were false. No history profile was used.
+
+| Module | Fresh result | Gate |
+| --- | --- | --- |
+| API | 164 mutants: 162 killed, two timed out; 263/263 lines | Pass: 100/100 mutation/line |
+| report-core | 227 mutants: 210 killed, one timed out, four survived, 12 uncovered; 563/605 lines | Pass: 93/93 against 90/90 |
+| assert-core | 1,044 mutants: 902 killed, 19 timed out, 26 survived, 97 uncovered; 1,860/2,085 lines | **Blocked:** 88/89 against 94/95 |
+| assert-junit5 | 38 unmutated failures during coverage discovery, including auxiliary profile/receipt/resource/binding factories | **Blocked before mutation:** no 82/97 score obtained |
+
+The core gaps span admission, processing, fixture context and other classes;
+passing nested Launcher tests do not substitute for the module's participating
+mutation tests. The Jupiter failure list includes helper factories selected
+outside their enclosing test harnesses. No exclusions, thresholds, supported
+profiles or production behavior were changed to make either baseline pass.
+Required baseline failures block simplification acceptance; no candidate test
+deletion/consolidation or production refactoring has been applied. In particular,
+the proposed reporting consolidation remains an external, unapplied candidate.
+The outstanding native accumulated-reporting obligation and unresolved report-reuse
+failure below are not waived by these baselines or their later nonrecurrence.
+
+Evidence is frozen outside the checkout under
+C:/Data/Code/flow-amendments-20260916 (baseline-core and baseline-all), with source
+hashes, mutation identities/statuses, XML/HTML reports and Surefire outputs.
+The separate flow-amendments-baseline-tests-20260916,
+flow-amendments-baseline-pit-20260916 and
+flow-amendments-baseline-jupiter-pit-20260916 logs retain the successful and failed
+invocations. Snapshot source inventories include only the two documentation edits
+made while PIT ran in addition to the two arriving user edits; Java source remained
+at the pinned endpoint throughout those baseline runs. Later ticket-19 work is a
+separate feature, not a passing simplification or a repair of these mutation gates.
+
+Ticket 31's documentation correction distinguishes destination-specific latest-link
+withdrawal from successful runner publication: publication may replace an old
+symlink but preserves its target and ordinary files/directories at latest. Explicit
+latest output retains its separate semantics. This corrects prose only; it adds no
+foreign-target protection, cross-run ownership or new runtime acceptance.
+
 ## Approved report-scope amendment — 2026-09-15
 
 The user approved [single-active-writer reporting](.scratch/parallel-flow-design/spec.md#report-scope-amendment-2026-09-15)

@@ -30,9 +30,9 @@ import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.resource.ChainPlan;
 
 /**
- * Native identity/profile adapter over shared-core admission. Original bodies
- * stay on their actual Jupiter invocation thread. Fixture/context ownership
- * remains guarded pending its own slice.
+ * Native identity/profile and terminal coordination over shared-core admission.
+ * Original bodies stay on their actual Jupiter invocation thread; ContextDomain
+ * binds shared fixture state to its actual owner under the admission grant.
  */
 final class FlowParallelOwner implements FlowNativeCall.Observer {
 	private final FlowExecution owner;
@@ -71,6 +71,7 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 	/** @param context Actual factory context for the early receiver handshake */
 	void attach( ExtensionContext context ) {
 		attachment = FlowNativeCall.attach( context, this );
+		admission.cancellationQuery( attachment.cancellationQuery() );
 	}
 
 	/** @param context Factory context being revalidated */

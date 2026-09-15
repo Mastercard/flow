@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.TestFactory;
@@ -63,6 +64,8 @@ final class FlowNativeCall implements TestExecutionListener, AutoCloseable {
 	private Throwable problem;
 	/** Whether this exact execute-call listener has been closed. */
 	private boolean closed;
+	private BooleanSupplier cancellation;
+	private boolean cancellationBound;
 
 	/** Receives actual native evidence without inventing processing outcomes. */
 	interface Observer {
@@ -114,6 +117,19 @@ final class FlowNativeCall implements TestExecutionListener, AutoCloseable {
 		private Attachment( FlowNativeCall call, Observer observer ) {
 			this.call = call;
 			this.observer = observer;
+		}
+
+		/** @return The optional query for this exact execute call, never a fallback */
+		BooleanSupplier cancellationQuery() {
+			FlowNativeCall owner;
+			synchronized( this ) {
+				owner = call;
+			}
+			if( owner == null )
+				return null;
+			synchronized( owner ) {
+				return owner.cancellation;
+			}
 		}
 
 		/** Rejects failed notifications or use after attachment release. */
@@ -199,6 +215,14 @@ final class FlowNativeCall implements TestExecutionListener, AutoCloseable {
 			throw new IllegalArgumentException(
 					"Flow factory requires exactly one FlowExecution parameter" );
 		}
+	}
+
+	/** @param query Native token query bound once, immediately before execution */
+	synchronized void cancellationQuery( BooleanSupplier query ) {
+		if( cancellationBound || closed || plan != null )
+			throw new IllegalStateException( "Flow cancellation query is already fixed" );
+		cancellation = Objects.requireNonNull( query );
+		cancellationBound = true;
 	}
 
 	/**
@@ -369,6 +393,7 @@ final class FlowNativeCall implements TestExecutionListener, AutoCloseable {
 	private synchronized void detach( Attachment value ) {
 		if( attachment == value ) {
 			attachment = null;
+			cancellation = null;
 			ancestors.clear();
 			if( closed )
 				factory = null;
@@ -382,6 +407,7 @@ final class FlowNativeCall implements TestExecutionListener, AutoCloseable {
 		}
 		closed = true;
 		plan = null;
+		cancellation = null;
 		if( attachment != null ) {
 			// Call return cannot finalize or force-release owned use. The owner
 			// retains its attachment and sees this failure at its backstop check.

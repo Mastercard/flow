@@ -34,6 +34,7 @@ public final class FlowLauncherSix extends FlowLauncherBridge implements Launche
 			var builder = original.getTestPlan().isPresent()
 					? LauncherExecutionRequestBuilder.request( original.getTestPlan().orElseThrow() )
 					: LauncherExecutionRequestBuilder.request( original.getDiscoveryRequest().orElseThrow() );
+			call.cancellationQuery( original.getCancellationToken()::isCancellationRequested );
 			delegate.execute( builder.listeners( listeners( call, original
 					.getAdditionalTestExecutionListeners().toArray( TestExecutionListener[]::new ) ) )
 					.cancellationToken( original.getCancellationToken() ).build() );

@@ -1,6 +1,8 @@
 package com.mastercard.test.flow.assrt.junit5;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
@@ -9,6 +11,7 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMetho
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DynamicNode;
@@ -39,6 +42,30 @@ import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
  */
 @SuppressWarnings("static-method")
 class FlowNativeCallTest {
+	/**
+	 * The exact call's optional query is available only while its attachment is
+	 * live.
+	 */
+	@Test
+	void optionalQueryBelongsToTheExactCallAndClearsOnSafeDetach() {
+		for( boolean present : new boolean[] { false, true } ) {
+			NativeReceiptFixture.events = new Events();
+			var request = request( NativeReceiptFixture.class );
+			BooleanSupplier query = () -> false;
+			try( FlowNativeCall call = new FlowNativeCall( request ) ) {
+				if( present ) {
+					call.cancellationQuery( query );
+					assertThrows( IllegalStateException.class, () -> call.cancellationQuery( query ) );
+				}
+				assertEquals( List.of(), execute( request, call ) );
+				assertSame( present ? query : null, NativeReceiptFixture.events.query );
+				assertNull( NativeReceiptFixture.events.attachment.cancellationQuery() );
+				assertThrows( IllegalStateException.class, () -> call.cancellationQuery( query ) );
+				assertEquals( 9, NativeReceiptFixture.events.bodies );
+			}
+		}
+	}
+
 	@Test
 	void missingOrAmbiguousReceiptsNeverEnterTheOriginalFactory() {
 		for( int receivers : new int[] { 0, 2 } ) {
@@ -111,8 +138,11 @@ class FlowNativeCallTest {
 		NativeReceiptFixture.events.releaseAtFactoryTerminal = false;
 		var request = request( NativeReceiptFixture.class );
 		FlowNativeCall call = new FlowNativeCall( request );
+		BooleanSupplier query = () -> false;
+		call.cancellationQuery( query );
 		try {
 			assertEquals( List.of(), execute( request, call ) );
+			assertSame( query, NativeReceiptFixture.events.attachment.cancellationQuery() );
 			assertTrue( NativeReceiptFixture.events.earlyReleaseRejected );
 			assertEquals( 1, NativeReceiptFixture.events.factoryTerminals );
 			assertEquals( 2, NativeReceiptFixture.events.enclosing.size(),
@@ -121,6 +151,8 @@ class FlowNativeCallTest {
 					.allMatch( parent -> NativeReceiptFixture.events.registered.stream()
 							.allMatch( child -> child.startsWith( parent + "/" ) ) ) );
 			call.close();
+			assertNull( NativeReceiptFixture.events.attachment.cancellationQuery(),
+					"call cleanup drops the query, not retained native ownership" );
 			IllegalStateException failure = assertThrows( IllegalStateException.class,
 					NativeReceiptFixture.events.attachment::check );
 			assertTrue( failure.getCause().getMessage().contains( "did not drain" ) );
@@ -129,6 +161,7 @@ class FlowNativeCallTest {
 			// A safe late owner can detach; this does not erase the incomplete call.
 			NativeReceiptFixture.events.attachment.release();
 			NativeReceiptFixture.events.attachment.release();
+			assertNull( NativeReceiptFixture.events.attachment.cancellationQuery() );
 			assertThrows( IllegalStateException.class, call::check );
 		}
 		finally {
@@ -197,6 +230,7 @@ class FlowNativeCallTest {
 		final List<Integer> lines = new ArrayList<>();
 		final List<TestExecutionResult.Status> results = new ArrayList<>();
 		FlowNativeCall.Attachment attachment;
+		private BooleanSupplier query;
 		int factories;
 		int bodies;
 		int factoryTerminals;
@@ -248,6 +282,7 @@ class FlowNativeCallTest {
 				ReflectiveInvocationContext<Method> method, ExtensionContext context ) throws Throwable {
 			Events events = NativeReceiptFixture.events;
 			events.attachment = FlowNativeCall.attach( context, events );
+			events.query = events.attachment.cancellationQuery();
 			events.attachment.check();
 			return invocation.proceed();
 		}

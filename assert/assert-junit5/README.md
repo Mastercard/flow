@@ -292,11 +292,31 @@ passed. Stop after quiescence is a no-op. Retained unsafe owners are not forcibl
 released to make disposal appear successful; stopped reporting is not finalized as
 successful merely to discard references.
 
-Ticket 19 still owns native-token query propagation, cooperative cancellation
-callbacks, check cadence and the reachable owner drain budget. There is no new
-watchdog/executor, uniform Launcher/remote/IDE shutdown guarantee or hard-kill
-cleanup promise here. Report/capture/replay guards and consumer resource-audit
-limits remain unchanged.
+| Ownership | Acquisition or handoff | Evidence permitting release or detachment |
+| --- | --- | --- |
+| Pending request | Ready work registers its complete footprint | Withdrawal removes priority only; it releases no live grant |
+| Whole flow/chain grant | Atomic resource and capacity acquisition before native emission | Actual native retirement and processing drainage, plus the completed chain interval or safe Stop; outstanding operations still retain it |
+| Borrowed `ContextDomain.Use` | Invocation borrows its already-owned grant | Same-thread, LIFO close restores the previous scope; it does not release native/chain ownership |
+| Fixture-owner acquired `Use` | Existing owner acquires synchronously for creation/reset/teardown | Safe completion of that lifecycle action; uncertain fixture state prevents release |
+| Exact operation receipt | Registered before use escapes | The operation and its required cleanup actually end; repeat proof cannot bypass native/chain ownership or repair uncertainty |
+| Native execution owner | Owns descriptions, attachment and original cleanup | Native scope ended, admission is disposable and original cleanup completed; only then detach heavy execution references |
+| Physical fixture domain | Existing owner supplies the lifetime identity | Explicit successful transitions/reset update applied state; runner detachment neither clears that state nor destroys the fixture |
+
+On the supported JUnit 6 parallel request path, the identical native cancellation
+token supplies an optional query to the exact execution owner. Admission and
+pre-body entry check it outside bookkeeping locks. The existing readiness waiter
+rechecks every 250 ms only when that channel exists; completion, resource changes
+and explicit Stop still wake it immediately. Unchanged wakes check only the token,
+Stop and event generation, without retrying readiness or resource acquisition.
+Provider-free serial and older request overloads receive no fabricated token
+channel and add no token-driven periodic wakes. Clearing a token cannot reopen
+admission or replace the first Stop cause.
+
+Ticket 19's cooperative cancellation callbacks and reachable owner drain budget
+remain pending. Queries cannot run inside a blocked inline body/callback or native
+join. There is no new watchdog/executor, uniform Launcher/remote/IDE shutdown
+guarantee or hard-kill cleanup promise here. Report/capture/replay guards and
+consumer resource-audit limits remain unchanged.
 
 ### Uninterrupted selected chains
 

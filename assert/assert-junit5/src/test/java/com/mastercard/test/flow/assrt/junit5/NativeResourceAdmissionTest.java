@@ -84,6 +84,153 @@ class NativeResourceAdmissionTest {
 	private static final ThreadLocal<Run> FACTORY = new ThreadLocal<>();
 
 	/**
+	 * Mutating only B's native token must end its busy-resource wait while A still
+	 * owns the key. The advance latch proves arrival at consumption, not parking
+	 * inside Flow's readiness monitor.
+	 *
+	 * @param preview Whether approval predates binding the original execute token
+	 * @throws Exception If either actual Launcher fails to drain
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void rawNativeTokenStopsResourceWaitWithoutHolderCompletion( boolean preview ) throws Exception {
+		CountDownLatch held = new CountDownLatch( 1 );
+		CountDownLatch release = new CountDownLatch( 1 );
+		CountDownLatch advancing = new CountDownLatch( 1 );
+		Run holder = new Run( true, List.of( flow( "token holder" ) ),
+				r -> r.resources( "K", f -> true, "cancel19-K" ), a -> {
+					held.countDown();
+					await( release );
+				} );
+		Run waiting = new Run( true, List.of( flow( "token waiter" ) ),
+				r -> r.resources( "K", f -> true, "cancel19-K" ), a -> fail( "cancelled body" ) );
+		waiting.cancellation = org.junit.platform.engine.CancellationToken.create();
+		waiting.preview = preview;
+		waiting.beforeAdvance = advancing::countDown;
+		Throwable primary = null;
+		try {
+			holder.start();
+			await( held );
+			waiting.start();
+			await( waiting.prepared );
+			await( advancing );
+			waiting.cancellation.cancel();
+			waiting.execution.get( 2, TimeUnit.SECONDS );
+			waiting.awaitCompletion();
+			assertEquals( 1, release.getCount(), "token alone, not holder completion" );
+			assertEquals( List.of(), holder.finished );
+			assertEquals( 1, holder.bodies.get() );
+			assertEquals( List.of(), waiting.registered );
+			assertEquals( 0, waiting.bodies.get() );
+			assertNotNull( waiting.handle.status().cause() );
+			assertFalse( waiting.failures.isEmpty(), "stopped enumeration is not success" );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			// Withdraw every waiter before freeing the holder, even on primary failure.
+			try {
+				if( primary != null )
+					waiting.stop( primary );
+			}
+			catch( Throwable cleanup ) {
+				if( cleanup != primary )
+					primary.addSuppressed( cleanup );
+			}
+			finally {
+				release.countDown();
+				Throwable failure = primary;
+				for( Run run : new Run[] { holder, waiting } ) {
+					try {
+						if( run.execution != null )
+							run.awaitCompletion();
+					}
+					catch( Throwable cleanup ) {
+						if( failure == null )
+							failure = cleanup;
+						else if( failure != cleanup )
+							failure.addSuppressed( cleanup );
+					}
+				}
+				if( primary == null && failure != null ) {
+					if( failure instanceof Exception )
+						throw (Exception) failure;
+					throw (Error) failure;
+				}
+			}
+		}
+		holder.finish();
+	}
+
+	/**
+	 * Cancellation after native start but before Flow entry takes the genuine
+	 * wrapper abort path, even after enumeration has left its readiness query.
+	 *
+	 * @throws Exception If the actual Launcher fails to drain
+	 */
+	@Test
+	void rawNativeTokenAbortsHeldPreBodyAfterEnumerationCloses() throws Exception {
+		CountDownLatch held = new CountDownLatch( 1 );
+		CountDownLatch proceed = new CountDownLatch( 1 );
+		CountDownLatch enumerated = new CountDownLatch( 1 );
+		Run run = new Run( true, List.of( flow( "token pre-body" ) ),
+				r -> r.resources( "K", f -> true, "cancel19-prebody" ), a -> {
+				} );
+		run.cancellation = org.junit.platform.engine.CancellationToken.create();
+		run.beforeBody = () -> {
+			held.countDown();
+			await( proceed );
+		};
+		run.returning = () -> run.liveStream.onClose( enumerated::countDown );
+		Throwable primary = null;
+		try {
+			run.start();
+			await( held );
+			await( enumerated );
+			run.cancellation.cancel();
+			assertNull( run.handle.status().cause(), "no query during blocked interceptor/native join" );
+			proceed.countDown();
+			run.awaitCompletion();
+			assertEquals( 0, run.bodies.get() );
+			assertEquals( 1, run.getSummary().getTestsStartedCount() );
+			assertEquals( 1, run.getSummary().getTestsAbortedCount() );
+			assertEquals( 0, run.getSummary().getTestsSkippedCount() );
+			assertEquals( 0, run.getSummary().getTestsSucceededCount() );
+			assertNotNull( run.handle.status().cause() );
+			assertEquals( 0, run.handle.status().owners() );
+			assertEquals( 1, run.closes.get() );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			try {
+				if( primary != null )
+					run.stop( primary );
+			}
+			catch( Throwable cleanup ) {
+				if( cleanup != primary )
+					primary.addSuppressed( cleanup );
+			}
+			finally {
+				proceed.countDown();
+				try {
+					run.awaitCompletion();
+				}
+				catch( Throwable cleanup ) {
+					if( primary == null )
+						throw cleanup;
+					if( cleanup != primary )
+						primary.addSuppressed( cleanup );
+				}
+			}
+		}
+	}
+
+	/**
 	 * Jupiter cancellation can skip a registered child without invoking its
 	 * wrapper. The skip is actual native evidence, not an invented ABORTED
 	 * terminal.
@@ -2361,6 +2508,7 @@ class NativeResourceAdmissionTest {
 	 */
 	static final class Run extends SummaryGeneratingListener {
 		private org.junit.platform.engine.CancellationToken cancellation;
+		private boolean preview;
 		private boolean observed;
 		final String id = "resource-run-" + IDS.incrementAndGet();
 		final boolean parallel;
@@ -2451,11 +2599,15 @@ class NativeResourceAdmissionTest {
 				try( session ) {
 					if( cancellation == null )
 						session.getLauncher().execute( request, this );
-					else
-						session.getLauncher()
-								.execute( org.junit.platform.launcher.core.LauncherExecutionRequestBuilder
-										.request( request ).cancellationToken( cancellation ).listeners( this )
-										.build() );
+					else {
+						var builder = preview
+								? org.junit.platform.launcher.core.LauncherExecutionRequestBuilder
+										.request( session.getLauncher().discover( request ) )
+								: org.junit.platform.launcher.core.LauncherExecutionRequestBuilder
+										.request( request );
+						session.getLauncher().execute( builder.cancellationToken( cancellation )
+								.listeners( this ).build() );
+					}
 				}
 				finally {
 					RUNS.remove( id );
