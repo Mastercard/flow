@@ -804,13 +804,12 @@ abstract class FlowProcessor {
 
 	private void report( Consumer<Writer> data, boolean error ) {
 		if( config.reporting.writing() ) {
-			Path testDir = null;
 			Path reportDir = null;
 			if( report == null ) {
 
 				String testTitle = config.title;
 
-				testDir = Paths.get( AssertionOptions.ARTIFACT_DIR.value(), config.reportPath );
+				Path testDir = Paths.get( AssertionOptions.ARTIFACT_DIR.value(), config.reportPath );
 
 				// work out what the report directory should be called
 				String name = AssertionOptions.REPORT_NAME.value();
@@ -830,46 +829,18 @@ abstract class FlowProcessor {
 
 				reportDir = testDir.resolve( name );
 
-				report = new Writer( config.model.title(), testTitle, reportDir );
+				Path latest = testDir.resolve( "latest" );
+				report = new Writer( config.model.title(), testTitle, reportDir,
+						Writer.Indexing.IMMEDIATE, latest );
+				if( !"latest".equals( reportDir.getFileName().toString() ) ) {
+					report.onClose( path -> linkLatest( latest, path ) );
+				}
 			}
 
 			data.accept( report );
 
-			if( testDir != null && reportDir != null ) {
-				// We've just created a new report! We should:
-
-				// if required, create a predictably-named link to it
-				if( !"latest".equals( reportDir.getFileName().toString() ) ) {
-					try {
-						Path linkPath = testDir.resolve( "latest" );
-						boolean shouldLink;
-						// we want to delete an existing symlink, but avoid changing any other kind of
-						// file that might exist at that path
-						if( Files.exists( linkPath, LinkOption.NOFOLLOW_LINKS ) ) {
-							if( Files.isSymbolicLink( linkPath ) ) {
-								Files.delete( linkPath );
-								shouldLink = true;
-							}
-							else {
-								shouldLink = false;
-							}
-						}
-						else {
-							shouldLink = true;
-						}
-
-						if( shouldLink ) {
-							Files.createSymbolicLink( linkPath, linkPath.getParent().relativize( reportDir ) );
-						}
-					}
-					catch( @SuppressWarnings("unused") IOException ioe ) {
-						// The symlink to the latest report is a nice-to-have. Some platforms (e.g.:
-						// windows) restrict the ability to create symlinks so we can't count on it
-						// working.
-					}
-				}
-
-				// also, if appropriate, open a browser to it
+			if( reportDir != null ) {
+				// We've just created a new report: if appropriate, open a browser to it.
 				if( config.reporting.shouldOpen( error ) ) {
 					if( AssertionOptions.DUCT.isTrue() ) {
 						// if you've traced a ClassNotFoundException or NoClassDefFoundError to here,
@@ -881,6 +852,37 @@ abstract class FlowProcessor {
 					}
 				}
 			}
+		}
+	}
+
+	private static void linkLatest( Path linkPath, Path reportDir ) {
+		try {
+			// Writer supplies a canonical report path; resolve only the link's parent
+			// so relative targets also work through an aliased artifact directory.
+			linkPath = linkPath.getParent().toRealPath().resolve( linkPath.getFileName() );
+			boolean shouldLink;
+			// Ordinary files and directories at latest may be user-owned.
+			if( Files.exists( linkPath, LinkOption.NOFOLLOW_LINKS ) ) {
+				if( Files.isSymbolicLink( linkPath ) ) {
+					Files.delete( linkPath );
+					shouldLink = true;
+				}
+				else {
+					shouldLink = false;
+				}
+			}
+			else {
+				shouldLink = true;
+			}
+
+			if( shouldLink ) {
+				Files.createSymbolicLink( linkPath, linkPath.getParent().relativize( reportDir ) );
+			}
+		}
+		catch( @SuppressWarnings("unused") IOException ioe ) {
+			// The symlink to the latest report is a nice-to-have. Some platforms (e.g.:
+			// windows) restrict the ability to create symlinks so we can't count on it
+			// working.
 		}
 	}
 

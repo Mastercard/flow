@@ -44,6 +44,7 @@ import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.data.Entry;
 import com.mastercard.test.flow.report.data.FlowData;
 import com.mastercard.test.flow.report.data.Index;
+import com.mastercard.test.flow.util.Option.Temporary;
 
 /**
  * Exercises the generic functionality of {@link AbstractFlocessor} via the
@@ -51,6 +52,27 @@ import com.mastercard.test.flow.report.data.Index;
  */
 @SuppressWarnings("static-method")
 class AbstractFlocessorTest {
+
+	@Test
+	void scopedCompletionAllowsReportReuseAfterRepeatedExecution() {
+		try( Temporary name = AssertionOptions.REPORT_NAME.temporarily( "reused" ) ) {
+			for( int run = 0; run < 2; run++ ) {
+				try( TestFlocessor tf = new TestFlocessor( "scoped completion", TestModel.abc() )
+						.system( State.LESS, B ).reporting( Reporting.QUIETLY, "scoped-completion" )
+						.behaviour( a -> a.actual().response( a.expected().response().content() ) ) ) {
+					tf.execute();
+					assertEquals( "abc [] SUCCESS", tf.results() );
+					Reader report = new Reader( tf.report() );
+					assertEquals( Set.of( "PASS" ), report.read().entries.get( 0 ).tags );
+					tf.behaviour( a -> {
+					} );
+					tf.execute();
+					assertEquals( "abc [] SKIP", tf.results() );
+					assertTrue( report.read().entries.get( 0 ).tags.contains( "SKIP" ) );
+				}
+			}
+		}
+	}
 
 	/**
 	 * Completion is terminal even when there is no execution or report to finish.
@@ -115,25 +137,27 @@ class AbstractFlocessorTest {
 	 */
 	@Test
 	void noBehaviour() {
-		TestFlocessor tf = new TestFlocessor( "noBehaviour", TestModel.abc() )
+		try( TestFlocessor tf = new TestFlocessor( "noBehaviour", TestModel.abc() )
 				.reporting( Reporting.QUIETLY )
-				.system( State.LESS, Actors.B );
+				.system( State.LESS, Actors.B ) ) {
 
-		tf.execute();
+			tf.execute();
 
-		assertEquals( "abc [] error No test behaviour specified", tf.events() );
+			assertEquals( "abc [] error No test behaviour specified", tf.events() );
 
-		// This is also recorded to the report
-		Reader r = new Reader( tf.report() );
-		Index index = r.read();
-		Entry ie = index.entries.get( 0 );
-		FlowData fd = r.detail( ie );
-		String msg = fd.logs.get( 0 ).message;
+			// This is also recorded to the report
+			Reader r = new Reader( tf.report() );
+			Index index = r.read();
+			Entry ie = index.entries.get( 0 );
+			FlowData fd = r.detail( ie );
+			String msg = fd.logs.get( 0 ).message;
 
-		assertTrue( ie.tags.contains( "ERROR" ), ie.tags.toString() );
-		assertTrue( fd.tags.contains( "ERROR" ), fd.tags.toString() );
-		assertEquals( "Encountered error: java.lang.IllegalStateException: No test behaviour specified",
-				msg.replaceAll( "\tat .*", "" ).trim() );
+			assertTrue( ie.tags.contains( "ERROR" ), ie.tags.toString() );
+			assertTrue( fd.tags.contains( "ERROR" ), fd.tags.toString() );
+			assertEquals(
+					"Encountered error: java.lang.IllegalStateException: No test behaviour specified",
+					msg.replaceAll( "\tat .*", "" ).trim() );
+		}
 	}
 
 	/**
@@ -168,31 +192,33 @@ class AbstractFlocessorTest {
 						events.add( "complete " + flow.meta().description() );
 					}
 				} );
-		List<Flow> selected;
-		try( Stream<Flow> flows = tf.flows() ) {
-			selected = flows.collect( Collectors.toList() );
+		try( tf ) {
+			List<Flow> selected;
+			try( Stream<Flow> flows = tf.flows() ) {
+				selected = flows.collect( Collectors.toList() );
+			}
+			assertEquals( 2, selected.size() );
+			assertTrue( events.isEmpty() );
+			assertNull( tf.report() );
+
+			tf.behaviour( a -> {
+				events.add( "first " + a.flow().meta().description() );
+				a.actual().response( a.expected().response().content() );
+			} );
+			tf.process( selected.get( 0 ) );
+			Reader report = new Reader( tf.report() );
+			assertEquals( 1, report.read().entries.size() );
+
+			tf.behaviour( a -> {
+				events.add( "second " + a.flow().meta().description() );
+				a.actual().response( a.expected().response().content() );
+			} );
+			tf.process( selected.get( 1 ) );
+			assertEquals( 2, report.read().entries.size() );
+			assertEquals( List.of( "first abc", "complete abc", "second child", "complete child" ),
+					events );
+			assertEquals( 2, tf.flows().count() );
 		}
-		assertEquals( 2, selected.size() );
-		assertTrue( events.isEmpty() );
-		assertNull( tf.report() );
-
-		tf.behaviour( a -> {
-			events.add( "first " + a.flow().meta().description() );
-			a.actual().response( a.expected().response().content() );
-		} );
-		tf.process( selected.get( 0 ) );
-		Reader report = new Reader( tf.report() );
-		assertEquals( 1, report.read().entries.size() );
-
-		tf.behaviour( a -> {
-			events.add( "second " + a.flow().meta().description() );
-			a.actual().response( a.expected().response().content() );
-		} );
-		tf.process( selected.get( 1 ) );
-		assertEquals( 2, report.read().entries.size() );
-		assertEquals( List.of( "first abc", "complete abc", "second child", "complete child" ),
-				events );
-		assertEquals( 2, tf.flows().count() );
 	}
 
 	/**
@@ -229,25 +255,27 @@ class AbstractFlocessorTest {
 							? "unexpected".getBytes( UTF_8 )
 							: a.expected().response().content() );
 				} );
-		tf.execute();
+		try( tf ) {
+			tf.execute();
 
-		assertEquals( "abc [] ERROR\ndef [] SUCCESS", tf.results() );
-		assertEquals( 2, evidence.size() );
-		// Legacy checkers receive the harvested assertions once per message type.
-		assertEquals( List.of( "abc", "abc" ), evidence.get( 0 ).stream()
-				.map( a -> a.flow().meta().description() ).collect( Collectors.toList() ) );
-		assertEquals( List.of( "def", "def" ), evidence.get( 1 ).stream()
-				.map( a -> a.flow().meta().description() ).collect( Collectors.toList() ) );
-		Reader report = new Reader( tf.report() );
-		Index index = report.read();
-		assertEquals( 2, index.entries.size() );
-		FlowData first = report.detail( index.entries.get( 0 ) );
-		FlowData second = report.detail( index.entries.get( 1 ) );
-		assertEquals( Set.of( "ERROR" ), first.tags );
-		assertTrue( first.logs.get( 0 ).message.contains( "checker failed" ) );
-		assertEquals( Set.of( "PASS" ), second.tags );
-		assertTrue( second.logs.isEmpty() );
-		assertEquals( "B response to A", second.root.response.full.actual );
+			assertEquals( "abc [] ERROR\ndef [] SUCCESS", tf.results() );
+			assertEquals( 2, evidence.size() );
+			// Legacy checkers receive the harvested assertions once per message type.
+			assertEquals( List.of( "abc", "abc" ), evidence.get( 0 ).stream()
+					.map( a -> a.flow().meta().description() ).collect( Collectors.toList() ) );
+			assertEquals( List.of( "def", "def" ), evidence.get( 1 ).stream()
+					.map( a -> a.flow().meta().description() ).collect( Collectors.toList() ) );
+			Reader report = new Reader( tf.report() );
+			Index index = report.read();
+			assertEquals( 2, index.entries.size() );
+			FlowData first = report.detail( index.entries.get( 0 ) );
+			FlowData second = report.detail( index.entries.get( 1 ) );
+			assertEquals( Set.of( "ERROR" ), first.tags );
+			assertTrue( first.logs.get( 0 ).message.contains( "checker failed" ) );
+			assertEquals( Set.of( "PASS" ), second.tags );
+			assertTrue( second.logs.isEmpty() );
+			assertEquals( "B response to A", second.root.response.full.actual );
+		}
 	}
 
 	/**
@@ -312,25 +340,28 @@ class AbstractFlocessorTest {
 								.response( a.expected().response().content() );
 					}
 				} );
-		tf.execute();
+		try( tf ) {
+			tf.execute();
 
-		assertEquals( "producer [] UNEXPECTED\nsink [] SUCCESS", tf.results() );
-		assertEquals( List.of( "producer", "sink" ), bodies );
-		if( reporting == Reporting.NEVER ) {
-			assertEquals( List.of( "request actual-request" ), publications );
-			assertEquals( List.of( "sink" ), completed );
-			assertEquals( 3, tf.events().lines().filter( l -> l.startsWith( "COMPARE" ) ).count() );
-			assertNull( tf.report() );
-		}
-		else {
-			assertEquals( List.of( "request actual-request", "response actual-response" ), publications );
-			assertEquals( List.of( "producer", "sink" ), completed );
-			assertEquals( 4, tf.events().lines().filter( l -> l.startsWith( "COMPARE" ) ).count() );
-			Reader report = new Reader( tf.report() );
-			Index index = report.read();
-			assertEquals( 2, index.entries.size() );
-			assertEquals( Set.of( "FAIL" ), report.detail( index.entries.get( 0 ) ).tags );
-			assertEquals( Set.of( "PASS" ), report.detail( index.entries.get( 1 ) ).tags );
+			assertEquals( "producer [] UNEXPECTED\nsink [] SUCCESS", tf.results() );
+			assertEquals( List.of( "producer", "sink" ), bodies );
+			if( reporting == Reporting.NEVER ) {
+				assertEquals( List.of( "request actual-request" ), publications );
+				assertEquals( List.of( "sink" ), completed );
+				assertEquals( 3, tf.events().lines().filter( l -> l.startsWith( "COMPARE" ) ).count() );
+				assertNull( tf.report() );
+			}
+			else {
+				assertEquals( List.of( "request actual-request", "response actual-response" ),
+						publications );
+				assertEquals( List.of( "producer", "sink" ), completed );
+				assertEquals( 4, tf.events().lines().filter( l -> l.startsWith( "COMPARE" ) ).count() );
+				Reader report = new Reader( tf.report() );
+				Index index = report.read();
+				assertEquals( 2, index.entries.size() );
+				assertEquals( Set.of( "FAIL" ), report.detail( index.entries.get( 0 ) ).tags );
+				assertEquals( Set.of( "PASS" ), report.detail( index.entries.get( 1 ) ).tags );
+			}
 		}
 	}
 
@@ -384,27 +415,28 @@ class AbstractFlocessorTest {
 	 */
 	@Test
 	void emptyTest() {
-		TestFlocessor tf = new TestFlocessor( "emptyTest", TestModel.abc() )
+		try( TestFlocessor tf = new TestFlocessor( "emptyTest", TestModel.abc() )
 				.system( State.FUL, B )
 				.reporting( Reporting.QUIETLY )
 				.behaviour( assrt -> {
 					// no assertions!
-				} );
+				} ) ) {
 
-		tf.execute();
+			tf.execute();
 
-		assertEquals( "SKIP No assertions made", tf.events() );
+			assertEquals( "SKIP No assertions made", tf.events() );
 
-		// This is also recorded to the report
-		Reader r = new Reader( tf.report() );
-		Index index = r.read();
-		Entry ie = index.entries.get( 0 );
-		FlowData fd = r.detail( ie );
-		String msg = fd.logs.get( 0 ).message;
+			// This is also recorded to the report
+			Reader r = new Reader( tf.report() );
+			Index index = r.read();
+			Entry ie = index.entries.get( 0 );
+			FlowData fd = r.detail( ie );
+			String msg = fd.logs.get( 0 ).message;
 
-		assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
-		assertTrue( fd.tags.contains( "SKIP" ), fd.tags.toString() );
-		assertEquals( "No assertions made", msg );
+			assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
+			assertTrue( fd.tags.contains( "SKIP" ), fd.tags.toString() );
+			assertEquals( "No assertions made", msg );
+		}
 	}
 
 	/**
@@ -414,32 +446,33 @@ class AbstractFlocessorTest {
 	 */
 	@Test
 	void failedBasis() {
-		TestFlocessor tf = new TestFlocessor( "failedBasis", TestModel.abcWithChild() )
+		try( TestFlocessor tf = new TestFlocessor( "failedBasis", TestModel.abcWithChild() )
 				.system( State.FUL, B )
 				.reporting( Reporting.QUIETLY )
 				.behaviour( assrt -> {
 					assrt.actual().response( "fail!".getBytes( UTF_8 ) );
-				} );
-		tf.execute();
+				} ) ) {
+			tf.execute();
 
-		assertEquals( copypasta(
-				"COMPARE abc []",
-				"com.mastercard.test.flow.assrt.TestModel.abcWithChild(TestModel.java:_) A->B [] response",
-				" | B response to A | fail! |",
-				"",
-				"SKIP Ancestor failed" ),
-				copypasta( tf.events() ) );
+			assertEquals( copypasta(
+					"COMPARE abc []",
+					"com.mastercard.test.flow.assrt.TestModel.abcWithChild(TestModel.java:_) A->B [] response",
+					" | B response to A | fail! |",
+					"",
+					"SKIP Ancestor failed" ),
+					copypasta( tf.events() ) );
 
-		// This is also recorded to the report
-		Reader r = new Reader( tf.report() );
-		Index index = r.read();
-		Entry ie = index.entries.get( 1 );
-		FlowData fd = r.detail( ie );
-		String msg = fd.logs.get( 0 ).message;
+			// This is also recorded to the report
+			Reader r = new Reader( tf.report() );
+			Index index = r.read();
+			Entry ie = index.entries.get( 1 );
+			FlowData fd = r.detail( ie );
+			String msg = fd.logs.get( 0 ).message;
 
-		assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
-		assertTrue( fd.tags.contains( "SKIP" ), fd.tags.toString() );
-		assertEquals( "Skipping flow: Ancestor failed", msg );
+			assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
+			assertTrue( fd.tags.contains( "SKIP" ), fd.tags.toString() );
+			assertEquals( "Skipping flow: Ancestor failed", msg );
+		}
 	}
 
 	/**
@@ -447,29 +480,30 @@ class AbstractFlocessorTest {
 	 */
 	@Test
 	void failedDependency() {
-		TestFlocessor tf = new TestFlocessor( "failedDependency", TestModel.abcWithDependency() )
+		try( TestFlocessor tf = new TestFlocessor( "failedDependency", TestModel.abcWithDependency() )
 				.system( State.FUL, B )
 				.reporting( Reporting.QUIETLY )
 				.behaviour( assrt -> {
 					throw new RuntimeException( "kaboom!" );
-				} );
-		tf.execute();
+				} ) ) {
+			tf.execute();
 
-		assertEquals( copypasta(
-				"dependency [] error kaboom!",
-				"SKIP Missing dependency" ),
-				copypasta( tf.events() ) );
+			assertEquals( copypasta(
+					"dependency [] error kaboom!",
+					"SKIP Missing dependency" ),
+					copypasta( tf.events() ) );
 
-		// This is also recorded to the report
-		Reader r = new Reader( tf.report() );
-		Index index = r.read();
-		Entry ie = index.entries.get( 1 );
-		FlowData fd = r.detail( ie );
-		String msg = fd.logs.get( 0 ).message;
+			// This is also recorded to the report
+			Reader r = new Reader( tf.report() );
+			Index index = r.read();
+			Entry ie = index.entries.get( 1 );
+			FlowData fd = r.detail( ie );
+			String msg = fd.logs.get( 0 ).message;
 
-		assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
-		assertTrue( fd.tags.contains( "SKIP" ), fd.tags.toString() );
-		assertEquals( "Skipping flow: Missing dependency", msg );
+			assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
+			assertTrue( fd.tags.contains( "SKIP" ), fd.tags.toString() );
+			assertEquals( "Skipping flow: Missing dependency", msg );
+		}
 	}
 
 	/**
@@ -498,30 +532,31 @@ class AbstractFlocessorTest {
 	 */
 	@Test
 	void missingImplicit() {
-		TestFlocessor tf = new TestFlocessor( "missingImplicit", TestModel.abcWithImplicit() )
+		try( TestFlocessor tf = new TestFlocessor( "missingImplicit", TestModel.abcWithImplicit() )
 				.system( State.FUL, B )
 				.reporting( Reporting.QUIETLY )
 				.behaviour( assrt -> {
 					assrt.actual().response( assrt.expected().response().content() );
-				} );
-		tf.execute();
+				} ) ) {
+			tf.execute();
 
-		assertEquals( copypasta(
-				"SKIP Implicitly depends on D, which is not part of the system under test" ),
-				copypasta( tf.events() ) );
+			assertEquals( copypasta(
+					"SKIP Implicitly depends on D, which is not part of the system under test" ),
+					copypasta( tf.events() ) );
 
-		// This is also recorded to the report
-		Reader r = new Reader( tf.report() );
-		Index index = r.read();
-		Entry ie = index.entries.get( 0 );
-		FlowData fd = r.detail( ie );
-		String msg = fd.logs.get( 0 ).message;
+			// This is also recorded to the report
+			Reader r = new Reader( tf.report() );
+			Index index = r.read();
+			Entry ie = index.entries.get( 0 );
+			FlowData fd = r.detail( ie );
+			String msg = fd.logs.get( 0 ).message;
 
-		assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
-		assertTrue( fd.tags.contains( "SKIP" ), fd.tags.toString() );
-		assertEquals( "Skipping flow: "
-				+ "Implicitly depends on D, which is not part of the system under test",
-				msg );
+			assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
+			assertTrue( fd.tags.contains( "SKIP" ), fd.tags.toString() );
+			assertEquals( "Skipping flow: "
+					+ "Implicitly depends on D, which is not part of the system under test",
+					msg );
+		}
 	}
 
 	/**

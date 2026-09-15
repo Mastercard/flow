@@ -44,6 +44,13 @@ import com.mastercard.test.flow.util.Bytes;
 
 /**
  * For writing a new report
+ * <p>
+ * Every writer claims its canonical destination before replacement and retains
+ * ownership until close, including immediate writers. Cooperating writers
+ * reject overlapping ancestor/descendant destinations. Callers must not remove
+ * claim files or change filesystem aliases while writers are active; claims do
+ * not protect against noncooperating deletion or replacement.
+ * </p>
  */
 public class Writer implements AutoCloseable {
 
@@ -95,6 +102,8 @@ public class Writer implements AutoCloseable {
 	private final String modelTitle;
 	private final String testTitle;
 	private final Path root;
+	private final Path requestedRoot;
+	private final ReportClaim claim;
 	private final Map<Flow, IndexedFlowData> data = new LinkedHashMap<>();
 	private final Map<String, IndexedFlowData> detailOwners = new HashMap<>();
 	private final JsApp app;
@@ -103,6 +112,7 @@ public class Writer implements AutoCloseable {
 	private State state = State.OPEN;
 	private Throwable failure;
 	private boolean updating;
+	private Consumer<Path> publication;
 
 	private enum State {
 		OPEN, FINALIZING, CLOSED, FAILED
@@ -137,18 +147,53 @@ public class Writer implements AutoCloseable {
 	 * @param testTitle  Test title
 	 * @param root       Report destination
 	 * @param indexing   Index publication policy
+	 * @param latest     Advertisement location, named latest; null uses a sibling
+	 *                   of the canonical destination. Its parent is canonicalized,
+	 *                   not the advertisement's target. No link is created
+	 *                   automatically.
+	 */
+	public Writer( String modelTitle, String testTitle, Path root, Indexing indexing, Path latest ) {
+		this( modelTitle, testTitle, root, indexing, new ReportFiles(), latest );
+	}
+
+	/**
+	 * @param modelTitle Model title
+	 * @param testTitle  Test title
+	 * @param root       Report destination
+	 * @param indexing   Index publication policy
 	 * @param files      Payload filesystem operations
 	 */
 	Writer( String modelTitle, String testTitle, Path root, Indexing indexing, ReportFiles files ) {
+		this( modelTitle, testTitle, root, indexing, files, null );
+	}
+
+	/**
+	 * @param modelTitle Model title
+	 * @param testTitle  Test title
+	 * @param root       Report destination
+	 * @param indexing   Index publication policy
+	 * @param files      Payload filesystem operations
+	 * @param latest     Advertisement location known before replacement; null uses
+	 *                   a sibling
+	 */
+	Writer( String modelTitle, String testTitle, Path root, Indexing indexing, ReportFiles files,
+			Path latest ) {
 		this.modelTitle = modelTitle;
 		this.testTitle = testTitle;
-		this.root = root;
+		requestedRoot = root;
 		this.indexing = Objects.requireNonNull( indexing, "indexing" );
 		this.files = Objects.requireNonNull( files, "files" );
-		// delete whatever might be there already
-		QuietFiles.recursiveDelete( root );
-		// write static content
-		app = new JsApp( "/com/mastercard/test/flow/report", root.resolve( "res" ), files );
+		claim = new ReportClaim( root, latest );
+		this.root = claim.root();
+		try {
+			claim.withdrawLatest();
+			files.clear( this.root );
+			app = new JsApp( "/com/mastercard/test/flow/report", this.root.resolve( "res" ), files );
+		}
+		catch( RuntimeException | Error e ) {
+			releaseAfterFailure( e );
+			throw e;
+		}
 	}
 
 	/**
@@ -339,16 +384,43 @@ public class Writer implements AutoCloseable {
 	}
 
 	/**
+	 * Registers one synchronous publication action for successful finalization. It
+	 * runs inside close, with destination ownership retained, before release. The
+	 * action must finish its use before returning and must not wait for another
+	 * thread to use this writer. A thrown failure is latched and is not retried.
+	 * Publication actions use a nonblocking filesystem claim; a busy claim fails
+	 * reporting rather than invoking the action. Actions advertising latest must
+	 * use the location supplied at construction (a sibling by default), preserve
+	 * unrelated references and ordinary files, and handle their own partial side
+	 * effects.
+	 *
+	 * @param action Receives the canonical report destination
+	 * @return This writer
+	 */
+	public synchronized Writer onClose( Consumer<Path> action ) {
+		requireOpen();
+		if( publication != null ) {
+			throw new IllegalStateException( "Publication action already registered" );
+		}
+		publication = Objects.requireNonNull( action, "action" );
+		return this;
+	}
+
+	/**
 	 * Completes this report. Final-only indexes are closed in a same-directory
 	 * temporary file before an atomic move, with no non-atomic fallback. A
 	 * successful repeated close does nothing; further updates are rejected. After
 	 * an update or publication fails, subsequent close/update calls throw an
-	 * exception whose cause is the original failure, without retrying IO.
+	 * exception whose cause is the original failure, without retrying IO. Failed
+	 * close disposes safely releasable ownership without declaring success.
 	 */
 	@Override
 	public synchronized void close() {
 		if( state == State.CLOSED ) {
 			return;
+		}
+		if( state == State.FAILED ) {
+			releaseAfterFailure( failure );
 		}
 		requireOpen();
 		state = State.FINALIZING;
@@ -357,12 +429,28 @@ public class Writer implements AutoCloseable {
 				correctFinalLinks();
 				publishIndex();
 			}
+			if( publication != null ) {
+				try( ReportClaim advertisement = claim.publication() ) {
+					publication.accept( root );
+				}
+			}
+			claim.close();
 			state = State.CLOSED;
 		}
 		catch( RuntimeException | Error e ) {
 			state = State.FAILED;
 			failure = e;
+			releaseAfterFailure( e );
 			throw e;
+		}
+	}
+
+	private void releaseAfterFailure( Throwable problem ) {
+		try {
+			claim.close();
+		}
+		catch( RuntimeException | Error cleanup ) {
+			problem.addSuppressed( cleanup );
 		}
 	}
 
@@ -403,7 +491,7 @@ public class Writer implements AutoCloseable {
 	 * @return The path to the report directory
 	 */
 	public Path path() {
-		return root;
+		return requestedRoot;
 	}
 
 	/**

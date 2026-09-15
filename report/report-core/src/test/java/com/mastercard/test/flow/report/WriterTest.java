@@ -52,15 +52,16 @@ class WriterTest {
 	 */
 	@Test
 	void missingBasesSnapshot( @TempDir Path dir ) {
-		Writer writer = new Writer( "model", "test", dir ).with( Mdl.CHILD );
-		Map<Flow, List<Flow>> snapshot = writer.missingBases();
-		writer.with( Mdl.BASIS );
+		try( Writer writer = new Writer( "model", "test", dir ).with( Mdl.CHILD ) ) {
+			Map<Flow, List<Flow>> snapshot = writer.missingBases();
+			writer.with( Mdl.BASIS );
 
-		assertEquals( List.of( Mdl.BASIS ), snapshot.get( Mdl.CHILD ) );
-		Assertions.assertTrue( writer.missingBases().isEmpty() );
-		Assertions.assertThrows( UnsupportedOperationException.class, snapshot::clear );
-		Assertions.assertThrows( UnsupportedOperationException.class,
-				() -> snapshot.get( Mdl.CHILD ).clear() );
+			assertEquals( List.of( Mdl.BASIS ), snapshot.get( Mdl.CHILD ) );
+			Assertions.assertTrue( writer.missingBases().isEmpty() );
+			Assertions.assertThrows( UnsupportedOperationException.class, snapshot::clear );
+			Assertions.assertThrows( UnsupportedOperationException.class,
+					() -> snapshot.get( Mdl.CHILD ).clear() );
+		}
 	}
 
 	/**
@@ -117,6 +118,7 @@ class WriterTest {
 			release.countDown();
 			workers.shutdownNow();
 			Assertions.assertTrue( workers.awaitTermination( 10, TimeUnit.SECONDS ) );
+			writer.close();
 		}
 	}
 
@@ -161,8 +163,7 @@ class WriterTest {
 		QuietFiles.write( dir.resolve( "pre-existing-file.txt" ),
 				"This will be deleted".getBytes( UTF_8 ) );
 
-		try {
-			Writer w = writeReport( dir );
+		try( Writer w = writeReport( dir ) ) {
 			assertEquals( "target/WriterTest/write", w.path().toString().replace( '\\', '/' ) );
 		}
 		catch( IllegalStateException ise ) {
@@ -312,46 +313,47 @@ class WriterTest {
 		Path dir = Paths.get( "target", "WriterTest", "chunkLoadingPath" );
 
 		Files.createDirectories( dir );
-		Writer w = writeReport( dir );
+		try( Writer w = writeReport( dir ) ) {
 
-		Path runtimeFile = QuietFiles.list( w.path().resolve( "res" ) )
-				.filter( p -> p.getFileName().toString()
-						.matches( "runtime\\.[0-9a-f]+\\.js" ) )
-				.findAny()
-				.orElseThrow( () -> new IllegalStateException(
-						"Failed to find runtime.<hash>.js file in " + w.path() ) );
+			Path runtimeFile = QuietFiles.list( w.path().resolve( "res" ) )
+					.filter( p -> p.getFileName().toString()
+							.matches( "runtime\\.[0-9a-f]+\\.js" ) )
+					.findAny()
+					.orElseThrow( () -> new IllegalStateException(
+							"Failed to find runtime.<hash>.js file in " + w.path() ) );
 
-		// The file that was written in the report
-		String written = new String( QuietFiles.readAllBytes( runtimeFile ), UTF_8 );
-		// The resource that was generated in report-ng
-		String resource = resource( runtimeFile.getFileName().toString() );
+			// The file that was written in the report
+			String written = new String( QuietFiles.readAllBytes( runtimeFile ), UTF_8 );
+			// The resource that was generated in report-ng
+			String resource = resource( runtimeFile.getFileName().toString() );
 
-		// let's examine the changes that we've made to the runtime file
-		Patch<String> patch = DiffUtils.diffInline( resource, written );
+			// let's examine the changes that we've made to the runtime file
+			Patch<String> patch = DiffUtils.diffInline( resource, written );
 
-		assertEquals( 1, patch.getDeltas().size(),
-				"edit count" );
-		AbstractDelta<String> delta = patch.getDeltas().get( 0 );
-		assertEquals( DeltaType.INSERT, delta.getType(),
-				"edit type" );
-		assertEquals( "[\"res/\"+]", delta.getTarget().getLines().toString(),
-				"inserted lines count" );
+			assertEquals( 1, patch.getDeltas().size(),
+					"edit count" );
+			AbstractDelta<String> delta = patch.getDeltas().get( 0 );
+			assertEquals( DeltaType.INSERT, delta.getType(),
+					"edit type" );
+			assertEquals( "[\"res/\"+]", delta.getTarget().getLines().toString(),
+					"inserted lines count" );
 
-		int context = 14;
-		String before = resource.substring(
-				delta.getSource().getPosition() - context,
-				delta.getSource().getPosition() + context )
-				.replaceAll( "\\d", "#" );
-		String after = written.substring(
-				delta.getTarget().getPosition() - context,
-				delta.getTarget().getPosition() + context
-						+ delta.getTarget().getLines().get( 0 ).length() )
-				.replaceAll( "\\d", "#" );
+			int context = 14;
+			String before = resource.substring(
+					delta.getSource().getPosition() - context,
+					delta.getSource().getPosition() + context )
+					.replaceAll( "\\d", "#" );
+			String after = written.substring(
+					delta.getTarget().getPosition() - context,
+					delta.getTarget().getPosition() + context
+							+ delta.getTarget().getLines().get( 0 ).length() )
+					.replaceAll( "\\d", "#" );
 
-		assertEquals( "),[])),a.u=e=>(###===e?\"comm",
-				before, "raw resource runtime snippet" );
-		assertEquals( "),[])),a.u=e=>\"res/\"+(###===e?\"comm",
-				after, "written runtime snippet" );
+			assertEquals( "),[])),a.u=e=>(###===e?\"comm",
+					before, "raw resource runtime snippet" );
+			assertEquals( "),[])),a.u=e=>\"res/\"+(###===e?\"comm",
+					after, "written runtime snippet" );
+		}
 	}
 
 	private static String resource( String name ) {
@@ -396,42 +398,43 @@ class WriterTest {
 
 		Path dir = Paths.get( "target", "WriterTest", "basisChaining" );
 
-		Writer writer = new Writer( "model", "test", dir );
-		Reader reader = new Reader( dir );
+		try( Writer writer = new Writer( "model", "test", dir ) ) {
+			Reader reader = new Reader( dir );
 
-		writer.with( zygote );
-		assertHierarchy( reader, ""
-				+ "zygote's basis is unknown basis:null",
-				"zygote has an ancestry, but none of them are in the report" );
-		assertWriterMissingBases( writer, ""
-				+ "zygote : [ junior, pops, gramps ]" );
+			writer.with( zygote );
+			assertHierarchy( reader, ""
+					+ "zygote's basis is unknown basis:null",
+					"zygote has an ancestry, but none of them are in the report" );
+			assertWriterMissingBases( writer, ""
+					+ "zygote : [ junior, pops, gramps ]" );
 
-		writer.with( pops );
-		assertHierarchy( reader, ""
-				+ "zygote's basis is pops\n"
-				+ "  pops's basis is unknown basis:null",
-				"An ancestor has been added, zygote is updated" );
-		assertWriterMissingBases( writer, ""
-				+ "  pops : [ gramps ]\n"
-				+ "zygote : [ junior ]" );
+			writer.with( pops );
+			assertHierarchy( reader, ""
+					+ "zygote's basis is pops\n"
+					+ "  pops's basis is unknown basis:null",
+					"An ancestor has been added, zygote is updated" );
+			assertWriterMissingBases( writer, ""
+					+ "  pops : [ gramps ]\n"
+					+ "zygote : [ junior ]" );
 
-		writer.with( gramps );
-		assertHierarchy( reader, ""
-				+ "zygote's basis is pops\n"
-				+ "  pops's basis is gramps\n"
-				+ "gramps's basis is unknown basis:null",
-				"A more distant ancestor has been added, no update" );
-		assertWriterMissingBases( writer, ""
-				+ "zygote : [ junior ]" );
+			writer.with( gramps );
+			assertHierarchy( reader, ""
+					+ "zygote's basis is pops\n"
+					+ "  pops's basis is gramps\n"
+					+ "gramps's basis is unknown basis:null",
+					"A more distant ancestor has been added, no update" );
+			assertWriterMissingBases( writer, ""
+					+ "zygote : [ junior ]" );
 
-		writer.with( junior );
-		assertHierarchy( reader, ""
-				+ "zygote's basis is junior\n"
-				+ "  pops's basis is gramps\n"
-				+ "gramps's basis is unknown basis:null\n"
-				+ "junior's basis is pops",
-				"The direct basis is added, zygote is updated again" );
-		assertWriterMissingBases( writer, "" );
+			writer.with( junior );
+			assertHierarchy( reader, ""
+					+ "zygote's basis is junior\n"
+					+ "  pops's basis is gramps\n"
+					+ "gramps's basis is unknown basis:null\n"
+					+ "junior's basis is pops",
+					"The direct basis is added, zygote is updated again" );
+			assertWriterMissingBases( writer, "" );
+		}
 	}
 
 	private void assertHierarchy( Reader reader, String expected, String comment ) {

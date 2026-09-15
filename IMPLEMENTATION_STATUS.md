@@ -10,6 +10,7 @@ authoritative; no frozen feasibility evidence or design decision was rewritten.
 | Tickets | Implementation | Evidence seam |
 | --- | --- | --- |
 | 01–03 | Serialized direct Writer updates/snapshots; explicit final-only index and atomic close; latched failures; final basis/dependency rename correction using serialized detail evidence | `WriterTest`, `WriterLifecycleTest`, `WriterPublicationTest`, `WriterFinalLinksTest`, `ReaderTest` |
+| 04 | Canonical filesystem destination claims; active ancestor/descendant protection; safe failure disposal/reuse; finalization-owned configured latest publication; explicit direct-caller completion | `WriterOwnershipTest`, `ReportingTest`, `ReportTestUtilTest`, existing caller and replay regressions; platform limits below |
 | 06 | Shared configuration and processor with invocation-local message/assertion/failure evidence; legacy fluent behavior retained | `AbstractFlocessorTest`, legacy JUnit 4 and Jupiter `MetaTest` |
 | 07 | `FlowTest` / model-free `FlowExecution` / `PreparedFlocessor`; frozen preparation and provider-free native serial consumption | `FlowExecutionTest`, `PreparedFlowLifecycleTest` through real Launcher |
 | 12 | Identity-visited prerequisite closure after filtering; retained bindings; hard and contracted-chain cycle rejection; valid in-flow bindings | `PrerequisiteSelectionTest`, `OrderTest`, `PreparedSelectionTest` |
@@ -27,7 +28,7 @@ Report-only failure classification and run-owned final-only activation are unfin
 
 ## Blocking work and unpassed gates
 
-### 04: legacy completion delivered; destination claims remain
+### 04: destination claims and explicit completion
 
 Both legacy adapters now implement `AutoCloseable`. Integrations retain their
 runner and close it in genuine `@AfterAll` / `@AfterClass` teardown after all
@@ -35,12 +36,46 @@ children. Completion rejects active processing without waiting, permanently
 prevents further processing, closes an existing Writer without lazy initialization,
 and keeps close failures observable. Prepared callers gain no public early-close API.
 
-This is the explicit lifecycle prerequisite approved by the user on 2026-09-15,
-not the destination-claim implementation. No last-test guess, factory/stream-return
-finalization, GC release or mode change was introduced. Missing completion will
-retain ownership. Canonical cooperating claims, alias/process collisions, retained
-ownership through advertisement and owned `latest` withdrawal remain next.
-Until then, different Writers require distinct non-overlapping paths.
+The lifecycle prerequisite approved on 2026-09-15 now supports mandatory Writer
+claims. No last-test guess, factory/stream-return finalization, GC release or mode
+change was introduced. Missing completion retains ownership. Existing reporting
+test callers now use explicit resource scopes without making the test helper's
+`execute()` terminal or changing its repeatable execution semantics.
+
+Claim files live outside each replaced tree. Canonical destination acquisition
+precedes ancestor probes and a one-time no-follow descendant scan. Pre-open file
+identity and post-probe linked-file validation address a delayed descendant whose
+sidecar an earlier ancestor removed; native Windows instead requires the public
+JDK 17 `NOSHARE_DELETE` option because its provider returns null file keys. Unknown
+identity/unsupported locks fail closed. Channel close owns lock release; uncertain
+close keeps its failure/local guard. Stale unlocked claim files permit reuse.
+
+One synchronous `Writer.onClose` action runs after successful finalization while
+destination and configured publication ownership remain held. The runner passes
+its actual `testDir/latest` before initialization, including nested explicit report
+names, and advertises only during completion. Existing immediate indexing and
+initial browse behavior remain; run-owned final-only activation is still ticket 23.
+Owned advertisements are withdrawn before replacement. An explicit output named
+`latest` is retained as an output access path, not mistaken for an advertisement.
+
+Final integrated checks: **211 cases, 194 passed, 17 skipped, zero failures/errors**
+on Java 17.0.19 / JUnit 6.0.3, with both test-skip flags disabled and the real 39
+frontend assets. Real process fixtures exercise same-path, nested, publication-parent
+and delayed-claim schedules. Windows delete/rename denial passed. Unlink-capable,
+symlink and physical-parent-alias cases remain conditionally skipped here; POSIX,
+network filesystems and uncertain-close fault injection are not runtime-verified.
+No noncooperating-writer, alias-mutation, crash-durability or recovery guarantee is
+made. Standards and specification review defects were corrected; final follow-up
+found no residual scoped source defect.
+
+Final clean-export documentation checks passed all **626 cases** (48 source links,
+48 snippets, 530 console-use checks); the generated masking-example anchor was
+refreshed. These are not a new full-reactor or cross-platform acceptance result.
+
+The original Swing failures also reproduced unchanged on the committed baseline.
+Native mouse events were blocked by a locked Windows session. After the user
+unlocked it, the unchanged six-case `FlowPanelTest` passed in full. No substitute
+button invocation, sleep, relaxed assertion or production GUI fix was introduced.
 
 Legacy-slice validation: 110 focused assertion cases passed; changed execution
 sources also compiled against JUnit 5.10 / Platform 1.10 and passed 62 core/legacy

@@ -124,7 +124,10 @@ class WriterPublicationTest {
 				super.publish( source, destination );
 			}
 		};
-		Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY, files );
+		Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY, files )
+				.onClose( path -> {
+					throw new AssertionError( "Failed output must not be advertised" );
+				} );
 		RuntimeException original;
 		if( fault == Fault.DETAIL ) {
 			original = assertThrows( RuntimeException.class, () -> writer.with( Mdl.BASIS ) );
@@ -141,6 +144,11 @@ class WriterPublicationTest {
 		assertFalse( Files.exists( dir.resolve( Writer.INDEX_FILE_NAME ) ) );
 		try( var paths = Files.list( dir ) ) {
 			assertFalse( paths.anyMatch( p -> p.getFileName().toString().endsWith( ".tmp" ) ) );
+		}
+		try( Writer replacement = new Writer( "model", "replacement", dir ) ) {
+			replacement.with( Mdl.CHILD );
+			assertSame( original, assertThrows( IllegalStateException.class, writer::close ).getCause() );
+			assertEquals( "replacement", new Reader( dir ).read().meta.testTitle );
 		}
 	}
 }

@@ -14,6 +14,13 @@ import java.nio.file.Path;
 class ReportFiles {
 
 	/**
+	 * @param root Inactive destination whose claim is held by the caller
+	 */
+	void clear( Path root ) {
+		QuietFiles.recursiveDelete( root );
+	}
+
+	/**
 	 * @param path File to create or replace
 	 * @return The output stream, whose owner must close it before publication
 	 * @throws IOException On filesystem failure

@@ -34,8 +34,9 @@ class FailuresTest extends AbstractFilterTest {
 				Writer.PASS_TAG ) );
 		Path report = Paths.get( "target", "mctf", "FailuresTest", "failures" );
 		QuietFiles.recursiveDelete( report );
-		Writer w = new Writer( "model", "test", report );
-		mdl.flows().forEach( f -> w.with( f, fd -> fd.tags.add( resultTags.removeFirst() ) ) );
+		try( Writer w = new Writer( "model", "test", report ) ) {
+			mdl.flows().forEach( f -> w.with( f, fd -> fd.tags.add( resultTags.removeFirst() ) ) );
+		}
 
 		new FilterCliHarness()
 				.expect( "tags are displayed", ""

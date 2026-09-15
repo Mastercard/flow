@@ -9,6 +9,9 @@ import static com.mastercard.test.flow.assrt.Reporting.QUIETLY;
 import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -17,17 +20,25 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mastercard.test.flow.Actor;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.report.Reader;
+import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.Entry;
 import com.mastercard.test.flow.report.data.FlowData;
 import com.mastercard.test.flow.report.data.Index;
@@ -77,20 +88,21 @@ class ReportingTest {
 	 */
 	@Test
 	void successTagging() {
-		TestFlocessor tf = new TestFlocessor( "successTagging", TestModel.abc() )
+		try( TestFlocessor tf = new TestFlocessor( "successTagging", TestModel.abc() )
 				.system( State.FUL, B )
 				.reporting( QUIETLY )
 				.behaviour( assrt -> {
 					assrt.actual().response( assrt.expected().response().content() );
-				} );
-		tf.execute();
+				} ) ) {
+			tf.execute();
 
-		Reader r = new Reader( tf.report() );
-		Index index = r.read();
-		Entry ie = index.entries.get( 0 );
-		assertTrue( ie.tags.contains( "PASS" ), ie.tags.toString() );
-		FlowData fd = r.detail( ie );
-		assertTrue( fd.tags.contains( "PASS" ), fd.tags.toString() );
+			Reader r = new Reader( tf.report() );
+			Index index = r.read();
+			Entry ie = index.entries.get( 0 );
+			assertTrue( ie.tags.contains( "PASS" ), ie.tags.toString() );
+			FlowData fd = r.detail( ie );
+			assertTrue( fd.tags.contains( "PASS" ), fd.tags.toString() );
+		}
 	}
 
 	/**
@@ -124,96 +136,97 @@ class ReportingTest {
 	 */
 	@Test
 	void failureReporting() throws Exception {
-		TestFlocessor tf = new TestFlocessor( "failureReporting", TestModel.abc() )
+		try( TestFlocessor tf = new TestFlocessor( "failureReporting", TestModel.abc() )
 				.system( State.FUL, B )
 				.reporting( QUIETLY )
 				.behaviour( assrt -> {
 					assrt.actual()
 							.request( "unexpected req content!".getBytes( UTF_8 ) )
 							.response( "unexpected res content!".getBytes( UTF_8 ) );
-				} );
-		tf.execute();
+				} ) ) {
+			tf.execute();
 
-		assertEquals( copypasta(
-				"COMPARE abc []",
-				"com.mastercard.test.flow.assrt.TestModel.abc(TestModel.java:_) A->B [] request",
-				" | A request to B | unexpected req content! |",
-				"",
-				"COMPARE abc []",
-				"com.mastercard.test.flow.assrt.TestModel.abc(TestModel.java:_) A->B [] response",
-				" | B response to A | unexpected res content! |" ),
-				copypasta( tf.events() ) );
+			assertEquals( copypasta(
+					"COMPARE abc []",
+					"com.mastercard.test.flow.assrt.TestModel.abc(TestModel.java:_) A->B [] request",
+					" | A request to B | unexpected req content! |",
+					"",
+					"COMPARE abc []",
+					"com.mastercard.test.flow.assrt.TestModel.abc(TestModel.java:_) A->B [] response",
+					" | B response to A | unexpected res content! |" ),
+					copypasta( tf.events() ) );
 
-		Reader r = new Reader( tf.report() );
-		Index index = r.read();
-		Entry ie = index.entries.get( 0 );
-		assertTrue( ie.tags.contains( "FAIL" ), ie.tags.toString() );
-		FlowData fd = r.detail( ie );
-		assertTrue( fd.tags.contains( "FAIL" ), fd.tags.toString() );
+			Reader r = new Reader( tf.report() );
+			Index index = r.read();
+			Entry ie = index.entries.get( 0 );
+			assertTrue( ie.tags.contains( "FAIL" ), ie.tags.toString() );
+			FlowData fd = r.detail( ie );
+			assertTrue( fd.tags.contains( "FAIL" ), fd.tags.toString() );
 
-		assertEquals( copypasta(
-				"{",
-				"  'requester' : 'A',",
-				"  'responder' : 'B',",
-				"  'tags' : [ ],",
-				"  'request' : {",
-				"    'full' : {",
-				"      'expect' : 'A request to B',",
-				"      'expectBytes' : 'QSByZXF1ZXN0IHRvIEI=',",
-				"      'actual' : 'unexpected req content!',",
-				"      'actualBytes' : 'dW5leHBlY3RlZCByZXEgY29udGVudCE='",
-				"    },",
-				"    'asserted' : {",
-				"      'expect' : 'A request to B',",
-				"      'actual' : 'unexpected req content!'",
-				"    }",
-				"  },",
-				"  'response' : {",
-				"    'full' : {",
-				"      'expect' : 'B response to A',",
-				"      'expectBytes' : 'QiByZXNwb25zZSB0byBB',",
-				"      'actual' : 'unexpected res content!',",
-				"      'actualBytes' : 'dW5leHBlY3RlZCByZXMgY29udGVudCE='",
-				"    },",
-				"    'asserted' : {",
-				"      'expect' : 'B response to A',",
-				"      'actual' : 'unexpected res content!'",
-				"    }",
-				"  },",
-				"  'children' : [ {",
-				"    'requester' : 'B',",
-				"    'responder' : 'C',",
-				"    'tags' : [ ],",
-				"    'request' : {",
-				"      'full' : {",
-				"        'expect' : 'B request to C',",
-				"        'expectBytes' : 'QiByZXF1ZXN0IHRvIEM=',",
-				"        'actual' : null,",
-				"        'actualBytes' : null",
-				"      },",
-				"      'asserted' : {",
-				"        'expect' : null,",
-				"        'actual' : null",
-				"      }",
-				"    },",
-				"    'response' : {",
-				"      'full' : {",
-				"        'expect' : 'C response to B',",
-				"        'expectBytes' : 'QyByZXNwb25zZSB0byBC',",
-				"        'actual' : null,",
-				"        'actualBytes' : null",
-				"      },",
-				"      'asserted' : {",
-				"        'expect' : null,",
-				"        'actual' : null",
-				"      }",
-				"    },",
-				"    'children' : [ ]",
-				"  } ]",
-				"}" ),
-				copypasta( new ObjectMapper()
-						.enable( INDENT_OUTPUT )
-						.writeValueAsString( fd.root ) ) );
+			assertEquals( copypasta(
+					"{",
+					"  'requester' : 'A',",
+					"  'responder' : 'B',",
+					"  'tags' : [ ],",
+					"  'request' : {",
+					"    'full' : {",
+					"      'expect' : 'A request to B',",
+					"      'expectBytes' : 'QSByZXF1ZXN0IHRvIEI=',",
+					"      'actual' : 'unexpected req content!',",
+					"      'actualBytes' : 'dW5leHBlY3RlZCByZXEgY29udGVudCE='",
+					"    },",
+					"    'asserted' : {",
+					"      'expect' : 'A request to B',",
+					"      'actual' : 'unexpected req content!'",
+					"    }",
+					"  },",
+					"  'response' : {",
+					"    'full' : {",
+					"      'expect' : 'B response to A',",
+					"      'expectBytes' : 'QiByZXNwb25zZSB0byBB',",
+					"      'actual' : 'unexpected res content!',",
+					"      'actualBytes' : 'dW5leHBlY3RlZCByZXMgY29udGVudCE='",
+					"    },",
+					"    'asserted' : {",
+					"      'expect' : 'B response to A',",
+					"      'actual' : 'unexpected res content!'",
+					"    }",
+					"  },",
+					"  'children' : [ {",
+					"    'requester' : 'B',",
+					"    'responder' : 'C',",
+					"    'tags' : [ ],",
+					"    'request' : {",
+					"      'full' : {",
+					"        'expect' : 'B request to C',",
+					"        'expectBytes' : 'QiByZXF1ZXN0IHRvIEM=',",
+					"        'actual' : null,",
+					"        'actualBytes' : null",
+					"      },",
+					"      'asserted' : {",
+					"        'expect' : null,",
+					"        'actual' : null",
+					"      }",
+					"    },",
+					"    'response' : {",
+					"      'full' : {",
+					"        'expect' : 'C response to B',",
+					"        'expectBytes' : 'QyByZXNwb25zZSB0byBC',",
+					"        'actual' : null,",
+					"        'actualBytes' : null",
+					"      },",
+					"      'asserted' : {",
+					"        'expect' : null,",
+					"        'actual' : null",
+					"      }",
+					"    },",
+					"    'children' : [ ]",
+					"  } ]",
+					"}" ),
+					copypasta( new ObjectMapper()
+							.enable( INDENT_OUTPUT )
+							.writeValueAsString( fd.root ) ) );
+		}
 	}
 
 	/**
@@ -222,26 +235,27 @@ class ReportingTest {
 	 */
 	@Test
 	void errorTagging() {
-		TestFlocessor tf = new TestFlocessor( "errorTagging", TestModel.abc() )
+		try( TestFlocessor tf = new TestFlocessor( "errorTagging", TestModel.abc() )
 				.system( State.FUL, B )
 				.reporting( QUIETLY )
 				.behaviour( assrt -> {
 					throw new RuntimeException( "kaboom" );
-				} );
-		tf.execute();
+				} ) ) {
+			tf.execute();
 
-		Reader r = new Reader( tf.report() );
-		Index index = r.read();
-		Entry ie = index.entries.get( 0 );
-		assertTrue( ie.tags.contains( "ERROR" ), ie.tags.toString() );
-		FlowData fd = r.detail( ie );
-		assertTrue( fd.tags.contains( "ERROR" ), fd.tags.toString() );
+			Reader r = new Reader( tf.report() );
+			Index index = r.read();
+			Entry ie = index.entries.get( 0 );
+			assertTrue( ie.tags.contains( "ERROR" ), ie.tags.toString() );
+			FlowData fd = r.detail( ie );
+			assertTrue( fd.tags.contains( "ERROR" ), fd.tags.toString() );
 
-		assertEquals( "Encountered error: java.lang.RuntimeException: kaboom",
-				fd.logs.get( 0 ).message.split( "\n" )[0].trim(),
-				"First line of logged error"
-		// the stacktrace is logged, but we'll not assert on that
-		);
+			assertEquals( "Encountered error: java.lang.RuntimeException: kaboom",
+					fd.logs.get( 0 ).message.split( "\n" )[0].trim(),
+					"First line of logged error"
+			// the stacktrace is logged, but we'll not assert on that
+			);
+		}
 	}
 
 	/**
@@ -250,27 +264,29 @@ class ReportingTest {
 	 */
 	@Test
 	void parseFailureTagging() {
-		TestFlocessor tf = new TestFlocessor( "parseFailureTagging", TestModel.abcWithParseFailures() )
-				.system( State.FUL, B )
-				.reporting( QUIETLY )
-				.behaviour( assrt -> {
-					assrt.actual().response( new byte[] { 0 } );
-				} );
-		tf.execute();
+		try( TestFlocessor tf = new TestFlocessor( "parseFailureTagging",
+				TestModel.abcWithParseFailures() )
+						.system( State.FUL, B )
+						.reporting( QUIETLY )
+						.behaviour( assrt -> {
+							assrt.actual().response( new byte[] { 0 } );
+						} ) ) {
+			tf.execute();
 
-		Reader r = new Reader( tf.report() );
-		Index index = r.read();
-		Entry ie = index.entries.get( 0 );
-		assertTrue( ie.tags.contains( "ERROR" ), ie.tags.toString() );
-		FlowData fd = r.detail( ie );
-		assertTrue( fd.tags.contains( "ERROR" ), fd.tags.toString() );
+			Reader r = new Reader( tf.report() );
+			Index index = r.read();
+			Entry ie = index.entries.get( 0 );
+			assertTrue( ie.tags.contains( "ERROR" ), ie.tags.toString() );
+			FlowData fd = r.detail( ie );
+			assertTrue( fd.tags.contains( "ERROR" ), fd.tags.toString() );
 
-		assertEquals(
-				"java.lang.IllegalArgumentException: Failed to parse response message from actual data",
-				fd.logs.get( 0 ).message.split( "\n" )[0].trim(),
-				"First line of logged error"
-		// the stacktrace is logged, but we'll not assert on that
-		);
+			assertEquals(
+					"java.lang.IllegalArgumentException: Failed to parse response message from actual data",
+					fd.logs.get( 0 ).message.split( "\n" )[0].trim(),
+					"First line of logged error"
+			// the stacktrace is logged, but we'll not assert on that
+			);
+		}
 	}
 
 	/**
@@ -278,20 +294,21 @@ class ReportingTest {
 	 */
 	@Test
 	void skipTagging() {
-		TestFlocessor tf = new TestFlocessor( "skipTagging", TestModel.abc() )
+		try( TestFlocessor tf = new TestFlocessor( "skipTagging", TestModel.abc() )
 				.system( State.FUL, B )
 				.reporting( QUIETLY )
 				.behaviour( assrt -> {
 					// no assertions made
-				} );
-		tf.execute();
+				} ) ) {
+			tf.execute();
 
-		Reader r = new Reader( tf.report() );
-		Index index = r.read();
-		Entry ie = index.entries.get( 0 );
-		assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
-		FlowData fd = r.detail( ie );
-		assertTrue( fd.tags.contains( "SKIP" ), fd.tags.toString() );
+			Reader r = new Reader( tf.report() );
+			Index index = r.read();
+			Entry ie = index.entries.get( 0 );
+			assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
+			FlowData fd = r.detail( ie );
+			assertTrue( fd.tags.contains( "SKIP" ), fd.tags.toString() );
+		}
 	}
 
 	/**
@@ -299,41 +316,150 @@ class ReportingTest {
 	 */
 	@Test
 	void exercised() {
-		TestFlocessor tf = new TestFlocessor( "exercised", TestModel.abc() )
+		try( TestFlocessor tf = new TestFlocessor( "exercised", TestModel.abc() )
 				.system( State.FUL, B )
 				.reporting( QUIETLY )
 				.behaviour( assrt -> {
 					// no assertions made
-				} );
-		tf.execute();
+				} ) ) {
+			tf.execute();
 
-		Reader r = new Reader( tf.report() );
-		Index index = r.read();
-		Entry ie = index.entries.get( 0 );
-		FlowData fd = r.detail( ie );
-		assertEquals( "[B]", fd.exercised.toString() );
+			Reader r = new Reader( tf.report() );
+			Index index = r.read();
+			Entry ie = index.entries.get( 0 );
+			FlowData fd = r.detail( ie );
+			assertEquals( "[B]", fd.exercised.toString() );
+		}
+	}
+
+	/**
+	 * Live reporting does not publish latest; completion shares its ownership with
+	 * other report destinations, even after temporary runtime options have ended.
+	 *
+	 * @param name Report name beneath the configured artifact directory
+	 * @param dir  Isolated artifact directory
+	 * @throws Exception On worker failure
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = { "report", "sub/path/report" })
+	void latestPublicationOwnership( String name, @TempDir Path dir ) throws Exception {
+		CountDownLatch publishing = new CountDownLatch( 1 );
+		CountDownLatch release = new CountDownLatch( 1 );
+		var worker = Executors.newSingleThreadExecutor();
+		try( Writer blocker = new Writer( "model", "blocker", dir.resolve( "other/report" ),
+				Writer.Indexing.IMMEDIATE, dir.resolve( "latest" ) ).onClose( path -> {
+					publishing.countDown();
+					try {
+						assertTrue( release.await( 10, TimeUnit.SECONDS ) );
+					}
+					catch( InterruptedException e ) {
+						Thread.currentThread().interrupt();
+						throw new AssertionError( e );
+					}
+				} ) ) {
+			var close = worker.submit( blocker::close );
+			try {
+				assertTrue( publishing.await( 10, TimeUnit.SECONDS ) );
+				TestFlocessor tf = new TestFlocessor( "publication", TestModel.abc() )
+						.system( State.FUL, B )
+						.reporting( QUIETLY )
+						.behaviour( assrt -> assrt.actual().response( assrt.expected().response().content() ) );
+				IllegalStateException failure = assertThrows( IllegalStateException.class, () -> {
+					try( tf ) {
+						try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
+								Temporary reportName = AssertionOptions.REPORT_NAME.temporarily( name ) ) {
+							tf.execute();
+							assertEquals( "abc [] SUCCESS", tf.results() );
+							Reader reader = new Reader( tf.report() );
+							Entry entry = reader.read().entries.get( 0 );
+							assertTrue( entry.tags.contains( "PASS" ) );
+							assertTrue( reader.detail( entry ).tags.contains( "PASS" ) );
+						}
+					}
+				} );
+				assertSame( failure, assertThrows( IllegalStateException.class, tf::close ).getCause() );
+				assertEquals( "publication", new Reader( tf.report() ).read().meta.testTitle );
+			}
+			finally {
+				release.countDown();
+				close.get( 10, TimeUnit.SECONDS );
+			}
+		}
+		finally {
+			release.countDown();
+			worker.shutdownNow();
+			assertTrue( worker.awaitTermination( 10, TimeUnit.SECONDS ) );
+		}
+	}
+
+	/**
+	 * An ordinary latest file or directory belongs to the user, not publication.
+	 *
+	 * @param directory Whether latest is a directory containing a file
+	 * @param dir       Isolated artifact directory
+	 * @throws Exception On filesystem failure
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void ordinaryLatest( boolean directory, @TempDir Path dir ) throws Exception {
+		Path latest = dir.resolve( "latest" );
+		Path retained = directory ? Files.createDirectory( latest ).resolve( "retained" ) : latest;
+		Files.writeString( retained, "user content" );
+		TestFlocessor tf = new TestFlocessor( "ordinary latest", TestModel.abc() )
+				.system( State.FUL, B ).reporting( QUIETLY );
+		try( tf ) {
+			try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
+					Temporary name = AssertionOptions.REPORT_NAME.temporarily( "sub/path/report" ) ) {
+				tf.execute();
+				assertEquals( "user content", Files.readString( retained ) );
+			}
+		}
+		assertEquals( "user content", Files.readString( retained ) );
+		assertFalse( Files.isSymbolicLink( latest ) );
+		assertEquals( "ordinary latest", new Reader( tf.report() ).read().meta.testTitle );
 	}
 
 	/**
 	 * Shows that a stably-named symlink is created that points to the latest report
+	 * only at completion, including when the same destination is reused.
+	 *
+	 * @param name Null for the default name, or a configured nested name
+	 * @throws Exception On filesystem failure
 	 */
-	@Test
+	@ParameterizedTest
+	@NullSource
+	@ValueSource(strings = "sub/path/report")
 	@DisabledOnOs(OS.WINDOWS) // requires special permissions to create symlinks
-	void symlink() {
+	void symlink( String name ) throws Exception {
+		Path linkedPath = Paths.get( "target/mctf/symlink/latest" );
+		if( Files.isSymbolicLink( linkedPath ) ) {
+			Files.delete( linkedPath );
+		}
 		TestFlocessor tf = new TestFlocessor( "symlink", TestModel.abc() )
 				.system( State.FUL, B )
 				.reporting( QUIETLY, "symlink" )
 				.behaviour( assrt -> {
 					// no assertions made
 				} );
-		try( Temporary t = AssertionOptions.REPORT_NAME.temporarily( "sub/path/report" ) ) {
-			tf.execute();
+		try( tf ) {
+			try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( "target/mctf" );
+					Temporary t = AssertionOptions.REPORT_NAME.temporarily( name ) ) {
+				tf.execute();
+				assertFalse( Files.exists( linkedPath, LinkOption.NOFOLLOW_LINKS ),
+						"No advertisement while processing" );
+				assertEquals( 1, new Reader( tf.report() ).read().entries.size() );
+			}
 		}
 
 		Path writtenPath = tf.report();
-		Path linkedPath = Paths.get( "target/mctf/symlink/latest" );
 
-		assertEquals( "target/mctf/symlink/sub/path/report", writtenPath.toString() );
+		if( name == null ) {
+			assertEquals( linkedPath.getParent(), writtenPath.getParent() );
+			assertTrue( writtenPath.getFileName().toString().matches( "\\d{6}-\\d{6}" ) );
+		}
+		else {
+			assertEquals( "target/mctf/symlink/sub/path/report", writtenPath.toString() );
+		}
 		assertTrue( Files.exists( linkedPath, LinkOption.NOFOLLOW_LINKS ),
 				"The expected symlink has been created" );
 		assertTrue( Files.isSymbolicLink( linkedPath ),
@@ -349,5 +475,47 @@ class ReportingTest {
 		assertEquals( direct.meta.modelTitle, linked.meta.modelTitle );
 		assertEquals( direct.meta.testTitle, linked.meta.testTitle );
 		assertEquals( direct.meta.timestamp, linked.meta.timestamp );
+
+		try( TestFlocessor replacement = new TestFlocessor( "replacement", TestModel.abc() )
+				.system( State.FUL, B ).reporting( QUIETLY, "symlink" );
+				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( "target/mctf" );
+				Temporary reportName = AssertionOptions.REPORT_NAME.temporarily(
+						linkedPath.getParent().relativize( writtenPath ).toString() ) ) {
+			replacement.execute();
+			assertFalse( Files.exists( linkedPath, LinkOption.NOFOLLOW_LINKS ),
+					"Reusing the advertised destination withdraws latest while processing" );
+		}
+		assertEquals( "replacement", new Reader( linkedPath ).read().meta.testTitle );
+	}
+
+	/**
+	 * An aliased artifact parent keeps an older report advertised until its
+	 * replacement completes, then uses a valid relative link to the new report.
+	 *
+	 * @param dir Isolated artifact directory
+	 * @throws Exception On filesystem failure
+	 */
+	@Test
+	@DisabledOnOs(OS.WINDOWS) // requires special permissions to create symlinks
+	void symlinkedArtifactDirectory( @TempDir Path dir ) throws Exception {
+		Path actual = Files.createDirectories( dir.resolve( "actual/reports" ) );
+		Path alias = Files.createSymbolicLink( dir.resolve( "alias" ), actual );
+		Path latest = alias.resolve( "latest" );
+		try( Writer old = new Writer( "model", "old", actual.resolve( "old" ) ) ) {
+			old.with( TestModel.abc().flows().findFirst().orElseThrow() );
+		}
+		Files.createSymbolicLink( latest, Path.of( "old" ) );
+		TestFlocessor tf = new TestFlocessor( "new", TestModel.abc() )
+				.system( State.FUL, B ).reporting( QUIETLY );
+		try( tf ) {
+			try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( alias.toString() );
+					Temporary name = AssertionOptions.REPORT_NAME.temporarily( "sub/path/report" ) ) {
+				tf.execute();
+				assertEquals( "old", new Reader( latest ).read().meta.testTitle );
+			}
+		}
+		assertEquals( Path.of( "sub/path/report" ), Files.readSymbolicLink( latest ) );
+		assertEquals( tf.report().toRealPath(), latest.toRealPath() );
+		assertEquals( "new", new Reader( latest ).read().meta.testTitle );
 	}
 }

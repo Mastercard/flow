@@ -265,7 +265,7 @@ Consider the following worked example:
 [Rolling?d\+]: ../../test/java/com/mastercard/test/flow/doc/mask/Rolling.java#L30,30
 [msg.Mask]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java
 [msg.Mask.andThen(Consumer)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java#L290-L292,290-292
-[BenDiceTest?masking]: ../../test/java/com/mastercard/test/flow/doc/mask/BenDiceTest.java#L31,31
+[BenDiceTest?masking]: ../../test/java/com/mastercard/test/flow/doc/mask/BenDiceTest.java#L36,36
 [BenTest]: ../../test/java/com/mastercard/test/flow/doc/mask/BenTest.java
 [AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L122-L129,122-129
 
