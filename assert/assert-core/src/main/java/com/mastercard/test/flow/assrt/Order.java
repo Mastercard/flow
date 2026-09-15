@@ -67,9 +67,9 @@ public class Order {
 			prerequisites.put( flow, sources );
 		} );
 		// A map from chain name to chain members
-		Map<String, List<Flow>> chains = new HashMap<>();
+		Map<Object, List<Flow>> chains = new HashMap<>();
 		// A map from chain member to chain name
-		Map<Flow, String> chainNames = new HashMap<>();
+		Map<Flow, Object> chainNames = new IdentityHashMap<>();
 
 		// This defines the ideal order of flows that minimises expensive context
 		// switches
@@ -83,14 +83,14 @@ public class Order {
 		// Build chains. flows that are not actually in a chain are implicitly in a
 		// chain all on their lonesomes
 		flows.forEach( f -> {
-			String chain = Tags.suffix( f.meta().tags(), CHAIN_TAG_PREFIX )
-					.orElse( f.meta().id() );
+			Object chain = Tags.suffix( f.meta().tags(), CHAIN_TAG_PREFIX )
+					.<Object>map( name -> name ).orElseGet( Object::new );
 			chains.computeIfAbsent( chain, c -> new ArrayList<>() ).add( f );
 			chainNames.put( f, chain );
 		} );
 
 		// Correct the internal order of each chain
-		for( Map.Entry<String, List<Flow>> chain : chains.entrySet() ) {
+		for( Map.Entry<Object, List<Flow>> chain : chains.entrySet() ) {
 			if( chain.getValue().size() > 1 ) {
 				chains.put( chain.getKey(),
 						order( chain.getValue().stream(),

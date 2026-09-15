@@ -107,7 +107,7 @@ close, complete the prepared run. Early close or abandonment is diagnosed by its
 class-local lifecycle backstop; neither is converted into successful finalization.
 Reporting retains its current immediate behavior for the original serial caller.
 Resource declarations below add cooperating serial ownership; cancellation drainage,
-whole-chain/context ownership and integrated final-only reporting remain unfinished.
+shared context/fixture lifecycle and integrated final-only reporting remain unfinished.
 
 Real Launcher regressions have exercised the serial caller on coherent JUnit
 5.10/Platform 1.10 and JUnit 6.0.3 stacks with Java 17. These are tested points,
@@ -140,6 +140,9 @@ IDs or interactions:
 - `exclusive("fixture reset", predicate)` conflicts with all cooperating work.
 - `independent("empty resource audit", predicate)` remains source-compatible and
   declares a known empty set, equivalent to `resources` with no keys.
+- `isolatedChains("whole-scenario audit", "checkout", "refund")` permits outside
+  overlap for those entire chains, identified by existing `chain:` tag suffixes.
+  It does not classify member resources or select additional flows.
 
 All matching rules combine by union; exclusive dominates, and an empty declaration
 cannot erase another restriction. No matching rule means **UNKNOWN global-exclusive**,
@@ -159,19 +162,57 @@ contraction and before any SUT use. Nothing adds Flow fields or identity-bearing
 tags. After `tests()`, `requirements(flow)` returns the stored immutable
 `ResourceRequirements`: `keys()`, `rules()`, `unknown()` and `exclusive()` expose
 the union and every matching rule name without rerunning predicates. Retain the
-value if diagnostics are needed after the run detaches.
+value if diagnostics are needed after the run detaches. These are the individual
+member requirements. Use `reservation(flow)` for the effective selected-chain union
+and global-exclusion policy used by admission; `reservation(flow).isolationRules()`
+lists the matching whole-chain audit names separately from resource classification.
+Both queries use frozen preparation results and reject detached or unselected flows.
 
 Temporary tracer limits also reject reporting other than `Reporting.NEVER`, capture
 other than `LogCapture.NO_OP`, replay, contexts/applicators, residue/checkers,
-autonomous actors, chains, foreign binding destinations, noncanonical prerequisites
+autonomous actors, foreign binding destinations, noncanonical prerequisites
 and non-class source URIs. These are fail-closed implementation
 boundaries, **not new permanent support restrictions**. Resource declarations do
-not authorize any of those unsupported surfaces or promote chains. Explicit serial
+not authorize any of those unsupported surfaces. Explicit serial
 resource declarations also reject reports, capture, replay, applicators/checkers,
-autonomous actors and flows with contexts, residue or chain membership: per-flow
-reservations are not whole-chain or applied-context ownership. Existing serial
+autonomous actors and flows with contexts or residue: reservations do not establish
+shared applied-context ownership. Existing serial
 configuration without new declarations retains its earlier processing behavior;
 cross-flow fixture/context lifetimes in that route are not covered by this slice.
+
+### Uninterrupted selected chains
+
+Both prepared modes reserve a default chain globally against all cooperating work,
+including EMPTY and disjoint-key flows in other runners. Only selected and required
+dependency-expanded members participate, in canonical order. Chain membership and
+basis alone never expand selection. Hard, basis-visibility, producer and identical-
+message participant constraints compose with the whole units; contradictory
+contraction is rejected before SUT use, not repaired by outside interleaving.
+
+The selected members' entire resource union is acquired before the first member.
+One grant survives between members and through synchronous processing and each
+member's outer native cleanup, with no partial acquisition or intervening reset.
+Any UNKNOWN or exclusive member promotes the whole chain, even when other members
+have named rules. An unchained exclusive flow does not promote its dependency
+component.
+
+Only `isolatedChains` relaxes default outside exclusion. Audit the whole scenario,
+not individual matching members; `resources`, `independent`, `State.LESS` and
+distinct keys do not imply that audit. The declaration freezes at `tests()` and
+cannot erase actual resource conflicts or turn UNKNOWN into EMPTY. Isolated chains
+may overlap across cooperating scopes, but their own members remain sequential.
+
+Parallel leaves remain flat with individual native outcomes and durations. The
+next member needs both actual predecessor native terminal evidence and processing
+drainage; it does not join unrelated chains. Serial retains genuine SAME_THREAD
+execution and uses the next actual native factory advance as return proof. Stop
+prevents unused members from entering and retains uncertain use; safe late drainage
+never resumes admission. This is not the complete cancellation policy.
+
+Shared context transitions, residue, capture/report integration and fixture
+create/reset/teardown ownership remain separate guarded work. In particular,
+parallel description-stream close can precede active native cleanup: it is not a
+safe fixture-teardown hook. No physical worker affinity is promised.
 
 ### Shared reservation scope and lifetime
 

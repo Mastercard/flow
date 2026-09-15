@@ -17,6 +17,7 @@ import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.assrt.History.Result;
+import com.mastercard.test.flow.assrt.resource.ChainPlan;
 import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations.Grant;
@@ -86,13 +87,25 @@ public final class FlowAdmission {
 	 * @param requirements Stored whole-set requirements in the same order
 	 */
 	public void prepare( List<Flow> flows, List<ResourceRequirements> requirements ) {
+		prepare( flows, new ChainPlan( flows, requirements ) );
+	}
+
+	/**
+	 * @param flows  Selected flows in validated serial order
+	 * @param chains Frozen whole-chain plan shared with serial consumption
+	 */
+	public void prepare( List<Flow> flows, ChainPlan chains ) {
 		List<Node> planned = new ArrayList<>();
 		Map<Flow, Integer> indices = new IdentityHashMap<>();
 		for( int i = 0; i < flows.size(); i++ ) {
 			if( indices.put( flows.get( i ), i ) != null ) {
 				throw new IllegalArgumentException( "Duplicate selected Flow reference" );
 			}
-			planned.add( new Node( flows.get( i ), requirements.get( i ) ) );
+			planned.add( new Node( flows.get( i ), chains.requirements( i ) ) );
+		}
+		for( int i = 0; i < planned.size(); i++ ) {
+			planned.get( i ).owner = planned.get( chains.first( i ) );
+			planned.get( i ).last = chains.last( i ) == i;
 		}
 		for( int i = 0; i < flows.size(); i++ ) {
 			Flow flow = flows.get( i );
@@ -108,6 +121,7 @@ public final class FlowAdmission {
 		}
 		basisPrecedence( flows, indices, planned );
 		publicationPrecedence( flows, indices, planned );
+		chainPrecedence( chains, planned );
 		synchronized( history ) {
 			if( prepared || released || stopped != null ) {
 				throw new IllegalStateException( "Flow admission cannot be prepared", stopped );
@@ -125,6 +139,32 @@ public final class FlowAdmission {
 	private static void precedence( List<Node> planned, int before, int after ) {
 		if( planned.get( before ).successors.add( after ) )
 			planned.get( after ).remaining++;
+	}
+
+	private static void chainPrecedence( ChainPlan chains, List<Node> planned ) {
+		List<Set<Integer>> original = planned.stream().map( n -> Set.copyOf( n.successors ) ).toList();
+		for( int i = 0; i < planned.size(); i++ ) {
+			for( int successor : original.get( i ) ) {
+				if( chains.first( i ) != chains.first( successor ) )
+					precedence( planned, chains.last( i ), chains.first( successor ) );
+			}
+			if( chains.next( i ) >= 0 )
+				precedence( planned, i, chains.next( i ) );
+		}
+		int[] remaining = planned.stream().mapToInt( n -> n.remaining ).toArray();
+		Deque<Integer> ready = new ArrayDeque<>();
+		for( int i = 0; i < remaining.length; i++ )
+			if( remaining[i] == 0 )
+				ready.add( i );
+		int visited = 0;
+		while( !ready.isEmpty() ) {
+			visited++;
+			for( int successor : planned.get( ready.removeFirst() ).successors )
+				if( --remaining[successor] == 0 )
+					ready.add( successor );
+		}
+		if( visited != planned.size() )
+			throw new IllegalArgumentException( "Contradictory contracted chain precedence" );
 	}
 
 	private static void publicationPrecedence( List<Flow> flows, Map<Flow, Integer> indices,
@@ -285,6 +325,10 @@ public final class FlowAdmission {
 				}
 				previous = index;
 				node = nodes.get( index );
+				if( node.owner.grant != null ) {
+					admit( node, index );
+					return index;
+				}
 				request = node.request;
 			}
 			if( request == null ) {
@@ -306,17 +350,22 @@ public final class FlowAdmission {
 			if( grant != null ) {
 				synchronized( history ) {
 					if( stopped == null ) {
-						node.grant = grant;
+						node.owner.grant = grant;
 						node.request = null;
-						node.admitted = true;
-						ready.remove( index );
-						issued++;
+						admit( node, index );
 						return index;
 					}
 				}
 				grant.close(); // Never emitted, hence proven unused.
 			}
 		}
+	}
+
+	private void admit( Node node, int index ) {
+		node.admitted = true;
+		node.owner.uses++;
+		ready.remove( index );
+		issued++;
 	}
 
 	/**
@@ -470,11 +519,15 @@ public final class FlowAdmission {
 		}
 	}
 
-	private static Grant finishedGrant( Node node ) {
-		if( node.outcome != null && (!node.entered || node.safe) ) {
-			Grant grant = node.grant;
-			node.grant = null;
-			return grant;
+	private Grant finishedGrant( Node node ) {
+		if( !node.retired && node.outcome != null && (!node.entered || node.safe) ) {
+			node.retired = true;
+			node.owner.uses--;
+			if( node.last || stopped != null ) {
+				Grant grant = node.owner.grant;
+				node.owner.grant = null;
+				return grant;
+			}
 		}
 		return null;
 	}
@@ -588,6 +641,7 @@ public final class FlowAdmission {
 
 	private void cancelPending() {
 		List<Request> cancelled = new ArrayList<>();
+		List<Grant> unused = new ArrayList<>();
 		synchronized( history ) {
 			if( stopped == null || pendingCancelled ) {
 				return;
@@ -600,9 +654,14 @@ public final class FlowAdmission {
 					cancelled.add( node.request );
 					node.request = null;
 				}
+				if( node.owner == node && node.grant != null && node.uses == 0 ) {
+					unused.add( node.grant );
+					node.grant = null;
+				}
 			}
 		}
 		cancelled.forEach( Request::cancel );
+		unused.forEach( Grant::close );
 	}
 
 	private void wake() {
@@ -619,6 +678,10 @@ public final class FlowAdmission {
 		private int remaining;
 		private Request request;
 		private Grant grant;
+		private Node owner;
+		private int uses;
+		private boolean last;
+		private boolean retired;
 		private String id;
 		private boolean admitted;
 		private boolean started;

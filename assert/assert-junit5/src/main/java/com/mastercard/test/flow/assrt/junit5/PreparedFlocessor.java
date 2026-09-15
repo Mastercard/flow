@@ -21,7 +21,7 @@ import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.assrt.AbstractFlocessor;
 import com.mastercard.test.flow.assrt.History.Result;
-import com.mastercard.test.flow.assrt.Order;
+import com.mastercard.test.flow.assrt.resource.ChainPlan;
 import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
 import com.mastercard.test.flow.assrt.resource.ResourceRules;
 
@@ -36,6 +36,25 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	private final List<Flow> selectedFlows = new ArrayList<>();
 	private ResourceRules rules = new ResourceRules();
 	private final Map<Flow, ResourceRequirements> requirements = new IdentityHashMap<>();
+	private final Map<Flow, Integer> selectedIndices = new IdentityHashMap<>();
+	private ChainPlan chains;
+
+	/**
+	 * Permits outside overlap only after auditing each entire named chain's state,
+	 * callbacks and cleanup. Member resource declarations remain necessary; an
+	 * UNKNOWN or exclusive member still makes the whole chain global-exclusive.
+	 * Membership comes from existing chain tags, never from partial predicates.
+	 *
+	 * @param rule  Unique nonblank whole-chain audit name
+	 * @param names Existing chain tag suffixes, without the chain: prefix
+	 * @return this adapter
+	 */
+	public PreparedFlocessor isolatedChains( String rule, String... names ) {
+		beforeConfiguration();
+		rules.isolatedChains( rule, names );
+		declaredResources = true;
+		return this;
+	}
 
 	/**
 	 * Declares an assessed empty resource set using a named bulk rule. The audit
@@ -104,11 +123,41 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	}
 
 	/**
+	 * Retrieves the frozen whole-unit reservation without reevaluating predicates.
+	 * Retain the immutable value for diagnostics after this preparation detaches.
+	 *
+	 * @param flow A selected or dependency-expanded flow in this live preparation
+	 * @return Effective resource union, UNKNOWN/exclusive policy and isolation
+	 *         audits
+	 */
+	public ResourceRequirements reservation( Flow flow ) {
+		int index = Objects.requireNonNull( selectedIndices.get( flow ),
+				"Flow is not prepared or was detached" );
+		return reservation( index );
+	}
+
+	/**
 	 * @param index Preparation-local flow index
 	 * @return Its stored requirements
 	 */
 	ResourceRequirements requirements( int index ) {
 		return requirements( selectedFlows.get( index ) );
+	}
+
+	/**
+	 * @param index Selected member index
+	 * @return Complete whole-unit requirements
+	 */
+	ResourceRequirements reservation( int index ) {
+		return chains.requirements( index );
+	}
+
+	/**
+	 * @param index Next selected index
+	 * @return Whether it continues the previous unit
+	 */
+	boolean continuesChain( int index ) {
+		return index > 0 && chains.first( index ) == chains.first( index - 1 );
 	}
 
 	/**
@@ -145,28 +194,27 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 				// Native identity and navigation are values of this preparation, not
 				// delayed metadata reads when somebody enumerates the descriptions.
 				selectedFlows.add( flow );
+				selectedIndices.put( flow, index );
 				nodes.add( DynamicTest.dynamicTest( id, Flocessor.testSource( flow ),
 						owner.invocation( index ) ) );
 			}
 		}
-		if( owner.parallel() ) {
-			owner.prepareParallel( selectedFlows, nodes,
-					selectedFlows.stream().map( requirements::get ).toList() );
-		}
+		chains = rules.chains( selectedFlows,
+				selectedFlows.stream().map( requirements::get ).toList() );
+		if( owner.parallel() )
+			owner.prepareParallel( selectedFlows, nodes, chains );
 		return owner.describe( nodes );
 	}
 
 	private void resolveResources( Flow flow ) {
 		requirements.put( flow, rules.resolve( flow ) );
-		// Explicit serial participation must not pretend that per-flow reservations
-		// implement cross-flow context or whole-chain ownership. Legacy serial
+		// Explicit serial participation must not pretend that reservations
+		// implement cross-flow context ownership. Legacy serial
 		// configuration without these new declarations retains its existing behavior.
 		if( declaredResources && !owner.parallel()
-				&& (flow.context().findAny().isPresent() || flow.residue().findAny().isPresent()
-						|| flow.meta().tags().stream()
-								.anyMatch( t -> t.startsWith( Order.CHAIN_TAG_PREFIX ) )) ) {
+				&& (flow.context().findAny().isPresent() || flow.residue().findAny().isPresent()) ) {
 			throw new IllegalStateException(
-					"Flow serial resources do not yet own context, residue or chain: "
+					"Flow serial resources do not yet own context or residue: "
 							+ flow.meta().id() );
 		}
 	}
@@ -188,7 +236,9 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	/** Clears the prepared invocation table after owned use has drained. */
 	void detach() {
 		selectedFlows.clear();
+		selectedIndices.clear();
 		requirements.clear();
+		chains = null;
 		rules = null;
 	}
 

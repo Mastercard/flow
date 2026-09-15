@@ -1,10 +1,5 @@
 package com.mastercard.test.flow.assrt.junit5;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
-import static com.mastercard.test.flow.util.Transmission.Type.REQUEST;
-import static com.mastercard.test.flow.util.Transmission.Type.RESPONSE;
-
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,14 +17,24 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
@@ -40,8 +45,10 @@ import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.engine.TestExecutionResult;
+import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import org.junit.platform.engine.reporting.ReportEntry;
 import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherConfig;
@@ -57,11 +64,14 @@ import com.mastercard.test.flow.assrt.junit5.mock.Actrs;
 import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
 import com.mastercard.test.flow.assrt.junit5.mock.Msg;
 import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
-import com.mastercard.test.flow.assrt.resource.ResourceRules;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations;
-import com.mastercard.test.flow.assrt.resource.ResourceReservations.Request;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations.Grant;
+import com.mastercard.test.flow.assrt.resource.ResourceReservations.Request;
+import com.mastercard.test.flow.assrt.resource.ResourceRules;
 import com.mastercard.test.flow.builder.Creator;
+import com.mastercard.test.flow.builder.Deriver;
+import static com.mastercard.test.flow.util.Transmission.Type.REQUEST;
+import static com.mastercard.test.flow.util.Transmission.Type.RESPONSE;
 
 /**
  * Real factory/Launcher seam with independent native pools and fake shared SUT
@@ -73,6 +83,729 @@ class NativeResourceAdmissionTest {
 	private static final ThreadLocal<Run> FACTORY = new ThreadLocal<>();
 
 	/**
+	 * Public diagnostics preserve member classification separately from the frozen
+	 * reservation actually used by both native modes.
+	 *
+	 * @param parallel Native execution mode
+	 * @param policy   Whole-chain resource policy
+	 * @throws Exception If native work does not drain
+	 */
+	@ParameterizedTest
+	@CsvSource({ "false,default", "true,default", "false,known", "true,known",
+			"false,unknown", "true,unknown", "false,exclusive", "true,exclusive" })
+	void preparedReservationExposesFrozenUnionAndIsolationAudits( boolean parallel, String policy )
+			throws Exception {
+		Flow a = chainFlow( "A", "AB" );
+		Flow b = chainSink( "B", "AB", a );
+		Flow unselected = chainFlow( "unused", "AB" );
+		AtomicInteger calls = new AtomicInteger();
+		AtomicReference<ResourceRequirements> snapshot = new AtomicReference<>();
+		String[] names = { "AB" };
+		String[] keys = { "account" };
+		boolean defaultChain = policy.equals( "default" );
+		boolean unknown = policy.equals( "unknown" );
+		Run run = new Run( parallel, List.of( b, unselected, a ), r -> {
+			assertThrows( NullPointerException.class, () -> r.reservation( a ) );
+			r.exercising( f -> f == b, message -> {
+			} ).resources( "A state", f -> {
+				calls.incrementAndGet();
+				return f == a;
+			}, defaultChain ? new String[0] : keys ).resources( "B state", f -> {
+				calls.incrementAndGet();
+				return f == b && !unknown;
+			}, defaultChain ? new String[0] : new String[] { "queue" } );
+			if( !defaultChain )
+				r.isolatedChains( "state isolation", names )
+						.isolatedChains( "cleanup isolation", "AB", "absent" );
+			r.isolatedChains( "unselected isolation", "absent" )
+					.exclusive( "reset", f -> f == unselected || policy.equals( "exclusive" ) && f == b );
+			names[0] = "mutated";
+			keys[0] = "mutated";
+		}, x -> {
+			if( x.flow() == b )
+				assertEquals( "A", x.expected().request().assertable() );
+		} );
+		run.selected = List.of( a, b );
+		run.returning = () -> {
+			ResourceRequirements member = run.runner.requirements( a );
+			ResourceRequirements effective = run.runner.reservation( a );
+			snapshot.set( effective );
+			assertSame( effective, run.runner.reservation( b ) );
+			assertFalse( member.exclusive() );
+			assertEquals( Set.of(), member.isolationRules() );
+			assertEquals( unknown, run.runner.requirements( b ).unknown() );
+			assertEquals( unknown, effective.unknown() );
+			assertEquals( !policy.equals( "known" ), effective.exclusive() );
+			assertEquals( defaultChain ? Set.of()
+					: unknown ? Set.of( "account" )
+							: Set.of( "account", "queue" ),
+					effective.keys() );
+			assertEquals( unknown ? Set.of( "A state" )
+					: policy.equals( "exclusive" )
+							? Set.of( "A state", "B state", "reset" )
+							: Set.of( "A state", "B state" ),
+					effective.rules() );
+			assertEquals( defaultChain ? List.of() : List.of( "state isolation", "cleanup isolation" ),
+					effective.isolationRules().stream().toList() );
+			assertThrows( UnsupportedOperationException.class, () -> effective.keys().clear() );
+			assertThrows( UnsupportedOperationException.class, () -> effective.rules().clear() );
+			assertThrows( UnsupportedOperationException.class, () -> effective.isolationRules().clear() );
+			assertThrows( NullPointerException.class, () -> run.runner.reservation( unselected ) );
+			assertThrows( NullPointerException.class, () -> run.runner.requirements( unselected ) );
+			assertThrows( IllegalStateException.class,
+					() -> run.runner.isolatedChains( "too late", "AB" ) );
+			assertSame( effective, run.runner.reservation( a ) );
+			assertEquals( 4, calls.get(), "queries never reevaluate predicates" );
+		};
+		run.start();
+		run.finish();
+		assertEquals( List.of( a.meta().id(), b.meta().id() ), run.registered );
+		assertEquals( unknown && parallel ? 1 : 0, run.fallbacks.size() );
+		assertThrows( NullPointerException.class, () -> run.runner.reservation( a ) );
+		assertThrows( NullPointerException.class, () -> run.runner.requirements( a ) );
+		assertEquals( unknown, snapshot.get().unknown() );
+		assertEquals( !policy.equals( "known" ), snapshot.get().exclusive() );
+		assertEquals( defaultChain ? Set.of() : Set.of( "state isolation", "cleanup isolation" ),
+				snapshot.get().isolationRules() );
+		assertEquals( 4, calls.get() );
+	}
+
+	/** An unchained exclusive source cannot serialize all of its descendants. */
+	@Test
+	void unchainedExclusiveSourceDoesNotPromoteTheWholeComponent() throws Exception {
+		Flow root = ParallelBindingFixture.create( "root", "root" );
+		Flow a = chainSink( "A", "AB", root );
+		Flow b = chainSink( "B", "AB", a );
+		Flow c = Creator.build( f -> f.meta( m -> m.description( "C" ) ).prerequisite( root )
+				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN ).request( new Msg( "request" ) )
+						.response( new Msg( "response" ) ) ) );
+		CountDownLatch both = new CountDownLatch( 2 );
+		CountDownLatch release = new CountDownLatch( 1 );
+		Run run = new Run( true, List.of( b, c, a, root ), r -> r
+				.independent( "owned empty", f -> true ).exclusive( "root reset", f -> f == root )
+				.isolatedChains( "complete AB audit", "AB" ), x -> {
+					if( x.flow() == a || x.flow() == c ) {
+						both.countDown();
+						await( release );
+					}
+					if( x.flow() == b )
+						assertEquals( "A", x.expected().request().assertable() );
+				} );
+		Throwable primary = null;
+		try {
+			run.start();
+			await( both );
+			assertFalse( run.registered.contains( b.meta().id() ) );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			release.countDown();
+			drain( primary, run );
+		}
+	}
+
+	/**
+	 * Actual factory preparation must reject A1 -> B -> A2 before SUT or emission.
+	 *
+	 * @param parallel Native mode
+	 * @throws Exception If the rejected Launcher fails to finish
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void contradictoryChainFailsBeforeAnyNativeLeaf( boolean parallel ) throws Exception {
+		Flow a = chainFlow( "A1", "A" );
+		Flow b = Creator.build( f -> f.meta( m -> m.description( "B" ) ).prerequisite( a ) );
+		Flow end = Creator.build( f -> f.meta( m -> m.description( "A2" )
+				.tags( tags -> tags.add( "chain:A" ) ) ).prerequisite( b ) );
+		Run run = new Run( parallel, List.of( end, b, a ), r -> r
+				.independent( "empty", f -> true ).isolatedChains( "cannot relax hard edges", "A" ),
+				x -> fail( "invalid chain cannot use SUT" ) );
+		run.start();
+		run.awaitCompletion();
+		assertEquals( List.of(), run.registered );
+		assertEquals( 0, run.bodies.get() );
+		assertEquals( 0, run.getSummary().getTestsStartedCount() );
+		assertTrue( run.failures.stream().anyMatch( f -> f instanceof IllegalArgumentException
+				&& f.getMessage().contains( "contracted chains" ) ), run.failures::toString );
+	}
+
+	/**
+	 * No first member starts while any member's resource is held. Whole-chain
+	 * isolation cannot erase UNKNOWN or exclusive promotion from another member.
+	 *
+	 * @param parallel Mode of the chain factory
+	 * @throws Exception If native work does not drain
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void nativeChainsReserveWholeUnionAndPromoteUnknownOrExclusiveMembers( boolean parallel )
+			throws Exception {
+		for( String policy : List.of( "known", "unknown", "exclusive" ) ) {
+			CountDownLatch held = new CountDownLatch( 1 );
+			CountDownLatch releaseHolder = new CountDownLatch( 1 );
+			CountDownLatch free = new CountDownLatch( 1 );
+			CountDownLatch first = new CountDownLatch( 1 );
+			CountDownLatch releaseChain = new CountDownLatch( 1 );
+			AtomicBoolean holderDone = new AtomicBoolean();
+			Run holder = new Run( !parallel, List.of( flow( "holder" ) ),
+					r -> r.resources( "B owner", f -> true, "whole-B" ), x -> {
+						held.countDown();
+						await( releaseHolder );
+						holderDone.set( true );
+					} );
+			Flow a = chainFlow( "A", "AB" );
+			Flow b = chainSink( "B", "AB", a );
+			Run chain = new Run( parallel, List.of( b, a ), r -> {
+				r.isolatedChains( "whole AB audit", "AB" ).resources( "A state", f -> f == a, "whole-A" );
+				if( !policy.equals( "unknown" ) )
+					r.resources( "B state", f -> f == b, "whole-B" );
+				if( policy.equals( "exclusive" ) )
+					r.exclusive( "B exclusive", f -> f == b );
+			}, x -> {
+				assertTrue( holderDone.get(), "whole union must be held before A" );
+				if( x.flow() == a ) {
+					first.countDown();
+					await( releaseChain );
+				}
+				else
+					assertEquals( "A", x.expected().request().assertable() );
+			} );
+			Run freeA = new Run( !parallel, List.of( flow( "free A" ) ),
+					r -> r.resources( "A owner", f -> true, "whole-A" ), x -> free.countDown() );
+			Throwable primary = null;
+			try {
+				holder.start();
+				await( held );
+				chain.start();
+				await( chain.prepared );
+				freeA.start();
+				await( free );
+				freeA.finish();
+				assertEquals( List.of(), chain.registered, "blocked chain held no partial A" );
+				releaseHolder.countDown();
+				await( first );
+				assertReservation( false, "whole-B" );
+				assertReservation( policy.equals( "known" ) );
+				assertEquals( policy.equals( "unknown" ), chain.runner.requirements( b ).unknown() );
+			}
+			catch( Throwable failure ) {
+				primary = failure;
+				throw failure;
+			}
+			finally {
+				releaseHolder.countDown();
+				releaseChain.countDown();
+				drain( primary, holder, chain, freeA );
+			}
+		}
+	}
+
+	/**
+	 * Selection expands real data prerequisites, never unused chain or basis-only
+	 * members; their resource/exclusive rules cannot enlarge the selected unit.
+	 *
+	 * @param parallel Native execution mode
+	 * @throws Exception If native work does not drain
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void selectedChainDoesNotExpandThroughGroupingOrBasis( boolean parallel ) throws Exception {
+		Flow a = chainFlow( "A", "AB" );
+		Flow basis = chainFlow( "basis-only", "AB" );
+		Flow b = Deriver.build( basis, f -> f.meta( m -> m.description( "B" )
+				.tags( tags -> tags.add( "chain:AB" ) ) )
+				.dependency( a, dep -> dep.from( i -> true, RESPONSE, ".+" )
+						.to( i -> true, REQUEST, ".+" ) ) );
+		Flow unselected = chainFlow( "chain-only", "AB" );
+		Flow later = chainSink( "later-dependent", "AB", b );
+		AtomicInteger resolutions = new AtomicInteger();
+		Run run = new Run( parallel, List.of( later, unselected, basis, b, a ), r -> r
+				.exercising( f -> f == b, message -> {
+				} ).resources( "selected state", f -> {
+					resolutions.incrementAndGet();
+					return f == a || f == b;
+				}, "selected-chain" )
+				.exclusive( "unselected reset", f -> f == unselected || f == basis || f == later )
+				.isolatedChains( "whole AB audit", "AB" ), x -> {
+					assertTrue( x.flow() == a || x.flow() == b );
+					if( x.flow() == b )
+						assertEquals( "A", x.expected().request().assertable() );
+				} );
+		run.selected = List.of( a, b );
+		run.start();
+		run.finish();
+		assertEquals( 2, resolutions.get() );
+		assertEquals( List.of( a.meta().id(), b.meta().id() ), run.registered );
+		assertEquals( 1, b.dependencies().count() );
+		assertEquals( 1, run.closes.get() );
+	}
+
+	/**
+	 * A test-local outer stream pauses the next actual advance after A has
+	 * finished. Serial ownership must wait for that proof, not infer it on close.
+	 *
+	 * @throws Exception If the native factory fails to drain
+	 */
+	@Test
+	void stoppedSerialChainWaitsForTheNextActualAdvanceBeforeReturningOwnership() throws Exception {
+		Flow a = chainFlow( "A", "AB" );
+		Flow b = chainSink( "B", "AB", a );
+		CountDownLatch beforeNext = new CountDownLatch( 1 );
+		CountDownLatch release = new CountDownLatch( 1 );
+		AtomicInteger advances = new AtomicInteger();
+		Run run = new Run( false, List.of( a, b ),
+				r -> r.independent( "empty members", f -> true ), x -> assertSame( a, x.flow() ) );
+		run.beforeAdvance = () -> {
+			if( advances.incrementAndGet() == 2 ) {
+				beforeNext.countDown();
+				await( release );
+			}
+		};
+		Throwable primary = null;
+		try {
+			run.start();
+			await( beforeNext );
+			assertEquals( List.of( a.meta().id() ), run.finished );
+			assertThrows( IllegalStateException.class, run.handle::close );
+			assertReservation( false );
+			assertEquals( 0, run.closes.get() );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			release.countDown();
+			try {
+				run.awaitCompletion();
+			}
+			catch( Throwable failure ) {
+				if( primary == null )
+					throw failure;
+				if( primary != failure )
+					primary.addSuppressed( failure );
+			}
+		}
+		assertEquals( List.of( a.meta().id() ), run.registered );
+		assertEquals( 1, run.bodies.get() );
+		assertEquals( 1, run.closes.get() );
+		assertFalse( run.failures.isEmpty() );
+		assertAvailable();
+		assertDoesNotThrow( run.handle::close );
+	}
+
+	/**
+	 * Native cleanup still owns the chain after Stop; unused members stay unused.
+	 *
+	 * @param parallel Whether native admission is parallel
+	 * @throws Exception If native work does not drain
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void stoppedChainRetainsNativeCleanupAndNeverEntersItsUnusedMember( boolean parallel )
+			throws Exception {
+		for( boolean liveClose : parallel ? List.of( false ) : List.of( false, true ) ) {
+			Flow a = chainFlow( "A", "AB" );
+			Flow b = chainSink( "B", "AB", a );
+			CountDownLatch cleaning = new CountDownLatch( 1 );
+			CountDownLatch release = new CountDownLatch( 1 );
+			Run run = new Run( parallel, List.of( a, b ),
+					r -> r.independent( "empty", f -> true ), x -> assertSame( a, x.flow() ) );
+			run.cleanup = () -> {
+				cleaning.countDown();
+				await( release );
+			};
+			Throwable primary = null;
+			try {
+				run.start();
+				await( cleaning );
+				assertThrows( IllegalStateException.class, () -> {
+					if( liveClose )
+						run.liveStream.close();
+					else
+						run.handle.close();
+				} );
+				assertReservation( false );
+				// Parallel description-stream close is not fixture lifecycle ownership;
+				// ticket 17 must integrate that separately from native grant retention.
+				if( !parallel )
+					assertEquals( 0, run.closes.get(), "no original fixture close during unsafe use" );
+				assertEquals( List.of( a.meta().id() ), run.registered );
+				assertThrows( IllegalStateException.class, run.handle::close );
+				assertReservation( false );
+			}
+			catch( Throwable failure ) {
+				primary = failure;
+				throw failure;
+			}
+			finally {
+				release.countDown();
+				try {
+					run.awaitCompletion();
+				}
+				catch( Throwable failure ) {
+					if( primary == null )
+						throw failure;
+					if( primary != failure )
+						primary.addSuppressed( failure );
+				}
+			}
+			assertEquals( 1, run.bodies.get() );
+			assertEquals( List.of( a.meta().id() ), run.registered );
+			assertFalse( run.failures.isEmpty(), "stop is not successful exhaustion" );
+			assertEquals( 1, run.closes.get() );
+			assertAvailable();
+		}
+	}
+
+	/**
+	 * Whole-chain isolation permits cross-pool overlap and independent
+	 * continuation, for mixed serial/parallel and parallel/parallel owners.
+	 *
+	 * @param parallel      Whether A/B uses parallel native admission
+	 * @param otherParallel Whether C/D uses parallel native admission
+	 * @throws Exception If native work does not drain
+	 */
+	@ParameterizedTest
+	@CsvSource({ "false,true", "true,false", "true,true" })
+	void isolatedSerialAndParallelChainsOverlapAcrossScopes( boolean parallel, boolean otherParallel )
+			throws Exception {
+		Flow a = chainFlow( "A", "AB" );
+		Flow b = chainSink( "B", "AB", a );
+		Flow c = chainFlow( "C", "CD" );
+		Flow d = chainSink( "D", "CD", c );
+		CountDownLatch aEntered = new CountDownLatch( 1 );
+		CountDownLatch cEntered = new CountDownLatch( 1 );
+		CountDownLatch bEntered = new CountDownLatch( 1 );
+		CountDownLatch releaseA = new CountDownLatch( 1 );
+		CountDownLatch releaseC = new CountDownLatch( 1 );
+		Run ab = new Run( parallel, List.of( b, a ), r -> r
+				.resources( "AB state", f -> true, "isolated-AB" )
+				.isolatedChains( "complete AB audit", "AB" ), x -> {
+					if( x.flow() == a ) {
+						aEntered.countDown();
+						await( releaseA );
+					}
+					else {
+						assertEquals( "A", x.expected().request().assertable() );
+						bEntered.countDown();
+					}
+				} );
+		Run cd = new Run( otherParallel, List.of( d, c ), r -> r
+				.resources( "CD state", f -> true, "isolated-CD" )
+				.isolatedChains( "complete CD audit", "CD" ), x -> {
+					if( x.flow() == c ) {
+						cEntered.countDown();
+						await( releaseC );
+					}
+					else
+						assertEquals( "C", x.expected().request().assertable() );
+				} );
+		Throwable primary = null;
+		try {
+			ab.start();
+			await( aEntered );
+			cd.start();
+			await( cEntered );
+			assertFalse( ab.registered.contains( b.meta().id() ), "members of AB remain serial" );
+			assertFalse( cd.registered.contains( d.meta().id() ), "members of CD remain serial" );
+			releaseA.countDown();
+			await( bEntered );
+			ab.finish();
+			assertEquals( List.of( a.meta().id(), b.meta().id() ), ab.finished );
+			assertFalse( cd.finished.contains( c.meta().id() ) );
+			assertFalse( cd.registered.contains( d.meta().id() ) );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			releaseA.countDown();
+			releaseC.countDown();
+			drain( primary, ab, cd );
+		}
+	}
+
+	/**
+	 * Default chains drain existing cooperating work, then exclude a separately
+	 * launched EMPTY or disjoint-key runner through both members' outer cleanup.
+	 *
+	 * @param chainParallel   Mode of the actual chain factory
+	 * @param outsideParallel Mode of the outside factory
+	 * @throws Exception If native work does not drain
+	 */
+	@ParameterizedTest
+	@CsvSource({ "false,false", "false,true", "true,false", "true,true" })
+	void defaultChainExcludesOtherPreparedScopesForItsWholeInterval(
+			boolean chainParallel, boolean outsideParallel ) throws Exception {
+		for( boolean empty : List.of( false, true ) ) {
+			CountDownLatch held = new CountDownLatch( 1 );
+			CountDownLatch releaseHolder = new CountDownLatch( 1 );
+			CountDownLatch cleaning = new CountDownLatch( 1 );
+			CountDownLatch releaseCleanup = new CountDownLatch( 1 );
+			CountDownLatch second = new CountDownLatch( 1 );
+			CountDownLatch releaseSecond = new CountDownLatch( 1 );
+			CountDownLatch later = new CountDownLatch( 1 );
+			AtomicBoolean holderDone = new AtomicBoolean();
+			AtomicBoolean chainDone = new AtomicBoolean();
+			Run holder = new Run( outsideParallel, List.of( flow( "holder" ) ),
+					r -> r.resources( "outside holder", f -> true, "holder-state" ), x -> {
+						held.countDown();
+						await( releaseHolder );
+						holderDone.set( true );
+					} );
+			Flow a = chainFlow( "A", "AB" );
+			Flow b = chainSink( "B", "AB", a );
+			Run chain = new Run( chainParallel, List.of( b, a ), r -> r
+					.resources( "first state", f -> f == a, "chain-A" )
+					.resources( "second state", f -> f == b, "chain-B" ), x -> {
+						assertTrue( holderDone.get(), "chain must drain even a disjoint outside holder" );
+						if( x.flow() == b ) {
+							assertEquals( "A", x.expected().request().assertable() );
+							second.countDown();
+							await( releaseSecond );
+						}
+					} );
+			chain.state = State.LESS;
+			AtomicInteger cleanup = new AtomicInteger();
+			chain.cleanup = () -> {
+				if( cleanup.incrementAndGet() == 1 ) {
+					cleaning.countDown();
+					await( releaseCleanup );
+				}
+				else
+					chainDone.set( true );
+			};
+			Run outside = new Run( outsideParallel, List.of( flow( "outside" ) ), r -> r
+					.resources( "outside audit", f -> true,
+							empty ? new String[0] : new String[] { "disjoint" } ),
+					x -> {
+						later.countDown();
+						assertTrue( chainDone.get(), "outside use must follow the entire chain cleanup" );
+					} );
+			Throwable primary = null;
+			try {
+				holder.start();
+				await( held );
+				chain.start();
+				await( chain.prepared );
+				assertFalse( cleaning.await( 150, TimeUnit.MILLISECONDS ) );
+				assertEquals( List.of(), chain.registered );
+				releaseHolder.countDown();
+				await( cleaning );
+				outside.start();
+				await( outside.prepared );
+				assertFalse( later.await( 150, TimeUnit.MILLISECONDS ) );
+				assertEquals( List.of(), outside.registered );
+				releaseCleanup.countDown();
+				await( second );
+				assertEquals( List.of(), outside.registered );
+				await( chain.firstFinished );
+				assertTrue( chain.finished.contains( a.meta().id() ) );
+			}
+			catch( Throwable failure ) {
+				primary = failure;
+				throw failure;
+			}
+			finally {
+				releaseHolder.countDown();
+				releaseCleanup.countDown();
+				releaseSecond.countDown();
+				drain( primary, holder, chain, outside );
+			}
+			assertEquals( 2, cleanup.get() );
+		}
+	}
+
+	private static void drain( Throwable primary, Run... runs ) throws Exception {
+		Throwable failure = primary;
+		for( Run run : runs ) {
+			try {
+				run.finish();
+			}
+			catch( Throwable cleanup ) {
+				if( failure == null )
+					failure = cleanup;
+				else if( failure != cleanup )
+					failure.addSuppressed( cleanup );
+			}
+		}
+		if( primary == null && failure != null ) {
+			if( failure instanceof Exception )
+				throw (Exception) failure;
+			throw (Error) failure;
+		}
+	}
+
+	/**
+	 * The real flat leaves preserve binding payloads and individual completion;
+	 * finishing A admits B while unrelated C is still executing.
+	 *
+	 * @throws Exception If native work does not drain
+	 */
+	@Test
+	void auditedChainsPublishAndContinueIndependentlyOnNativeThreads() throws Exception {
+		Flow a = chainFlow( "A", "AB" );
+		Flow b = chainSink( "B", "AB", a );
+		Flow c = chainFlow( "C", "CD" );
+		Flow d = chainSink( "D", "CD", c );
+		CountDownLatch both = new CountDownLatch( 2 );
+		CountDownLatch releaseA = new CountDownLatch( 1 );
+		CountDownLatch releaseC = new CountDownLatch( 1 );
+		CountDownLatch bEntered = new CountDownLatch( 1 );
+		CountDownLatch releaseB = new CountDownLatch( 1 );
+		List<String> payloads = new CopyOnWriteArrayList<>();
+		Run run = new Run( true, List.of( d, b, c, a ), r -> r
+				.independent( "owned messages and synchronous callbacks", f -> true )
+				.isolatedChains( "complete scenarios use isolated state", "AB", "CD" ), x -> {
+					if( x.flow() == a || x.flow() == c ) {
+						both.countDown();
+						await( x.flow() == a ? releaseA : releaseC );
+					}
+					else {
+						String expected = x.flow() == b ? "A" : "C";
+						assertEquals( expected, x.expected().request().assertable() );
+						payloads.add( x.flow().meta().description() + ":" + expected );
+						if( x.flow() == b ) {
+							bEntered.countDown();
+							await( releaseB );
+						}
+					}
+				} );
+		Throwable primary = null;
+		try {
+			run.start();
+			await( both );
+			assertEquals( Set.of( a.meta().id(), c.meta().id() ), Set.copyOf( run.registered ) );
+			releaseA.countDown();
+			await( bEntered );
+			await( run.firstFinished );
+			assertTrue( run.finished.contains( a.meta().id() ) );
+			assertFalse( run.finished.contains( b.meta().id() ) );
+			assertFalse( run.finished.contains( c.meta().id() ) );
+			assertFalse( run.registered.contains( d.meta().id() ) );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			releaseA.countDown();
+			releaseB.countDown();
+			releaseC.countDown();
+			try {
+				run.finish();
+			}
+			catch( Throwable failure ) {
+				if( primary == null )
+					throw failure;
+				if( primary != failure )
+					primary.addSuppressed( failure );
+			}
+		}
+		assertEquals( List.of( "B:A", "D:C" ), payloads );
+		assertEquals( 1, run.closes.get() );
+	}
+
+	private static Flow chainSink( String name, String chain, Flow source ) {
+		return Creator.build( f -> f.meta( m -> m.description( name )
+				.tags( tags -> tags.add( "chain:" + chain ) ) )
+				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+						.request( new ParallelBindingFixture.Text( "pending" ) )
+						.response( new ParallelBindingFixture.Text( name ) ) )
+				.dependency( source, dep -> dep.from( i -> true, RESPONSE, ".+" )
+						.to( i -> true, REQUEST, ".+" ) ) );
+	}
+
+	/**
+	 * Both native modes retain a default chain across outer interception and its
+	 * next real member; the short first leaf has its own terminal result.
+	 *
+	 * @param parallel Whether the real Launcher uses parallel Flow admission
+	 * @throws Exception If native work does not drain
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void defaultChainOwnsNativeCleanupAndTheNextMember( boolean parallel ) throws Exception {
+		Flow a = chainFlow( "A", "scenario" );
+		Flow b = chainFlow( "B", "scenario" );
+		CountDownLatch cleaning = new CountDownLatch( 1 );
+		CountDownLatch releaseCleanup = new CountDownLatch( 1 );
+		CountDownLatch second = new CountDownLatch( 1 );
+		CountDownLatch releaseSecond = new CountDownLatch( 1 );
+		AtomicInteger cleanup = new AtomicInteger();
+		Run run = new Run( parallel, List.of( b, a ),
+				r -> r.independent( "empty member resources are not whole-chain isolation", f -> true ),
+				x -> {
+					if( x.flow() == b ) {
+						second.countDown();
+						await( releaseSecond );
+					}
+				} );
+		run.cleanup = () -> {
+			if( cleanup.incrementAndGet() == 1 ) {
+				cleaning.countDown();
+				await( releaseCleanup );
+			}
+		};
+		var scope = ResourceReservations.shared();
+		var outside = scope.register( scope.capacity( 1 ),
+				new ResourceRules().resources( "outside empty", f -> true ).resolve( null ), () -> {
+				} );
+		Throwable primary = null;
+		try {
+			run.start();
+			await( cleaning );
+			assertEquals( List.of( a.meta().id() ), run.registered );
+			try( Grant unexpected = outside.tryAcquire() ) {
+				assertNull( unexpected, "outer cleanup remains part of the chain interval" );
+			}
+			releaseCleanup.countDown();
+			await( second );
+			try( Grant unexpected = outside.tryAcquire() ) {
+				assertNull( unexpected, "reservation is retained into the next member" );
+			}
+			await( run.firstFinished );
+			assertTrue( run.finished.contains( a.meta().id() ), "A finishes without joining B" );
+			assertFalse( run.finished.contains( b.meta().id() ) );
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			releaseCleanup.countDown();
+			releaseSecond.countDown();
+			outside.cancel();
+			try {
+				run.finish();
+			}
+			catch( Throwable failure ) {
+				if( primary == null )
+					throw failure;
+				if( primary != failure )
+					primary.addSuppressed( failure );
+			}
+		}
+		assertEquals( List.of( a.meta().id(), b.meta().id() ), run.registered );
+		assertEquals( 2, cleanup.get() );
+		assertEquals( 1, run.closes.get() );
+		assertDoesNotThrow( run.handle::close );
+	}
+
+	private static Flow chainFlow( String name, String chain ) {
+		return Creator.build( f -> f.meta( m -> m.description( name )
+				.tags( tags -> tags.add( "chain:" + chain ) ) )
+				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+						.request( new ParallelBindingFixture.Text( "request" ) )
+						.response( new ParallelBindingFixture.Text( name ) ) ) );
+	}
+
+	/**
 	 * B has no prerequisite or resource wait of its own, but cannot overtake A's
 	 * synchronous publication. D proves the factory can make independent progress.
 	 *
@@ -80,15 +813,18 @@ class NativeResourceAdmissionTest {
 	 * @throws Exception If a real Launcher fails to drain
 	 */
 	@ParameterizedTest
-	@ValueSource(strings = { "same-field", "different-fields", "parent-child", "different-messages" })
+	@ValueSource(
+			strings = { "same-field", "different-fields", "parent-child", "different-messages", "chain" })
 	void canonicalPublishersMatchSerialValuesWhenBIsReadyBeforeA( String shape ) throws Exception {
 		List<List<String>> observations = new ArrayList<>();
 		for( boolean parallel : List.of( false, true ) ) {
 			boolean fields = shape.equals( "different-fields" ) || shape.equals( "parent-child" );
 			String first = fields ? shape.equals( "parent-child" ) ? "left=A,right=A" : "left=A" : "A";
 			String second = fields ? "right=B" : "B";
-			Flow a = ParallelBindingFixture.create( "A", first );
-			Flow b = ParallelBindingFixture.create( "B", second );
+			Flow a = shape.equals( "chain" ) ? chainFlow( "A", "AB" )
+					: ParallelBindingFixture.create( "A", first );
+			Flow b = shape.equals( "chain" ) ? chainFlow( "B", "AB" )
+					: ParallelBindingFixture.create( "B", second );
 			Map<Flow, Thread> callers = new ConcurrentHashMap<>();
 			List<String> writes = new CopyOnWriteArrayList<>();
 			Flow c = Creator.build( f -> {
@@ -143,8 +879,9 @@ class NativeResourceAdmissionTest {
 				if( parallel ) {
 					await( independent );
 					assertEquals( 0, b.dependencies().count(), "B has no genuine prerequisite" );
-					assertFalse( run.registered.contains( "A []" ), "A's own resource is held" );
-					assertFalse( run.registered.contains( "B []" ), "ready B must not even be emitted" );
+					assertFalse( run.registered.contains( a.meta().id() ), "A's own resource is held" );
+					assertFalse( run.registered.contains( b.meta().id() ),
+							"ready B must not even be emitted" );
 					assertEquals( List.of(), writes );
 				}
 			}
@@ -1190,7 +1927,7 @@ class NativeResourceAdmissionTest {
 	 * @throws Exception If a rejected run fails to finish
 	 */
 	@Test
-	void explicitSerialResourcesDoNotAuthorizeUnauditedChainsOrReports() throws Exception {
+	void serialResourceDeclarationsSupportChainsButStillRejectReports() throws Exception {
 		Flow chain = Creator.build( f -> f.meta( m -> m.description( "chain" )
 				.tags( t -> t.add( "chain:unowned" ) ) )
 				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
@@ -1200,13 +1937,20 @@ class NativeResourceAdmissionTest {
 				r.resources( "fixture", f -> true, "serial-guard" );
 				if( reporting )
 					r.reporting( com.mastercard.test.flow.assrt.Reporting.QUIETLY );
-			}, a -> fail( "unsupported serial ownership" ) );
+			}, a -> {
+				if( reporting )
+					fail( "unsupported serial reporting ownership" );
+			} );
 			run.start();
 			run.awaitCompletion();
-			assertEquals( 0, run.bodies.get() );
-			assertEquals( 0, run.getSummary().getTestsStartedCount() );
-			assertTrue( run.failures.stream().anyMatch( f -> f.toString().contains(
-					reporting ? "reporting NEVER" : "context, residue or chain" ) ), run.failures::toString );
+			assertEquals( reporting ? 0 : 1, run.bodies.get() );
+			assertEquals( reporting ? 0 : 1, run.getSummary().getTestsStartedCount() );
+			if( reporting )
+				assertTrue(
+						run.failures.stream().anyMatch( f -> f.toString().contains( "reporting NEVER" ) ),
+						run.failures::toString );
+			else
+				assertEquals( List.of(), run.failures );
 		}
 	}
 
@@ -1271,10 +2015,13 @@ class NativeResourceAdmissionTest {
 		final String id = "resource-run-" + IDS.incrementAndGet();
 		final boolean parallel;
 		final List<Flow> flows;
+		private List<Flow> selected;
 		final Consumer<PreparedFlocessor> configure;
 		final Consumer<Assertion> body;
 		final CountDownLatch prepared = new CountDownLatch( 1 );
 		final List<String> registered = new CopyOnWriteArrayList<>();
+		private final List<String> finished = new CopyOnWriteArrayList<>();
+		private final CountDownLatch firstFinished = new CountDownLatch( 1 );
 		final List<Throwable> failures = new CopyOnWriteArrayList<>();
 		final List<String> fallbacks = new CopyOnWriteArrayList<>();
 		final List<ResourceRequirements> requirements = new ArrayList<>();
@@ -1315,6 +2062,7 @@ class NativeResourceAdmissionTest {
 				Consumer<Assertion> body ) {
 			this.parallel = parallel;
 			this.flows = flows;
+			selected = flows;
 			this.configure = configure;
 			this.body = body;
 		}
@@ -1367,9 +2115,9 @@ class NativeResourceAdmissionTest {
 				return;
 			awaitCompletion();
 			assertEquals( List.of(), failures );
-			assertEquals( flows.size(), getSummary().getTestsStartedCount() );
-			assertEquals( flows.size(), getSummary().getTestsSucceededCount() );
-			assertEquals( flows.size(), bodies.get() );
+			assertEquals( selected.size(), getSummary().getTestsStartedCount() );
+			assertEquals( selected.size(), getSummary().getTestsSucceededCount() );
+			assertEquals( selected.size(), bodies.get() );
 			assertEquals( 12, pool.getParallelism() );
 		}
 
@@ -1418,6 +2166,10 @@ class NativeResourceAdmissionTest {
 		@Override
 		public void executionFinished( TestIdentifier id, TestExecutionResult result ) {
 			super.executionFinished( id, result );
+			if( id.isTest() ) {
+				finished.add( id.getDisplayName() );
+				firstFinished.countDown();
+			}
 			result.getThrowable().ifPresent( failures::add );
 		}
 	}
@@ -1506,9 +2258,10 @@ class NativeResourceAdmissionTest {
 		run.configure.accept( runner );
 		Stream<DynamicNode> tests = runner.tests();
 		assertThrows( IllegalStateException.class, runner::tests );
-		run.flows.forEach( f -> run.requirements.add( runner.requirements( f ) ) );
+		run.selected.forEach( f -> run.requirements.add( runner.requirements( f ) ) );
 		assertThrows( IllegalStateException.class, () -> runner.resources( "late", f -> true, "x" ) );
 		assertThrows( IllegalStateException.class, () -> runner.exclusive( "late", f -> true ) );
+		assertThrows( IllegalStateException.class, () -> runner.isolatedChains( "late", "AB" ) );
 		run.prepared.countDown();
 		Stream<DynamicNode> original = tests.onClose( () -> {
 			run.closes.incrementAndGet();

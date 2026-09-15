@@ -46,6 +46,258 @@ import com.mastercard.test.flow.util.Transmission.Type;
  */
 class FlowAdmissionTest {
 	/**
+	 * Stop may return a between-member reservation, but not one still used by an
+	 * entered member or its outer native cleanup.
+	 *
+	 * @param capacity Core/serial outstanding capacity
+	 * @param between  Whether the first member has already terminated safely
+	 */
+	@ParameterizedTest
+	@CsvSource({ "1,false", "2,false", "5,false", "1,true", "2,true", "5,true" })
+	void stoppedChainsReleaseOnlyProvenDrainedUse( int capacity, boolean between ) {
+		FlowAdmission run = prepare( capacity,
+				List.of( emptyFlow( "A [chain:AB]" ), emptyFlow( "B [chain:AB]" ) ) );
+		var scope = ResourceReservations.shared();
+		var outside = scope.register( scope.capacity( 1 ),
+				new ResourceRules().resources( "empty", f -> true ).resolve( null ), () -> {
+				} );
+		assertEquals( 0, run.poll() );
+		enter( run, 0 );
+		Throwable primary = null;
+		try {
+			run.processed( 0, Result.SUCCESS, null );
+			if( between )
+				run.finished( "0", SUCCESSFUL, null );
+			run.stop( new IllegalStateException( "observed stop" ) );
+			assertThrows( IllegalStateException.class, run::poll );
+			assertFalse( run.enter( 1, "unused" ), "no stopped member may enter" );
+			try( Grant grant = outside.tryAcquire() ) {
+				if( between )
+					assertNotNull( grant, "no active member remains" );
+				else
+					assertNull( grant, "body drainage alone does not prove native cleanup" );
+			}
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			outside.cancel();
+			try {
+				complete( run, 0 );
+			}
+			catch( Throwable cleanup ) {
+				if( primary == null )
+					throw cleanup;
+				if( primary != cleanup )
+					primary.addSuppressed( cleanup );
+			}
+		}
+		assertThrows( IllegalStateException.class, run::close,
+				"late drainage never restarts the owner" );
+	}
+
+	/**
+	 * Every member's resource is required before the first member starts.
+	 *
+	 * @param capacity Core/serial outstanding capacity
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 2, 5 })
+	void isolatedChainAcquiresWholeUnionBeforeItsFirstMember( int capacity ) {
+		List<Flow> flows = List.of( emptyFlow( "A [chain:AB]" ), emptyFlow( "B [chain:AB]" ) );
+		ResourceRules rules = new ResourceRules().isolatedChains( "whole-chain audit", "AB" )
+				.resources( "A state", f -> f == flows.get( 0 ), "chain-A" )
+				.resources( "B state", f -> f == flows.get( 1 ), "chain-B" );
+		FlowAdmission run = new FlowAdmission( capacity );
+		run.prepare( flows, rules.chains( flows, flows.stream().map( rules::resolve ).toList() ) );
+		var scope = ResourceReservations.shared();
+		var b = scope.register( scope.capacity( 1 ), rules.resolve( flows.get( 1 ) ), () -> {
+		} );
+		var a = scope.register( scope.capacity( 1 ), rules.resolve( flows.get( 0 ) ), () -> {
+		} );
+		try( Grant held = b.tryAcquire() ) {
+			assertNotNull( held );
+			assertEquals( WAITING, run.poll() );
+			try( Grant free = a.tryAcquire() ) {
+				assertNotNull( free, "waiting whole chain holds no partial A" );
+			}
+		}
+		finally {
+			a.cancel();
+			b.cancel();
+		}
+		for( int i = 0; i < 2; i++ ) {
+			assertEquals( i, run.poll() );
+			enter( run, i );
+			complete( run, i );
+		}
+		finish( run );
+	}
+
+	/**
+	 * Contract the combined graph, not just hard prerequisites. None of the
+	 * order-only edges may be dropped to rescue an impossible uninterrupted chain.
+	 *
+	 * @param capacity   Core/serial outstanding capacity
+	 * @param constraint Source of the contradictory precedence
+	 */
+	@ParameterizedTest
+	@CsvSource({ "1,hard", "2,hard", "5,hard", "1,basis", "2,basis", "5,basis",
+			"1,publication", "2,publication", "5,publication", "1,alias", "2,alias", "5,alias" })
+	void chainContractionRejectsEveryKindOfCombinedContradiction( int capacity, String constraint ) {
+		List<Flow> flows;
+		if( constraint.equals( "basis" ) ) {
+			Flw a = emptyFlow( "A1 [chain:A]" );
+			Flw b = emptyFlow( "B []" ).basis( a );
+			flows = List.of( a, b, emptyFlow( "A2 [chain:A]" ).basis( b ) );
+		}
+		else if( constraint.equals( "hard" ) ) {
+			Flow a = Creator
+					.build( f -> f.meta( m -> m.description( "A1" ).tags( t -> t.add( "chain:A" ) ) ) );
+			Flow b = flow( "B", a );
+			Flow end = Creator
+					.build( f -> f.meta( m -> m.description( "A2" ).tags( t -> t.add( "chain:A" ) ) )
+							.prerequisite( b ) );
+			flows = List.of( a, b, end );
+		}
+		else {
+			Text shared = new Text( "request" ) {
+				@Override
+				public Text child() {
+					return this;
+				}
+			};
+			List<Flow> producers = new ArrayList<>();
+			for( String name : List.of( "A1", "B", "A2" ) ) {
+				producers.add( Creator.build( f -> f.meta( m -> m.description( name ).tags( t -> {
+					if( name.startsWith( "A" ) )
+						t.add( "chain:A" );
+				} ) ).call( i -> i.from( TestModel.Actors.A ).to( TestModel.Actors.B )
+						.request( constraint.equals( "alias" ) ? shared : new Text( "request" ) )
+						.response( new Text( name ) ) ) ) );
+			}
+			flows = new ArrayList<>( producers );
+			if( constraint.equals( "publication" ) )
+				flows.add( fanIn( "sink", producers, 2 ) );
+		}
+		ResourceRules rules = new ResourceRules().resources( "empty", f -> true )
+				.isolatedChains( "isolation cannot erase ordering", "A" );
+		FlowAdmission run = new FlowAdmission( capacity );
+		assertTrue( assertThrows( IllegalArgumentException.class,
+				() -> run.prepare( flows,
+						rules.chains( flows, flows.stream().map( rules::resolve ).toList() ) ) )
+								.getMessage().contains( "contracted chain" ) );
+		assertThrows( IllegalStateException.class, run::poll, "no invalid plan can admit work" );
+	}
+
+	/**
+	 * Auditing a whole chain permits disjoint units, not concurrent members or a
+	 * level barrier between unrelated chains.
+	 *
+	 * @param capacity Core/serial outstanding capacity
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 2, 5 })
+	void isolatedChainsContinueWithoutASeparateGrantOrCrossChainBarrier( int capacity ) {
+		Flow a = emptyFlow( "A [chain:AB]" );
+		Flow b = emptyFlow( "B [chain:AB]" );
+		Flow c = emptyFlow( "C [chain:CD]" );
+		Flow d = emptyFlow( "D [chain:CD]" );
+		List<Flow> flows = List.of( a, b, c, d );
+		ResourceRules rules = new ResourceRules().resources( "owned empty", f -> true )
+				.isolatedChains( "whole scenarios have isolated state and callbacks", "AB", "CD" );
+		FlowAdmission run = new FlowAdmission( capacity );
+		run.prepare( flows, rules.chains( flows, flows.stream().map( rules::resolve ).toList() ) );
+		List<Integer> entered = new ArrayList<>();
+		try {
+			assertEquals( 0, run.poll() );
+			enter( run, 0 );
+			entered.add( 0 );
+			if( capacity > 1 ) {
+				assertEquals( 2, run.poll(), "C may overlap A, B may not" );
+				enter( run, 2 );
+				entered.add( 2 );
+			}
+			assertEquals( WAITING, run.poll() );
+			complete( run, 0 );
+			assertEquals( 1, run.poll(), "B continues even while C is held" );
+			enter( run, 1 );
+			entered.add( 1 );
+			complete( run, 1 );
+			if( capacity == 1 ) {
+				assertEquals( 2, run.poll() );
+				enter( run, 2 );
+				entered.add( 2 );
+			}
+			complete( run, 2 );
+			assertEquals( 3, run.poll() );
+			enter( run, 3 );
+			entered.add( 3 );
+			complete( run, 3 );
+			finish( run );
+			entered.clear();
+		}
+		finally {
+			if( !entered.isEmpty() ) {
+				run.stop( new IllegalStateException( "test cleanup" ) );
+				entered.forEach( i -> complete( run, i ) );
+			}
+		}
+	}
+
+	/**
+	 * A chain owns the whole interval, not merely each member's named keys.
+	 *
+	 * @param capacity Core/serial outstanding capacity
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 2, 5 })
+	void defaultChainRetainsGlobalOwnershipThroughNativeCleanupAndBetweenMembers( int capacity ) {
+		Flow a = Creator
+				.build( f -> f.meta( m -> m.description( "A" ).tags( t -> t.add( "chain:scenario" ) ) ) );
+		Flow b = Creator
+				.build( f -> f.meta( m -> m.description( "B" ).tags( t -> t.add( "chain:scenario" ) ) ) );
+		FlowAdmission run = prepare( capacity, List.of( a, b ) );
+		var scope = ResourceReservations.shared();
+		var empty = new ResourceRules().resources( "outside empty", f -> true ).resolve( null );
+		var outside = scope.register( scope.capacity( 1 ), empty, () -> {
+		} );
+		List<Integer> entered = new ArrayList<>();
+		try {
+			assertEquals( 0, run.poll() );
+			enter( run, 0 );
+			entered.add( 0 );
+			run.processed( 0, Result.SUCCESS, null );
+			try( Grant unexpected = outside.tryAcquire() ) {
+				assertNull( unexpected, "default chain excludes EMPTY during outer native cleanup" );
+			}
+			assertEquals( WAITING, run.poll(), "next member waits for actual native completion" );
+			run.finished( "0", SUCCESSFUL, null );
+			try( Grant unexpected = outside.tryAcquire() ) {
+				assertNull( unexpected, "the same grant must survive the gap between members" );
+			}
+			assertEquals( 1, run.poll() );
+			enter( run, 1 );
+			entered.add( 1 );
+			complete( run, 1 );
+			try( Grant available = outside.tryAcquire() ) {
+				assertNotNull( available );
+			}
+			finish( run );
+			entered.clear();
+		}
+		finally {
+			outside.cancel();
+			if( !entered.isEmpty() ) {
+				run.stop( new IllegalStateException( "test cleanup" ) );
+				entered.forEach( i -> complete( run, i ) );
+			}
+		}
+	}
+
+	/**
 	 * A blocked first publisher cannot be overtaken, but its error is not data for
 	 * B.
 	 *

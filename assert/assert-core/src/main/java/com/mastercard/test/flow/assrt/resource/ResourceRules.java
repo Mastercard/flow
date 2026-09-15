@@ -2,6 +2,7 @@ package com.mastercard.test.flow.assrt.resource;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -14,6 +15,50 @@ import com.mastercard.test.flow.Flow;
  */
 public final class ResourceRules {
 	private final Map<String, Rule> rules = new LinkedHashMap<>();
+	private final Map<String, Set<String>> isolatedChains = new LinkedHashMap<>();
+
+	/**
+	 * Audits entire named chains for outside overlap. This does not classify any
+	 * member's resources: UNKNOWN and exclusive members still exclude all work.
+	 *
+	 * @param name   Unique nonblank audit name
+	 * @param chains Existing chain tag suffixes, without the chain: prefix
+	 * @return this configuration
+	 */
+	public ResourceRules isolatedChains( String name, String... chains ) {
+		validateName( name );
+		Set<String> names = new LinkedHashSet<>();
+		for( String chain : chains ) {
+			if( Objects.requireNonNull( chain ).isBlank() )
+				throw new IllegalArgumentException( "Isolated chain name must not be blank" );
+			names.add( chain );
+		}
+		if( names.isEmpty() )
+			throw new IllegalArgumentException( "A whole-chain audit must name chains" );
+		isolatedChains.put( name, names );
+		return this;
+	}
+
+	/**
+	 * Freezes selected membership and whole-chain isolation without rerunning
+	 * rules.
+	 *
+	 * @param flows        Selected flows in canonical order
+	 * @param requirements Previously resolved member requirements in the same order
+	 * @return Whole-unit reservation plan
+	 */
+	public ChainPlan chains( List<Flow> flows, List<ResourceRequirements> requirements ) {
+		Map<String, Set<String>> isolated = new LinkedHashMap<>();
+		isolatedChains.forEach( ( rule, names ) -> names.forEach( name -> isolated
+				.computeIfAbsent( name, key -> new LinkedHashSet<>() ).add( rule ) ) );
+		return new ChainPlan( flows, requirements, isolated );
+	}
+
+	private void validateName( String name ) {
+		if( Objects.requireNonNull( name ).isBlank() || rules.containsKey( name )
+				|| isolatedChains.containsKey( name ) )
+			throw new IllegalArgumentException( "Resource rule must be named and unique: " + name );
+	}
 
 	/**
 	 * Declares a known set; an empty set is an affirmative independence audit.
@@ -40,9 +85,7 @@ public final class ResourceRules {
 
 	private ResourceRules add( String name, Predicate<Flow> matches, boolean exclusive,
 			String... keys ) {
-		if( Objects.requireNonNull( name ).isBlank() || rules.containsKey( name ) ) {
-			throw new IllegalArgumentException( "Resource rule must be named and unique: " + name );
-		}
+		validateName( name );
 		Set<String> identities = new LinkedHashSet<>();
 		for( String key : keys ) {
 			if( Objects.requireNonNull( key ).isBlank() ) {

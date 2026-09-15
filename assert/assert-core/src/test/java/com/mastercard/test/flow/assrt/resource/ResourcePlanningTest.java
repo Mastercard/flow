@@ -2,6 +2,7 @@ package com.mastercard.test.flow.assrt.resource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.FutureTask;
@@ -19,6 +20,95 @@ import com.mastercard.test.flow.assrt.resource.ResourceReservations.Request;
  * Pure public planning/reservation seam, shared by runners and fixture owners.
  */
 class ResourcePlanningTest {
+	/**
+	 * Isolation is not a resource audit, even when another member is classified.
+	 */
+	@Test
+	void wholeChainUnionPreservesUnknownAndExclusiveMembersWithoutSelectingOthers() {
+		Flow a = Creator
+				.build( f -> f.meta( m -> m.description( "A" ).tags( t -> t.add( "chain:AB" ) ) ) );
+		Flow b = Creator
+				.build( f -> f.meta( m -> m.description( "B" ).tags( t -> t.add( "chain:AB" ) ) ) );
+		Flow outside = Creator
+				.build( f -> f.meta( m -> m.description( "outside" ) ).prerequisite( a ) );
+		String[] audited = { "AB" };
+		ResourceRules rules = new ResourceRules().isolatedChains( "whole-chain audit", audited )
+				.isolatedChains( "cleanup audit", "AB", "absent" )
+				.isolatedChains( "unselected audit", "absent" )
+				.resources( "A state", f -> f == a, "account" )
+				.exclusive( "outside reset", f -> f == outside );
+		audited[0] = "mutated";
+		List<Flow> selected = new ArrayList<>( List.of( a, b, outside ) );
+		ChainPlan unknown = rules.chains( selected, selected.stream().map( rules::resolve ).toList() );
+		assertSame( unknown.requirements( 0 ), unknown.requirements( 1 ) );
+		assertEquals( Set.of( "account" ), unknown.requirements( 0 ).keys() );
+		assertEquals( Set.of( "A state" ), unknown.requirements( 0 ).rules() );
+		assertEquals( List.of( "whole-chain audit", "cleanup audit" ),
+				unknown.requirements( 0 ).isolationRules().stream().toList() );
+		assertEquals( Set.of(), unknown.requirements( 2 ).isolationRules() );
+		assertEquals( Set.of(), rules.resolve( b ).isolationRules() );
+		assertThrows( UnsupportedOperationException.class,
+				() -> unknown.requirements( 0 ).isolationRules().clear() );
+		assertTrue( unknown.requirements( 0 ).unknown(), "a classified member cannot erase UNKNOWN" );
+		assertTrue( unknown.requirements( 0 ).exclusive() );
+		assertTrue( rules.resolve( b ).unknown(), "isolation does not classify a member as EMPTY" );
+		rules.resources( "B state", f -> f == b, "queue" );
+		ChainPlan known = rules.chains( selected, selected.stream().map( rules::resolve ).toList() );
+		assertEquals( Set.of( "account", "queue" ), known.requirements( 0 ).keys() );
+		assertFalse( known.requirements( 0 ).unknown() );
+		assertFalse( known.requirements( 0 ).exclusive(), "unchained exclusive is not component-wide" );
+		assertTrue( known.requirements( 2 ).exclusive() );
+		rules.exclusive( "B reset", f -> f == b );
+		ChainPlan exclusive = rules.chains( selected,
+				selected.stream().map( rules::resolve ).toList() );
+		assertTrue( exclusive.requirements( 0 ).exclusive() );
+		ChainPlan subset = rules.chains( List.of( a ), List.of( rules.resolve( a ) ) );
+		assertEquals( -1, subset.next( 0 ) );
+		assertEquals( Set.of( "account" ), subset.requirements( 0 ).keys() );
+		assertFalse( subset.requirements( 0 ).exclusive(),
+				"unselected chain member adds no restriction" );
+		rules.isolatedChains( "later audit", "AB" );
+		selected.clear();
+		assertEquals( Set.of( "whole-chain audit", "cleanup audit" ),
+				unknown.requirements( 0 ).isolationRules(),
+				"plan does not retain mutable declarations" );
+		assertEquals( 1, unknown.next( 0 ), "selected membership is frozen" );
+		assertTrue( unknown.requirements( 0 ).unknown(),
+				"later member rules cannot change the snapshot" );
+		assertEquals( Set.of( "chain:AB" ), a.meta().tags() );
+		assertThrows( IllegalArgumentException.class,
+				() -> rules.resources( "whole-chain audit", f -> true ) );
+		assertThrows( IllegalArgumentException.class, () -> rules.isolatedChains( "A state", "AB" ) );
+		assertThrows( IllegalArgumentException.class, () -> rules.isolatedChains( "empty" ) );
+		assertThrows( IllegalArgumentException.class, () -> rules.isolatedChains( "blank", " " ) );
+	}
+
+	/**
+	 * Default exclusion is distinct from member classification and unrelated
+	 * audits.
+	 */
+	@Test
+	void defaultChainReservationKeepsKnownEmptyMembersSeparateFromIsolation() {
+		Flow a = Creator.build( f -> f.meta( m -> m.description( "A" )
+				.tags( t -> t.add( "chain:AB" ) ) ) );
+		ResourceRules rules = new ResourceRules().resources( "empty", f -> true )
+				.isolatedChains( "absent scenario", "other" );
+		ResourceRequirements member = rules.resolve( a );
+		ChainPlan plan = rules.chains( List.of( a ), List.of( member ) );
+		assertFalse( member.exclusive() );
+		assertFalse( plan.requirements( 0 ).unknown() );
+		assertTrue( plan.requirements( 0 ).exclusive() );
+		assertEquals( Set.of(), plan.requirements( 0 ).keys() );
+		assertEquals( Set.of( "empty" ), plan.requirements( 0 ).rules() );
+		assertEquals( Set.of(), plan.requirements( 0 ).isolationRules() );
+		assertEquals( -1, plan.next( 0 ) );
+		ResourceRequirements unknown = new ResourceRules().isolatedChains( "not membership", "AB" )
+				.resolve( a );
+		assertTrue( unknown.unknown() );
+		assertEquals( Set.of(), unknown.rules() );
+		assertEquals( Set.of(), unknown.isolationRules() );
+	}
+
 	/** Checks immutable rule unions, provenance and exclusive precedence. */
 	@Test
 	void unionKeepsEveryMatchingRuleAndExclusiveCannotBeErased() {

@@ -1,11 +1,6 @@
 package com.mastercard.test.flow.assrt.junit5;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
-import static com.mastercard.test.flow.util.Transmission.Type.REQUEST;
-import static com.mastercard.test.flow.util.Transmission.Type.RESPONSE;
-
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
@@ -17,6 +12,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
@@ -27,6 +32,7 @@ import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.engine.TestExecutionResult;
+import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherConfig;
@@ -35,20 +41,44 @@ import org.junit.platform.launcher.core.LauncherFactory;
 import org.opentest4j.AssertionFailedError;
 
 import com.mastercard.test.flow.Flow;
+import com.mastercard.test.flow.Message;
+import com.mastercard.test.flow.Unpredictable;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.LogCapture;
 import com.mastercard.test.flow.assrt.Reporting;
 import com.mastercard.test.flow.assrt.junit5.mock.Actrs;
 import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
+import com.mastercard.test.flow.assrt.junit5.mock.Msg;
 import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.builder.Deriver;
-import com.mastercard.test.flow.Message;
-import com.mastercard.test.flow.Unpredictable;
-import com.mastercard.test.flow.assrt.junit5.mock.Msg;
+import static com.mastercard.test.flow.util.Transmission.Type.REQUEST;
+import static com.mastercard.test.flow.util.Transmission.Type.RESPONSE;
 
 /** Public caller/Launcher regression seam for the restricted native tracer. */
 class FlowParallelBindingTest {
+	/**
+	 * Completed chain failures retain the real dependent and derived-flow oracle.
+	 */
+	@Test
+	void chainsRetainHistoryErrorsDerivedSuppressionsAndNativeDurations() {
+		List<String> expected = List.of( "error [chain:error]:FAILED",
+				"errorChild [chain:error]:FAILED", "errorDependent [chain:error]:ABORTED",
+				"failure [chain:failure]:FAILED", "failureChild [chain:failure]:ABORTED",
+				"failureDependent [chain:failure]:FAILED", "success [chain:success]:SUCCESSFUL",
+				"successChild [chain:success]:SUCCESSFUL", "successDependent [chain:success]:SUCCESSFUL" );
+		for( String mode : List.of( "false", "true" ) ) {
+			Evidence e = execute( "oracle-chain", mode, 12 );
+			assertEquals( expected, e.results.stream().sorted().toList(), e.failures::toString );
+			assertEquals( 9, e.starts.size() );
+			assertEquals( 7, e.events.stream().filter( s -> s.startsWith( "body:" ) ).count() );
+			assertEquals( 9, e.durations.size() );
+			assertTrue( e.durations.values().stream().allMatch( n -> n > 0 ) );
+			assertEquals( 9, e.sources.get() );
+			assertDoesNotThrow( e.handle::close );
+		}
+	}
+
 	/** Both direct successors can finish before an unrelated slow root. */
 	@Test
 	void dependencyForkProgressesWithoutAnUnrelatedLevelBarrier() {
@@ -320,7 +350,7 @@ class FlowParallelBindingTest {
 	 */
 	@Test
 	void allPreparationMustBeAuditedBeforeAnySutUse() {
-		for( String mode : List.of( "report", "capture", "chain",
+		for( String mode : List.of( "report", "capture",
 				"transform" ) ) {
 			Evidence e = execute( mode, "true", 3 );
 			assertFalse( e.failures.isEmpty(), mode );
@@ -335,7 +365,7 @@ class FlowParallelBindingTest {
 	 * @param scenario Fan-in or shared-message model
 	 */
 	@ParameterizedTest
-	@ValueSource(strings = { "fanin", "alias" })
+	@ValueSource(strings = { "fanin", "alias", "chain" })
 	void auditedPublicationPreservesEveryNativeInvocation( String scenario ) {
 		Evidence e = execute( scenario, "true", 12 );
 		assertEquals( List.of(), e.failures );
@@ -394,12 +424,31 @@ class FlowParallelBindingTest {
 	 */
 	@Test
 	void busyTargetTwoMakesRealInlineProgressAndRestoresContextOnReuse() {
-		Evidence e = execute( "busy", "true", 2 );
-		assertEquals( List.of(), e.failures );
-		assertEquals( 80, e.results.size() );
-		assertTrue( e.inline.get() > 0, "real native body on the still-enumerating factory worker" );
-		assertEquals( 80, e.restored.get() );
-		assertEquals( 2, e.threads.size() );
+		for( String scenario : List.of( "busy", "busy-chain" ) ) {
+			Evidence e = execute( scenario, "true", 2 );
+			assertEquals( List.of(), e.failures );
+			assertEquals( 80, e.results.size() );
+			assertTrue( e.inline.get() > 0, "real native body on the still-enumerating factory worker" );
+			assertEquals( 80, e.restored.get() );
+			assertEquals( 80, e.durations.size() );
+			assertTrue( e.durations.values().stream().allMatch( n -> n > 0 ) );
+			assertEquals( 2, e.threads.size() );
+			if( scenario.equals( "busy-chain" ) )
+				for( int i = 0; i < 80; i += 2 )
+					assertTrue( e.events.indexOf( String.format( "finish:%03d [chain:pair-%d]", i,
+							i / 2 ) ) < e.events.indexOf( String.format( "body:%03d", i + 1 ) ) );
+		}
+	}
+
+	/**
+	 * Whole-chain ownership does not make a one-worker readiness waiter supported.
+	 */
+	@Test
+	void nativeParallelOneStillRejectsChainsBeforeFactoryOrSut() {
+		Evidence e = execute( "chain", "true", 1 );
+		assertNull( e.factory );
+		assertEquals( 0, e.starts.size() );
+		assertFalse( e.failures.isEmpty() );
 	}
 
 	/**
@@ -711,8 +760,14 @@ class ParallelBindingFixture {
 			if( e.scenario.equals( "fanin" ) )
 				f.prerequisite( c );
 		} );
-		List<Flow> flows = e.scenario.equals( "busy" )
-				? IntStream.range( 0, 80 ).mapToObj( n -> create( String.format( "%03d", n ), "response" ) )
+		List<Flow> flows = e.scenario.startsWith( "busy" )
+				? IntStream.range( 0, 80 ).mapToObj( n -> Creator.build( f -> {
+					f.meta( m -> m.description( String.format( "%03d", n ) ).tags( tags -> {
+						if( e.scenario.equals( "busy-chain" ) )
+							tags.add( "chain:pair-" + n / 2 );
+					} ) ).call( i -> i.from( Actrs.AVA ).to( Actrs.BEN ).request( new Text( "request" ) )
+							.response( new Text( "response" ) ) );
+				} ) )
 						.toList()
 				: e.scenario.startsWith( "oracle" ) ? new Mdl().flows().toList() : List.of( a, b, c );
 		if( e.scenario.startsWith( "basis-" ) ) {
@@ -743,6 +798,22 @@ class ParallelBindingFixture {
 							.request( new Text( "request" ) ).response( new Text( "response" ) ) ) );
 			flows = List.of( a, b, c, d );
 		}
+		if( e.scenario.equals( "oracle-chain" ) ) {
+			flows = new java.util.ArrayList<>();
+			for( String name : List.of( "error", "failure", "success" ) ) {
+				Flow root = Creator.build( f -> f.meta( m -> m.description( name )
+						.tags( tags -> tags.add( "chain:" + name ) ) )
+						.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN ).request( new Text( "request" ) )
+								.response( new Text( "response" ) ) ) );
+				flows.add( root );
+				flows.add( Deriver.build( root, f -> f.meta( m -> m.description( name + "Child" )
+						.tags( tags -> tags.add( "chain:" + name ) ) ) ) );
+				flows.add( Creator.build( f -> f.meta( m -> m.description( name + "Dependent" )
+						.tags( tags -> tags.add( "chain:" + name ) ) ).prerequisite( root )
+						.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN ).request( new Text( "request" ) )
+								.response( new Text( "response" ) ) ) ) );
+			}
+		}
 		List<Flow> selected = flows;
 		PreparedFlocessor runner = execution.flocessor( "real binding", new Mdl() {
 			@Override
@@ -754,6 +825,11 @@ class ParallelBindingFixture {
 			runner.independent( "owned synchronous resources and callbacks; no affinity",
 					f -> !e.scenario.equals( "partial" ) || f == a );
 		}
+		if( e.scenario.equals( "busy-chain" ) )
+			runner.isolatedChains( "whole pairs own distinct state and callbacks",
+					IntStream.range( 0, 40 ).mapToObj( i -> "pair-" + i ).toArray( String[]::new ) );
+		if( e.scenario.equals( "oracle-chain" ) )
+			runner.isolatedChains( "three independent scenarios", "error", "failure", "success" );
 		if( e.scenario.equals( "report" ) )
 			runner.reporting( Reporting.QUIETLY );
 		if( e.scenario.equals( "capture" ) )
@@ -809,7 +885,7 @@ class ParallelBindingFixture {
 						: assertion.expected().response().content() );
 				return;
 			}
-			if( e.scenario.equals( "busy" ) ) {
+			if( e.scenario.startsWith( "busy" ) ) {
 				if( name.equals( "000" ) ) {
 					e.cEntered.countDown();
 					await( e.release );
@@ -851,7 +927,7 @@ class ParallelBindingFixture {
 		assertThrows( IllegalStateException.class, () -> runner.independent( "late", f -> true ) );
 		if( e.scenario.equals( "transform" ) )
 			return tests.skip( 1 );
-		if( e.scenario.equals( "busy" ) )
+		if( e.scenario.startsWith( "busy" ) )
 			return tests.onClose( e.release::countDown );
 		return tests;
 	}

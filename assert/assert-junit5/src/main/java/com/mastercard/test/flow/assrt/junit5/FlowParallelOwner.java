@@ -26,13 +26,12 @@ import com.mastercard.test.flow.assrt.FlowAdmission;
 import com.mastercard.test.flow.assrt.FlowAdmission.Outcome;
 import com.mastercard.test.flow.assrt.History;
 import com.mastercard.test.flow.assrt.History.Result;
-import com.mastercard.test.flow.assrt.Order;
-import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
+import com.mastercard.test.flow.assrt.resource.ChainPlan;
 
 /**
  * Native identity/profile adapter over shared-core admission. Original bodies
- * stay on their actual Jupiter invocation thread. General producer conflicts,
- * chains and fixture/context ownership remain guarded pending their own slices.
+ * stay on their actual Jupiter invocation thread. Fixture/context ownership
+ * remains guarded pending its own slice.
  */
 final class FlowParallelOwner implements FlowNativeCall.Observer {
 	private final FlowExecution owner;
@@ -76,17 +75,16 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 	/**
 	 * Freezes native identities and rejects surfaces not yet owned by admission.
 	 * 
-	 * @param flows        Selected flows in canonical order
-	 * @param nodes        Original owned descriptions
-	 * @param requirements Stored requirements in the same order
+	 * @param flows  Selected flows in canonical order
+	 * @param nodes  Original owned descriptions
+	 * @param chains Frozen whole-chain ownership
 	 */
 	void prepare( List<Flow> flows, List<DynamicNode> nodes,
-			List<ResourceRequirements> requirements ) {
+			ChainPlan chains ) {
 		for( int i = 0; i < flows.size(); i++ ) {
 			Flow flow = flows.get( i );
-			if( flow.context().findAny().isPresent() || flow.residue().findAny().isPresent()
-					|| flow.meta().tags().stream().anyMatch( t -> t.startsWith( Order.CHAIN_TAG_PREFIX ) ) ) {
-				throw unsupported( flow, "context, residue or chain (pending tickets 15/17)" );
+			if( flow.context().findAny().isPresent() || flow.residue().findAny().isPresent() ) {
+				throw unsupported( flow, "context or residue (pending ticket 17)" );
 			}
 			for( Dependency dependency : flow.dependencies().toList() ) {
 				Flow source = dependency.source().flow();
@@ -107,7 +105,7 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 			sources.add( ClassSource.from( uri ) );
 			names.put( description.getDisplayName(), i );
 		}
-		admission.prepare( flows, requirements );
+		admission.prepare( flows, chains );
 	}
 
 	private static IllegalStateException unsupported( Flow flow, String surface ) {

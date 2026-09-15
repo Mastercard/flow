@@ -21,11 +21,12 @@ authoritative; no frozen feasibility evidence or design decision was rewritten.
 | 11 | Named rule union/provenance, UNKNOWN global exclusion, shared same-JVM whole-resource-set and execution-slot reservation before native emission; prepared serial/parallel cooperation | `ResourcePlanningTest`, `NativeResourceAdmissionTest`, serial cleanup and actual packaged consumer regressions |
 | 13 | Shared-core dependency-ready admission, coherent processing/native accounting, sparse canonical basis visibility, direct successor release and idempotent evidence | `FlowAdmissionTest`, actual serial/native `FlowParallelBindingTest` oracles, resource/queueing and packaged-consumer regressions |
 | 14 (code; native REPORT acceptance pending 23) | Canonical destination and identical-message participant precedence; retained synchronous binding operations, partial effects and order-only eligibility | `DependenciesTest`, `AbstractFlocessorTest`, `FlowAdmissionTest`, real serial/native publication and fault oracles |
+| 15 (supported execution slice) | Selected-only chain planning, whole-interval grants, default global exclusion, explicit whole-chain isolation audits and safe native member advancement | Core capacities 1/2/5; real serial/parallel scope, payload, cleanup, stop-gate and native-inline regressions; context/fixture integration remains 17 |
 
 The new caller permits `flow.parallel=true` only through the checked native owner.
 Named bulk `resources()`, `exclusive()` and `independent()` declarations are resolved
 once after dependency expansion. Unmatched work remains UNKNOWN/global-exclusive,
-including against explicitly known-empty work. Reporting/capture/replay/context/chain
+including against explicitly known-empty work. Reporting/capture/replay/context
 and other unchecked parallel surfaces fail closed before SUT use. These temporary
 implementation boundaries are not permanent public support restrictions. There is
 no completed fairness or workload-speedup claim.
@@ -109,7 +110,7 @@ results below predate this slice; the next full run is reserved for final integr
 - 05 needs the actual 6,000–7,000-flow consuming workload and resource-owner input.
   That environment was not supplied; the reported 52/25-minute observations are
   not new measurements or a diagnosed serial-tail cause.
-- 15–19 and 21–27 are not delivered. This includes uninterrupted chain reservations, fairness,
+- 16–19 and 21–27 are not delivered. This includes fairness and actual context/fixture ownership,
   bounded cancellation, correlated capture/cutoff, truthful stopped-run final
   artifacts, integrated compatibility, performance assessment and rollout.
 
@@ -144,6 +145,41 @@ original and reviewed evidence are archived separately; no historical IDE fixtur
 was altered. Human-only IntelliJ and 6,000-flow checks remain deferred until the end.
 
 ## Validation record
+
+### Uninterrupted chain slice
+
+One frozen selected-chain plan supplies both serial and parallel reservations.
+Default chains exclude all cooperating outside work, including known-empty flows.
+Only a named whole-chain `isolatedChains()` audit permits outside overlap; member
+UNKNOWN/exclusive policy still dominates. No extra members are selected, and no
+unchained exclusive flow promotes its dependency component. Combined hard, basis,
+publication and shared-message constraints survive contraction and cycle validation.
+An unchained identity/chain-name collision that concealed a contradiction was fixed.
+
+One grant spans members and native outer cleanup. Parallel continuation requires
+processing drainage and actual predecessor native completion; serial return proof
+remains the next actual SAME_THREAD advance. Stop returns proven-unused intervals
+but retains uncertain ownership. No native join, level barrier or body pool is added.
+The member `requirements()` view remains unchanged; `reservation()` exposes effective
+whole-chain requirements and immutable, separately classified isolation audit names.
+Independent review found and corrected the missing diagnostic provenance; both final
+review axes report zero actionable findings.
+
+The broader gate completed **374 cases: 372 passed, two existing Windows symlink
+skips, zero failures/errors** (10 API, 27 message, 180 core, 157 adapter). Three
+246-test repeats and another 246-test install gate passed without failures or skips.
+All four existing packaged-consumer points passed on the new binaries. Tests used
+Java 17.0.19, both skip flags and failure-ignore disabled, and 39 real frontend assets.
+Actual chain controls include isolated mixed/parallel scopes with B:A and D:C payloads,
+independent continuation, 80 busy-target-two leaves and retained History outcomes.
+All 637 clean-export documentation checks passed. Every tracked Markdown and staged
+file matched the tested export after line-ending normalization; the separate chain15
+archive retains 42 evidence files and fingerprints, without changing earlier archives.
+
+This does not discharge context/residue/fixture transitions and no-reset ownership
+in 17, fair ready-exclusive draining in 16, full cancellation in 18–19, reporting in
+23, or actual IDE display/Stop acceptance. The tentative serial acquire/stop race is
+source-guarded, not deterministically paused. No new full-suite or workload claim.
 
 ### Canonical publication slice
 

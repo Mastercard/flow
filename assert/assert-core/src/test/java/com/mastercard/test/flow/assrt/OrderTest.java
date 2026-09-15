@@ -1,9 +1,5 @@
 package com.mastercard.test.flow.assrt;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -11,10 +7,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.assrt.mock.Flw;
+import com.mastercard.test.flow.builder.Creator;
 
 /**
  * Exercises {@link Order}
@@ -23,6 +23,19 @@ import com.mastercard.test.flow.assrt.mock.Flw;
 class OrderTest {
 
 	private static final Collection<Applicator<?>> EMPTY = Collections.emptyList();
+
+	/** An unchained flow ID is not an explicit chain membership declaration. */
+	@Test
+	void unchainedIdentityCannotJoinAnActualChain() {
+		Flow a = Creator.build( f -> f.meta( m -> m.description( "A" )
+				.tags( tags -> tags.add( "chain:B []" ) ) ) );
+		Flow b = Creator.build( f -> f.meta( m -> m.description( "B" ) ).prerequisite( a ) );
+		Flow c = Creator.build( f -> f.meta( m -> m.description( "C" )
+				.tags( tags -> tags.add( "chain:B []" ) ) ).prerequisite( b ) );
+		assertTrue( assertThrows( IllegalArgumentException.class,
+				() -> new Order( Stream.of( c, b, a ), EMPTY ).order() )
+						.getMessage().contains( "contracted chains" ) );
+	}
 
 	/**
 	 * No order constraints between {@link Flow}s, preferred alphabetical ordering

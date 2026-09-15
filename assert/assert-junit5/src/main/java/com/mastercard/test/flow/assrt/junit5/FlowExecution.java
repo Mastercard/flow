@@ -19,6 +19,7 @@ import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.assrt.History;
 import com.mastercard.test.flow.assrt.History.Result;
+import com.mastercard.test.flow.assrt.resource.ChainPlan;
 import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations.Grant;
@@ -92,13 +93,13 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 	/**
 	 * Audits selected flows and prepares their native admission graph.
 	 *
-	 * @param flows        Selected flows in canonical order
-	 * @param nodes        Corresponding owned native descriptions
-	 * @param requirements Resolved per-flow requirements in the same order
+	 * @param flows  Selected flows in canonical order
+	 * @param nodes  Corresponding owned native descriptions
+	 * @param chains Frozen selected-chain ownership
 	 */
 	void prepareParallel( List<Flow> flows, List<DynamicNode> nodes,
-			List<ResourceRequirements> requirements ) {
-		parallelOwner.prepare( flows, nodes, requirements );
+			ChainPlan chains ) {
+		parallelOwner.prepare( flows, nodes, chains );
 	}
 
 	/**
@@ -332,7 +333,8 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 
 			@Override
 			public boolean tryAdvance( Consumer<? super DynamicNode> action ) {
-				Grant finished;
+				Grant finished = null;
+				Grant retained;
 				ResourceRequirements requirements;
 				synchronized( resourceWake ) {
 					if( !live || configuring || Thread.currentThread() != factoryThread ) {
@@ -344,27 +346,34 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 					// The next actual SAME_THREAD factory advance follows the entire native
 					// call, including outer interceptors that reject before Flow enters.
 					// action.accept returning (possibly buffering) and close do not prove this.
-					finished = serialGrant;
-					serialGrant = null;
 					if( issued != drained ) {
 						broken = true;
 					}
-				}
-				if( finished != null ) {
-					finished.close();
-				}
-				synchronized( resourceWake ) {
-					requireConsumption();
-					if( issued == descriptions.size() ) {
-						exhausted = true;
-						return false;
+					if( broken || issued == descriptions.size() || !runner.continuesChain( issued ) ) {
+						finished = serialGrant;
+						serialGrant = null;
 					}
-					requirements = runner.requirements( issued );
+					retained = serialGrant;
+					// This advance proved prior native return. Until the next emission the
+					// retained grant is tentative, so a concurrent stop may dispose safely.
+					serialGrant = null;
 				}
-				Grant grant = reserveSerial( requirements );
+				Grant grant = retained;
 				DynamicNode next;
 				boolean emitted = false;
 				try {
+					if( finished != null )
+						finished.close();
+					synchronized( resourceWake ) {
+						requireConsumption();
+						if( issued == descriptions.size() ) {
+							exhausted = true;
+							return false;
+						}
+						requirements = runner.reservation( issued );
+					}
+					if( grant == null )
+						grant = reserveSerial( requirements );
 					synchronized( resourceWake ) {
 						requireConsumption();
 						next = descriptions.get( issued++ );
@@ -386,7 +395,7 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 					synchronized( resourceWake ) {
 						serialHandoff = false;
 					}
-					if( !emitted ) {
+					if( !emitted && grant != null ) {
 						grant.close();
 					}
 				}
