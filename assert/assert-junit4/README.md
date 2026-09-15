@@ -35,20 +35,21 @@ There is a certain amount of unavoidable boilerplate required to hook the `Floce
 @RunWith(Parameterized.class)
 public class MyTest {
 
-  private static final Flocessor flows = new Flocessor( "my flow test", mySystemModel )
-    .system( /* The actors that are being exercised */ )
-    .behaviour( asrt -> {
-      // implement this to push data from asrt into your system 
-      // and then put the system outputs back into asrt
-    } );
-
-  // Boilerplate from here on
+  private static Flocessor flows;
 
   /** @return The {@link Flow} parameters */
   @Parameters(name = "{0}")
   public static Collection<Object[]> flows() {
+    flows = new Flocessor( "my flow test", mySystemModel )
+      .system( /* The actors that are being exercised */ )
+      .behaviour( asrt -> {
+        // implement this to push data from asrt into your system
+        // and then put the system outputs back into asrt
+      } );
     return flows.parameters();
   }
+
+  // Boilerplate from here on
 
   /** Human-readable name for the current test case */
   @Parameter(0)
@@ -67,5 +68,23 @@ public class MyTest {
   public void test() {
     flows.process( flow );
   }
+
+  /** Closes reporting after all parameterized cases, including failures. */
+  @AfterClass
+  public static void complete() {
+    flows.close();
+  }
 }
 ```
+
+The legacy runner implements `AutoCloseable`. Close it from `@AfterClass`, after
+all parameterized cases finish, including failures and skips. Parameter enumeration
+does not complete execution, and configuration remains live until completion.
+Create the runner in `@Parameters` so another JUnit run of the class gets a fresh
+runner; `@BeforeClass` is too late because parameter enumeration happens first.
+
+`close()` rejects active processing rather than waiting or cancelling it. Otherwise
+it permanently prevents further SUT calls, even with `Reporting.NEVER`, and closes
+only an already-created report. Successful close is idempotent; failed reporting
+remains observable on repeated close. Omitting completion leaves report ownership
+open.

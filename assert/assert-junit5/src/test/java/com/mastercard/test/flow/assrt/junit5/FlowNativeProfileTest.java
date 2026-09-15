@@ -11,6 +11,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ForkJoinPool;
@@ -23,6 +25,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -378,6 +381,7 @@ class FlowNativeProfileTest {
 
 	/** Observations asserted only after Launcher returns. */
 	static final class Events {
+		final List<Flocessor> runners = new ArrayList<>();
 		/** Failures from native execution or bounded busy-worker coordination. */
 		final CopyOnWriteArrayList<Throwable> failures = new CopyOnWriteArrayList<>();
 		/** Original factory entries. */
@@ -509,7 +513,7 @@ class FlowProfileFixture {
 
 	private static Stream<DynamicNode> oneFlow() {
 		// One real legacy flow: native profile evidence, not a parallel scheduler.
-		return new Flocessor( "native profile", new Mdl() )
+		Flocessor runner = new Flocessor( "native profile", new Mdl() )
 				.system( State.FUL, Actrs.BEN )
 				.exercising( f -> "success".equals( f.meta().description() ), message -> {
 					// Expected selection diagnostic.
@@ -521,7 +525,18 @@ class FlowProfileFixture {
 					}
 					events.bodies.incrementAndGet();
 					a.actual().response( a.expected().response().content() );
-				} ).tests();
+				} );
+		events.runners.add( runner );
+		return runner.tests();
+	}
+
+	/**
+	 * Stream closure can precede native children; class teardown owns runner
+	 * completion.
+	 */
+	@AfterAll
+	static void completeFlows() {
+		events.runners.forEach( Flocessor::close );
 	}
 }
 

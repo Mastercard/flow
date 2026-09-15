@@ -310,21 +310,38 @@ This allows us to write a test like so:
 <!-- quick.AssertionTest:assertion -->
 
 ```java
-@TestFactory
-Stream<DynamicNode> tests() {
-	return new Flocessor( "Ben behaviour", new Greetings() )
-			.system( State.LESS, BEN )
-			.behaviour( asrt -> {
-				String input = new String( asrt.expected().request().content(), UTF_8 );
-				String output = BenSys.getGreetingResponse( input );
-				asrt.actual()
-						.request( input.getBytes( UTF_8 ) )
-						.response( output.getBytes( UTF_8 ) );
-			} )
-			.tests();
+@TestInstance(Lifecycle.PER_CLASS)
+class AssertionTest {
+
+	private Flocessor flocessor;
+
+	/**
+	 * @return Test instances
+	 */
+	@TestFactory
+	Stream<DynamicNode> tests() {
+		flocessor = new Flocessor( "Ben behaviour", new Greetings() )
+				.system( State.LESS, BEN )
+				.behaviour( asrt -> {
+					String input = new String( asrt.expected().request().content(), UTF_8 );
+					String output = BenSys.getGreetingResponse( input );
+					asrt.actual()
+							.request( input.getBytes( UTF_8 ) )
+							.response( output.getBytes( UTF_8 ) );
+				} );
+		return flocessor.tests();
+	}
+
+	/** Closes reporting after dynamic children, not when their factory returns. */
+	@AfterAll
+	void completeFlows() {
+		if( flocessor != null ) {
+			flocessor.close();
+		}
+	}
 }
 ```
-[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/AssertionTest.java#L24-L36,24-36)
+[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/AssertionTest.java#L22-L51,22-51)
 
 <!-- snippet end -->
 

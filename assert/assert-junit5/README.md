@@ -32,16 +32,38 @@ After [importing the `bom`](../../bom):
 The flocessor should be used to provide the output of a [TestFactory](https://junit.org/junit5/docs/current/api/org.junit.jupiter.api/org/junit/jupiter/api/TestFactory.html) method:
 
 ```java
-@TestFactory
-Stream<DynamicNode> myTest() {
-  return new Flocessor( "my test name", mySystemModel )
+@TestInstance(Lifecycle.PER_CLASS)
+class MyTest {
+  private final Flocessor flows = new Flocessor( "my test name", mySystemModel )
     .system( /* The actors that are being exercised */ )
     .behaviour( asrt -> {
       // implement this to push data from asrt into your system 
       // and then put the system outputs back into asrt
-    } ).tests();
+    } );
+
+  @TestFactory
+  Stream<DynamicNode> myTest() {
+    return flows.tests();
+  }
+
+  // Factory return can precede dynamic children; close only after they finish.
+  @AfterAll
+  void complete() {
+    flows.close();
+  }
 }
 ```
+
+The legacy runner implements `AutoCloseable`. Retain it until `@AfterAll`:
+factory return, description enumeration and stream closure can all precede actual
+test execution. Do not wrap a factory's returned stream in try-with-resources to
+close the runner. Configuration remains live until explicit completion.
+
+`close()` rejects active processing rather than waiting or cancelling it. Otherwise
+it permanently prevents further SUT calls, even with `Reporting.NEVER`, and closes
+only an already-created report. Successful close is idempotent; failed reporting
+remains observable on repeated close. Omitting completion leaves report ownership
+open. This does not add a public close method to `PreparedFlocessor`.
 
 ## Prepared caller (implementation preview)
 

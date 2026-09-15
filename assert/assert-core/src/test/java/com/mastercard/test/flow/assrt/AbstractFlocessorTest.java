@@ -9,12 +9,20 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -43,6 +51,64 @@ import com.mastercard.test.flow.report.data.Index;
  */
 @SuppressWarnings("static-method")
 class AbstractFlocessorTest {
+
+	/**
+	 * Completion is terminal even when there is no execution or report to finish.
+	 */
+	@ParameterizedTest
+	@EnumSource(value = Reporting.class, names = { "NEVER", "QUIETLY" })
+	void completionWithoutExecutionIsTerminalAndDoesNotCreateReport( Reporting reporting ) {
+		List<String> calls = new ArrayList<>();
+		TestFlocessor runner = new TestFlocessor( "closed before execution", TestModel.abc() )
+				.system( State.LESS, B ).reporting( reporting )
+				.behaviour( a -> calls.add( "SUT" ) );
+		Flow flow = runner.flows().findFirst().orElseThrow();
+		runner.completeProcessing();
+		runner.completeProcessing();
+		assertThrows( IllegalStateException.class, () -> runner.process( flow ) );
+		assertEquals( List.of(), calls );
+		assertNull( runner.report() );
+	}
+
+	/**
+	 * A rejected close must neither wait for nor invalidate an in-flight SUT call.
+	 */
+	@Test
+	void completionRejectsActiveInvocationWithoutClosingIt() throws Exception {
+		CountDownLatch entered = new CountDownLatch( 1 );
+		CountDownLatch release = new CountDownLatch( 1 );
+		TestFlocessor runner = new TestFlocessor( "active completion", TestModel.abc() )
+				.system( State.LESS, B ).reporting( Reporting.NEVER )
+				.behaviour( a -> {
+					entered.countDown();
+					try {
+						assertTrue( release.await( 5, TimeUnit.SECONDS ) );
+					}
+					catch( InterruptedException e ) {
+						Thread.currentThread().interrupt();
+						throw new AssertionError( e );
+					}
+					a.actual().response( a.expected().response().content() );
+				} );
+		Flow flow = runner.flows().findFirst().orElseThrow();
+		ExecutorService executor = Executors.newSingleThreadExecutor();
+		try {
+			Future<?> invocation = executor.submit( () -> runner.process( flow ) );
+			assertTrue( entered.await( 5, TimeUnit.SECONDS ) );
+			assertTimeoutPreemptively( Duration.ofSeconds( 2 ),
+					() -> assertThrows( IllegalStateException.class, runner::completeProcessing ) );
+			release.countDown();
+			invocation.get( 5, TimeUnit.SECONDS );
+			runner.process( flow );
+			runner.completeProcessing();
+			assertThrows( IllegalStateException.class, () -> runner.process( flow ) );
+		}
+		finally {
+			release.countDown();
+			executor.shutdownNow();
+			assertTrue( executor.awaitTermination( 5, TimeUnit.SECONDS ) );
+		}
+	}
 
 	/**
 	 * Default test behaviour is to fail noisily

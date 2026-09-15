@@ -103,6 +103,13 @@ class CaptureScopeTest {
 		assertEquals( List.of( "begin", "end", "read", "close" ), source.events );
 		assertSame( decoration,
 				assertThrows( IllegalStateException.class, runner::completeProcessing ).getCause() );
+		assertSame( decoration,
+				assertThrows( IllegalStateException.class, runner::completeProcessing ).getCause() );
+		runner.reporting( Reporting.NEVER ).behaviour( a -> {
+			throw new AssertionError( "A failed close must still prevent SUT use" );
+		} );
+		assertThrows( IllegalStateException.class, () -> runner.process( flow ) );
+		assertEquals( List.of( "begin", "end", "read", "close" ), source.events );
 	}
 
 	@ParameterizedTest

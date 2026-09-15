@@ -33,17 +33,28 @@ import com.mastercard.test.flow.util.Tags;
  * test</a>, e.g.:
  *
  * <pre>
- * &#64;TestFactory
- * Stream&lt;DynamicNode&gt; flows() {
- * 	return new Flocessor( "My test name", MY_SYSTEM_MODEL )
+ * &#64;TestInstance(Lifecycle.PER_CLASS)
+ * class MyTest {
+ * 	private final Flocessor flows = new Flocessor( "My test name", MY_SYSTEM_MODEL )
  * 			.system( State.LESS, MY_ACTORS_UNDER_TEST )
  * 			.behaviour( asrt -&gt; {
  * 				// test behaviour
- * 			} ).tests();
+ * 			} );
+ *
+ * 	&#64;TestFactory
+ * 	Stream&lt;DynamicNode&gt; flows() {
+ * 		return flows.tests();
+ * 	}
+ *
+ * 	// Factory return can precede dynamic children; close only after they finish.
+ * 	&#64;AfterAll
+ * 	void complete() {
+ * 		flows.close();
+ * 	}
  * }
  * </pre>
  */
-public class Flocessor extends AbstractFlocessor<Flocessor> {
+public class Flocessor extends AbstractFlocessor<Flocessor> implements AutoCloseable {
 
 	/**
 	 * @param title A meaningful name for the test
@@ -51,6 +62,21 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 	 */
 	public Flocessor( String title, Model model ) {
 		super( title, model );
+	}
+
+	/**
+	 * Permanently stops processing and closes any existing report. Call from
+	 * {@code @AfterAll}, after all dynamic tests have finished. Factory return and
+	 * stream closure do not prove completion. Omitting this call leaves report
+	 * ownership open.
+	 *
+	 * @throws IllegalStateException if an invocation or completion is still active,
+	 *                               or reporting has failed; a reporting failure
+	 *                               remains observable on repeated close
+	 */
+	@Override
+	public void close() {
+		completeProcessing();
 	}
 
 	/**

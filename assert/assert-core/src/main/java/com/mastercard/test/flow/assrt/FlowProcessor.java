@@ -75,6 +75,9 @@ abstract class FlowProcessor {
 	private Dependencies dependencies;
 	private final Map<Class<? extends Context>, Context> currentContext = new HashMap<>();
 	private Writer report;
+	private int active;
+	private boolean closed;
+	private boolean closing;
 
 	/**
 	 * @param config  Configuration owned by the caller
@@ -180,7 +183,20 @@ abstract class FlowProcessor {
 	 * @param flow The flow to process after selection has indexed dependencies
 	 */
 	void process( Flow flow ) {
-		new Invocation( flow ).process();
+		synchronized( this ) {
+			if( closed ) {
+				throw new IllegalStateException( "Flow processing is closed" );
+			}
+			active++;
+		}
+		try {
+			new Invocation( flow ).process();
+		}
+		finally {
+			synchronized( this ) {
+				active--;
+			}
+		}
 	}
 
 	/** Evidence and deferred failures belong only to this actual invocation. */
@@ -879,8 +895,23 @@ abstract class FlowProcessor {
 	 * Legacy adapters deliberately do not call this on enumeration.
 	 */
 	void complete() {
-		if( report != null ) {
-			report.close();
+		synchronized( this ) {
+			if( active != 0 || closing ) {
+				throw new IllegalStateException( "Flow processing is still active or completing" );
+			}
+			closed = true;
+			closing = true;
+		}
+		try {
+			// Keep the failed writer: repeated close must expose its original failure.
+			if( report != null ) {
+				report.close();
+			}
+		}
+		finally {
+			synchronized( this ) {
+				closing = false;
+			}
 		}
 	}
 

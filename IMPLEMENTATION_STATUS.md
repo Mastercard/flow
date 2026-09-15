@@ -27,21 +27,33 @@ Report-only failure classification and run-owned final-only activation are unfin
 
 ## Blocking work and unpassed gates
 
-### 04: destination claims need a genuine legacy lifecycle
+### 04: legacy completion delivered; destination claims remain
 
-Both legacy adapters create immediate Writers without a reliable run-completion
-hook. Adding mandatory constructor-level destination locks would leave those
-destinations owned after completed legacy runs and reject later same-path runs.
-Report-core cannot distinguish completion from a pause between `with()` calls.
+Both legacy adapters now implement `AutoCloseable`. Integrations retain their
+runner and close it in genuine `@AfterAll` / `@AfterClass` teardown after all
+children. Completion rejects active processing without waiting, permanently
+prevents further processing, closes an existing Writer without lazy initialization,
+and keeps close failures observable. Prepared callers gain no public early-close API.
 
-No lock exemption, guessed last-test release, stream-return finalization, cleaner
-success hook or implicit mode change was introduced. Ticket 04 is **not implemented**.
-On 2026-09-15 the user approved explicit close/completion support for legacy runners
-and updating integrations to call it. A caller omitting completion retains ownership;
-completion is never guessed. The next slice can now implement that lifecycle and
-canonical cooperating claims, retained
-ownership through advertisement, alias/process collisions and owned `latest`
-withdrawal. Until then, different Writers require distinct non-overlapping paths.
+This is the explicit lifecycle prerequisite approved by the user on 2026-09-15,
+not the destination-claim implementation. No last-test guess, factory/stream-return
+finalization, GC release or mode change was introduced. Missing completion will
+retain ownership. Canonical cooperating claims, alias/process collisions, retained
+ownership through advertisement and owned `latest` withdrawal remain next.
+Until then, different Writers require distinct non-overlapping paths.
+
+Legacy-slice validation: 110 focused assertion cases passed; changed execution
+sources also compiled against JUnit 5.10 / Platform 1.10 and passed 62 core/legacy
+cases. Post-review focused checks passed 71 assertion cases. Actual Core Launcher
+execution found and started 15 leaves on each of two same-JVM runs: 14 successes,
+one expected out-of-SUT HISTOGRAM abort, no test/container failures; both runners
+closed after execution. This exposed and fixed early per-class service capture
+and reuse of terminally stopped mock dependencies. JUnit 4 examples likewise
+create a fresh runner during parameter discovery. Standards/simplicity and spec
+follow-up reviews found no remaining scoped defects. Generated-document and
+console-use checks passed all 623 cases in the clean export. Zero-case dynamic
+Surefire reports were not counted as runtime acceptance. Historical full-reactor
+results below predate this slice; the next full run is reserved for final integration.
 
 ### Native execution, hosts and workload
 
