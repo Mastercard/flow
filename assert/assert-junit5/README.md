@@ -175,6 +175,13 @@ prerequisites and non-class source URIs. Contexts/applicators, residue/checkers 
 autonomous actors require an explicit actual fixture domain, not just named resource
 rules. These are fail-closed implementation boundaries, **not new permanent support
 restrictions**. The same guards apply to explicit prepared serial cooperation.
+In particular, the class-source guard is not an instruction to rewrite existing
+`trace(String)` metadata as trace addenda. Accepted parallel compatibility must
+retain automatic traces, optional addenda, arbitrary string traces, supported
+non-class URIs and absent source metadata, checking source equality only when
+comparable evidence exists. Standard model validation, including trace uniqueness,
+is recommended but remains independently configured rather than a parallel runtime
+prerequisite.
 Existing serial
 configuration without new declarations retains its earlier processing behavior;
 cross-runner fixture/context ownership is not retroactively inferred for that route.

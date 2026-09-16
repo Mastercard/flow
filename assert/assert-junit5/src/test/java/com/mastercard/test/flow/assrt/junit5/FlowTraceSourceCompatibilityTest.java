@@ -1,10 +1,5 @@
 package com.mastercard.test.flow.assrt.junit5;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
-
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,11 +9,15 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.TestSource;
+import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import org.junit.platform.engine.support.descriptor.ClassSource;
 import org.junit.platform.engine.support.descriptor.UriSource;
 import org.junit.platform.launcher.TestExecutionListener;
@@ -28,11 +27,11 @@ import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
 import org.junit.platform.launcher.core.LauncherFactory;
 
 import com.mastercard.test.flow.Flow;
-import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.junit5.mock.Actrs;
 import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
 import com.mastercard.test.flow.assrt.junit5.mock.Msg;
+import com.mastercard.test.flow.builder.Creator;
 
 /** Native trace/source compatibility through a real parallel Launcher call. */
 @SuppressWarnings("static-method")

@@ -31,8 +31,9 @@ not an optional writer cleanup.
 | 05, 25–27 | Narrow to actual resource auditing, focused combined acceptance, comparable real-workload measurement and a short reversible adoption checklist. |
 | Remaining 10, 17, 19 acceptance | Retain relevant host/fixture checks, delivered evidence and safety boundaries; do not repeat completed implementation or broaden cancellation machinery. |
 | Parallel replay/broader native support | Defer; preserve existing serial behavior and explicit fail-fast unsupported-configuration restrictions. |
+| 33 | Before acceptance, remove the temporary class-source prerequisite. Preserve automatic traces, addenda, arbitrary string traces, supported non-class URIs and absent source metadata; compare source only when comparable evidence exists. Standard validation remains recommended and optional. |
 
-The active integration dependency is 16/23 → 25, not 24/29–32 → 25. Reporting
+The active integration dependency is 16/23/33 → 25, not 24/29–32 → 25. Reporting
 retains 03, the automated part of 10, narrowed 20 and completed 28 as prerequisites;
 human host acceptance remains at final integration. Then 05/25 → 26 → 27.
 Deferred collector and partial-report work must not re-enter this critical path.
@@ -41,8 +42,21 @@ Required acceptance still includes resolution of the observed two-worker stall
 and report-reuse finding, combined parallel/reporting and relevant serial/safety
 regressions, real command outcomes, existing packaged-runtime checks, IntelliJ
 Run/Debug/navigation/selection/Stop and comparable user-workload assessment with
-the supplied 12-target/20-cap profile. Broad benchmark matrices are deferred;
-existing automated complexity/wake-work checks remain. No speedup is claimed.
+the supplied 12-target/20-cap reference profile plus at least one different valid
+application-selected fixed profile. The exact 12/20 values are not a product limit;
+retain structural profile validation and derive admission from the actual pool.
+Broad benchmark matrices are deferred; existing automated complexity/wake-work
+checks remain. No speedup is claimed.
+
+Native compatibility acceptance also covers automatic class traces, optional
+addenda, arbitrary `trace(String)` text, supported non-class URIs, absent source
+metadata and duplicate traces when optional model validation was not invoked.
+Explicit standard validation must continue to report duplicate traces. The
+production correction is limited to existing identity validation: no metadata
+rewriting, synthetic source, second identity subsystem or validation coupling.
+The current consumer-wide addenda conversion is a temporary workaround, not an
+adoption requirement. Ticket 33 owns this correction and joins focused ticket-25
+acceptance; its publication does not mark any production or test work complete.
 
 **Existing mutation gates remain:** API 100/100, report-core 90/90, core 94/95,
 Jupiter 82/97 mutation/line coverage. Current valid results are required; no

@@ -1,7 +1,7 @@
 package com.mastercard.test.flow.assrt.junit5;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import java.net.URI;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
