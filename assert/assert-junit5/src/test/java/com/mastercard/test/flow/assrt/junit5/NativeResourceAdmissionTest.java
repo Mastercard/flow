@@ -48,6 +48,7 @@ import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.platform.engine.TestExecutionResult;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import org.junit.platform.engine.reporting.ReportEntry;
@@ -61,6 +62,8 @@ import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.Assertion;
+import com.mastercard.test.flow.assrt.AssertionOptions;
+import com.mastercard.test.flow.assrt.Reporting;
 import com.mastercard.test.flow.assrt.junit5.mock.Actrs;
 import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
 import com.mastercard.test.flow.assrt.junit5.mock.Msg;
@@ -71,6 +74,9 @@ import com.mastercard.test.flow.assrt.resource.ResourceReservations.Request;
 import com.mastercard.test.flow.assrt.resource.ResourceRules;
 import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.builder.Deriver;
+import com.mastercard.test.flow.report.Reader;
+import com.mastercard.test.flow.report.Writer;
+import com.mastercard.test.flow.util.Option.Temporary;
 import static com.mastercard.test.flow.util.Transmission.Type.REQUEST;
 import static com.mastercard.test.flow.util.Transmission.Type.RESPONSE;
 
@@ -1178,6 +1184,101 @@ class NativeResourceAdmissionTest {
 		}
 		assertEquals( List.of( "B:A", "D:C" ), payloads );
 		assertEquals( 1, run.closes.get() );
+	}
+
+	/**
+	 * One real model and factory combine disjoint progress, whole-chain resource
+	 * ownership, canonical publication, UNKNOWN fallback and final-only reporting.
+	 *
+	 * @param dir Isolated report artifact directory
+	 * @throws Exception If native work does not drain
+	 */
+	@Test
+	void combinedResourceChainContextAndReportAcceptance( @TempDir Path dir ) throws Exception {
+		Flow a = chainFlow( "A", "AB" );
+		Flow b = chainSink( "B", "AB", a );
+		Flow c = flow( "C" );
+		Flow d = Creator.build( f -> f.meta( m -> m.description( "D" ) ).prerequisite( a )
+				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+						.request( new Msg( "request" ) ).response( new Msg( "response" ) ) ) );
+		Flow unknown = Creator.build( f -> f.meta( m -> m.description( "unknown" ) )
+				.prerequisite( b ).prerequisite( c ).prerequisite( d )
+				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+						.request( new Msg( "request" ) ).response( new Msg( "response" ) ) ) );
+		CountDownLatch disjoint = new CountDownLatch( 2 );
+		CountDownLatch releaseA = new CountDownLatch( 1 );
+		CountDownLatch releaseB = new CountDownLatch( 1 );
+		CountDownLatch releaseC = new CountDownLatch( 1 );
+		CountDownLatch bEntered = new CountDownLatch( 1 );
+		CountDownLatch dEntered = new CountDownLatch( 1 );
+		CountDownLatch unknownEntered = new CountDownLatch( 1 );
+		AtomicReference<String> bound = new AtomicReference<>();
+		Run run = new Run( true, List.of( unknown, d, c, b, a ), r -> r
+				.resources( "shared A/D state", f -> f == a || f == d, "shared-state" )
+				.independent( "all other audited state", f -> f != unknown )
+				.isolatedChains( "whole AB ownership", "AB" ).reporting( Reporting.QUIETLY ),
+				x -> {
+					if( x.flow() == a || x.flow() == c ) {
+						disjoint.countDown();
+						await( x.flow() == a ? releaseA : releaseC );
+					}
+					else if( x.flow() == b ) {
+						bound.set( x.expected().request().assertable() );
+						assertEquals( "A", bound.get() );
+						bEntered.countDown();
+						await( releaseB );
+					}
+					else if( x.flow() == d )
+						dEntered.countDown();
+					else if( x.flow() == unknown )
+						unknownEntered.countDown();
+				} );
+
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "combined-acceptance" ) ) {
+			Throwable primary = null;
+			try {
+				run.start();
+				await( disjoint );
+				assertEquals( 1, bEntered.getCount(), "B still depends on A" );
+				assertEquals( 1, dEntered.getCount(), "D cannot overlap A's shared state" );
+				assertEquals( 1, unknownEntered.getCount(), "UNKNOWN waits for its prerequisites" );
+				assertFalse( Files.exists( dir.resolve( "combined-acceptance" )
+						.resolve( Writer.INDEX_FILE_NAME ) ), "final index cannot precede drainage" );
+
+				releaseA.countDown();
+				await( bEntered );
+				assertEquals( 1, dEntered.getCount(),
+						"D cannot overlap the retained whole-chain resource" );
+				releaseB.countDown();
+				await( dEntered );
+				assertEquals( 1, releaseC.getCount(), "D progresses while disjoint C is held" );
+				assertEquals( 1, unknownEntered.getCount() );
+				releaseC.countDown();
+			}
+			catch( Throwable failure ) {
+				primary = failure;
+				throw failure;
+			}
+			finally {
+				releaseA.countDown();
+				releaseB.countDown();
+				releaseC.countDown();
+				drain( primary, run );
+			}
+
+			assertEquals( 0, unknownEntered.getCount() );
+			assertEquals( "A", bound.get(), "B observes A's canonical response publication" );
+			assertEquals( 1, run.fallbacks.size(), run.fallbacks::toString );
+			assertTrue( run.fallbacks.get( 0 ).contains( "unknown []" ), run.fallbacks::toString );
+			assertEquals( 1, run.closes.get() );
+			var entries = new Reader( run.runner.report() ).read().entries;
+			assertEquals( 5, entries.size(), "one final entry for every genuine native leaf" );
+			assertTrue( entries.stream().allMatch( entry -> entry.tags.contains( Writer.PASS_TAG ) ),
+					entries::toString );
+			assertTrue( Files.isRegularFile( run.runner.report().resolve( Writer.INDEX_FILE_NAME ) ) );
+			assertDoesNotThrow( run.handle::close, "completed fixture ownership is safely disposable" );
+		}
 	}
 
 	private static Flow chainSink( String name, String chain, Flow source ) {

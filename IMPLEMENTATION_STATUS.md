@@ -123,7 +123,7 @@ times in the tracked suite. The isolated diagnostic ran both shapes 100 times
 all **320 assert-core** cases (two existing skips) and **300 assert-junit5** cases,
 with zero failures/errors. The temporary two-second state probe and sandbox-only
 fixture changes are not production changes. The report-reuse resolution below and
-the remaining combined, packaged-runtime, mutation, host and workload acceptance
+the remaining packaged-runtime, mutation, host and workload acceptance
 stay separate.
 
 ## Ticket 19 final reactor — 2026-09-16
@@ -465,6 +465,28 @@ Prepared quiet reporting initializes once after returned-description validation,
 publishes one final index after safe mode-specific completion, emits a bounded
 diagnostics companion, and treats ordinary report-only faults as visible non-fatal
 diagnostics. Legacy assertion runners retain immediate reporting.
+
+## Ticket 25 focused combined acceptance — 2026-09-16
+
+`NativeResourceAdmissionTest.combinedResourceChainContextAndReportAcceptance`
+now drives one real five-flow model through the sole `NativeResourceFixture`
+factory under the supplied fixed 12-target/20-cap Launcher profile. A and disjoint
+C enter together. D becomes dependency-ready after A but cannot enter while the
+AB chain retains A's shared resource; once B finishes, D progresses while C is
+still deliberately held. B observes A's canonically published response. The last
+flow has no matching resource declaration, reports the explicit UNKNOWN fallback
+before native emission, and waits for its selected prerequisites.
+
+The same run uses the actual Jupiter pool and invocation contexts, checks one
+fixture-stream close, rejects an index before drainage, then parses one final
+five-entry all-PASS report through `Reader` and verifies the atomic index exists.
+The existing profile test separately exercises fixed 2/2 as the different valid
+application-selected profile; production admission derives capacity from the
+current ForkJoin pool rather than a product constant. The focused combined test
+passed, and the full assert-junit5 suite passed **301 cases** with zero failures,
+errors or skips. Genuine failure/skip and report-fault command semantics remain
+covered by the adjacent mixed-outcome and final-publication regressions rather than
+being synthesized into this all-passing combined model.
 
 ## Blocking work and unpassed gates
 
