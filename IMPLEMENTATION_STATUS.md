@@ -95,6 +95,59 @@ progress under the stalled PIT path, remaining report/trace acceptance, manual
 IntelliJ interaction and the user's workload trial remain open. No speedup, release
 acceptance or locked-desktop pass is claimed.
 
+## Native-progress follow-up: reproduced, not fixed — 2026-09-17
+
+The PIT stall also reproduces without PIT or mutation instrumentation. An isolated
+run of `busyTargetTwoMakesRealInlineProgressAndRestoresContextOnReuse` passed, but
+the fourth subsequent bounded invocation failed its chain terminal-listener order
+assertion. That is a separate observation, not a reproduction of the hang and not
+yet a justified reason to change the assertion.
+
+A throwaway process-bounded harness then repeatedly invoked the unchanged genuine
+Launcher fixture. On `busy-chain` iteration 93 it captured 78 started/completed
+leaves, 78 restored contexts and one remaining queued native task. The factory was
+waiting in `FlowAdmission.next()` and the other worker was parked in the native
+pool. The live pool snapshot was parallelism 2, size 2, active 1, running 0,
+tasks 1, submissions 0. Flow 020 had been registered but had not started; its
+successor 021 had not been registered. The probe's ten-second per-call deadline
+dumped the real events/stacks and terminated its own JVM. This makes an
+instrumentation-only explanation untenable; it does not prove a missed notification.
+
+A three-flow regression reduced the insufficient-progress condition: one native
+worker is held in an independent body, A is the only queued prerequisite, and B
+cannot be admitted until A publishes its real dependency binding. A registration
+receipt coordinates the held worker; no fabricated native execution is used.
+The original queue-width threshold failed this regression with the bounded fixture
+timeout (5.61 seconds). Removing that threshold passed the same test (0.527 seconds),
+including native counts, inline execution, context restoration and binding.
+
+**That candidate is rejected, not implemented.** The full adapter suite with it
+ran 302 cases and failed 11: five fixture-cancellation cases, three independent
+binding/progress cases and three native-resource cases, including combined
+resource/chain/context/report acceptance. Unconditionally executing a queued child
+on the factory does not preserve the existing cancellation and scheduling contracts.
+Both production and test sources were restored to their committed baseline, checked
+with an empty Git diff before recompilation. The restored full adapter suite passed
+301 cases with zero failures, errors or skips in 1 minute 37 seconds; this confirms
+rollback of the candidate's regressions, not absence of the intermittent baseline
+stall. No existing assertion or test was disabled, and the new red regression is
+retained in the diagnostic archive rather than presented as a completed implementation.
+
+The separate `native-progress-investigation.tar.gz` archive under the evidence
+directory above contains the rejected source snapshot, its three-flow regression,
+the standalone probe, live stall evidence, behavioral red/green logs, and all 302
+candidate-suite XML results. SHA-256:
+`58937b6575c6c65549bf14a743657add0956a4fc744998e3ed00f6b7dd867af8`.
+Its green focused test is **not** acceptance of the rejected candidate. The original
+`evidence.tar.gz` remains unchanged.
+
+Decision for follow-up: do not replace the threshold with an idle-worker heuristic,
+drain the pool, weaken cancellation assertions, or introduce an alternate body
+executor. A native-wait/progress solution must pass both the bounded small-backlog
+reproducer and the existing cancellation/independent-progress contracts before a
+fresh Jupiter mutation run. The earlier “resolved” native-progress checkpoint below
+is historical and is superseded by this open finding.
+
 ## Post-functional cleanup clarification — 2026-09-16
 
 The user clarified that the remaining simplification/refactoring/test-reduction
