@@ -6,6 +6,23 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Documentation follow-up — 2026-09-16
+
+The user directed that failures in Git-ignored scratch artifacts are non-blocking
+for proceeding when library tests pass. A fresh unchanged-scope Link/Property/SysOut
+run reproduced the 22 local-input failures across 963 cases: 13 link failures,
+eight probe console-use failures and one historical property reference. No library
+documentation repair is needed for these failures; scratch evidence, imported
+skills, scanner scope and assertions remain unchanged. The earlier committed status
+links were already repaired in `b01a51b6`.
+
+All library modules passed in the full reactor recorded below, and their source
+has not changed since that run. The four example-application setup errors remain
+separate from library tests. This disposition does not turn the full reactor into
+a pass, resolve the core/Jupiter mutation-baseline failures, or waive the remaining
+native-progress, report-reuse, manual-host and workload acceptance findings.
+The fresh reproduction log is C:/Data/Code/flow-doc-followup-red.log.
+
 ## Ticket 19 final reactor — 2026-09-16
 
 Implementation slices are committed on `parallel_execution_controller`:
