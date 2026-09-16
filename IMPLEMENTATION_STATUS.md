@@ -6,6 +6,64 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Approved focused delivery — 2026-09-16
+
+The user confirmed the reduced scope after a Q1–Q7 interview. This section
+supersedes conflicting pending-work instructions in the historical entries below;
+it records a scope decision, not new implementation or passing tests. This
+reconciliation changes documentation/status/dependencies only.
+
+**Deliver:** safe opt-in parallel execution within one model/factory and one
+automatically finalized, thread-safe report. Preserve serial default, dependency
+and chain semantics, canonical bindings, fixture/context/resource safety, genuine
+outcomes and the implemented cancellation/unsafe-ownership guarantees. Keep the
+current architecture and single-active-writer reporting contract. The native path
+still rejects reporting other than NEVER; ticket 23 remains essential integration,
+not an optional writer cleanup.
+
+| Work | Approved disposition |
+| --- | --- |
+| 29–32 | Cancel remaining simplification/test-reduction work and remove it as an integration prerequisite. Retain existing tests and already-delivered corrections. |
+| 21–22 | Defer per-flow parallel capture and correlated collector/file-source work. External logging remains; no unsupported per-flow attribution is claimed. |
+| 20 | Preserve existing capture lifecycle correctness and finish only what reporting integration/serial compatibility still needs. |
+| 23 | Finish normal-run final-only reporting, including genuine failure/skip outcomes and visible non-fatal report-only errors without changing processing semantics. |
+| 24 | Defer useful partial reports after cancellation. Retain safe drainage and visible cancelled/incomplete diagnostics; no invalid final report may be advertised. |
+| 05, 25–27 | Narrow to actual resource auditing, focused combined acceptance, comparable real-workload measurement and a short reversible adoption checklist. |
+| Remaining 10, 17, 19 acceptance | Retain relevant host/fixture checks, delivered evidence and safety boundaries; do not repeat completed implementation or broaden cancellation machinery. |
+| Parallel replay/broader native support | Defer; preserve existing serial behavior and explicit fail-fast unsupported-configuration restrictions. |
+
+The active integration dependency is 16/23 → 25, not 24/29–32 → 25. Reporting
+retains 03, the automated part of 10, narrowed 20 and completed 28 as prerequisites;
+human host acceptance remains at final integration. Then 05/25 → 26 → 27.
+Deferred collector and partial-report work must not re-enter this critical path.
+
+Required acceptance still includes resolution of the observed two-worker stall
+and report-reuse finding, combined parallel/reporting and relevant serial/safety
+regressions, real command outcomes, existing packaged-runtime checks, IntelliJ
+Run/Debug/navigation/selection/Stop and comparable user-workload assessment with
+the supplied 12-target/20-cap profile. Broad benchmark matrices are deferred;
+existing automated complexity/wake-work checks remain. No speedup is claimed.
+
+**Existing mutation gates remain:** API 100/100, report-core 90/90, core 94/95,
+Jupiter 82/97 mutation/line coverage. Current valid results are required; no
+threshold reduction or silent exclusion is authorized. Any necessary discovery
+correction requires separate justification. Cancellation of test reductions removes
+their before/after reduction comparisons, not these gates. Reporting work can
+proceed independently of mutation repair and the cancelled cleanup programme.
+
+The core threshold failure and Jupiter's 38 unmutated failures were observed at
+historical endpoint 15177819, not freshly reproduced at the reconciliation endpoint
+0c2ba7fe. The retained logs were checked read-only: Jupiter names tracked test
+fixtures, not scratch documents. These results are distinct from the 22 ignored/
+local-document failures already accepted as non-blocking, and do not by themselves
+prove production defects. The four application setup errors and unavailable
+host/platform/workload evidence remain recorded, not converted into passes.
+
+Local spec, plan/analysis, design map and affected implementation tickets now carry
+this amendment. Original checklists/results remain historical; cancelled and
+deferred work is not marked complete. No production/test changes, test runs or
+workload enablement are performed by this update.
+
 ## Documentation follow-up — 2026-09-16
 
 The user directed that failures in Git-ignored scratch artifacts are non-blocking
