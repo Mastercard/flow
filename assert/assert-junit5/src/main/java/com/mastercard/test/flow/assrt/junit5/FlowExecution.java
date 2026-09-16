@@ -579,7 +579,7 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 					observed = resourceChanges;
 				}
 				Grant grant = retained == null ? request.tryAcquire() : retained;
-				if( grant != null && grant.operations() == 0 ) {
+				if( grant != null && !grant.pending() ) {
 					return grant;
 				}
 				synchronized( resourceWake ) {

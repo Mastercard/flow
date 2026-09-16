@@ -41,6 +41,7 @@ import com.mastercard.test.flow.assrt.ContextDomain;
 import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.Listener;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations;
+import com.mastercard.test.flow.assrt.resource.ResourceReservations.Operation;
 import com.mastercard.test.flow.assrt.resource.ResourceRules;
 import com.mastercard.test.flow.assrt.junit5.NativeResourceAdmissionTest.Run;
 import com.mastercard.test.flow.assrt.junit5.mock.Actrs;
@@ -490,6 +491,307 @@ class ContextFixtureTest {
 				} );
 		fresh.start();
 		fresh.finish();
+	}
+
+	/**
+	 * One physical fixture integration handles explicit serial Stop and the raw
+	 * native token. Native return, actual use and claimed callback work drain
+	 * independently; neither callback failure nor an old receipt targets a new
+	 * user.
+	 *
+	 * @param parallel   Use the genuine JUnit 6 token instead of explicit Stop
+	 * @param throwing   The first client cancellation fails after its controlled
+	 *                   hold
+	 * @param proofFirst Actual use ends before cancellation returns, not after
+	 * @throws Exception If controlled work or a real Launcher fails to drain
+	 */
+	@ParameterizedTest
+	@CsvSource({ "false,false,true", "true,false,true", "false,true,true", "true,true,true",
+			"false,false,false", "true,false,false", "false,true,false", "true,true,false" })
+	void fixtureCancellationRetainsOwnershipThroughNativeReturn( boolean parallel, boolean throwing,
+			boolean proofFirst )
+			throws Exception {
+		Fixture fixture = new Fixture().cooperative();
+		Flow a = Creator.build( f -> f.meta( m -> m.description( "A actual operations" )
+				.tags( t -> t.add( "chain:cancel" ) ) ).call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+						.request( new Msg( "A" ) ).response( new Msg( "literal response" ) ) ) );
+		Flow b = Creator.build( f -> f.meta( m -> m.description( "B must not continue" )
+				.tags( t -> t.add( "chain:cancel" ) ) ).prerequisite( a )
+				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN ).request( new Msg( "B" ) )
+						.response( new Msg( "literal response" ) ) ) );
+		var nativeCleanup = new CountDownLatch( 1 );
+		var nativeReturn = new CountDownLatch( 1 );
+		var callbackEntered = new CountDownLatch( 1 );
+		var callbackReturn = new CountDownLatch( 1 );
+		var explicit = new IllegalStateException( "explicit fixture Stop" );
+		var callbackFailure = new IllegalArgumentException( "client cancellation failed" );
+		fixture.beforeCancel = () -> {
+			callbackEntered.countDown();
+			await( callbackReturn );
+		};
+		fixture.cancelling = () -> {
+			if( throwing )
+				throw callbackFailure;
+		};
+		Run run = new Run( parallel, List.of( a, b ), r -> fixture.configure( r )
+				.isolatedChains( "whole physical fixture", "cancel" ), assertion -> {
+					assertSame( a, assertion.flow() );
+					fixture.operation( a ).finish(); // Actual completed use is not claimed.
+					fixture.operation( a );
+					fixture.operation( a );
+				} );
+		if( parallel )
+			run.cancellation = org.junit.platform.engine.CancellationToken.create();
+		run.beforeBody = () -> assertTrue( fixture.operations.isEmpty(),
+				"admission publishes a receipt, not an automatic operation" );
+		run.cleanup = () -> {
+			nativeCleanup.countDown();
+			await( nativeReturn );
+		};
+		FutureTask<Void> stopping = new FutureTask<>( () -> {
+			if( parallel )
+				run.cancellation.cancel();
+			else if( throwing )
+				assertSame( callbackFailure,
+						assertThrows( IllegalArgumentException.class, () -> run.handle.stop( explicit ) ) );
+			else
+				run.handle.stop( explicit );
+			return null;
+		} );
+		Thread stopper = new Thread( stopping, "fixture-cancellation-request" );
+		Throwable primary = null;
+		Throwable cause = null;
+		try {
+			run.start();
+			await( nativeCleanup );
+			assertEquals( 3, fixture.operations.size(), "only actual fixture calls register use" );
+			assertTrue( fixture.cancelled.isEmpty() );
+			stopper.start();
+			await( callbackEntered );
+			cause = run.handle.status().cause();
+			assertNotNull( cause );
+			if( !parallel )
+				assertSame( explicit, cause );
+			run.handle.stop( new IllegalStateException( "concurrent repeated Stop" ) );
+			assertSame( cause, run.handle.status().cause() );
+			assertEquals( List.of( fixture.operations.get( 1 ).proof ), fixture.cancelled );
+			if( proofFirst ) {
+				fixture.finishOperations();
+				assertEquals( 0, fixture.liveOperations(), "all actual use ended while callback is held" );
+			}
+			nativeReturn.countDown();
+			await( run.firstFinished );
+			if( !parallel )
+				run.awaitCompletion();
+			assertEquals( 1, run.bodies.get(), "no chain continuation" );
+			assertEquals( 0, run.closes.get(), "no disposal before callback return" );
+			assertEquals( "STOPPING", run.handle.status().state().name() );
+			assertEquals( 1, run.handle.status().owners() );
+			assertSame( cause, assertThrows( IllegalStateException.class,
+					fixture.domain::tryAcquire ).getCause(), "not ordinary busy or safely reusable" );
+			assertNull( fixture.domain.uncertainty(), "client cancellation is not fixture damage" );
+			callbackReturn.countDown();
+			stopping.get( 5, TimeUnit.SECONDS );
+			run.awaitCompletion();
+			if( !proofFirst ) {
+				assertEquals( 2, fixture.liveOperations(), "callback return/throw does not end use" );
+				assertEquals( 0, run.closes.get() );
+				assertEquals( 1, run.handle.status().owners() );
+				assertSame( cause, assertThrows( IllegalStateException.class,
+						fixture.domain::tryAcquire ).getCause() );
+				fixture.finishOperations();
+			}
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			callbackReturn.countDown();
+			nativeReturn.countDown();
+			drainCancellation( primary, fixture, run, stopper, stopping );
+		}
+		assertEquals( List.of( fixture.operations.get( 1 ).proof, fixture.operations.get( 2 ).proof ),
+				fixture.cancelled, "all claimed callbacks attempted, including late delivery after proof" );
+		assertEquals( 1, run.getSummary().getTestsStartedCount() );
+		assertEquals( 1, run.getSummary().getTestsSucceededCount() );
+		assertEquals( 1, run.closes.get() );
+		assertEquals( "QUIESCENT", run.handle.status().state().name() );
+		assertEquals( 0, run.handle.status().owners() );
+		assertSame( cause, run.handle.status().cause() );
+		assertEquals( 3, fixture.writes, "only the three actual uses perform work" );
+		assertEquals( 1, fixture.operations.get( 1 ).cancellations,
+				"a client captured before proof tolerates late cancellation" );
+		if( parallel && throwing )
+			assertTrue( run.failures.stream().anyMatch( f -> contains( f, callbackFailure ) ) );
+		fixture.cancelling = () -> {
+		};
+		Run fresh = new Run( !parallel, List.of( flow( "fresh actual user", null ) ),
+				fixture::configure,
+				assertion -> {
+					var current = fixture.operation( assertion.flow() );
+					try {
+						run.handle.stop( explicit );
+						fixture.operations.get( 1 ).proof.complete();
+						assertEquals( 0, current.cancellations );
+						assertThrows( IllegalStateException.class,
+								() -> fixture.receipts.get( a ).operation() );
+					}
+					finally {
+						current.finish();
+					}
+				} );
+		fresh.start();
+		fresh.finish();
+	}
+
+	/**
+	 * Stop can claim between operation registration and identity publication. The
+	 * same short correlation mutex delays lookup, not registration's return; a
+	 * prepared inert client then honors cancellation atomically before starting.
+	 *
+	 * @param parallel Raw native token or provider-free explicit serial Stop
+	 * @throws Exception If controlled publication or native work fails to drain
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void fixtureCancellationRacesIdentityPublicationBeforeClientStart( boolean parallel )
+			throws Exception {
+		Fixture fixture = new Fixture().cooperative();
+		var registered = new CountDownLatch( 1 );
+		var publish = new CountDownLatch( 1 );
+		var ready = new CountDownLatch( 1 );
+		var start = new CountDownLatch( 1 );
+		var arrived = new CountDownLatch( 1 );
+		var cancelled = new CountDownLatch( 1 );
+		fixture.publishing = () -> {
+			registered.countDown();
+			await( publish ); // Test-only hold at the normally short publication boundary.
+		};
+		fixture.starting = () -> {
+			ready.countDown();
+			await( start );
+		};
+		fixture.cancellationArrived = arrived::countDown;
+		fixture.cancelling = cancelled::countDown;
+		Flow a = flow( "A prepared client", null );
+		Flow b = Creator.build( f -> f.meta( m -> m.description( "B not entered" ) )
+				.prerequisite( a ).call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+						.request( new Msg( "B" ) ).response( new Msg( "literal response" ) ) ) );
+		Run run = new Run( parallel, List.of( a, b ), fixture::configure,
+				assertion -> fixture.operation( assertion.flow() ) );
+		if( parallel )
+			run.cancellation = org.junit.platform.engine.CancellationToken.create();
+		var cause = new IllegalStateException( "Stop during fixture publication" );
+		FutureTask<Void> stopping = new FutureTask<>( () -> {
+			if( parallel )
+				run.cancellation.cancel();
+			else
+				run.handle.stop( cause );
+			return null;
+		} );
+		Thread stopper = new Thread( stopping, "fixture-publication-stop" );
+		Throwable primary = null;
+		try {
+			run.start();
+			await( registered );
+			assertTrue( fixture.cancelled.isEmpty(), "operation registration never calls user code" );
+			stopper.start();
+			await( arrived );
+			assertEquals( "STOPPING", run.handle.status().state().name() );
+			assertEquals( 1, run.handle.status().owners() );
+			assertTrue( !cancelled.await( 100, TimeUnit.MILLISECONDS ),
+					"claimed callback waits for exact publication" );
+			publish.countDown();
+			await( ready );
+			await( cancelled );
+			assertEquals( 1, fixture.operations.size() );
+			var operation = fixture.operations.get( 0 );
+			assertEquals( List.of( operation.proof ), fixture.cancelled );
+			assertEquals( 1, operation.cancellations );
+			assertEquals( 0, fixture.writes, "inert handle has performed no IO/work" );
+			assertTrue( !operation.started );
+			start.countDown();
+			stopping.get( 5, TimeUnit.SECONDS );
+			run.awaitCompletion();
+			assertEquals( 0, fixture.liveOperations(), "cancel-before-start gives actual no-use proof" );
+			assertEquals( 0, fixture.writes );
+			assertTrue( !operation.started );
+			assertEquals( 1, run.bodies.get() );
+			assertEquals( 1, run.getSummary().getTestsSucceededCount() );
+			assertEquals( "QUIESCENT", run.handle.status().state().name() );
+			assertEquals( 1, run.closes.get() );
+			assertNull( fixture.domain.uncertainty() );
+			try( var use = fixture.domain.tryAcquire() ) {
+				assertNotNull( use );
+			}
+		}
+		catch( Throwable failure ) {
+			primary = failure;
+			throw failure;
+		}
+		finally {
+			publish.countDown();
+			start.countDown();
+			drainCancellation( primary, fixture, run, stopper, stopping );
+		}
+	}
+
+	private static void drainCancellation( Throwable primary, Fixture fixture, Run run,
+			Thread stopper, FutureTask<Void> stopping ) throws Exception {
+		Throwable failure = primary;
+		// Gates are already open. Attempt every cleanup even if proof or Stop fails.
+		if( primary != null )
+			stop( primary, run );
+		try {
+			fixture.finishOperations();
+		}
+		catch( Throwable cleanup ) {
+			if( failure == null )
+				failure = cleanup;
+			else if( failure != cleanup )
+				failure.addSuppressed( cleanup );
+		}
+		try {
+			if( stopper.getState() != Thread.State.NEW ) {
+				stopper.join( 5000 );
+				assertTrue( !stopper.isAlive(), "Stop caller drained" );
+				stopping.get( 5, TimeUnit.SECONDS );
+			}
+		}
+		catch( Throwable cleanup ) {
+			if( failure == null )
+				failure = cleanup;
+			else if( failure != cleanup )
+				failure.addSuppressed( cleanup );
+		}
+		try {
+			if( run.execution != null )
+				run.awaitCompletion();
+		}
+		catch( Throwable cleanup ) {
+			if( failure == null )
+				failure = cleanup;
+			else if( failure != cleanup )
+				failure.addSuppressed( cleanup );
+		}
+		finally {
+			// Publication may have finished only while the native caller was draining.
+			try {
+				fixture.finishOperations();
+			}
+			catch( Throwable cleanup ) {
+				if( failure == null )
+					failure = cleanup;
+				else if( failure != cleanup )
+					failure.addSuppressed( cleanup );
+			}
+		}
+		if( primary == null && failure != null ) {
+			if( failure instanceof Exception exception )
+				throw exception;
+			throw (Error) failure;
+		}
 	}
 
 	/**
@@ -1715,6 +2017,23 @@ class ContextFixtureTest {
 
 	private static final class Fixture {
 		private final ContextDomain domain;
+		private final Object correlation = new Object();
+		private final IdentityHashMap<Flow, ContextDomain.Receipt> receipts = new IdentityHashMap<>();
+		private final IdentityHashMap<Operation, ControlledOperation> live = new IdentityHashMap<>();
+		private final List<ControlledOperation> operations = new CopyOnWriteArrayList<>();
+		private final List<Operation> cancelled = new CopyOnWriteArrayList<>();
+		// Controlled boundary holds are test-only; normal publication contains no
+		// waits.
+		private Runnable publishing = () -> {
+		};
+		private Runnable starting = () -> {
+		};
+		private Runnable cancellationArrived = () -> {
+		};
+		private Runnable beforeCancel = () -> {
+		};
+		private Runnable cancelling = () -> {
+		};
 		private final List<String> transitions = new ArrayList<>();
 		private String value = "default";
 		private int writes;
@@ -1722,6 +2041,68 @@ class ContextFixtureTest {
 
 		private Fixture( String... keys ) {
 			domain = new ContextDomain( keys );
+		}
+
+		private Fixture cooperative() {
+			domain.cancellation( proof -> {
+				cancellationArrived.run();
+				ControlledOperation operation;
+				synchronized( correlation ) {
+					operation = live.get( proof );
+				}
+				cancelled.add( proof );
+				beforeCancel.run();
+				if( operation != null )
+					operation.cancel();
+				cancelling.run();
+			} );
+			return this;
+		}
+
+		private PreparedFlocessor configure( PreparedFlocessor runner ) {
+			return runner.contextDomain( domain, ( flow, receipt ) -> {
+				synchronized( correlation ) {
+					receipts.put( flow, receipt );
+				}
+			} ).independent( "physical fixture", f -> true );
+		}
+
+		private ControlledOperation operation( Flow flow ) {
+			var operation = new ControlledOperation( this );
+			synchronized( correlation ) {
+				operation.proof = receipts.get( flow ).operation();
+				operations.add( operation );
+				publishing.run();
+				live.put( operation.proof, operation );
+			}
+			starting.run();
+			operation.start();
+			return operation;
+		}
+
+		private int liveOperations() {
+			synchronized( correlation ) {
+				return live.size();
+			}
+		}
+
+		private void finishOperations() {
+			Throwable primary = null;
+			for( var operation : operations ) {
+				try {
+					operation.finish();
+				}
+				catch( RuntimeException | Error failure ) {
+					if( primary == null )
+						primary = failure;
+					else if( primary != failure )
+						primary.addSuppressed( failure );
+				}
+			}
+			if( primary instanceof RuntimeException failure )
+				throw failure;
+			if( primary instanceof Error failure )
+				throw failure;
 		}
 
 		private Applicator<Setting> applicator() {
@@ -1743,6 +2124,51 @@ class ContextFixtureTest {
 					value = next;
 				}
 			};
+		}
+	}
+
+	/**
+	 * Controlled client handle: cancellation is a request, not completion proof.
+	 */
+	private static final class ControlledOperation {
+		private final Fixture fixture;
+		private Operation proof;
+		private boolean started;
+		private boolean ended;
+		private int cancellations;
+
+		private ControlledOperation( Fixture fixture ) {
+			this.fixture = fixture;
+		}
+
+		private void start() {
+			synchronized( this ) {
+				if( ended )
+					return;
+				if( cancellations == 0 ) {
+					started = true;
+					return;
+				}
+			}
+			finish();
+		}
+
+		private synchronized void cancel() {
+			cancellations++;
+		}
+
+		private void finish() {
+			synchronized( this ) {
+				if( ended )
+					return;
+				ended = true;
+				if( started )
+					fixture.writes++;
+			}
+			synchronized( fixture.correlation ) {
+				fixture.live.remove( proof );
+			}
+			proof.complete();
 		}
 	}
 

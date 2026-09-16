@@ -6,6 +6,48 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Cooperative fixture cancellation — 2026-09-16
+
+Ticket 19's second slice adds one optional `ContextDomain.cancellation(handler)`
+before fixture sharing/use. Only actual exact operations bind it; admission does
+not manufacture operations. Stop marks all owned grants and claims their supported
+live callbacks before outside-lock delivery. Operation completion and claimed
+callback return are independent obligations: both must drain before whole-grant
+release, unsafe-retention removal, continuation or disposal. Return/throw does not
+complete an operation or permanently damage the domain. First Stop cause, all-attempt
+delivery, late proof and no-restart behavior are preserved.
+
+The supported fixture protocol uses an inert, pre-start-cancellable client handle
+and a short correlation mutex around receipt registration plus exact identity-map
+publication; lookup uses the same mutex, with client cancellation outside it.
+Starting must honor earlier cancellation atomically. No IO, waits, Stop or proof
+belong inside production publication. Claimed late callbacks must be harmless.
+This is an optional client capability, not a generic remote-cancellation guarantee.
+
+Two core and ten added Launcher cases cover exact identity, independent-owner
+isolation, claim/proof races, repeated Stop, callback retention, throwing callbacks,
+uncooperative work and late safe reuse. One fixture helper exercises provider-free
+serial explicit Stop and actual parallel JUnit 6 token observation, including
+publication racing Stop and cancellation before start. Concurrent hook isolation
+is directly tested at the reservation seam; existing native peer-ownership tests
+remain, not a new concurrent native-hook isolation matrix.
+
+Runtime negative controls failed with missing domain hookup (four cases), unlocked
+publication (two) and false operation completion on cancellation return (four), then
+passed after restoration. The initial core RED was compilation failure, not runtime
+evidence. Final focused upstream validation: **335 cases, zero failures/errors/skips**
+(119 admission, two operation cancellation, 20 resource planning, 101 fixture,
+seven native call, 76 native resource and ten serial cleanup). Zulu 17.0.19 actual
+compilation, existing formatting and 39 real report assets passed with test skips
+and failure-ignore false. Append-only flow-cancel19-hooks red/green/format/focused
+logs are retained under C:/Data/Code. Independent Standards review requested the
+README update supplied with this slice; Spec review found no scoped mismatch.
+
+**Still pending:** the monotonic configurable owner stop/drain budget and deadline
+evidence, performance measurement, final whole-repository regression and intended-
+host/workload acceptance. Query-slice packaged compatibility below predates these
+hook changes. Mutation baseline blockers and the report-reuse failure remain open.
+
 ## Optional native cancellation query — 2026-09-16
 
 Ticket 19's first vertical slice attaches the identical optional JUnit 6 native

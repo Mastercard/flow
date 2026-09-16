@@ -416,7 +416,7 @@ public final class FlowAdmission {
 				previous = index;
 				node = nodes.get( index );
 				if( node.owner.grant != null ) {
-					if( node.owner.grant.operations() != 0 )
+					if( node.owner.grant.pending() )
 						continue;
 					admit( node, index );
 					return index;

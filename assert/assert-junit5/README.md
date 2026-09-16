@@ -299,6 +299,7 @@ successful merely to discard references.
 | Borrowed `ContextDomain.Use` | Invocation borrows its already-owned grant | Same-thread, LIFO close restores the previous scope; it does not release native/chain ownership |
 | Fixture-owner acquired `Use` | Existing owner acquires synchronously for creation/reset/teardown | Safe completion of that lifecycle action; uncertain fixture state prevents release |
 | Exact operation receipt | Registered before use escapes | The operation and its required cleanup actually end; repeat proof cannot bypass native/chain ownership or repair uncertainty |
+| Claimed cancellation callback | Stop claims each supported live operation once, before delivery | Callback actually returns or throws; separate operation completion is still required |
 | Native execution owner | Owns descriptions, attachment and original cleanup | Native scope ended, admission is disposable and original cleanup completed; only then detach heavy execution references |
 | Physical fixture domain | Existing owner supplies the lifetime identity | Explicit successful transitions/reset update applied state; runner detachment neither clears that state nor destroys the fixture |
 
@@ -312,11 +313,32 @@ Provider-free serial and older request overloads receive no fabricated token
 channel and add no token-driven periodic wakes. Clearing a token cannot reopen
 admission or replace the first Stop cause.
 
-Ticket 19's cooperative cancellation callbacks and reachable owner drain budget
-remain pending. Queries cannot run inside a blocked inline body/callback or native
-join. There is no new watchdog/executor, uniform Launcher/remote/IDE shutdown
-guarantee or hard-kill cleanup promise here. Report/capture/replay guards and
-consumer resource-audit limits remain unchanged.
+The fixture may configure `domain.cancellation(operation -> ...)` once, before
+sharing its footprint or checking/using the domain. It receives the identical
+operation registered through a domain receipt. Stop claims supported live operations
+once, outside-lock delivery requests only their cancellation, and callback work
+retains ownership until it returns or throws. Operation proof and callback drainage
+are independent; neither cancellation return nor failure completes the operation or
+permanently damages the fixture. A callback claimed before completion may arrive
+after it, so the client must tolerate late cancellation. A throwing callback does
+not prevent attempts to deliver the other claimed requests.
+
+Keep integration in the fixture's common operation-start method, not each flow.
+For an inert client handle that supports cancellation before start, hold a short
+fixture correlation mutex around `receipt.operation()` and exact identity-map
+insertion. The cancellation handler looks up under that mutex, then releases it
+before invoking the client. Start must atomically honor any earlier cancellation.
+Publication contains no IO, waits, Stop or completion; registration itself never
+calls the handler. Remove the exact mapping under the mutex, then call
+`operation.complete()` outside it after actual use and required cleanup. A simple
+unsynchronized post-return map insertion is not a safe publication protocol.
+Clients without this capability are not made cooperatively cancellable by Flow.
+
+Ticket 19's reachable owner drain budget remains pending. Queries cannot run inside
+a blocked inline body/callback or native join; a blocking cancellation handler can
+also delay later deliveries and Stop return. There is no new watchdog/executor,
+uniform Launcher/remote/IDE shutdown guarantee or hard-kill cleanup promise here.
+Report/capture/replay guards and consumer resource-audit limits remain unchanged.
 
 ### Uninterrupted selected chains
 

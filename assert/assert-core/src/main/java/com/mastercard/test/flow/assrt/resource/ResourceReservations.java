@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * Same-classloader/JVM whole-set reservations for cooperating runners and
@@ -115,11 +116,12 @@ public final class ResourceReservations {
 		 */
 		public void stopping( Throwable cause ) {
 			Objects.requireNonNull( cause );
-			List<Grant> owned;
+			List<Runnable> effects = new ArrayList<>();
 			synchronized( SHARED ) {
-				owned = new ArrayList<>( grants );
+				for( Grant grant : grants )
+					grant.stop( cause, effects );
 			}
-			signalAll( owned.stream().<Runnable>map( grant -> () -> grant.stopping( cause ) ).toList() );
+			signalAll( effects );
 		}
 	}
 
@@ -228,9 +230,11 @@ public final class ResourceReservations {
 	 */
 	public final class Operation {
 		private Grant grant;
+		private Consumer<Operation> cancellation;
 
-		private Operation( Grant grant ) {
+		private Operation( Grant grant, Consumer<Operation> cancellation ) {
 			this.grant = grant;
+			this.cancellation = cancellation;
 		}
 
 		/**
@@ -245,9 +249,10 @@ public final class ResourceReservations {
 					return;
 				Grant completed = grant;
 				grant = null;
+				cancellation = null;
+				completed.live.remove( this );
 				completed.operations--;
-				if( completed.operations == 0 && completed.failure == null )
-					unsafe.remove( completed.identity );
+				completed.clearStoppedUse();
 				completed.releaseIfDrained();
 				notifications = completed.notifications();
 			}
@@ -259,9 +264,11 @@ public final class ResourceReservations {
 	public final class Grant implements AutoCloseable {
 		private final Request request;
 		private final Object identity = new Object();
+		private final Set<Operation> live = new LinkedHashSet<>();
 		private boolean released;
 		private boolean closing;
 		private volatile int operations;
+		private volatile int callbacks;
 		private Throwable stopped;
 		private Throwable failure;
 
@@ -276,37 +283,111 @@ public final class ResourceReservations {
 			return operations;
 		}
 
+		/**
+		 * @return Whether actual operations or claimed cancellation callbacks still
+		 *         prevent continuation; readable without nesting owner locks
+		 */
+		public boolean pending() {
+			// Proof publishes operations after Stop has published every callback claim.
+			return operations != 0 || callbacks != 0;
+		}
+
 		/** @return A receipt acquired before this exact owner's operation escapes */
 		public Operation operation() {
+			return operation( null );
+		}
+
+		/**
+		 * Atomically registers actual use and its optional cooperative Stop handler.
+		 * Registration is bookkeeping only: it never calls the handler. Stop claims
+		 * each live handler once and calls it outside reservation locks with this
+		 * identical receipt. Proof before claim skips delivery; a claimed handler may
+		 * arrive after proof, so the client must tolerate late cancellation. Return or
+		 * failure is not operation completion or evidence of damaged fixture state.
+		 *
+		 * @param cancellation Prompt client-specific request, or null for no hook
+		 * @return Exact operation proof, registered before use escapes
+		 */
+		public Operation operation( Consumer<Operation> cancellation ) {
 			synchronized( ResourceReservations.this ) {
 				if( released || closing || failure != null || stopped != null )
 					throw new IllegalStateException( "Operation requires live safe ownership", failure );
 				operations++;
-				return new Operation( this );
+				Operation operation = new Operation( this, cancellation );
+				live.add( operation );
+				return operation;
 			}
 		}
 
 		/**
-		 * Marks outstanding operations explicitly unsafe after observed Stop. No
-		 * operation is cancelled or completed here. Call outside owner locks.
+		 * Latches Stop and claims live cooperative handlers before delivering them
+		 * outside bookkeeping locks. Neither delivery nor return proves ended use. Call
+		 * outside owner locks; callback failures propagate after all effects.
 		 *
 		 * @param cause First owning run's stop cause
 		 */
 		public void stopping( Throwable cause ) {
-			List<Runnable> notifications;
+			Objects.requireNonNull( cause );
+			List<Runnable> effects = new ArrayList<>();
 			synchronized( ResourceReservations.this ) {
-				Objects.requireNonNull( cause );
-				if( released || stopped != null )
-					return;
-				stopped = cause;
-				if( operations == 0 )
-					return;
-				if( request.capacity.unsafe == null )
-					request.capacity.unsafe = cause;
-				unsafe.putIfAbsent( identity, new Retention( request.requirements, cause ) );
-				notifications = notifications();
+				stop( cause, effects );
 			}
-			signalAll( notifications );
+			signalAll( effects );
+		}
+
+		private void stop( Throwable cause, List<Runnable> effects ) {
+			if( released || stopped != null )
+				return;
+			stopped = cause;
+			if( operations == 0 )
+				return;
+			if( request.capacity.unsafe == null )
+				request.capacity.unsafe = cause;
+			unsafe.putIfAbsent( identity, new Retention( request.requirements, cause ) );
+			effects.addAll( notifications() );
+			for( Operation operation : live ) {
+				Consumer<Operation> handler = operation.cancellation;
+				if( handler != null ) {
+					operation.cancellation = null;
+					callbacks++;
+					// Capture this grant independently of the operation's erasable proof.
+					effects.add( () -> cancel( operation, handler ) );
+				}
+			}
+		}
+
+		private void cancel( Operation operation, Consumer<Operation> handler ) {
+			Throwable primary = null;
+			try {
+				handler.accept( operation );
+			}
+			catch( RuntimeException | Error callbackFailure ) {
+				primary = callbackFailure;
+				throw callbackFailure;
+			}
+			finally {
+				List<Runnable> notifications;
+				synchronized( ResourceReservations.this ) {
+					callbacks--;
+					clearStoppedUse();
+					releaseIfDrained();
+					notifications = notifications();
+				}
+				try {
+					signalAll( notifications );
+				}
+				catch( RuntimeException | Error cleanup ) {
+					if( primary == null )
+						throw cleanup;
+					if( primary != cleanup )
+						primary.addSuppressed( cleanup );
+				}
+			}
+		}
+
+		private void clearStoppedUse() {
+			if( operations == 0 && callbacks == 0 && failure == null )
+				unsafe.remove( identity );
 		}
 
 		private List<Runnable> notifications() {
@@ -380,7 +461,7 @@ public final class ResourceReservations {
 		}
 
 		private void releaseIfDrained() {
-			if( !closing || released || failure != null || operations != 0 )
+			if( !closing || released || failure != null || operations != 0 || callbacks != 0 )
 				return;
 			released = true;
 			unsafe.remove( identity );

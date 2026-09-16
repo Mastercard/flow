@@ -2507,7 +2507,8 @@ class NativeResourceAdmissionTest {
 	 * Each task calls a real Launcher; no test body is submitted to this thread.
 	 */
 	static final class Run extends SummaryGeneratingListener {
-		private org.junit.platform.engine.CancellationToken cancellation;
+		/** Optional real Launcher cancellation channel. */
+		org.junit.platform.engine.CancellationToken cancellation;
 		private boolean preview;
 		private boolean observed;
 		final String id = "resource-run-" + IDS.incrementAndGet();
@@ -2519,7 +2520,8 @@ class NativeResourceAdmissionTest {
 		final CountDownLatch prepared = new CountDownLatch( 1 );
 		final List<String> registered = new CopyOnWriteArrayList<>();
 		private final List<String> finished = new CopyOnWriteArrayList<>();
-		private final CountDownLatch firstFinished = new CountDownLatch( 1 );
+		/** Actual native leaf terminal, independent of factory return. */
+		final CountDownLatch firstFinished = new CountDownLatch( 1 );
 		final List<Throwable> failures = new CopyOnWriteArrayList<>();
 		final List<String> fallbacks = new CopyOnWriteArrayList<>();
 		final List<ResourceRequirements> requirements = new ArrayList<>();

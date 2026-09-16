@@ -4,11 +4,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import com.mastercard.test.flow.Context;
 import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations.Grant;
+import com.mastercard.test.flow.assrt.resource.ResourceReservations.Operation;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations.Request;
 import com.mastercard.test.flow.assrt.resource.ResourceRules;
 
@@ -27,6 +29,8 @@ public final class ContextDomain {
 	private final ResourceRequirements requirements;
 	private final ThreadLocal<Use> use = new ThreadLocal<>();
 	private volatile Throwable unsafe;
+	private Consumer<Operation> cancellation;
+	private boolean configured;
 
 	/**
 	 * @param keys Additional shared state, such as an account or whole-table
@@ -51,8 +55,43 @@ public final class ContextDomain {
 				.resources( "fixture shared state", f -> true, keys ).resolve( null );
 	}
 
-	/** @return Complete footprint, including possible previous-context removal */
+	/**
+	 * Configures this physical fixture's optional cancellation integration once,
+	 * before its footprint is shared or any use/mode check. Only actual operations
+	 * registered through a Receipt bind this handler; admission creates no fake
+	 * use. The handler receives the identical operation, never an inferred current
+	 * user. It must return promptly; its return or exception does not prove
+	 * completion or permanently poison the domain. Claimed callbacks may arrive
+	 * after proof. A client can prepare an inert pre-start-cancellable handle, then
+	 * hold a short fixture correlation mutex around receipt.operation() and
+	 * identity-map insert. Release that mutex before starting IO; start must honor
+	 * earlier cancellation atomically. The handler looks up under the same mutex
+	 * and releases it before client cancellation. Publication must contain no IO,
+	 * waits, Stop or completion. Remove the mapping under that mutex, then call
+	 * operation.complete() outside it; a late cancellation of an already completed
+	 * handle must be harmless.
+	 *
+	 * @param handler Client-specific cancellation request for a supported operation
+	 * @return This fixture domain
+	 */
+	public synchronized ContextDomain cancellation( Consumer<Operation> handler ) {
+		if( configured )
+			throw new IllegalStateException( "Fixture cancellation must be configured once before use" );
+		cancellation = Objects.requireNonNull( handler );
+		configured = true;
+		return this;
+	}
+
+	private synchronized void freeze() {
+		configured = true;
+	}
+
+	/**
+	 * @return Complete footprint, including possible previous-context removal;
+	 *         publishing it fixes the optional cancellation configuration
+	 */
 	public ResourceRequirements requirements() {
+		freeze();
 		return requirements;
 	}
 
@@ -70,12 +109,14 @@ public final class ContextDomain {
 	 * @param parallel Whether native parallel mode was selected
 	 */
 	public void checkMode( boolean parallel ) {
+		freeze();
 		if( parallel && owner != null )
 			throw new IllegalStateException( "Flow parallel does not support physical fixture affinity" );
 		check();
 	}
 
 	private void check() {
+		freeze();
 		if( unsafe != null )
 			throw new IllegalStateException( "Fixture context domain is unsafe", unsafe );
 		if( owner != null && owner != Thread.currentThread() )
@@ -147,6 +188,7 @@ public final class ContextDomain {
 	 * @return A thread-independent evidence receipt, never a current-grant lookup
 	 */
 	public Receipt receipt( Grant grant ) {
+		freeze();
 		Objects.requireNonNull( grant ).check( requirements );
 		return new Receipt( grant );
 	}
@@ -168,7 +210,7 @@ public final class ContextDomain {
 		 *         access
 		 */
 		public ResourceReservations.Operation operation() {
-			return grant.operation();
+			return grant.operation( cancellation );
 		}
 
 		/**
