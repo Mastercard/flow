@@ -65,6 +65,20 @@ until explicit reset. The affected 47 cases passed, then the whole core suite pa
 (93%) and 1,109/1,219 detected mutations (91%: 1,086 killed plus 23 timed out), with
 65 uncovered and 45 surviving. This remains below 94/95; no targets or gates changed.
 
+Commits `feb0df23` and `df075327` add eight further cases at existing public seams:
+cancellation/notification failures preserve actual operation proof and peer wakeups;
+merged capture rejects duplicate starts and preserves primary failures through
+rollback and fatal cleanup. The whole core suite passed 347 cases with the same two
+skips and no failures/errors; both affected classes then passed 33 cases after a
+test-only diagnostic cleanup. The completed unchanged-gate PIT run reached
+2,208/2,367 lines (93%) and 1,116/1,219 detected mutations (92%: 1,096 killed plus
+20 timed out), with 57 uncovered and 46 surviving. Compared with the preceding
+measurement, that is 12 more covered lines and seven more detected mutations.
+The run completed in 6 minutes 31 seconds and failed the unchanged 94/95 gate;
+neither a passing unit suite nor the improvement waives the remaining gap. Its
+reports and logs are frozen separately as `core-callback-capture.tar.gz` under the
+evidence directory below; the earlier archives remain unchanged.
+
 The new [external report command gate](assert/assert-junit5/src/it/packaged-consumer/verify-report-commands.sh)
 passed 16 external JVM runs: both JUnit stacks, serial/parallel, healthy/broken report
 output and passing/mixed bodies. It observed 48 genuine native starts (32 successful,
