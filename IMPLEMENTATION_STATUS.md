@@ -6,6 +6,64 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Ticket 19 final reactor — 2026-09-16
+
+Implementation slices are committed on `parallel_execution_controller`:
+`84e451ab` (latest-link prose), `319323bc` (native query), `cfa468bc` (cooperative
+fixture hooks), and `3eca5e46` (monotonic owner budget and review fixes). The arriving
+`.gitignore` and repeated `ServedIndexTest` edits remain unchanged and uncommitted.
+
+The requested whole-repository `mvn -B -nsu -fae ... test` ran once, with both test
+skip flags and failure-ignore false. It **FAILED**, exit 1 after 11m56s. All 180
+reported suites were cross-checked against fresh XML testcase elements and count
+attributes: **3,196 cases, 3,170 passed, 22 failures, four errors, zero test skips**.
+All assertion modules and report-core passed. Reactor-level `app-itest` was skipped
+because prerequisite application modules failed; it is not included as executed
+coverage or confused with a testcase skip.
+
+- Four application setup errors (`app-web-ui`, `app-ui`, `app-core`, `app-queue`)
+  follow multicast service-discovery receive timeouts. Mock listeners and Jetty
+  started, but required service advertisements were not received. This happens
+  before their Flow factories construct a runner, not in stop-budget execution.
+  The exact routing/interface/filtering cause is **not diagnosed**; no network
+  policy, timeout, dependency or discovery behavior was changed to force a pass.
+- Documentation has 22 failures: 15 in local scratch probes/documents, six in local
+  agent-skill documents, and one obsolete parallelism-option reference in the local
+  analysis document. The filesystem scanner does not consult Git ignore rules;
+  these inputs are not tracked by Git. CodeLink/Snippet passed; no module-source
+  console-use failure was reported. No scanner/exclusion weakening or deletion of
+  local evidence was applied. A clean tracked-source documentation gate is separate,
+  not a replacement claim that this working-tree reactor passed.
+
+Full output is retained in C:/Data/Code/flow-cancel19-final-reactor.log. Its reports
+were frozen before any rerun in the external flow-amendments-20260916 archive, and
+audit-final-reactor.ps1 verified the log/XML totals and no-skip/no-ignore properties.
+The current committed artifacts were then installed with **436/436** focused cases
+passing. The unchanged packaged-consumer script passed all four JUnit 5.10/Platform
+1.10 and JUnit 6.0.3 serial/parallel points: two tests each, zero failures/errors/skips,
+identical Flow artifact hashes, effective dependency versions and actual class-load
+checks. This refresh includes hooks and budget; it is compatibility evidence, not
+new host or exhaustive cancellation-feature coverage. Logs are
+flow-cancel19-final-install and flow-cancel19-final-consumer under C:/Data/Code.
+
+A separate tracked-source export exposed historical status links into ignored
+scratch documentation. The contract link now targets the tracked reporting README,
+and the local ticket remains a plain reference; the scanner itself is unchanged.
+The initial clean-source gate recorded 744/745 passed and one broken-link failure.
+After correction, **745/745** passed: 50 CodeLink, 50 Link, 50 Property, 50 Snippet
+and 545 SysOut cases, zero failures/errors/skips, with upstream compilation. The
+export matches `3eca5e46` under Git's line-ending normalization apart from this
+status-document update; all 39 copied real report assets were byte-identical.
+This tracked-input gate does not repair or pass the earlier working-tree scan.
+
+The current four-point consumer evidence contains 25 matching Flow JAR/POM hashes.
+Core JAR SHA-256: `7c9ed5932ceb482dd4dde2e4522afa5a94615481e7a070d411a1f4dce83a91bc`;
+Jupiter adapter: `666748b13d67873505269318907ee2d0745ef35fd89553139b743a6b80e543bc`.
+The existing report-reuse finding, baseline two-worker native stall, multicast
+discovery, mutation blockers and manual/workload gates remain OPEN. Further
+simplification requires passing fresh mutation baselines; changing native helper
+discovery scope requires an explicit decision, not a silent exclusion change.
+
 ## Monotonic owner stop/drain budget — 2026-09-16
 
 Ticket 19's remaining budget implementation adds `FlowExecution.stopBudget(Duration)`
@@ -50,8 +108,8 @@ The later passing binding gate is nonrecurrence, not diagnosis or resolution. No
 healthy-run timeout, profile reduction or native-progress acceptance was introduced
 to hide it. The separately recorded report-reuse failure also remains OPEN.
 
-The whole-repository final reactor is being attempted separately; the current-JAR
-packaged gate below still predates hooks/budget until refreshed. CPU/wall measurement,
+The final reactor and refreshed current-JAR packaged gate are recorded above.
+CPU/wall measurement,
 intended-host IntelliJ Run/Debug/navigation/selection/Stop and the user's 6,000-test
 workload remain deferred, not waived. These changes bound reachable Flow waits, not
 blocked inline callbacks/cleanup, native joins, Launcher/JVM return or remote use.
@@ -202,8 +260,8 @@ foreign-target protection, cross-run ownership or new runtime acceptance.
 
 ## Approved report-scope amendment — 2026-09-15
 
-The user approved [single-active-writer reporting](.scratch/parallel-flow-design/spec.md#report-scope-amendment-2026-09-15)
-and requested [ticket 28: Simplify single-run report ownership](.scratch/parallel-flow-implementation/issues/28-simplify-single-run-report-ownership.md).
+The user approved [single-active-writer reporting](report/report-core/README.md#sequential-replacement-and-completion-publication)
+and requested ticket 28, Simplify single-run report ownership.
 Cross-run report locks, rejection registries and competing-publication protection
 are removal targets, not requirements to restore during other work. Final-only
 indexing, direct immediate compatibility, within-run safety and sequential
