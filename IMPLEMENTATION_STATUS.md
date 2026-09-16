@@ -6,6 +6,58 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Ticket 25 acceptance refresh — 2026-09-17
+
+At `b7a4f070`, the focused 16-project packaging/install reactor passed, followed by
+the standalone consumer matrix against the same installed artifacts:
+
+| Jupiter / Platform | Flow parallel | Outer tests (failures/errors/skips) | Native starts |
+| --- | --- | --- | --- |
+| 5.10.0 / 1.10.0 | false | 2 (0/0/0) | 18 |
+| 5.10.0 / 1.10.0 | true | 2 (0/0/0) | 105 |
+| 6.0.3 / 6.0.3 | false | 2 (0/0/0) | 18 |
+| 6.0.3 / 6.0.3 | true | 2 (0/0/0) | 105 |
+
+The 246 native starts were independently totaled from the fresh Launcher summaries.
+The four sorted 25-file Flow artifact manifests have the identical SHA-256
+`edcf145b9df2132f015099c87e67f6f59441e0d4869fff0caf5fa03a1cfa59f1`.
+Fresh XML and class-loading checks passed via the existing
+[consumer verification script](assert/assert-junit5/src/it/packaged-consumer/verify.sh).
+This fixture uses `Reporting.NEVER`: it is packaged binding/runtime evidence, not
+packaged reporting, replay or the complete trace-variant acceptance matrix.
+
+Fresh unchanged-gate PIT at that endpoint reproduced the core failure: 2,111/2,367
+lines (89%), 1,066/1,219 detected mutations (87%), 118 uncovered and 35 surviving.
+Jupiter independently reproduced all 38 unmutated failures before mutation analysis:
+auxiliary top-level native factories were selected without their controlling tests'
+configuration or registry. These are automated test-discovery failures, not locked
+desktop failures.
+
+The discovery correction selects controlling classes using Surefire's four default
+naming conventions. The compiled-class inventory confirms all four patterns select
+the same 17 controllers as the successful `*Test` command-line probe; no production
+mutation targets, mutators, thresholds or existing assertions are reduced. Auxiliary
+factories remain exercised through their controlling tests' real nested Launchers.
+The probe passed its unmutated coverage phase and entered mutation analysis; this
+alone does not establish either Jupiter's 82/97 gate or complete ticket-25 acceptance.
+
+Core commit `156b7297` adds three admission-seam regressions: unused handoff proof
+retains outstanding operations without inventing results; actual native skip is
+idempotent and distinct from processing; throwing/nested/foreign receipt delivery
+preserves factory ownership. All 323 core cases passed with the same two existing
+skips and no failures/errors. The full unchanged 94/95 mutation gate is being
+remeasured in independent slices. The first complete rerun reached 2,148/2,367
+lines (91%) and 1,088/1,219 detected mutations (89%), with 96 uncovered and 35
+surviving: 37 more covered lines and 22 more detected mutations, but still a
+failing gate. A passing unit suite does not waive it.
+
+Decisions for later review: retain the discovery correction rather than making
+standalone auxiliary fixtures silently succeed; retain all mutation gates; keep
+cleanup 29–32 after functional completion and the user's trial/feedback. External
+report-only/mixed-failure command outcomes, remaining focused report/trace acceptance,
+manual IntelliJ interaction and the user's workload trial remain open. No speedup,
+release acceptance or locked-desktop pass is claimed.
+
 ## Post-functional cleanup clarification — 2026-09-16
 
 The user clarified that the remaining simplification/refactoring/test-reduction

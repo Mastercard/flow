@@ -46,6 +46,15 @@
 				<groupId>org.pitest</groupId>
 				<artifactId>pitest-maven</artifactId>
 				<configuration>
+					<!-- Match Surefire's four default controlling-test naming patterns. Auxiliary
+					     native factories require their controller's registry/configuration;
+					     they remain exercised by its nested Launcher, not as standalone tests. -->
+					<targetTests>
+						<param>com.mastercard.test.flow.assrt.junit5.Test*</param>
+						<param>com.mastercard.test.flow.assrt.junit5.*Test</param>
+						<param>com.mastercard.test.flow.assrt.junit5.*Tests</param>
+						<param>com.mastercard.test.flow.assrt.junit5.*TestCase</param>
+					</targetTests>
 					<!-- I'm not saying these *have* to stay where they are, just that 
 				     we shouldn't let them slip down by accident -->
 					<mutationThreshold>82</mutationThreshold>
