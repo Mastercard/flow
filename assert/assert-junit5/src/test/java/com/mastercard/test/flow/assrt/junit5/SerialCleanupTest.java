@@ -172,6 +172,7 @@ class SerialCleanupTest {
 		 */
 		@TestFactory
 		Stream<DynamicNode> flows( FlowExecution execution ) {
+			execution.stopBudget( java.time.Duration.ofMillis( 100 ) );
 			handle = execution;
 			runner = execution.flocessor( "failed fixture cleanup", PreparedFlowLifecycleTest.model(
 					new Mdl().flows().limit( 2 ).toArray( Flow[]::new ) ) )

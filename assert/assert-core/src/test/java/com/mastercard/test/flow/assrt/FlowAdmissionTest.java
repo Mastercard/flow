@@ -1258,11 +1258,11 @@ class FlowAdmissionTest {
 			return null;
 		} );
 		Thread thread = new Thread( stopping, "admission-stop" );
+		AtomicReference<Grant> acquired = new AtomicReference<>();
 		FutureTask<Boolean> probe = new FutureTask<>( () -> {
 			synchronized( run.history() ) {
-				try( Grant granted = waiting.tryAcquire() ) {
-					return granted != null;
-				}
+				acquired.set( waiting.tryAcquire() );
+				return acquired.get() != null;
 			}
 		} );
 		Throwable primary = null;
@@ -1284,6 +1284,10 @@ class FlowAdmissionTest {
 		finally {
 			release.countDown();
 			try {
+				// Grant.close now wakes its own request too. Neither hold the owner
+				// monitor nor await that notification before releasing this test hold.
+				if( acquired.get() != null )
+					acquired.get().close();
 				if( thread.getState() != Thread.State.NEW )
 					stopping.get( 5, TimeUnit.SECONDS );
 			}

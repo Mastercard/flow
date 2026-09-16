@@ -91,6 +91,8 @@ public final class ResourceReservations {
 		private final int limit;
 		private final Set<Grant> grants = new LinkedHashSet<>();
 		private volatile int active;
+		private volatile int operations;
+		private volatile int callbacks;
 		private volatile Throwable unsafe;
 
 		private Capacity( int limit ) {
@@ -107,6 +109,18 @@ public final class ResourceReservations {
 		/** @return Whole grants still owned, including explicitly retained use */
 		public int owned() {
 			return active;
+		}
+
+		/** @return Actual outstanding operations, without nesting owner locks */
+		public int operations() {
+			return operations;
+		}
+
+		/**
+		 * @return Claimed cancellation handlers still executing or awaiting delivery
+		 */
+		public int callbacks() {
+			return callbacks;
 		}
 
 		/**
@@ -252,6 +266,7 @@ public final class ResourceReservations {
 				cancellation = null;
 				completed.live.remove( this );
 				completed.operations--;
+				completed.request.capacity.operations--;
 				completed.clearStoppedUse();
 				completed.releaseIfDrained();
 				notifications = completed.notifications();
@@ -265,7 +280,7 @@ public final class ResourceReservations {
 		private final Request request;
 		private final Object identity = new Object();
 		private final Set<Operation> live = new LinkedHashSet<>();
-		private boolean released;
+		private volatile boolean released;
 		private boolean closing;
 		private volatile int operations;
 		private volatile int callbacks;
@@ -274,6 +289,11 @@ public final class ResourceReservations {
 
 		private Grant( Request request ) {
 			this.request = request;
+		}
+
+		/** @return Actual grant release, not a request to close it */
+		public boolean released() {
+			return released;
 		}
 
 		/**
@@ -313,6 +333,7 @@ public final class ResourceReservations {
 				if( released || closing || failure != null || stopped != null )
 					throw new IllegalStateException( "Operation requires live safe ownership", failure );
 				operations++;
+				request.capacity.operations++;
 				Operation operation = new Operation( this, cancellation );
 				live.add( operation );
 				return operation;
@@ -350,6 +371,7 @@ public final class ResourceReservations {
 				if( handler != null ) {
 					operation.cancellation = null;
 					callbacks++;
+					request.capacity.callbacks++;
 					// Capture this grant independently of the operation's erasable proof.
 					effects.add( () -> cancel( operation, handler ) );
 				}
@@ -369,6 +391,7 @@ public final class ResourceReservations {
 				List<Runnable> notifications;
 				synchronized( ResourceReservations.this ) {
 					callbacks--;
+					request.capacity.callbacks--;
 					clearStoppedUse();
 					releaseIfDrained();
 					notifications = notifications();
@@ -456,6 +479,10 @@ public final class ResourceReservations {
 				closing = true;
 				releaseIfDrained();
 				notifications = ResourceReservations.this.notifications();
+				// The owner's final wake can dispose the run. Deliver already-committed
+				// peer notifications first, including their failure/suppression effects.
+				if( released && !notifications.contains( request.changed ) )
+					notifications.add( request.changed );
 			}
 			signalAll( notifications );
 		}

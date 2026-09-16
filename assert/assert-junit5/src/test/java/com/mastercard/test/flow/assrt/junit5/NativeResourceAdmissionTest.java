@@ -2507,6 +2507,8 @@ class NativeResourceAdmissionTest {
 	 * Each task calls a real Launcher; no test body is submitted to this thread.
 	 */
 	static final class Run extends SummaryGeneratingListener {
+		/** Fake hangs use a short budget, never the production 30-second default. */
+		java.time.Duration stopBudget = java.time.Duration.ofMillis( 100 );
 		/** Optional real Launcher cancellation channel. */
 		org.junit.platform.engine.CancellationToken cancellation;
 		private boolean preview;
@@ -2775,6 +2777,7 @@ class NativeResourceAdmissionTest {
 	 */
 	static Stream<DynamicNode> prepare( FlowExecution execution ) {
 		Run run = FACTORY.get();
+		execution.stopBudget( run.stopBudget );
 		Throwable stopped;
 		synchronized( run ) {
 			run.handle = execution;

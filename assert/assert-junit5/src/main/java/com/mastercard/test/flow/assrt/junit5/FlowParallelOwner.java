@@ -1,6 +1,7 @@
 package com.mastercard.test.flow.assrt.junit5;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,6 +62,14 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 	/** @return The single core processing History */
 	History history() {
 		return admission.history();
+	}
+
+	/**
+	 * @param duration Configures the already-attached admission, never a second
+	 *                 timer
+	 */
+	void stopBudget( Duration duration ) {
+		admission.stopBudget( duration );
 	}
 
 	/** @return Bounded evidence retained independently of report publication */
@@ -143,7 +152,8 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 					if( index == FlowAdmission.EXHAUSTED ) {
 						return false;
 					}
-					owner.admitted( index, admission.reservation( index ) );
+					int admitted = index;
+					admission.receipt( admitted, grant -> owner.admitted( admitted, grant ) );
 					handedOff = true;
 					action.accept( descriptions.get( index ) );
 					return true;
@@ -378,6 +388,14 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 		finally {
 			originalStream = null;
 		}
+		if( complete && failure == null && admission.stopCause() == null ) {
+			try {
+				owner.completeParallel();
+			}
+			catch( Throwable cleanup ) {
+				failure = cleanup;
+			}
+		}
 		if( failure != null ) {
 			try {
 				owner.stop( failure );
@@ -395,7 +413,7 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 			names.clear();
 			profile = null;
 			attachment = null;
-			owner.disposeParallel( complete && failure == null, admission.status() );
+			owner.disposeParallel( admission.status() );
 		}
 		catch( Throwable cleanup ) {
 			try {
@@ -413,6 +431,25 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 
 	/** Stops at the exceptional backstop without forcing release. */
 	void close() {
-		admission.close();
+		Throwable primary = null;
+		// Stop/time precede registration: registration can synchronously claim and
+		// run original cleanup if a terminal has already committed drainage.
+		for( Runnable action : List.<Runnable>of(
+				() -> admission.stop( new IllegalStateException( "Flow parallel class backstop reached" ) ),
+				() -> disposeWhenDrained( false ), admission::close ) ) {
+			try {
+				action.run();
+			}
+			catch( RuntimeException | Error failure ) {
+				if( primary == null )
+					primary = failure;
+				else if( primary != failure )
+					primary.addSuppressed( failure );
+			}
+		}
+		if( primary instanceof RuntimeException failure )
+			throw failure;
+		if( primary instanceof Error failure )
+			throw failure;
 	}
 }

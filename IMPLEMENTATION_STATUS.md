@@ -6,6 +6,58 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Monotonic owner stop/drain budget — 2026-09-16
+
+Ticket 19's remaining budget implementation adds `FlowExecution.stopBudget(Duration)`
+before preparation, with a finite positive **30-second default** and nanosecond
+precision. Both prepared owners share a passive timing policy but retain their own
+existing monitors and lifecycle predicates. The first owner-observed Stop starts
+monotonic elapsed timing before cancellation effects; repeats never reset it.
+Healthy execution does not read the budget clock or receive a grace/total-run timeout.
+
+Only reachable close/backstop callers wait for independently drainable work, using
+the remaining budget and real event wakeups. Native/resource callbacks stay
+non-waiting. Expiry preserves unsafe ownership and records bounded immutable
+`ExecutionStatus.stopBudgetMiss()` evidence, including original cause and body,
+native/handoff, operation, callback, cleanup and owner counts. Evidence describes
+the observation, not reconstructed state at an unseen deadline. Serial native
+counts remain unavailable. Final grant release notifies its owner outside locks;
+original stream cleanup and runner completion precede final parallel admission
+release/status sealing. Late proof cannot erase a missed budget; timely completion
+prevents a later phantom miss. Interruption is restored and is not called expiry.
+
+Independent review found and corrected two close races: receipt callbacks could
+wait for their own pre-handoff return, and concurrent close could bypass registered
+cleanup between final capacity proof and owner notification. A narrow receipt guard
+and pending-cleanup wait preserve real evidence without a blanket factory-thread
+exemption. Review also corrected two test fault paths so a deliberately throwing
+clock or failed Launcher drainage cannot strand shared ownership or a closer thread.
+Runtime negative controls verified these fixes, including primary/suppressed failure
+preservation and fresh resource reuse. Temporary injections were removed.
+
+After fixes, focused upstream validation passed **436/436 cases across 16 classes**,
+zero failures/errors/skips, with fresh XML/source matching. This includes 13 core
+budget and 18 adapter budget cases, controlled clocks, actual timeout/notification
+parking, configuration/default/boundary checks, reentry and late proof. Zulu 17.0.19
+actual compilation and the existing formatter passed with skips/failure-ignore
+false. Append-only flow-cancel19-budget and flow-cancel19-budget-review logs under
+C:/Data/Code retain failures, controls and final evidence. Post-fix independent
+Standards and Spec review found no remaining actionable findings in the four fixes.
+
+**OPEN native-progress finding:** an intermittent two-worker `busy-chain` stall was
+also reproduced against the unchanged pre-budget production baseline `cfa468bc`.
+The later passing binding gate is nonrecurrence, not diagnosis or resolution. No
+healthy-run timeout, profile reduction or native-progress acceptance was introduced
+to hide it. The separately recorded report-reuse failure also remains OPEN.
+
+The whole-repository final reactor is being attempted separately; the current-JAR
+packaged gate below still predates hooks/budget until refreshed. CPU/wall measurement,
+intended-host IntelliJ Run/Debug/navigation/selection/Stop and the user's 6,000-test
+workload remain deferred, not waived. These changes bound reachable Flow waits, not
+blocked inline callbacks/cleanup, native joins, Launcher/JVM return or remote use.
+The failed simplification mutation baselines below remain blockers; no reductions
+or coverage-scope/threshold changes have been accepted.
+
 ## Cooperative fixture cancellation — 2026-09-16
 
 Ticket 19's second slice adds one optional `ContextDomain.cancellation(handler)`

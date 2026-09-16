@@ -13,6 +13,11 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+import java.util.function.LongSupplier;
+import java.time.Duration;
+import java.util.Optional;
+import java.util.LinkedHashSet;
 import java.util.stream.Stream;
 
 import com.mastercard.test.flow.Flow;
@@ -50,6 +55,13 @@ public final class FlowAdmission {
 	}
 
 	private final History history = new History();
+	private final StopBudget budget = new StopBudget();
+	private final LongSupplier nanoTime;
+	private ExecutionStatus.StopBudgetMiss budgetMiss;
+	private final Set<Node> retainedOwners = new LinkedHashSet<>();
+	private Thread cancellationThread;
+	private Thread cleanupThread;
+	private Thread receiptThread;
 	private final ResourceReservations.Capacity capacity;
 	private final long cancellationRecheckMillis;
 	private final Runnable resourceChanged = this::resourcesChanged;
@@ -94,10 +106,47 @@ public final class FlowAdmission {
 
 	/** Controls only the existing wait interval, never an execution deadline. */
 	FlowAdmission( int limit, long cancellationRecheckMillis ) {
+		this( limit, cancellationRecheckMillis, System::nanoTime );
+	}
+
+	/** Test clock at the existing admission seam, not a public clock API. */
+	FlowAdmission( int limit, LongSupplier nanoTime ) {
+		this( limit, 250, nanoTime );
+	}
+
+	private FlowAdmission( int limit, long cancellationRecheckMillis, LongSupplier nanoTime ) {
+		this.nanoTime = Objects.requireNonNull( nanoTime );
 		if( cancellationRecheckMillis <= 0 )
 			throw new IllegalArgumentException( "Cancellation recheck must be positive" );
 		this.cancellationRecheckMillis = cancellationRecheckMillis;
 		capacity = ResourceReservations.shared().capacity( limit );
+	}
+
+	/** @param duration Stop budget configured before preparation or Stop */
+	public void stopBudget( Duration duration ) {
+		synchronized( history ) {
+			if( prepared || released || stopped != null )
+				throw new IllegalStateException( "Flow stop budget is fixed" );
+			budget.configure( duration );
+		}
+	}
+
+	private void observeBudget() {
+		if( budget.open() && budgetMiss == null && budget.observe( nanoTime.getAsLong() ) ) {
+			incomplete = true;
+			budgetMiss = new ExecutionStatus.StopBudgetMiss( budget.duration(), budget.elapsed(), stopped,
+					active, (int) nodes.stream().filter( n -> n.admitted && !n.retired
+							&& n.outcome == null && n.skipped == null && !n.covered ).count(),
+					0, released ? 0 : 1, capacity.owned(), capacity.operations(), capacity.callbacks(),
+					cancelling, affectedIdentities() );
+		}
+	}
+
+	private List<String> affectedIdentities() {
+		return Stream
+				.concat( retainedOwners.stream(), nodes.stream().filter( n -> !n.safe || !n.retired ) )
+				.distinct()
+				.limit( 5 ).map( n -> n.label ).toList();
 	}
 
 	/**
@@ -430,6 +479,7 @@ public final class FlowAdmission {
 					checkFixture();
 					if( stopped == null ) {
 						node.owner.grant = grant;
+						retainedOwners.add( node.owner );
 						node.request = null;
 						admit( node, index );
 						return index;
@@ -458,6 +508,7 @@ public final class FlowAdmission {
 	public void unused( int index ) {
 		Grant unused = null;
 		synchronized( history ) {
+			observeBudget();
 			Node node = nodes.get( index );
 			if( stopped == null || !node.admitted || node.retired || node.id != null
 					|| node.started || node.entered || node.outcome != null )
@@ -466,7 +517,6 @@ public final class FlowAdmission {
 			retired++;
 			if( --node.owner.uses == 0 ) {
 				unused = node.owner.grant;
-				node.owner.grant = null;
 			}
 		}
 		settle( null, unused );
@@ -511,6 +561,7 @@ public final class FlowAdmission {
 				throw fault( "Native Flow start after terminal" );
 			}
 			node.started = true;
+			node.nativeThread = Thread.currentThread();
 		}
 	}
 
@@ -534,6 +585,7 @@ public final class FlowAdmission {
 				throw fault( "Flow executable differs from its owned native binding" );
 			}
 			node.entered = true;
+			node.bodyThread = Thread.currentThread();
 			entered++;
 			active++;
 			return true;
@@ -557,6 +609,33 @@ public final class FlowAdmission {
 	}
 
 	/**
+	 * Delivers pre-handoff ownership on the factory stack, outside bookkeeping
+	 * locks. A nested close cannot await native proof that requires this callback
+	 * to return. Delivery itself supplies no body, native or unused proof.
+	 *
+	 * @param index    Admitted invocation, not yet handed to native execution
+	 * @param delivery Short nonthrowing ownership receipt callback
+	 */
+	public void receipt( int index, Consumer<Grant> delivery ) {
+		Grant grant;
+		synchronized( history ) {
+			if( Thread.currentThread() != factoryThread || receiptThread != null )
+				throw new IllegalStateException( "Flow receipt delivery is outside its factory" );
+			grant = reservation( index );
+			receiptThread = Thread.currentThread();
+		}
+		try {
+			delivery.accept( grant );
+		}
+		finally {
+			synchronized( history ) {
+				receiptThread = null;
+				wake();
+			}
+		}
+	}
+
+	/**
 	 * Publishes actual processing after synchronous bindings/capture/callbacks end.
 	 * Null classification is fatal/incomplete evidence, never SUCCESS.
 	 * 
@@ -569,6 +648,7 @@ public final class FlowAdmission {
 		Throwable primary = null;
 		try {
 			synchronized( history ) {
+				observeBudget();
 				checkFixture();
 				Node node = nodes.get( index );
 				if( !node.entered || node.safe && (node.processing != result || node.failure != failure) ) {
@@ -588,6 +668,7 @@ public final class FlowAdmission {
 									: failure );
 				}
 				node.safe = true;
+				node.bodyThread = null;
 				completed++;
 				active--;
 				finished = finishedGrant( node );
@@ -616,6 +697,7 @@ public final class FlowAdmission {
 		List<Node> planned;
 		try {
 			synchronized( history ) {
+				observeBudget();
 				checkFixture();
 				planned = nodes;
 				Node node = nodes.get( index( id ) );
@@ -628,6 +710,7 @@ public final class FlowAdmission {
 					return;
 				}
 				node.outcome = outcome;
+				node.nativeThread = null;
 				node.nativeFailure = failure;
 				terminal++;
 				if( !node.entered || !node.safe ) {
@@ -666,7 +749,6 @@ public final class FlowAdmission {
 			node.owner.uses--;
 			if( node.owner.uses == 0 && (node.last || stopped != null) ) {
 				Grant grant = node.owner.grant;
-				node.owner.grant = null;
 				return grant;
 			}
 		}
@@ -685,6 +767,7 @@ public final class FlowAdmission {
 		Throwable primary = null;
 		try {
 			synchronized( history ) {
+				observeBudget();
 				Node node = nodes.get( index( id ) );
 				if( node.started || node.entered || node.outcome != null
 						|| node.skipped != null && !node.skipped.equals( reason ) )
@@ -715,6 +798,7 @@ public final class FlowAdmission {
 		Objects.requireNonNull( cause );
 		List<Grant> unused = new ArrayList<>();
 		synchronized( history ) {
+			observeBudget();
 			if( factoryEnded )
 				return;
 			factoryEnded = true;
@@ -723,6 +807,7 @@ public final class FlowAdmission {
 			for( Node node : nodes ) {
 				if( node.admitted && !node.retired ) {
 					node.covered = true;
+					node.nativeThread = null;
 					Grant grant = finishedGrant( node );
 					if( grant != null )
 						unused.add( grant );
@@ -756,6 +841,7 @@ public final class FlowAdmission {
 		Throwable primary = null;
 		try {
 			synchronized( history ) {
+				observeBudget();
 				checkFixture();
 				if( factoryOutcome != null ) {
 					if( factoryOutcome != outcome || factoryFailure != failure ) {
@@ -769,8 +855,10 @@ public final class FlowAdmission {
 				// A factory can finish with filtered dynamic descriptions and no child
 				// callback. Cover only native scope lifetime, never missing outcomes.
 				for( Node node : nodes )
-					if( node.admitted && !node.retired && node.outcome == null && node.skipped == null )
+					if( node.admitted && !node.retired && node.outcome == null && node.skipped == null ) {
 						node.covered = true;
+						node.nativeThread = null;
+					}
 				boolean complete = prepared && streamClosed && issued == nodes.size() && terminal == issued
 						&& active == 0 && capacity.owned() == 0 && stopped == null
 						&& outcome == Outcome.SUCCESSFUL;
@@ -863,13 +951,26 @@ public final class FlowAdmission {
 	private void drain() {
 		Runnable action = null;
 		synchronized( history ) {
+			observeBudget();
 			if( factoryEnded && disposable() ) {
 				action = drained;
 				drained = null;
+				if( action != null )
+					cleanupThread = Thread.currentThread();
 			}
 		}
-		if( action != null )
-			action.run();
+		if( action != null ) {
+			try {
+				action.run();
+			}
+			finally {
+				synchronized( history ) {
+					observeBudget();
+					cleanupThread = null;
+					wake();
+				}
+			}
+		}
 	}
 
 	/** @return The first stop cause, independently of native outcomes */
@@ -882,12 +983,11 @@ public final class FlowAdmission {
 	/** @return A bounded snapshot, retaining no Flow, native context or Writer */
 	public ExecutionStatus status() {
 		synchronized( history ) {
+			observeBudget();
 			return new ExecutionStatus( released ? ExecutionStatus.State.QUIESCENT
 					: stopped == null ? ExecutionStatus.State.ACTIVE : ExecutionStatus.State.STOPPING,
 					stopped, incomplete, selected, issued, entered, completed, terminal, capacity.owned(),
-					released ? affected
-							: nodes.stream().filter( n -> !n.safe || !n.retired )
-									.limit( 5 ).map( n -> n.label ).toList() );
+					released ? affected : affectedIdentities(), Optional.ofNullable( budgetMiss ) );
 		}
 	}
 
@@ -904,8 +1004,11 @@ public final class FlowAdmission {
 					throw fault( "Flow admission is not safely complete" );
 				}
 				affected = status().affected();
+				budget.finish();
 				released = true;
 				nodes = List.of();
+				retainedOwners.clear();
+				drained = null;
 				nativeIds.clear();
 				ready.clear();
 				history.clear();
@@ -941,12 +1044,44 @@ public final class FlowAdmission {
 			}
 		}
 		stop( new IllegalStateException( "Flow parallel class backstop reached" ) );
+		InterruptedException interrupted = null;
 		synchronized( history ) {
+			for( ;; ) {
+				observeBudget();
+				// Native enclosing terminal can follow this close. Only independently
+				// drainable use/cleanup warrants waiting; never await our own stack.
+				// Final capacity proof can precede the notification claiming registered
+				// cleanup. That cleanup is still required work, even before it has a thread.
+				if( released || disposable() && cleanupThread == null && (drained == null || !factoryEnded)
+						|| budgetMiss != null
+						|| cancellationThread == Thread.currentThread()
+						|| cleanupThread == Thread.currentThread()
+						|| receiptThread == Thread.currentThread()
+						|| nodes.stream().anyMatch( n -> n.bodyThread == Thread.currentThread()
+								|| n.nativeThread == Thread.currentThread() ) )
+					break;
+				long remaining = budget.remaining();
+				try {
+					history.wait( remaining / 1_000_000, (int) (remaining % 1_000_000) );
+				}
+				catch( InterruptedException failure ) {
+					Thread.currentThread().interrupt();
+					interrupted = failure;
+					break;
+				}
+			}
 			incomplete = true;
-			throw new IllegalStateException( "Incomplete Flow parallel admission: prepared=" + prepared
-					+ ", issued=" + issued + ", terminal=" + terminal + ", active=" + active
-					+ "; no forced release or finalization", stopped );
 		}
+		ExecutionStatus snapshot = status();
+		var failure = new IllegalStateException( "Incomplete Flow parallel admission: "
+				+ (interrupted == null ? "" : "drain wait interrupted; ")
+				+ snapshot.stopBudgetMiss().map( miss -> "budget missed; evidence observed after "
+						+ miss.elapsed() + ": " + miss + "; " ).orElse( "" )
+				+ "issued=" + snapshot.admitted() + ", terminal=" + snapshot.nativeTerminals()
+				+ "; no forced release or finalization", snapshot.cause() );
+		if( interrupted != null )
+			failure.addSuppressed( interrupted );
+		throw failure;
 	}
 
 	/**
@@ -971,6 +1106,18 @@ public final class FlowAdmission {
 	}
 
 	private void resourcesChanged() {
+		synchronized( history ) {
+			// Reservation proof already changed capacity. Observe the still-open
+			// budget before accepting that proof or discarding its identity.
+			observeBudget();
+			retainedOwners.removeIf( node -> {
+				if( node.grant.released() ) {
+					node.grant = null;
+					return true;
+				}
+				return false;
+			} );
+		}
 		// Reservation callbacks arrive outside all bookkeeping locks. The capacity
 		// latch also protects continuation if native completion races this callback.
 		effects( null, () -> {
@@ -988,8 +1135,10 @@ public final class FlowAdmission {
 	}
 
 	private void stopLocked( Throwable failure ) {
+		observeBudget();
 		if( stopped == null ) {
 			stopped = failure;
+			budget.start( nanoTime.getAsLong() );
 		}
 		cancellation = null;
 		incomplete = true;
@@ -1009,6 +1158,7 @@ public final class FlowAdmission {
 			// drainage without scanning every node again on each completion.
 			pendingCancelled = true;
 			cancelling = true;
+			cancellationThread = Thread.currentThread();
 			cause = stopped;
 			for( Node node : nodes ) {
 				if( node.request != null ) {
@@ -1018,7 +1168,6 @@ public final class FlowAdmission {
 				if( node.owner == node && node.grant != null ) {
 					if( node.uses == 0 ) {
 						unused.add( node.grant );
-						node.grant = null;
 					}
 				}
 			}
@@ -1028,7 +1177,10 @@ public final class FlowAdmission {
 						cancelled.stream().<Runnable>map( r -> r::cancel ).toArray( Runnable[]::new ) ),
 				() -> capacity.stopping( cause ), () -> closeGrants( unused ), () -> {
 					synchronized( history ) {
+						observeBudget();
 						cancelling = false;
+						cancellationThread = null;
+						wake();
 					}
 					// Proof can precede an extracted grant's close. Registering terminal
 					// disposal checks the other order; this check covers completed effects.
@@ -1059,6 +1211,8 @@ public final class FlowAdmission {
 		private boolean admitted;
 		private boolean started;
 		private boolean entered;
+		private Thread bodyThread;
+		private Thread nativeThread;
 		private boolean safe;
 		private Result processing;
 		private Throwable failure;

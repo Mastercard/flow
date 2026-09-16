@@ -540,6 +540,7 @@ class ContextFixtureTest {
 					fixture.operation( a );
 					fixture.operation( a );
 				} );
+		run.stopBudget = java.time.Duration.ofMillis( 250 );
 		if( parallel )
 			run.cancellation = org.junit.platform.engine.CancellationToken.create();
 		run.beforeBody = () -> assertTrue( fixture.operations.isEmpty(),
@@ -575,6 +576,18 @@ class ContextFixtureTest {
 			run.handle.stop( new IllegalStateException( "concurrent repeated Stop" ) );
 			assertSame( cause, run.handle.status().cause() );
 			assertEquals( List.of( fixture.operations.get( 1 ).proof ), fixture.cancelled );
+			Throwable closeFailure = assertThrows( IllegalStateException.class, run.handle::close );
+			assertTrue( closeFailure.getMessage().contains( "budget missed" ), closeFailure::toString );
+			var miss = run.handle.status().stopBudgetMiss().orElseThrow();
+			assertSame( cause, miss.cause() );
+			assertEquals( 2, miss.operations() );
+			assertEquals( 2, miss.callbacks() );
+			assertEquals( 0, miss.pendingBodies() );
+			assertEquals( parallel ? 1 : -1, miss.pendingNative() );
+			assertEquals( parallel ? 0 : 1, miss.pendingHandoffs() );
+			assertEquals( 1, miss.cleanup() );
+			assertEquals( 1, miss.owners() );
+			assertTrue( miss.cancellationEffects() );
 			if( proofFirst ) {
 				fixture.finishOperations();
 				assertEquals( 0, fixture.liveOperations(), "all actual use ended while callback is held" );
@@ -620,6 +633,8 @@ class ContextFixtureTest {
 		assertEquals( 0, run.handle.status().owners() );
 		assertSame( cause, run.handle.status().cause() );
 		assertEquals( 3, fixture.writes, "only the three actual uses perform work" );
+		assertTrue( run.handle.status().stopBudgetMiss().isPresent(),
+				"late quiescence preserves expiry" );
 		assertEquals( 1, fixture.operations.get( 1 ).cancellations,
 				"a client captured before proof tolerates late cancellation" );
 		if( parallel && throwing )

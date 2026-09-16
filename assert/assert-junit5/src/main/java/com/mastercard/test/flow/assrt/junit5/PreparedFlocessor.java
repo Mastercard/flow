@@ -235,6 +235,7 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	 */
 	public Stream<DynamicNode> tests() {
 		beforeConfiguration();
+		owner.preparing();
 		prepared = true;
 		if( owner.parallel() || declaredResources ) {
 			requireIndependentTracerConfiguration();

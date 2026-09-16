@@ -107,7 +107,8 @@ close, complete the prepared run. Early close or abandonment is diagnosed by its
 class-local lifecycle backstop; neither is converted into successful finalization.
 Reporting retains its current immediate behavior for the original serial caller.
 Resource declarations and explicit fixture domains below add cooperating serial
-ownership; full cancellation drainage and integrated final-only reporting remain unfinished.
+ownership. Cancellation and bounded reachable drainage are described below;
+integrated final-only reporting remains unfinished.
 
 Real Launcher regressions have exercised the serial caller on coherent JUnit
 5.10/Platform 1.10 and JUnit 6.0.3 stacks with Java 17. These are tested points,
@@ -334,11 +335,41 @@ calls the handler. Remove the exact mapping under the mutex, then call
 unsynchronized post-return map insertion is not a safe publication protocol.
 Clients without this capability are not made cooperatively cancellable by Flow.
 
-Ticket 19's reachable owner drain budget remains pending. Queries cannot run inside
-a blocked inline body/callback or native join; a blocking cancellation handler can
-also delay later deliveries and Stop return. There is no new watchdog/executor,
-uniform Launcher/remote/IDE shutdown guarantee or hard-kill cleanup promise here.
-Report/capture/replay guards and consumer resource-audit limits remain unchanged.
+### Reachable owner stop/drain budget
+
+Before `tests()`, configure `execution.stopBudget(Duration)` if the default
+**30 seconds** is unsuitable. The duration must be positive and representable in
+nanoseconds; zero, negative and overflowing values are rejected, not interpreted
+as unlimited. Configuration freezes when preparation starts. Both prepared modes
+measure elapsed monotonic time from the first owner-observed Stop, before invoking
+cancellation effects. Repeated Stop or close cannot restart the budget. Healthy
+execution has neither a total-run timeout nor a fixed completion grace period.
+
+Reachable close/backstop callers wait on the existing owner monitor for independently
+drainable work, with immediate progress notifications and only the remaining budget.
+Native/resource callbacks do not become waiters. Reentrant close cannot wait for its
+own receipt delivery, body, cancellation or cleanup stack; missing native evidence
+is not manufactured to dispose the owner. Interruption restores the interrupt flag
+and reports incomplete drainage separately from expiry.
+
+`execution.status().stopBudgetMiss()` supplies an optional immutable first-miss
+snapshot: configured and observed elapsed duration, original cause, pending body,
+native/handoff, operation, cancellation-callback, cleanup and owner evidence, plus
+at most five shortened identities. Counts describe the observation, not reconstructed
+state at an unseen deadline. Serial native evidence remains unavailable (`-1`).
+Original cleanup and runner completion precede final status sealing. A timely
+complete owner cannot acquire a phantom miss from a later status query; late observed
+proof may safely release ownership but cannot erase an already missed budget or
+restart the run. Expiry itself authorizes no release or successful finalization.
+
+Queries cannot run inside blocked inline bodies/callbacks or native joins. A blocking
+cancellation handler can delay subsequent deliveries and Stop return; synchronous
+cleanup can also outlast the budget before control becomes reachable again. The
+budget bounds reachable Flow-controlled waits, **not Launcher return, JVM termination
+or remote-SUT cessation**. No watchdog, new executor, retry or hard-kill cleanup
+guarantee is provided. Report/capture/replay guards and consumer resource-audit
+limits remain unchanged. Intended-host Stop and full-workload performance remain
+separate acceptance gates.
 
 ### Uninterrupted selected chains
 
