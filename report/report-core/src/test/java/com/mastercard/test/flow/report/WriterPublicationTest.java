@@ -46,6 +46,7 @@ class WriterPublicationTest {
 		assertEquals( indexing == Indexing.IMMEDIATE ? 5 : 1, files.indexWrites );
 		assertEquals( indexing == Indexing.IMMEDIATE ? 14 : 4, files.indexEntries );
 		assertEquals( 5, files.detailWrites );
+		assertEquals( indexing == Indexing.FINAL_ONLY ? 1 : 0, files.diagnosticWrites );
 		assertTrue( files.indexBytes > 0 );
 		assertTrue( files.detailBytes > 0 );
 	}
@@ -68,7 +69,7 @@ class WriterPublicationTest {
 	}
 
 	enum Fault {
-		DETAIL, TEMPORARY, WRITE, CLOSE, MOVE
+		DETAIL, DIAGNOSTIC, TEMPORARY, WRITE, CLOSE, MOVE
 	}
 
 	/**
@@ -85,6 +86,10 @@ class WriterPublicationTest {
 			@Override
 			OutputStream open( Path path ) throws IOException {
 				boolean temporary = path.getFileName().toString().endsWith( ".tmp" );
+				if( fault == Fault.DIAGNOSTIC
+						&& path.getFileName().toString().equals( Writer.DIAGNOSTICS_FILE_NAME ) ) {
+					throw new IOException( "diagnostic failure" );
+				}
 				if( fault == Fault.DETAIL && !temporary ) {
 					throw new IOException( "detail failure" );
 				}

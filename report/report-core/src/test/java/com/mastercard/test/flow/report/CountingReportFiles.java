@@ -19,6 +19,8 @@ class CountingReportFiles extends ReportFiles {
 	int indexEntries;
 	/** Number of complete detail files written, including corrections. */
 	int detailWrites;
+	/** Number of complete diagnostic companions written. */
+	int diagnosticWrites;
 	/** Bytes written in complete index files. */
 	long indexBytes;
 	/** Bytes written in complete detail files. */
@@ -35,7 +37,10 @@ class CountingReportFiles extends ReportFiles {
 			@Override
 			public void close() throws IOException {
 				super.close();
-				if( path.getParent().getFileName().toString().equals( Writer.DETAIL_DIR_NAME ) ) {
+				if( path.getFileName().toString().equals( Writer.DIAGNOSTICS_FILE_NAME ) ) {
+					diagnosticWrites++;
+				}
+				else if( path.getParent().getFileName().toString().equals( Writer.DETAIL_DIR_NAME ) ) {
 					detailWrites++;
 					detailBytes += Files.size( path );
 				}

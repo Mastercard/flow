@@ -38,8 +38,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
-import org.junit.jupiter.api.extension.DynamicTestInvocationContext;
 import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.DynamicTestInvocationContext;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
@@ -2423,7 +2423,7 @@ class NativeResourceAdmissionTest {
 	 * @throws Exception If a rejected run fails to finish
 	 */
 	@Test
-	void serialResourceDeclarationsSupportChainsButStillRejectReports() throws Exception {
+	void serialResourceDeclarationsSupportChainsAndFinalOnlyReports() throws Exception {
 		Flow chain = Creator.build( f -> f.meta( m -> m.description( "chain" )
 				.tags( t -> t.add( "chain:unowned" ) ) )
 				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
@@ -2434,19 +2434,13 @@ class NativeResourceAdmissionTest {
 				if( reporting )
 					r.reporting( com.mastercard.test.flow.assrt.Reporting.QUIETLY );
 			}, a -> {
-				if( reporting )
-					fail( "unsupported serial reporting ownership" );
+				a.actual().response( a.expected().response().content() );
 			} );
 			run.start();
 			run.awaitCompletion();
-			assertEquals( reporting ? 0 : 1, run.bodies.get() );
-			assertEquals( reporting ? 0 : 1, run.getSummary().getTestsStartedCount() );
-			if( reporting )
-				assertTrue(
-						run.failures.stream().anyMatch( f -> f.toString().contains( "reporting NEVER" ) ),
-						run.failures::toString );
-			else
-				assertEquals( List.of(), run.failures );
+			assertEquals( 1, run.bodies.get() );
+			assertEquals( 1, run.getSummary().getTestsStartedCount() );
+			assertEquals( List.of(), run.failures );
 		}
 	}
 

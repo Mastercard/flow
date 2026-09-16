@@ -356,16 +356,26 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 
 	/**
 	 * Temporary real-native tracer guard, not general parallel authorization.
-	 * Replay, capture and lazy report initialization remain guarded. Applied
-	 * contexts and residue require explicit actual fixture ownership.
+	 * Replay and capture remain guarded. Prepared quiet reports use
+	 * completion-owned final-only publication. Applied contexts and residue require
+	 * explicit actual fixture ownership.
 	 */
 	protected final void requireIndependentTracerConfiguration() {
-		if( config.reporting != Reporting.NEVER || config.logCapture != LogCapture.NO_OP
+		boolean unsupportedReporting = config.reporting != Reporting.NEVER
+				&& (!config.finalOnlyReporting || config.reporting != Reporting.QUIETLY);
+		if( unsupportedReporting
+				|| config.logCapture != LogCapture.NO_OP
 				|| config.replay.hasData() || !ownedContext && (!config.applicators.isEmpty()
 						|| !config.checkers.isEmpty() || !config.autonomous.isEmpty()) ) {
-			throw new IllegalStateException( "Flow parallel tracer requires reporting NEVER, "
-					+ "NO_OP capture, no replay, and fixture ownership for applicators, checkers or autonomous actors" );
+			throw new IllegalStateException(
+					"Flow parallel tracer requires reporting NEVER or final-only QUIETLY, "
+							+ "NO_OP capture, no replay, and fixture ownership for applicators, checkers or autonomous actors" );
 		}
+	}
+
+	/** Selects completion-owned report publication for a prepared adapter. */
+	protected final void finalOnlyReporting() {
+		config.finalOnlyReporting = true;
 	}
 
 	/**
@@ -384,6 +394,11 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 */
 	protected final void completeProcessing() {
 		processor.complete();
+	}
+
+	/** Initializes enabled final-only output after actual preparation is valid. */
+	protected final void initializeReporting() {
+		processor.initializeReport();
 	}
 
 	/**

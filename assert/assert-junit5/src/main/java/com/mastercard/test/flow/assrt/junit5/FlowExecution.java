@@ -543,6 +543,7 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 				}
 			}
 		}
+		runner.initialize();
 		if( parallel() ) {
 			return parallelOwner.consume( source );
 		}
@@ -938,12 +939,14 @@ public final class FlowExecution implements CloseableResource, AutoCloseable {
 				throw reported;
 			}
 			Throwable primary = null;
-			try( Stream<?> original = cleanup ) {
-				if( diagnostic != null && !late ) {
-					throw new IllegalStateException( diagnostic, stopCause );
+			try {
+				try( Stream<?> original = cleanup ) {
+					if( diagnostic != null && !late ) {
+						throw new IllegalStateException( diagnostic, stopCause );
+					}
 				}
-				// This is actual exhausted SAME_THREAD processing plus owned drainage.
-				// It is not stream-return/native-factory-terminal equivalence.
+				// This is actual exhausted SAME_THREAD processing plus successful owned
+				// drainage. It is not stream-return/native-factory-terminal equivalence.
 				if( diagnostic == null )
 					completing.complete();
 			}

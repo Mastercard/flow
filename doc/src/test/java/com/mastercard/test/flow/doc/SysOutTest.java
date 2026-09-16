@@ -75,6 +75,13 @@ class SysOutTest {
 				+ "SerialCleanupTest.java",
 				"System.out.print( evidence );",
 				"System.out.println( \"Unsafe serial \" + args[0]" );
+		// Reporting-fault acceptance captures the runner's required stderr diagnostic
+		// around an isolated real-Launcher invocation and restores it immediately.
+		accept( "../assert/assert-junit5/src/test/java/com/mastercard/test/flow/assrt/junit5/"
+				+ "FlowParallelBindingTest.java",
+				"PrintStream original = System.err;",
+				"System.setErr( captured );",
+				"System.setErr( original );" );
 	}
 
 	private static void accept( String file, String... line ) {

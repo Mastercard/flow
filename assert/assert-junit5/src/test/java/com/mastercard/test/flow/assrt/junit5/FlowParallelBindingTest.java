@@ -1,7 +1,11 @@
 package com.mastercard.test.flow.assrt.junit5;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.net.URI;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
@@ -31,6 +35,7 @@ import org.junit.jupiter.api.extension.DynamicTestInvocationContext;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.engine.TestExecutionResult;
@@ -54,6 +59,10 @@ import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
 import com.mastercard.test.flow.assrt.junit5.mock.Msg;
 import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.builder.Deriver;
+import com.mastercard.test.flow.report.Reader;
+import com.mastercard.test.flow.report.Writer;
+import com.mastercard.test.flow.report.data.Entry;
+import com.mastercard.test.flow.util.Option.Temporary;
 import static com.mastercard.test.flow.util.Transmission.Type.REQUEST;
 import static com.mastercard.test.flow.util.Transmission.Type.RESPONSE;
 
@@ -352,12 +361,167 @@ class FlowParallelBindingTest {
 	 */
 	@Test
 	void allPreparationMustBeAuditedBeforeAnySutUse() {
-		for( String mode : List.of( "report", "capture",
+		for( String mode : List.of( "report-open", "capture",
 				"transform" ) ) {
 			Evidence e = execute( mode, "true", 3 );
 			assertFalse( e.failures.isEmpty(), mode );
 			assertEquals( 0, e.starts.size(), mode );
 			assertFalse( e.events.stream().anyMatch( s -> s.startsWith( "body:" ) ), mode );
+		}
+	}
+
+	/**
+	 * A normal prepared run publishes one readable report after native completion,
+	 * never while bodies are still running, in either execution mode.
+	 *
+	 * @param dir Isolated report artifact directory
+	 */
+	@Test
+	void preparedQuietReportingPublishesAtCompletion( @TempDir Path dir ) {
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "prepared-final" ) ) {
+			for( String mode : List.of( "false", "true" ) ) {
+				for( int run = 0; run < 3; run++ ) {
+					Evidence e = execute( "report", mode, 3 );
+					assertEquals( List.of(), e.failures );
+					assertEquals( 3, e.results.size() );
+					assertEquals( 3, e.visibleReportDirectories.get() );
+					assertEquals( 0, e.visibleReportIndexes.get() );
+					assertEquals( 3,
+							new Reader( dir.resolve( "prepared-final" ) ).read().entries.size() );
+					String diagnostic = assertDoesNotThrow( () -> Files.readString(
+							dir.resolve( "prepared-final" ).resolve( Writer.DIAGNOSTICS_FILE_NAME ) ) );
+					assertTrue( diagnostic.contains( "Execution: completed and drained" ), diagnostic );
+					assertTrue( diagnostic.contains( "Final index: pending atomic publication" ),
+							diagnostic );
+				}
+			}
+		}
+	}
+
+	/**
+	 * An enabled empty parallel run publishes a readable report with no fake leaf.
+	 */
+	@Test
+	void parallelEmptyRunPublishesEmptyReport( @TempDir Path dir ) {
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "parallel-empty" ) ) {
+			Evidence e = execute( "report-empty", "true", 3 );
+			assertEquals( List.of(), e.failures );
+			assertEquals( List.of(), e.results );
+			assertEquals( 0, new Reader( dir.resolve( "parallel-empty" ) ).read().entries.size() );
+			assertTrue( Files.exists(
+					dir.resolve( "parallel-empty" ).resolve( Writer.DIAGNOSTICS_FILE_NAME ) ) );
+		}
+	}
+
+	/**
+	 * Report creation faults are diagnosed once without changing passing results.
+	 */
+	@Test
+	void parallelReportFailureIsVisibleAndNonFatal( @TempDir Path dir ) throws Exception {
+		Path blocked = Files.writeString( dir.resolve( "not-a-directory" ), "blocked" );
+		ByteArrayOutputStream diagnostic = new ByteArrayOutputStream();
+		PrintStream original = System.err;
+		Evidence e;
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( blocked.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "parallel-failed" );
+				PrintStream captured = new PrintStream( diagnostic, true, UTF_8 ) ) {
+			System.setErr( captured );
+			try {
+				e = execute( "report-fault", "true", 3 );
+			}
+			finally {
+				System.setErr( original );
+			}
+		}
+		assertEquals( List.of(), e.failures );
+		assertEquals( 3, e.results.size() );
+		assertEquals( 3, e.events.stream().filter( event -> event.startsWith( "body:" ) ).count() );
+		assertEquals( "published", e.bound );
+		assertEquals( 1, diagnostic.toString( UTF_8 ).lines()
+				.filter( line -> line.startsWith( "Flow report failed: " ) ).count(),
+				diagnostic::toString );
+		assertFalse( Files.exists( blocked.resolve( "parallel-failed" ) ) );
+	}
+
+	/**
+	 * A report fault cannot replace or suppress genuine native failure outcomes.
+	 */
+	@Test
+	void parallelReportFailurePreservesMixedOutcomes( @TempDir Path dir ) throws Exception {
+		Path blocked = Files.writeString( dir.resolve( "not-a-directory" ), "blocked" );
+		ByteArrayOutputStream diagnostic = new ByteArrayOutputStream();
+		PrintStream original = System.err;
+		Evidence e;
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( blocked.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "parallel-mixed-failed" );
+				PrintStream captured = new PrintStream( diagnostic, true, UTF_8 ) ) {
+			System.setErr( captured );
+			try {
+				e = execute( "oracle-report-fault", "true", 12 );
+			}
+			finally {
+				System.setErr( original );
+			}
+		}
+		assertEquals( 6, e.failures.size(), e.failures::toString );
+		assertEquals( 9, e.results.size() );
+		assertEquals( 7, e.events.stream().filter( event -> event.startsWith( "body:" ) ).count() );
+		assertEquals( 1, diagnostic.toString( UTF_8 ).lines()
+				.filter( line -> line.startsWith( "Flow report failed: " ) ).count(),
+				diagnostic::toString );
+	}
+
+	/** Final companion/index faults remain non-fatal and are never advertised. */
+	@ParameterizedTest
+	@ValueSource(strings = { "report-diagnostic-fault", "report-close-fault" })
+	void parallelFinalPublicationFailureIsVisibleAndNonFatal( String scenario,
+			@TempDir Path dir ) {
+		ByteArrayOutputStream diagnostic = new ByteArrayOutputStream();
+		PrintStream original = System.err;
+		Evidence e;
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "parallel-close-failed" );
+				PrintStream captured = new PrintStream( diagnostic, true, UTF_8 ) ) {
+			System.setErr( captured );
+			try {
+				e = execute( scenario, "true", 3 );
+			}
+			finally {
+				System.setErr( original );
+			}
+		}
+		assertEquals( List.of(), e.failures );
+		assertEquals( 3, e.results.size() );
+		assertEquals( 1, diagnostic.toString( UTF_8 ).lines()
+				.filter( line -> line.startsWith( "Flow report failed: " ) ).count(),
+				diagnostic::toString );
+		String blocked = scenario.equals( "report-diagnostic-fault" )
+				? Writer.DIAGNOSTICS_FILE_NAME
+				: Writer.INDEX_FILE_NAME;
+		assertTrue( Files.isDirectory( dir.resolve( "parallel-close-failed" ).resolve( blocked ) ) );
+	}
+
+	/**
+	 * Genuine mixed outcomes remain native failures and are all present in output.
+	 */
+	@Test
+	void parallelMixedOutcomesPublishTheirRealReportTags( @TempDir Path dir ) {
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "parallel-mixed" ) ) {
+			Evidence e = execute( "oracle-report", "true", 12 );
+			assertEquals( 6, e.failures.size(), e.failures::toString );
+			List<Entry> entries = new Reader( dir.resolve( "parallel-mixed" ) ).read().entries;
+			assertEquals( 9, entries.size() );
+			assertEquals( 3, entries.stream().filter( entry -> entry.tags.contains( Writer.PASS_TAG ) )
+					.count() );
+			assertEquals( 2, entries.stream().filter( entry -> entry.tags.contains( Writer.FAIL_TAG ) )
+					.count() );
+			assertEquals( 2, entries.stream().filter( entry -> entry.tags.contains( Writer.ERROR_TAG ) )
+					.count() );
+			assertEquals( 2, entries.stream().filter( entry -> entry.tags.contains( Writer.SKIP_TAG ) )
+					.count() );
 		}
 	}
 
@@ -564,6 +728,10 @@ class FlowParallelBindingTest {
 		final AtomicInteger restored = new AtomicInteger();
 		/** Bodies executed inline on the factory worker in the busy scenario. */
 		final AtomicInteger inline = new AtomicInteger();
+		/** Report indexes visible before the normal native completion boundary. */
+		final AtomicInteger visibleReportIndexes = new AtomicInteger();
+		/** Run-owned report directories visible before native bodies. */
+		final AtomicInteger visibleReportDirectories = new AtomicInteger();
 		/** Completed leaves retaining class-source navigation metadata. */
 		final AtomicInteger sources = new AtomicInteger();
 		/** Thread that entered the original factory. */
@@ -802,6 +970,9 @@ class ParallelBindingFixture {
 						return e.bound;
 					} ).to( i -> true, RESPONSE, ".+" ) ) ) );
 		}
+		if( e.scenario.equals( "report-empty" ) ) {
+			flows = List.of();
+		}
 		if( e.scenario.equals( "fork" ) ) {
 			Flow d = Creator.build( f -> f.meta( m -> m.description( "D" ) ).prerequisite( a )
 					.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
@@ -840,7 +1011,9 @@ class ParallelBindingFixture {
 					IntStream.range( 0, 40 ).mapToObj( i -> "pair-" + i ).toArray( String[]::new ) );
 		if( e.scenario.equals( "oracle-chain" ) )
 			runner.isolatedChains( "three independent scenarios", "error", "failure", "success" );
-		if( e.scenario.equals( "report" ) )
+		if( e.scenario.equals( "report-open" ) )
+			runner.reporting( Reporting.ALWAYS );
+		else if( e.scenario.contains( "report" ) )
 			runner.reporting( Reporting.QUIETLY );
 		if( e.scenario.equals( "capture" ) )
 			runner.logs( new LogCapture() {
@@ -862,6 +1035,15 @@ class ParallelBindingFixture {
 				assertEquals( token, FlowExtension.invocationContext().getUniqueId() );
 			e.threads.add( Thread.currentThread() );
 			e.events.add( "body:" + name );
+			if( (e.scenario.equals( "report-diagnostic-fault" )
+					|| e.scenario.equals( "report-close-fault" )) && name.equals( "A" ) ) {
+				String blocked = e.scenario.equals( "report-diagnostic-fault" )
+						? Writer.DIAGNOSTICS_FILE_NAME
+						: Writer.INDEX_FILE_NAME;
+				assertDoesNotThrow( () -> Files.createDirectory( Path
+						.of( AssertionOptions.ARTIFACT_DIR.value(), AssertionOptions.REPORT_NAME.value() )
+						.resolve( blocked ) ) );
+			}
 			if( e.scenario.equals( "intraflow" ) ) {
 				assertion.actual().request( "request".getBytes( UTF_8 ) )
 						.response( "published".getBytes( UTF_8 ) );
@@ -925,6 +1107,14 @@ class ParallelBindingFixture {
 			if( name.equals( "B" ) ) {
 				e.bound = assertion.expected().request().assertable();
 				assertEquals( e.scenario.equals( "comparison" ) ? "unexpected" : "published", e.bound );
+			}
+			if( e.scenario.equals( "report" ) && Files.exists( Path
+					.of( AssertionOptions.ARTIFACT_DIR.value(), AssertionOptions.REPORT_NAME.value() ) ) ) {
+				Path report = Path.of( AssertionOptions.ARTIFACT_DIR.value(),
+						AssertionOptions.REPORT_NAME.value() );
+				e.visibleReportDirectories.incrementAndGet();
+				if( Files.exists( report.resolve( Writer.INDEX_FILE_NAME ) ) )
+					e.visibleReportIndexes.incrementAndGet();
 			}
 			assertion.actual()
 					.response( name.equals( "Z" ) && e.scenario.equals( "basis-inverted" )

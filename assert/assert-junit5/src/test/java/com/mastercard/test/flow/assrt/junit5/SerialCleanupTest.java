@@ -1,34 +1,37 @@
 package com.mastercard.test.flow.assrt.junit5;
 
+import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.lang.reflect.Method;
-import java.nio.file.Path;
-import java.nio.file.Files;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
-
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
+import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.Reporting;
 import com.mastercard.test.flow.assrt.junit5.mock.Actrs;
 import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations;
 import com.mastercard.test.flow.assrt.resource.ResourceRules;
+import com.mastercard.test.flow.report.Reader;
+import com.mastercard.test.flow.util.Option.Temporary;
 
 /**
  * Real Launcher cleanup failures and genuinely empty, repeatable serial runs.
@@ -113,6 +116,9 @@ class SerialCleanupTest {
 		if( mode.equals( "complete" ) || mode.equals( "reentrant" ) ) {
 			assertSame( FailingCleanupFactory.cleanup, primary );
 			assertEquals( 2, FailingCleanupFactory.bodies );
+			assertTrue( !Files.exists(
+					FailingCleanupFactory.runner.report().resolve( "index.html" ) ),
+					"failed owned cleanup must not publish a complete report" );
 		}
 		else {
 			assertEquals( 0, FailingCleanupFactory.bodies );
@@ -132,8 +138,16 @@ class SerialCleanupTest {
 			else {
 				assertSame( FailingCleanupFactory.cleanup, closing.getSuppressed()[0] );
 			}
-			assertNull( FailingCleanupFactory.runner.report(),
-					"rejection must not initialize reporting" );
+			if( mode.equals( "validation" ) ) {
+				assertNull( FailingCleanupFactory.runner.report(),
+						"rejected preparation must not initialize reporting" );
+			}
+			else {
+				assertTrue( FailingCleanupFactory.runner.report() != null );
+				assertTrue( !Files.exists(
+						FailingCleanupFactory.runner.report().resolve( "index.html" ) ),
+						"incomplete execution must not publish a final index" );
+			}
 		}
 		assertEquals( unsafe ? 0 : 1, FailingCleanupFactory.closes );
 		if( unsafe ) {
@@ -220,37 +234,45 @@ class SerialCleanupTest {
 	}
 
 	/**
-	 * Verifies repeatable cleanup of an empty model without creating a report.
+	 * Verifies repeatable cleanup of an empty model, including empty reports.
 	 *
 	 * @param reporting Whether reporting is enabled for the empty run
+	 * @param dir       Isolated report artifact directory
 	 */
 	@ParameterizedTest
 	@ValueSource(booleans = { false, true })
-	void emptyModelSuccessfullyDisposesAndRepeatsWithoutInitializingReport( boolean reporting ) {
-		checkEmpty( false, reporting );
+	void emptyModelSuccessfullyDisposesAndRepeats( boolean reporting, @TempDir Path dir ) {
+		checkEmpty( false, reporting, dir );
 	}
 
 	/**
-	 * Verifies repeatable cleanup when filtering excludes every flow.
+	 * Verifies repeatable cleanup and reporting when filtering excludes every flow.
 	 *
 	 * @param reporting Whether reporting is enabled for the empty selection
+	 * @param dir       Isolated report artifact directory
 	 */
 	@ParameterizedTest
 	@ValueSource(booleans = { false, true })
-	void filterAllSuccessfullyDisposesAndRepeatsWithoutInitializingReport( boolean reporting ) {
-		checkEmpty( true, reporting );
+	void filterAllSuccessfullyDisposesAndRepeats( boolean reporting, @TempDir Path dir ) {
+		checkEmpty( true, reporting, dir );
 	}
 
-	private static void checkEmpty( boolean filtered, boolean reporting ) {
+	private static void checkEmpty( boolean filtered, boolean reporting, Path dir ) {
 		EmptyFactory.filtered = filtered;
 		EmptyFactory.reporting = reporting;
-		for( int run = 0; run < 2; run++ ) {
-			EmptyFactory.closes = 0;
-			assertEquals( List.of(), PreparedFlowLifecycleTest.launch( EmptyFactory.class ) );
-			assertEquals( 1, EmptyFactory.closes );
-			assertNull( EmptyFactory.runner.report(), "preserve lazy serial report initialization" );
-			EmptyFactory.handle.close();
-			assertThrows( IllegalStateException.class, () -> EmptyFactory.runner.tests() );
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "empty-final" ) ) {
+			for( int run = 0; run < 2; run++ ) {
+				EmptyFactory.closes = 0;
+				assertEquals( List.of(), PreparedFlowLifecycleTest.launch( EmptyFactory.class ) );
+				assertEquals( 1, EmptyFactory.closes );
+				if( reporting )
+					assertEquals( 0, new Reader( EmptyFactory.runner.report() ).read().entries.size() );
+				else
+					assertNull( EmptyFactory.runner.report() );
+				EmptyFactory.handle.close();
+				assertThrows( IllegalStateException.class, () -> EmptyFactory.runner.tests() );
+			}
 		}
 	}
 

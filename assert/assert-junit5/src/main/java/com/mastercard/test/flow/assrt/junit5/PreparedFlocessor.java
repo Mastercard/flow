@@ -25,8 +25,8 @@ import com.mastercard.test.flow.assrt.ContextDomain;
 import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.resource.ChainPlan;
 import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
-import com.mastercard.test.flow.assrt.resource.ResourceRules;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations.Grant;
+import com.mastercard.test.flow.assrt.resource.ResourceRules;
 
 /**
  * Self-typed sibling of {@link Flocessor}, supplied by {@link FlowExecution}.
@@ -225,6 +225,7 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	PreparedFlocessor( FlowExecution owner, String title, Model model ) {
 		super( title, model, owner.history() );
 		this.owner = owner;
+		finalOnlyReporting();
 	}
 
 	/**
@@ -289,6 +290,11 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 	/** Disposes initialized reporting only after successful owned drainage. */
 	void complete() {
 		completeProcessing();
+	}
+
+	/** Claims enabled report output after returned descriptions are validated. */
+	void initialize() {
+		initializeReporting();
 	}
 
 	/** Clears the prepared invocation table after owned use has drained. */

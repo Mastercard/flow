@@ -113,6 +113,23 @@ class WriterLifecycleTest {
 	}
 
 	/**
+	 * Final-only diagnostics are bounded and accompany a successfully published
+	 * index.
+	 *
+	 * @param dir Isolated report destination
+	 * @throws Exception On unexpected filesystem failure
+	 */
+	@Test
+	void boundedDiagnosticsCompanion( @TempDir Path dir ) throws Exception {
+		try( Writer writer = new Writer( "model", "diagnostics", dir, Indexing.FINAL_ONLY ) ) {
+			writer.diagnostics( "x".repeat( 32 * 1024 ) );
+		}
+		assertEquals( 16 * 1024,
+				Files.size( dir.resolve( Writer.DIAGNOSTICS_FILE_NAME ) ) );
+		assertTrue( Reader.isReportDir( dir ) );
+	}
+
+	/**
 	 * A callback failure remains observable without replaying it or publishing.
 	 *
 	 * @param indexing Index policy

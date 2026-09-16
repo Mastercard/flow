@@ -17,9 +17,9 @@ reconciliation changes documentation/status/dependencies only.
 automatically finalized, thread-safe report. Preserve serial default, dependency
 and chain semantics, canonical bindings, fixture/context/resource safety, genuine
 outcomes and the implemented cancellation/unsafe-ownership guarantees. Keep the
-current architecture and single-active-writer reporting contract. The native path
-still rejects reporting other than NEVER; ticket 23 remains essential integration,
-not an optional writer cleanup.
+current architecture and single-active-writer reporting contract. Prepared serial
+and parallel paths now accept `Reporting.QUIETLY` through run-owned final-only
+publication; other native reporting modes remain guarded.
 
 | Work | Approved disposition |
 | --- | --- |
@@ -358,8 +358,8 @@ replacement/latest behavior remain required. Compare code, tests and documentati
 with `main` and restore simpler earlier forms only where the removed requirement
 was their sole justification. Preserve active work and independently required fixes.
 
-Ticket 28's simplification is implemented; ticket 23's run-owned reporting integration
-still depends on its retained contract. The delivered ticket-04 claims and their
+Ticket 28's simplification is implemented and ticket 23 builds run-owned reporting
+on its retained contract. The delivered ticket-04 claims and their
 test/platform evidence below describe the original implemented contract, not the
 current implementation. All other slice evidence and open failures remain unchanged;
 removing a requirement is not a diagnosis or resolution of a recorded test failure.
@@ -377,8 +377,7 @@ Sequential path/latest handling remains in the existing filesystem abstraction.
 Immediate reads, within-writer synchronization/detail protection, detached snapshots,
 canonical final links, strict atomic final-only publication and observable failures
 remain. Claim-only test scopes were restored to earlier forms; actual completion,
-publication callbacks, capture cleanup and runner lifetimes were retained. Parallel
-reporting remains guarded pending 23; this slice does not enable it early.
+publication callbacks, capture cleanup and runner lifetimes were retained.
 
 The focused Java gate passed **194 cases: 179 passed, 15 platform skips, zero
 failures/errors**, with actual Java 17 compilation, both skip flags and failure-ignore
@@ -415,22 +414,26 @@ Historical claim-delivery evidence below is intentionally retained.
 | 10 (automated portion) | Standalone consumer of locally installed Flow POM/BOM/JARs; real model, binding, native overlap, provider-free serial and exact callback UID checks on consumer-selected JUnit stacks | `assert/assert-junit5/src/it/packaged-consumer`; artifact hashes, JVM class-load traces and native summaries |
 | 11 | Named rule union/provenance, UNKNOWN global exclusion, shared same-JVM whole-resource-set and execution-slot reservation before native emission; prepared serial/parallel cooperation | `ResourcePlanningTest`, `NativeResourceAdmissionTest`, serial cleanup and actual packaged consumer regressions |
 | 13 | Shared-core dependency-ready admission, coherent processing/native accounting, sparse canonical basis visibility, direct successor release and idempotent evidence | `FlowAdmissionTest`, actual serial/native `FlowParallelBindingTest` oracles, resource/queueing and packaged-consumer regressions |
-| 14 (code; native REPORT acceptance pending 23) | Canonical destination and identical-message participant precedence; retained synchronous binding operations, partial effects and order-only eligibility | `DependenciesTest`, `AbstractFlocessorTest`, `FlowAdmissionTest`, real serial/native publication and fault oracles |
+| 14 | Canonical destination and identical-message participant precedence; retained synchronous binding operations, partial effects and order-only eligibility | `DependenciesTest`, `AbstractFlocessorTest`, `FlowAdmissionTest`, real serial/native publication and fault oracles |
 | 15 (supported execution slice) | Selected-only chain planning, whole-interval grants, default global exclusion, explicit whole-chain isolation audits and safe native member advancement | Core capacities 1/2/5; real serial/parallel scope, payload, cleanup, stop-gate and native-inline regressions; context/fixture integration remains 17 |
 | 16 | Atomic readiness-cohort publication; oldest-ready conflict protection, disjoint bypass, exclusive drain/resume and cancellation wakeups | `ResourcePlanningTest`, `FlowAdmissionTest`, actual separate native pools and serial/parallel cooperation; narrow race qualifications below |
 | 17 (supported partial slice) | Explicit actual-fixture domains, shared applied state, additive whole-grant ownership and receipt-based unsafe-use retention across native outer cleanup | `ContextFixtureTest`, `ResourcePlanningTest`, real serial/parallel Launchers and isolated unsafe controls; consumer audits and broader acceptance remain pending |
 | 18 (supported Stop/ownership slice) | Irreversible admission Stop, bounded Writer-independent status, exact remaining-operation receipts and evidence-gated late disposal without repairing unsafe fixture state | `FlowAdmissionTest`, `ResourcePlanningTest`, `ContextFixtureTest`, `NativeResourceAdmissionTest`, `FlowNativeCallTest`; native-token/cooperative channels and owner wait budget remain 19 |
+| 23 | Run-owned final-only reporting after valid prepared descriptions and safe drainage; enabled empty reports; genuine outcome tags; bounded same-artifact diagnostics; ordinary report faults remain visible and non-fatal | `FlowParallelBindingTest`, `SerialCleanupTest`, `NativeResourceAdmissionTest`, `WriterLifecycleTest`, `WriterPublicationTest`, parsed `Reader` output |
 
 The new caller permits `flow.parallel=true` only through the checked native owner.
 Named bulk `resources()`, `exclusive()` and `independent()` declarations are resolved
 once after dependency expansion. Unmatched work remains UNKNOWN/global-exclusive,
-including against explicitly known-empty work. Reporting/capture/replay remain
-guarded; contexts, residue, applicators, checkers and autonomous actors require
+including against explicitly known-empty work. Capture/replay and non-quiet reporting
+remain guarded; contexts, residue, applicators, checkers and autonomous actors require
 explicit actual-fixture ownership. Other unchecked parallel surfaces fail closed
 before SUT use. These temporary implementation boundaries are not permanent public
 support restrictions. There is
 no workload-speedup or wall-clock scheduling guarantee.
-Report-only failure classification and run-owned final-only activation are unfinished.
+Prepared quiet reporting initializes once after returned-description validation,
+publishes one final index after safe mode-specific completion, emits a bounded
+diagnostics companion, and treats ordinary report-only faults as visible non-fatal
+diagnostics. Legacy assertion runners retain immediate reporting.
 
 ## Blocking work and unpassed gates
 
@@ -470,7 +473,8 @@ One synchronous `Writer.onClose` action runs after successful finalization while
 destination and configured publication ownership remain held. The runner passes
 its actual `testDir/latest` before initialization, including nested explicit report
 names, and advertises only during completion. Existing immediate indexing and
-initial browse behavior remain; run-owned final-only activation is still ticket 23.
+initial browse behavior remain for legacy callers; prepared presentation waits for
+successful final publication.
 Owned advertisements are withdrawn before replacement. An explicit output named
 `latest` is retained as an output access path, not mistaken for an advertisement.
 
@@ -678,11 +682,12 @@ All 813 indexed source/document files matched the export after line-ending
 normalization; only final evidence prose changed afterwards. This selected gate
 is not the full suite, IDE or workload acceptance.
 
-Ticket 19 still needs native-token query propagation, cooperative hooks, the accepted
+At this historical ticket-18 checkpoint, ticket 19 still needed native-token query
+propagation, cooperative hooks, the accepted
 250 ms check cadence and reachable owner drain budget. No uniform Launcher, remote,
 IDE or hard-kill cleanup bound is claimed. Capture/report/replay remain guarded;
-ticket 23's original accumulated native REPORT T30 and final-only obligations are
-not waived. Ticket 17's real consumer DB/browser/background-owner audits and broader
+ticket 23's then-unfinished accumulated native REPORT T30 and final-only obligations
+were not waived. Ticket 17's real consumer DB/browser/background-owner audits and broader
 artifact/log/retained-reference integration remain 25. Intended IntelliJ checks,
 the manual 6,000-flow workload and the full suite remain deferred until the end.
 
@@ -725,9 +730,10 @@ and Store seven (four successes, three expected aborts), with no failures. All f
 provoked-chain leaves passed. Later changes did not alter example code; these are
 historical example proofs, not new runs or migrations of their fixture owners.
 Real DB/browser owners, background quiescence and legacy cooperation still need
-consumer audits. Capture/report/replay remain guarded; distinct real parallel
-artifact/log attribution and retained-reference checks remain integration ticket 25.
-Native accumulated-reporting T30 and final-only activation remain ticket 23.
+consumer audits. At that checkpoint capture/report/replay remained guarded;
+distinct real parallel artifact/log attribution and retained-reference checks
+remained integration ticket 25. Native accumulated-reporting T30 and final-only
+activation were still ticket 23 work.
 IntelliJ, the manual 6,000-flow workload and the full suite remain pending.
 
 The parent independently reviewed the source. Final Standards/Spec reviews had
@@ -848,10 +854,11 @@ assertion remained primary and later drainage failures were suppressed.
 T30 covers peer/get/mutation/set/set-after faults in the API, core immediate and
 accumulated modes, and native immediate execution. Literal partial writes, later
 message behavior, operation counts, producer-thread/cause identity and unchanged
-order-only eligibility are checked. **Native accumulated-reporting T30 is not passed**:
-ticket 23 must exercise the complete stage/mode matrix, intra-flow/masking behavior,
-native attribution, partial effects and safely finalized reports through real Launcher
-execution. Core reporting tests do not replace that integration obligation.
+order-only eligibility are checked. Ticket 23 now covers retained native accumulated
+reporting through successful and mixed outcomes, including partial effects and
+safely finalized reports through real Launcher execution. The complete stage/mode
+mutation matrix, intra-flow/masking behavior and broader native attribution remain
+final ticket-25 acceptance; core reporting tests do not replace that obligation.
 
 The broader Java 17 / JUnit 6.0.3 gate completed **312 cases: 310 passed, two existing
 Windows symlink skips, zero failures/errors** (10 API, 27 message, 150 core, 125 adapter).

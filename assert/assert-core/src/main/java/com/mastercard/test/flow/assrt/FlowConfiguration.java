@@ -31,6 +31,8 @@ final class FlowConfiguration {
 	final String title;
 	/** Whether to write or display an execution report. */
 	Reporting reporting = Reporting.NEVER;
+	/** Whether this prepared owner publishes its report only at completion. */
+	boolean finalOnlyReporting;
 	/** The report location under the artifact directory. */
 	String[] reportPath = {};
 	/** Actors exercised by the test. */
@@ -97,6 +99,7 @@ final class FlowConfiguration {
 	FlowConfiguration snapshot() {
 		FlowConfiguration copy = new FlowConfiguration( this );
 		copy.reporting = reporting;
+		copy.finalOnlyReporting = finalOnlyReporting;
 		copy.reportPath = reportPath.clone();
 		copy.systemUnderTest.addAll( systemUnderTest );
 		copy.autonomous.addAll( autonomous );

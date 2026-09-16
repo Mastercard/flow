@@ -105,10 +105,15 @@ retroactively to the legacy caller.
 Actual serial exhaustion and drained invocations, followed by the observed stream
 close, complete the prepared run. Early close or abandonment is diagnosed by its
 class-local lifecycle backstop; neither is converted into successful finalization.
-Reporting retains its current immediate behavior for the original serial caller.
+Prepared runs initialize one report after their returned descriptions are validated,
+use final-only indexing in both execution modes and finalize it only at their proven
+completion boundary. Enabled empty selections publish an empty index without a fake
+test. Ordinary report creation, decoration and publication failures emit a bounded
+stderr diagnostic and do not replace genuine native outcomes; direct Writers and the
+original serial caller retain their observable immediate behavior.
 Resource declarations and explicit fixture domains below add cooperating serial
 ownership. Cancellation and bounded reachable drainage are described below;
-integrated final-only reporting remains unfinished.
+incomplete runs do not use normal completion to publish an index.
 
 Real Launcher regressions have exercised the serial caller on coherent JUnit
 5.10/Platform 1.10 and JUnit 6.0.3 stacks with Java 17. These are tested points,
@@ -169,8 +174,8 @@ and global-exclusion policy used by admission; `reservation(flow).isolationRules
 lists the matching whole-chain audit names separately from resource classification.
 Both queries use frozen preparation results and reject detached or unselected flows.
 
-Temporary tracer limits reject reporting other than `Reporting.NEVER`, capture
-other than `LogCapture.NO_OP`, replay, foreign binding destinations, noncanonical
+Temporary tracer limits permit completion-owned `Reporting.QUIETLY` and reject other
+reporting modes, capture other than `LogCapture.NO_OP`, replay, foreign binding destinations, noncanonical
 prerequisites and non-class source URIs. Contexts/applicators, residue/checkers and
 autonomous actors require an explicit actual fixture domain, not just named resource
 rules. These are fail-closed implementation boundaries, **not new permanent support
@@ -261,8 +266,9 @@ rejection. They do not certify the consuming suite's resource audit or backgroun
 quiescence. Existing service/mock/queue, DB and browser examples remain legacy
 serialized owners: their timers, handlers, whole-table observations and root-store
 cleanup have not been made automatically cooperating. Replay and report/capture
-integration remain guarded, including distinct artifact/log attribution for parallel
-browser sessions. No real browser, IDE or full-workload acceptance is claimed.
+integration remains restricted: prepared quiet reporting is run-owned and final-only,
+while capture, replay and parallel browser presentation remain guarded. No real
+browser, IDE or full-workload acceptance is claimed.
 
 ### Explicit Stop and remaining ownership
 
@@ -408,7 +414,8 @@ prevents unused members from entering and retains uncertain use; safe late drain
 never resumes admission. This is not the complete cancellation policy.
 
 Explicit domains cover shared context transitions, residue and owner lifecycle
-actions. Capture/report integration remains guarded. In particular,
+actions. Capture and replay integration remain guarded; reporting is limited to
+completion-owned quiet output. In particular,
 parallel description-stream close can precede active native cleanup: it is not a
 safe fixture-teardown hook. Physical affinity is supported only on a verified actual
 serial owner, never by parallel worker assignment.
@@ -556,14 +563,12 @@ serial/native payloads and operation counts. With A writing X/Y, B writing X and
 writing Y, B/C can overlap after A; the connected component is not serialized.
 Publication planning is exercised through core admission at capacities 1, 2 and 5.
 
-Native **reporting-enabled T30 remains blocked by ticket 23**. After run-owned
-reporting is enabled, the real factory/Launcher must repeat peer/get/mutation/set/
-set-after faults under accumulation against the serial/core oracle: partial writes,
-later-message publication/comparisons, callback counts and producer threads, original
-primary cause, order-only versus genuine dependency outcomes, and safely finalized
-report payloads/cleanup. Include valid intra-flow updates and masks. Current API and
-native immediate-failure checks, plus core `NEVER`/`QUIETLY` coverage of all five
-stages, do not satisfy that remaining native integration gate.
+Run-owned reporting is exercised with real serial and parallel Launcher execution,
+including success, assertion/error/skip outcomes, empty and repeated destinations,
+and Writer loss before later processing and binding publication. The broader T30
+mutation matrix—peer/get/mutation/set/set-after faults, intra-flow masks and full
+payload comparisons—remains part of final acceptance rather than a reason to keep
+quiet final-only reporting disabled.
 
 Native inline completion is supported; there is no second body pool or idle-worker
 estimate. At 12/20 Jupiter may execute inline before filling the 24-grant bound; the

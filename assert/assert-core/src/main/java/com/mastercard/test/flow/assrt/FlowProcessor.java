@@ -76,6 +76,8 @@ abstract class FlowProcessor {
 	private final Map<Class<? extends Context>, Context> currentContext = new HashMap<>();
 	private ContextDomain contextDomain;
 	private Writer report;
+	private RuntimeException reportFailure;
+	private boolean reportError;
 	private int active;
 	private boolean closed;
 	private boolean closing;
@@ -496,7 +498,7 @@ abstract class FlowProcessor {
 			}
 
 			private void diagnose( String operation, RuntimeException failure ) {
-				if( !ordinaryCaptureFailure( failure ) ) {
+				if( !ordinaryPeripheralFailure( failure ) ) {
 					throw failure;
 				}
 				// Independent of Writer availability; no backend logging feedback loop or
@@ -595,9 +597,10 @@ abstract class FlowProcessor {
 	}
 
 	/**
-	 * Only known ordinary source faults, including their entire exception graph.
+	 * Only known ordinary peripheral faults, including their entire exception
+	 * graph.
 	 */
-	private static boolean ordinaryCaptureFailure( Throwable failure ) {
+	private static boolean ordinaryPeripheralFailure( Throwable failure ) {
 		Set<Throwable> visited = Collections.newSetFromMap( new IdentityHashMap<>() );
 		Deque<Throwable> pending = new ArrayDeque<>();
 		pending.add( failure );
@@ -839,8 +842,24 @@ abstract class FlowProcessor {
 			.format( now().atZone( systemDefault() ) );
 
 	private void report( Consumer<Writer> data, boolean error ) {
-		if( config.reporting.writing() ) {
-			Path reportDir = null;
+		if( !config.reporting.writing() || reportFailed() )
+			return;
+		try {
+			updateReport( data, error );
+		}
+		catch( RuntimeException failure ) {
+			if( !config.finalOnlyReporting || !ordinaryPeripheralFailure( failure ) )
+				throw failure;
+			reportFailed( failure );
+		}
+	}
+
+	private void updateReport( Consumer<Writer> data, boolean error ) {
+		Path reportDir;
+		Writer target;
+		synchronized( this ) {
+			reportError |= error;
+			reportDir = null;
 			if( report == null ) {
 
 				String testTitle = config.title;
@@ -867,28 +886,61 @@ abstract class FlowProcessor {
 
 				Path latest = testDir.resolve( "latest" );
 				report = new Writer( config.model.title(), testTitle, reportDir,
-						Writer.Indexing.IMMEDIATE, latest );
+						config.finalOnlyReporting ? Writer.Indexing.FINAL_ONLY
+								: Writer.Indexing.IMMEDIATE,
+						latest );
 				if( !"latest".equals( reportDir.getFileName().toString() ) ) {
 					report.onClose( path -> linkLatest( latest, path ) );
 				}
 			}
+			target = report;
+		}
 
-			data.accept( report );
+		data.accept( target );
 
-			if( reportDir != null ) {
-				// We've just created a new report: if appropriate, open a browser to it.
-				if( config.reporting.shouldOpen( error ) ) {
-					if( AssertionOptions.DUCT.isTrue() ) {
-						// if you've traced a ClassNotFoundException or NoClassDefFoundError to here,
-						// then you've forgotten to add the duct module to your dependencies.
-						Duct.serve( report.path() );
-					}
-					else {
-						report.browse();
-					}
-				}
+		if( reportDir != null && !config.finalOnlyReporting ) {
+			// We've just created a new report: if appropriate, open a browser to it.
+			present( target, error );
+		}
+	}
+
+	private void present( Writer target, boolean error ) {
+		if( !config.reporting.shouldOpen( error ) )
+			return;
+		try {
+			if( AssertionOptions.DUCT.isTrue() ) {
+				// if you've traced a ClassNotFoundException or NoClassDefFoundError to here,
+				// then you've forgotten to add the duct module to your dependencies.
+				Duct.serve( target.path() );
+			}
+			else {
+				target.browse();
 			}
 		}
+		catch( RuntimeException failure ) {
+			if( !config.finalOnlyReporting || !ordinaryPeripheralFailure( failure ) )
+				throw failure;
+			System.err.println( "Flow report presentation failed: " + failure.getClass().getName() );
+		}
+	}
+
+	private synchronized boolean reportFailed() {
+		return reportFailure != null;
+	}
+
+	private synchronized void reportFailed( RuntimeException failure ) {
+		if( reportFailure == null ) {
+			reportFailure = failure;
+			System.err.println( "Flow report failed: " + failure.getClass().getName() );
+		}
+	}
+
+	/** Initializes enabled final-only output without adding synthetic Flow data. */
+	void initializeReport() {
+		if( config.finalOnlyReporting )
+			report( ignored -> {
+				/* Ownership only; an empty run has no Flow data. */
+			}, false );
 	}
 
 	private static void linkLatest( Path linkPath, Path reportDir ) {
@@ -922,8 +974,8 @@ abstract class FlowProcessor {
 		}
 	}
 
-	/** @return The report path, or null until the first report update */
-	Path report() {
+	/** @return The report path, or null while disabled or after creation failure */
+	synchronized Path report() {
 		return report == null ? null : report.path();
 	}
 
@@ -946,22 +998,39 @@ abstract class FlowProcessor {
 	}
 
 	/**
-	 * Disposes an existing immediate writer at proven owned completion. Does not
-	 * initialize a writer or promise enabled-empty/final-only runner reporting.
-	 * Legacy adapters deliberately do not call this on enumeration.
+	 * Disposes an existing writer at proven owned completion. Legacy adapters
+	 * deliberately do not call this on enumeration.
 	 */
 	void complete() {
+		initializeReport();
+		Writer closingReport;
 		synchronized( this ) {
 			if( active != 0 || closing ) {
 				throw new IllegalStateException( "Flow processing is still active or completing" );
 			}
 			closed = true;
 			closing = true;
+			closingReport = reportFailure == null ? report : null;
 		}
 		try {
 			// Keep the failed writer: repeated close must expose its original failure.
-			if( report != null ) {
-				report.close();
+			if( closingReport != null ) {
+				try {
+					if( config.finalOnlyReporting ) {
+						closingReport.diagnostics( "Flow run: " + config.title + "\n"
+								+ "Execution: completed and drained\n"
+								+ "Capture: completed\n"
+								+ "Final index: pending atomic publication\n" );
+					}
+					closingReport.close();
+					if( config.finalOnlyReporting )
+						present( closingReport, reportError );
+				}
+				catch( RuntimeException failure ) {
+					if( !config.finalOnlyReporting || !ordinaryPeripheralFailure( failure ) )
+						throw failure;
+					reportFailed( failure );
+				}
 			}
 		}
 		finally {

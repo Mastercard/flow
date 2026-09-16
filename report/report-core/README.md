@@ -44,6 +44,10 @@ rerunning callbacks or reading mutable execution data. Final entries are sorted
 by their existing detail identities. The index is written and closed in a temporary
 file in the report directory, then atomically moved into place. Unsupported or
 failed atomic moves fail reporting; there is no non-atomic fallback.
+Final-only writers also write the bounded text supplied through `diagnostics()` to
+`diagnostics.txt` before publishing the index. A companion-write failure is latched
+as a report failure and cannot leave a newly published final index. Immediate writers
+ignore companion text and retain their existing write-after-`with()` behavior.
 
 Successful repeated close does no work, and subsequent updates are rejected.
 Within one writer, a decorated detail identity already owned by another flow is
@@ -101,11 +105,10 @@ it removes only the link, never that link's target report. Ordinary files and
 directories at the advertisement location are preserved. This publication step is
 distinct from the destination-specific withdrawal before replacement and from an
 explicit `latest` output path. Automatic run naming and replay-source separation
-remain unchanged. Caller
-drainage, exactly-once initialization before concurrent bodies, final-only activation
-and latest/browse integration remain runner work; legacy assertion adapters still
-use immediate reporting. Parallel reporting remains guarded pending ticket 23's
-run-owned integration and the real caller/host acceptance gates.
+remain unchanged. Caller drainage, exactly-once initialization before concurrent
+bodies and latest/browse integration remain runner work; prepared assertion adapters
+use final-only reporting while legacy assertion adapters retain immediate reporting.
+Broader real caller/host acceptance remains separate.
 
 ## Testing
 

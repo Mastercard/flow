@@ -7,6 +7,7 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -67,6 +68,8 @@ public class Writer implements AutoCloseable {
 	 * The file name under which the report index is saved
 	 */
 	public static final String INDEX_FILE_NAME = "index.html";
+	/** Bounded run diagnostics written before a final-only index is published. */
+	public static final String DIAGNOSTICS_FILE_NAME = "diagnostics.txt";
 	/**
 	 * The directory in which {@link Flow} detail data is stored
 	 */
@@ -112,6 +115,8 @@ public class Writer implements AutoCloseable {
 	private Throwable failure;
 	private boolean updating;
 	private Consumer<Path> publication;
+	private String diagnostics = "";
+	private static final int MAX_DIAGNOSTIC_CHARS = 16 * 1024;
 
 	private enum State {
 		OPEN, FINALIZING, CLOSED, FAILED
@@ -398,6 +403,21 @@ public class Writer implements AutoCloseable {
 	}
 
 	/**
+	 * Supplies bounded run diagnostics for final-only publication. The text is
+	 * written before the atomic index move; immediate Writers ignore it.
+	 *
+	 * @param text Complete run diagnostic snapshot
+	 * @return This writer
+	 */
+	public synchronized Writer diagnostics( String text ) {
+		requireOpen();
+		String supplied = Objects.requireNonNull( text, "text" );
+		diagnostics = supplied.length() <= MAX_DIAGNOSTIC_CHARS ? supplied
+				: supplied.substring( 0, MAX_DIAGNOSTIC_CHARS );
+		return this;
+	}
+
+	/**
 	 * Completes this report. Final-only indexes are closed in a same-directory
 	 * temporary file before an atomic move, with no non-atomic fallback. A
 	 * successful repeated close does nothing; further updates are rejected. After
@@ -414,6 +434,7 @@ public class Writer implements AutoCloseable {
 		state = State.FINALIZING;
 		try {
 			if( indexing == Indexing.FINAL_ONLY ) {
+				writeDiagnostics();
 				correctFinalLinks();
 				publishIndex();
 			}
@@ -427,6 +448,16 @@ public class Writer implements AutoCloseable {
 			state = State.FAILED;
 			failure = e;
 			throw e;
+		}
+	}
+
+	private void writeDiagnostics() {
+		Path destination = root.resolve( DIAGNOSTICS_FILE_NAME );
+		try( OutputStream output = files.open( destination ) ) {
+			output.write( diagnostics.getBytes( UTF_8 ) );
+		}
+		catch( IOException e ) {
+			throw new UncheckedIOException( "Failed to write report diagnostics " + destination, e );
 		}
 	}
 
