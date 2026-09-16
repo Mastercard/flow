@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.assrt.LogCapture;
@@ -21,6 +23,61 @@ import com.mastercard.test.flow.report.data.LogEvent;
  */
 @SuppressWarnings("static-method")
 class MergeTest {
+	@Test
+	void duplicateBeginDoesNotReplaceTheActiveSources() {
+		List<String> events = new ArrayList<>();
+		Merge merge = new Merge().with( source( "first", events, null, null ) );
+		Flow flow = new Flw( "active []" );
+		merge.start( flow );
+		merge.with( source( "later", events, null, null ) );
+		assertThrows( IllegalStateException.class, () -> merge.start( flow ) );
+		try( Stream<LogEvent> logs = merge.end( flow ) ) {
+			assertEquals( 1, logs.count() );
+		}
+		assertEquals( List.of( "first begin", "first end", "first read", "first close" ), events );
+	}
+
+	/**
+	 * Failed startup still drains successful sources and preserves the first
+	 * failure.
+	 *
+	 * @param same Whether rollback raises the identical exception
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void rollbackFailureCannotReplaceTheStartFailure( boolean same ) {
+		List<String> events = new ArrayList<>();
+		var primary = new IllegalStateException( "start failed" );
+		var cleanup = same ? primary : new IllegalStateException( "rollback failed" );
+		Merge merge = new Merge().with( source( "first", events, null, cleanup ),
+				source( "second", events, primary, null ) );
+		Flow flow = new Flw( "rollback []" );
+		assertSame( primary, assertThrows( IllegalStateException.class, () -> merge.start( flow ) ) );
+		assertEquals( same ? List.of() : List.of( cleanup ), List.of( primary.getSuppressed() ) );
+		assertEquals(
+				List.of( "first begin", "second begin", "first end", "first read", "first close" ),
+				events );
+		try( Stream<LogEvent> logs = merge.end( flow ) ) {
+			assertEquals( 0, logs.count(), "failed rollback still retires the active capture" );
+		}
+	}
+
+	@Test
+	void fatalReadStillClosesEverySourceAndPreservesFailureIdentity() {
+		List<String> events = new ArrayList<>();
+		var primary = new AssertionError( "fatal capture read" );
+		var cleanup = new IllegalStateException( "later read failed" );
+		Merge merge = new Merge().with( source( "first", events, null, primary ),
+				source( "second", events, null, cleanup ), source( "third", events, null, primary ) );
+		Flow flow = new Flw( "fatal []" );
+		merge.start( flow );
+		assertSame( primary, assertThrows( AssertionError.class, () -> merge.end( flow ) ) );
+		assertEquals( List.of( cleanup ), List.of( primary.getSuppressed() ) );
+		assertEquals( List.of( "first begin", "second begin", "third begin", "first end", "first read",
+				"first close", "second end", "second read", "second close", "third end", "third read",
+				"third close" ), events );
+	}
+
 	@Test
 	void partialBeginBalancesOnlySuccessfulSources() {
 		List<String> events = new ArrayList<>();
@@ -51,7 +108,7 @@ class MergeTest {
 	}
 
 	private static LogCapture source( String name, List<String> events, RuntimeException begin,
-			RuntimeException read ) {
+			Throwable read ) {
 		return new LogCapture() {
 			@Override
 			public void start( Flow flow ) {
@@ -66,9 +123,10 @@ class MergeTest {
 				events.add( name + " end" );
 				return Stream.of( new LogEvent( "time", "INFO", name, "message" ) ).peek( e -> {
 					events.add( name + " read" );
-					if( read != null ) {
-						throw read;
-					}
+					if( read instanceof Error error )
+						throw error;
+					if( read instanceof RuntimeException runtime )
+						throw runtime;
 				} ).onClose( () -> events.add( name + " close" ) );
 			}
 		};
