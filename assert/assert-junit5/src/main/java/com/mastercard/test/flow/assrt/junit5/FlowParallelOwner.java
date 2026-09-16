@@ -146,7 +146,7 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 					index = admission.next( () -> {
 						profile.checkAdmission();
 						checkAttachment();
-					} );
+					}, NativeQueueAccess::runOne );
 					if( index == FlowAdmission.EXHAUSTED ) {
 						return false;
 					}
@@ -185,6 +185,24 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 				throw failure;
 			}
 		} );
+	}
+
+	/**
+	 * Accesses the JDK's protected local-queue extension hooks, not Jupiter
+	 * internals. A pool-width local backlog can strand registered children behind
+	 * their enumerating worker; smaller backlogs retain ordinary native scheduling.
+	 */
+	private abstract static class NativeQueueAccess extends ForkJoinTask<Void> {
+		private static final long serialVersionUID = 1L;
+
+		static void runOne() {
+			var pool = getPool();
+			if( pool != null && getQueuedTaskCount() >= pool.getParallelism() ) {
+				ForkJoinTask<?> task = pollNextLocalTask();
+				if( task != null )
+					task.quietlyInvoke();
+			}
+		}
 	}
 
 	/**

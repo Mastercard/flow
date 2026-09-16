@@ -396,6 +396,19 @@ public final class FlowAdmission {
 	 * @return Admitted index or {@link #EXHAUSTED}
 	 */
 	public int next( Runnable validate ) {
+		return next( validate, () -> {
+		} );
+	}
+
+	/**
+	 * Waits only after giving the native adapter one opportunity to execute work
+	 * already emitted by this factory.
+	 *
+	 * @param validate Adapter's actual pool/attachment check, outside all locks
+	 * @param progress Adapter's cooperative native progress action
+	 * @return Admitted index or {@link #EXHAUSTED}
+	 */
+	public int next( Runnable validate, Runnable progress ) {
 		if( Thread.currentThread() != factoryThread ) {
 			throw new IllegalStateException( "Only the actual Flow factory may await readiness" );
 		}
@@ -409,6 +422,12 @@ public final class FlowAdmission {
 			int next = poll();
 			if( next != WAITING ) {
 				return next;
+			}
+			progress.run();
+			synchronized( history ) {
+				checkActive();
+				if( changes != observed )
+					continue;
 			}
 			// Unchanged timer/spurious wakes never revalidate or retry the ready set.
 			for( ;; ) {

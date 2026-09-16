@@ -598,20 +598,22 @@ class FlowParallelBindingTest {
 	 */
 	@Test
 	void busyTargetTwoMakesRealInlineProgressAndRestoresContextOnReuse() {
-		for( String scenario : List.of( "busy", "busy-chain" ) ) {
-			Evidence e = execute( scenario, "true", 2 );
-			assertEquals( List.of(), e.failures );
-			assertEquals( 80, e.results.size() );
-			assertTrue( e.inline.get() > 0, "real native body on the still-enumerating factory worker" );
-			assertEquals( 80, e.restored.get() );
-			assertEquals( 80, e.durations.size() );
-			assertTrue( e.durations.values().stream().allMatch( n -> n > 0 ) );
-			assertEquals( 2, e.threads.size() );
-			if( scenario.equals( "busy-chain" ) )
-				for( int i = 0; i < 80; i += 2 )
-					assertTrue( e.events.indexOf( String.format( "finish:%03d [chain:pair-%d]", i,
-							i / 2 ) ) < e.events.indexOf( String.format( "body:%03d", i + 1 ) ) );
-		}
+		for( int repeat = 0; repeat < 20; repeat++ )
+			for( String scenario : List.of( "busy", "busy-chain" ) ) {
+				Evidence e = execute( scenario, "true", 2 );
+				assertEquals( List.of(), e.failures );
+				assertEquals( 80, e.results.size() );
+				assertTrue( e.inline.get() > 0,
+						"real native body on the still-enumerating factory worker" );
+				assertEquals( 80, e.restored.get() );
+				assertEquals( 80, e.durations.size() );
+				assertTrue( e.durations.values().stream().allMatch( n -> n > 0 ) );
+				assertEquals( 2, e.threads.size() );
+				if( scenario.equals( "busy-chain" ) )
+					for( int i = 0; i < 80; i += 2 )
+						assertTrue( e.events.indexOf( String.format( "finish:%03d [chain:pair-%d]", i,
+								i / 2 ) ) < e.events.indexOf( String.format( "body:%03d", i + 1 ) ) );
+			}
 	}
 
 	/**

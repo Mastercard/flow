@@ -38,8 +38,8 @@ retains 03, the automated part of 10, narrowed 20 and completed 28 as prerequisi
 human host acceptance remains at final integration. Then 05/25 → 26 → 27.
 Deferred collector and partial-report work must not re-enter this critical path.
 
-Required acceptance still includes resolution of the observed two-worker stall
-and report-reuse finding, combined parallel/reporting and relevant serial/safety
+Required acceptance still includes resolution of the report-reuse finding,
+combined parallel/reporting and relevant serial/safety
 regressions, real command outcomes, existing packaged-runtime checks, IntelliJ
 Run/Debug/navigation/selection/Stop and comparable user-workload assessment with
 the supplied 12-target/20-cap reference profile plus at least one different valid
@@ -92,8 +92,39 @@ All library modules passed in the full reactor recorded below, and their source
 has not changed since that run. The four example-application setup errors remain
 separate from library tests. This disposition does not turn the full reactor into
 a pass, resolve the core/Jupiter mutation-baseline failures, or waive the remaining
-native-progress, report-reuse, manual-host and workload acceptance findings.
+report-reuse, manual-host and workload acceptance findings.
 The fresh reproduction log is C:/Data/Code/flow-doc-followup-red.log.
+
+## Ticket 25 native-progress resolution — 2026-09-16
+
+The intermittent two-worker `busy-chain` failure is now diagnosed and resolved.
+An amplified unchanged-owner probe stopped with 79 descriptions issued but only 76
+terminal: three genuine dynamic children had registered native IDs but had never
+started, no Flow body/resource operation was active, the factory worker was waiting
+in `FlowAdmission.next()`, and the second native worker was idle. The same failure
+remained after externally releasing the test's deliberately held first body, ruling
+out fixture-release circularity. Jupiter had queued registered children on the
+still-enumerating ForkJoin worker without guaranteeing that another worker would
+steal them before the factory stream requested a completion-dependent successor.
+
+`FlowAdmission.next()` now offers adapters one cooperative-progress action only
+after ordinary polling finds no admissible Flow and before the factory waits. It
+retries readiness only when that action changes admission state, preserving the
+existing unchanged-wake/resource-attempt bound. The Jupiter owner uses public JDK
+ForkJoin extension hooks to execute one task from the factory worker's local queue
+only when that queue has at least one full pool-width of backlog. This keeps genuine
+Jupiter execution, IDs, listeners and outcomes; it adds no body pool, synthetic test,
+replay or healthy-run timeout. A broader `helpQuiesce()` experiment was rejected
+because it could enter deliberately held native fixtures before their controllers
+released them.
+
+The original 80-flow independent/whole-chain target-two regression now repeats 20
+times in the tracked suite. The isolated diagnostic ran both shapes 100 times
+(16,000 genuine children) without a stall. Final affected-module validation passed
+all **320 assert-core** cases (two existing skips) and **300 assert-junit5** cases,
+with zero failures/errors. The temporary two-second state probe and sandbox-only
+fixture changes are not production changes. Report reuse and the remaining combined,
+packaged-runtime, mutation, host and workload acceptance stay open.
 
 ## Ticket 19 final reactor — 2026-09-16
 
@@ -148,10 +179,10 @@ This tracked-input gate does not repair or pass the earlier working-tree scan.
 The current four-point consumer evidence contains 25 matching Flow JAR/POM hashes.
 Core JAR SHA-256: `7c9ed5932ceb482dd4dde2e4522afa5a94615481e7a070d411a1f4dce83a91bc`;
 Jupiter adapter: `666748b13d67873505269318907ee2d0745ef35fd89553139b743a6b80e543bc`.
-The existing report-reuse finding, baseline two-worker native stall, multicast
-discovery, mutation blockers and manual/workload gates remain OPEN. Further
-simplification requires passing fresh mutation baselines; changing native helper
-discovery scope requires an explicit decision, not a silent exclusion change.
+At that checkpoint the report-reuse finding, baseline two-worker native stall,
+multicast discovery, mutation blockers and manual/workload gates remained OPEN.
+Further simplification requires passing fresh mutation baselines; changing native
+helper discovery scope requires an explicit decision, not a silent exclusion change.
 
 ## Monotonic owner stop/drain budget — 2026-09-16
 
@@ -191,11 +222,11 @@ false. Append-only flow-cancel19-budget and flow-cancel19-budget-review logs und
 C:/Data/Code retain failures, controls and final evidence. Post-fix independent
 Standards and Spec review found no remaining actionable findings in the four fixes.
 
-**OPEN native-progress finding:** an intermittent two-worker `busy-chain` stall was
-also reproduced against the unchanged pre-budget production baseline `cfa468bc`.
-The later passing binding gate is nonrecurrence, not diagnosis or resolution. No
-healthy-run timeout, profile reduction or native-progress acceptance was introduced
-to hide it. The separately recorded report-reuse failure also remains OPEN.
+**Historical native-progress finding:** an intermittent two-worker `busy-chain`
+stall was reproduced against the unchanged pre-budget production baseline
+`cfa468bc`. The later passing binding gate was nonrecurrence, not diagnosis or
+resolution. The ticket-25 section above records the subsequent diagnosis and
+correction. The separately recorded report-reuse failure remains OPEN.
 
 The final reactor and refreshed current-JAR packaged gate are recorded above.
 CPU/wall measurement,

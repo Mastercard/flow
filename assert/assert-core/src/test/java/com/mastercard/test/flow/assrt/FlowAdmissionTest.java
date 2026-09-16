@@ -2283,6 +2283,28 @@ class FlowAdmissionTest {
 		assertFalse( thread.isAlive() );
 	}
 
+	/** Native progress is requested only when ordinary admission cannot proceed. */
+	@Test
+	void nativeProgressCanCompleteEmittedWorkBeforeFactoryWaits() {
+		Flow first = flow( "first" );
+		FlowAdmission run = prepare( 1, List.of( first, flow( "next", first ) ) );
+		AtomicInteger validations = new AtomicInteger();
+		AtomicInteger progress = new AtomicInteger();
+		assertEquals( 0, run.next( validations::incrementAndGet,
+				() -> fail( "ready admission must not request native progress" ) ) );
+		enter( run, 0 );
+		assertEquals( 1, run.next( validations::incrementAndGet, () -> {
+			assertFalse( Thread.holdsLock( run.history() ) );
+			progress.incrementAndGet();
+			complete( run, 0 );
+		} ) );
+		assertEquals( 3, validations.get() );
+		assertEquals( 1, progress.get() );
+		enter( run, 1 );
+		complete( run, 1 );
+		finish( run );
+	}
+
 	/**
 	 * Resource notifications can observe History on another thread without
 	 * deadlock.
