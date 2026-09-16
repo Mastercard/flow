@@ -11,6 +11,7 @@
 		<junit.version>5.10.0</junit.version>
 		<platform.version>1.10.0</platform.version>
 		<consumer.parallel>false</consumer.parallel>
+		<consumer.classload>target/classload-${junit.version}-${consumer.parallel}.log</consumer.classload>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
@@ -66,7 +67,7 @@
 				<version>3.5.3</version>
 				<configuration>
 					<failIfNoTests>true</failIfNoTests>
-					<argLine>-Xlog:class+load=info:file=target/classload-${junit.version}-${consumer.parallel}.log</argLine>
+					<argLine>-Xlog:class+load=info:file=${consumer.classload}</argLine>
 					<systemPropertyVariables>
 						<consumer.parallel>${consumer.parallel}</consumer.parallel>
 						<consumer.junit>${junit.version}</consumer.junit>

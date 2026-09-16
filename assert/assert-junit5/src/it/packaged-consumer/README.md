@@ -96,6 +96,56 @@ is **not** the real-flow oracle.
   selector is rejected before discovery/hidden work. This does not approve arbitrary
   subset selection: the checked parallel selector remains the whole sole class.
 
+## External report command gate: 2026-09-17
+
+After the same local install, run
+`bash assert/assert-junit5/src/it/packaged-consumer/verify-report-commands.sh`
+from the repository root. This separate gate starts an external JVM for each of
+16 combinations: both JUnit stacks, serial/parallel, healthy/broken report output,
+and passing/mixed Flow outcomes. It does not rebuild Flow between points.
+
+[ReportCommand.java](src/test/java/consumer/ReportCommand.java) is a thin public
+Launcher host with one full-class selector and no filters. The real native summary
+determines its process exit; an unexpected start count exits separately. Its factory
+and invocation-mode interceptor execute genuine dynamic tests on the selected
+native pool, not a second body executor or synthetic result list. `@AfterAll` checks
+completed output with the public Reader, binding values are checked in B's body,
+and a regular file used as the artifact root provides the report-only fault.
+
+The full matrix passed: 48 native starts, 32 successful, eight intentional failures
+and eight dependent aborts, with zero failed containers. Passing bodies yield exit
+0 even when report creation fails; the identical real SUT error yields exit 1 with
+or without that fault. Each fault produces exactly one visible report diagnostic.
+Each healthy report contains three entries, including the true ERROR/SKIP/PASS
+classifications in mixed cases. The script requires exact counts, the final report
+check marker, actual loaded Jupiter/Platform JAR versions and installed Flow adapter
+provenance. Output and separate class-load logs are under `target/evidence/report-command-*`.
+This supplements the original packaged binding gate; it does not replace its
+25-file artifact hash comparison or establish complete trace-variant acceptance.
+
+### Surefire host findings: not waived by the Launcher command
+
+Direct selection of `ReportCommand` under the pinned Surefire 3.5.3 ran all three
+bodies but reported zero tests, in serial and parallel on both JUnit stacks.
+`failIfNoTests` correctly failed the command and remains enabled. A minimized
+[SurefireSourceProbe.java](src/test/java/consumer/SurefireSourceProbe.java) reproduces
+this without `@FlowTest` or the Flow Launcher hook: a plain Jupiter dynamic leaf
+with a ClassSource in a different class is lost by that reporter; absent source or
+a source in the factory's own class is counted. The retained probe intentionally
+uses a different source class when `consumer.class.source=true` and no explicit
+source otherwise. Select it explicitly with `-Dtest=SurefireSourceProbe` for diagnosis;
+it is not part of the normal two-test binding gate.
+
+Apache's current stable Surefire 3.6.0 counts the minimized cross-class-source leaf.
+However, direct parallel Flow execution under 3.6.0 is rejected before the factory
+by the existing sole-class/no-filters guard. The exact new host request needs further
+inspection; no selector/filter allowance has been broadened. The isolated probe
+success is therefore **not** proof that upgrading Surefire alone enables this host.
+The repository and consumer remain pinned to 3.5.3. Flow metadata was not rewritten,
+source navigation was not removed, no test-count check was disabled and no reporter
+replacement was installed. Resolving this host path remains acceptance work requiring
+a justified request-profile decision, separate from the passing external Launcher gate.
+
 ## Recorded run: 2026-09-15
 
 Baseline: `c9867a0b31e8466441bf60c6b2950dd99ef9f9e7`. Windows 11 amd64,

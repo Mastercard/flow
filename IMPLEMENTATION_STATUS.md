@@ -40,6 +40,13 @@ mutation targets, mutators, thresholds or existing assertions are reduced. Auxil
 factories remain exercised through their controlling tests' real nested Launchers.
 The probe passed its unmutated coverage phase and entered mutation analysis; this
 alone does not establish either Jupiter's 82/97 gate or complete ticket-25 acceptance.
+The run was subsequently stopped after capturing a prolonged worker stall. Three
+minion stacks show nested native Launcher waits; the oldest captured stack runs
+through `JUnit5TestUnitFinder.findTestUnits`, the busy two-worker regression, and a
+factory waiting in `FlowAdmission.next()`. No finished Jupiter mutation score exists.
+The earlier native-progress correction is therefore not fully accepted under this
+path; diagnose the retained stack evidence before claiming that finding closed.
+The verified PIT process tree was terminated, not left running or counted as a pass.
 
 Core commit `156b7297` adds three admission-seam regressions: unused handoff proof
 retains outstanding operations without inventing results; actual native skip is
@@ -51,12 +58,42 @@ lines (91%) and 1,088/1,219 detected mutations (89%), with 96 uncovered and 35
 surviving: 37 more covered lines and 22 more detected mutations, but still a
 failing gate. A passing unit suite does not waive it.
 
+Commits `615da5fe` and `0556aa18` add native-configuration guard cases and fixture
+owner/lifecycle regressions, including applied context surviving runner completion
+until explicit reset. The affected 47 cases passed, then the whole core suite passed
+339 cases with the same two skips. Its completed PIT result is 2,196/2,367 lines
+(93%) and 1,109/1,219 detected mutations (91%: 1,086 killed plus 23 timed out), with
+65 uncovered and 45 surviving. This remains below 94/95; no targets or gates changed.
+
+The new [external report command gate](assert/assert-junit5/src/it/packaged-consumer/verify-report-commands.sh)
+passed 16 external JVM runs: both JUnit stacks, serial/parallel, healthy/broken report
+output and passing/mixed bodies. It observed 48 genuine native starts (32 successful,
+eight intentional failures, eight dependent aborts), exact process exits and actual
+loaded runtime/JAR versions. Report-only faults leave successful commands successful;
+the original SUT error makes the command fail with or without a report fault. Healthy
+final reports were checked by Reader. The original four-point packaged binding gate
+also passed again after these opt-in additions, with unchanged artifact manifests.
+
+This is a public-Launcher host, not a Surefire waiver. Direct Surefire 3.5.3 execution
+loses dynamic leaves whose ClassSource points to a different class, independently
+reproduced by a plain Jupiter test without Flow. Surefire 3.6.0 fixes that minimized
+source case, but the actual parallel command is then rejected by Flow's existing
+no-filters/sole-class request guard. See the [consumer host findings](assert/assert-junit5/src/it/packaged-consumer/README.md#surefire-host-findings-not-waived-by-the-launcher-command).
+No metadata rewrite, selector allowance or repository-wide plugin upgrade was made.
+
+The frozen evidence archive is under `C:/Data/Code/flow-ticket25-acceptance-20260917/`:
+core reports, consumer logs/class traces/output, source snapshots and the stopped
+PIT job's parent/minion stacks. Incomplete Jupiter output is diagnostic material,
+not a passing mutation report.
+
 Decisions for later review: retain the discovery correction rather than making
 standalone auxiliary fixtures silently succeed; retain all mutation gates; keep
-cleanup 29–32 after functional completion and the user's trial/feedback. External
-report-only/mixed-failure command outcomes, remaining focused report/trace acceptance,
-manual IntelliJ interaction and the user's workload trial remain open. No speedup,
-release acceptance or locked-desktop pass is claimed.
+cleanup 29–32 after functional completion and the user's trial/feedback. The direct
+Surefire request/profile needs a justified host decision rather than disabling
+counts or hiding native source metadata. Core/Jupiter mutation acceptance, native
+progress under the stalled PIT path, remaining report/trace acceptance, manual
+IntelliJ interaction and the user's workload trial remain open. No speedup, release
+acceptance or locked-desktop pass is claimed.
 
 ## Post-functional cleanup clarification — 2026-09-16
 
