@@ -6,6 +6,7 @@ import static com.mastercard.test.flow.assrt.TestModel.Actors.D;
 import static com.mastercard.test.flow.util.Transmission.Type.REQUEST;
 import static com.mastercard.test.flow.util.Transmission.Type.RESPONSE;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -38,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.mastercard.test.flow.Actor;
 import com.mastercard.test.flow.Flow;
@@ -60,6 +62,70 @@ import com.mastercard.test.flow.util.Option.Temporary;
  */
 @SuppressWarnings("static-method")
 class AbstractFlocessorTest {
+	/**
+	 * Native reporting authorization depends on publication ownership, not just the
+	 * mode.
+	 */
+	@ParameterizedTest
+	@CsvSource({ "NEVER,false,true", "NEVER,true,true", "QUIETLY,false,false",
+			"QUIETLY,true,true", "ALWAYS,false,false", "ALWAYS,true,false",
+			"FAILURES,false,false", "FAILURES,true,false" })
+	void nativeReportingRequiresSupportedCompletionOwnership( Reporting mode, boolean finalOnly,
+			boolean supported ) {
+		try( TestFlocessor runner = new TestFlocessor( "native reporting guard", TestModel.abc() )
+				.reporting( mode ) ) {
+			if( finalOnly )
+				runner.finalOnlyReporting();
+			if( supported )
+				assertDoesNotThrow( runner::requireIndependentTracerConfiguration );
+			else
+				assertThrows( IllegalStateException.class, runner::requireIndependentTracerConfiguration );
+			assertNull( runner.report(), "authorization alone must not initialize reporting" );
+		}
+	}
+
+	/**
+	 * Each stateful registration needs actual fixture ownership, including after
+	 * detachment.
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = { "applicators", "checkers", "autonomous" })
+	void nativeStatefulRegistrationsRequireCurrentFixtureOwnership( String registration ) {
+		try( TestFlocessor runner = new TestFlocessor( "native fixture guard", TestModel.abc() )
+				.system( State.FUL, A ).reporting( Reporting.NEVER ) ) {
+			assertDoesNotThrow( runner::requireIndependentTracerConfiguration );
+			switch( registration ) {
+				case "applicators" -> runner.applicators( ApplicatorTest.APPLICATOR );
+				case "checkers" -> runner.checkers( new CheckerTest.TestChecker() );
+				case "autonomous" -> runner.autonomous( A );
+				default -> throw new AssertionError( registration );
+			}
+			assertThrows( IllegalStateException.class, runner::requireIndependentTracerConfiguration );
+			runner.useContextDomain( new ContextDomain() );
+			assertDoesNotThrow( runner::requireIndependentTracerConfiguration );
+			runner.useContextDomain( null );
+			assertThrows( IllegalStateException.class, runner::requireIndependentTracerConfiguration );
+			assertEquals( "", runner.events(), "configuration must not execute fixture work" );
+		}
+	}
+
+	/**
+	 * Fixture/report authorization does not authorize per-flow capture in native
+	 * parallel mode.
+	 */
+	@Test
+	void nativeCaptureGuardDoesNotStartTheSource() {
+		CaptureScopeTest.Source capture = new CaptureScopeTest.Source();
+		try( TestFlocessor runner = new TestFlocessor( "native capture guard", TestModel.abc() )
+				.reporting( Reporting.QUIETLY ).logs( capture ) ) {
+			runner.finalOnlyReporting();
+			runner.useContextDomain( new ContextDomain() );
+			assertThrows( IllegalStateException.class, runner::requireIndependentTracerConfiguration );
+			assertEquals( List.of(), capture.events );
+			runner.logs( LogCapture.NO_OP );
+			assertDoesNotThrow( runner::requireIndependentTracerConfiguration );
+		}
+	}
 
 	@Test
 	void scopedCompletionAllowsReportReuseAfterRepeatedExecution() throws Exception {
