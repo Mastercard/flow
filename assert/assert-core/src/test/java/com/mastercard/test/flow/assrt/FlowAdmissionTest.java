@@ -2338,6 +2338,118 @@ class FlowAdmissionTest {
 		finish( run );
 	}
 
+	/**
+	 * Unemitted proof retires a handoff, not an operation that still uses its
+	 * grant.
+	 */
+	@Test
+	void unusedHandoffRetainsOutstandingOperationWithoutInventingResults() {
+		Flow flow = flow( "unemitted" );
+		FlowAdmission run = prepare( 1, List.of( flow ) );
+		assertEquals( 0, run.poll() );
+		Grant grant = run.reservation( 0 );
+		var operation = grant.operation();
+		Throwable cause = new IllegalStateException( "before native handoff" );
+		try {
+			run.stop( cause );
+			run.unused( 0 );
+			assertFalse( grant.released() );
+			assertEquals( 1, run.status().owners() );
+			assertEquals( 0, run.status().entered() );
+			assertEquals( 0, run.status().completed() );
+			assertEquals( 0, run.status().nativeTerminals() );
+			assertEquals( Result.PENDING, run.history().get( flow ) );
+			assertThrows( IllegalStateException.class, () -> run.reservation( 0 ) );
+			assertThrows( IllegalStateException.class, () -> run.unused( 0 ) );
+			operation.complete();
+			assertTrue( grant.released() );
+			assertEquals( 0, run.status().owners() );
+			assertSame( cause, run.stopCause() );
+		}
+		finally {
+			operation.complete();
+			run.enclosingFinished( cause );
+			run.release();
+		}
+	}
+
+	/**
+	 * Actual skip evidence is idempotent, remains distinct from History and stops
+	 * admission.
+	 */
+	@Test
+	void nativeSkipReturnsOwnershipWithoutInventingProcessing() {
+		Flow flow = flow( "skipped" );
+		FlowAdmission run = prepare( 1, List.of( flow ) );
+		assertEquals( 0, run.poll() );
+		Grant grant = run.reservation( 0 );
+		run.registered( 0, "skipped-leaf" );
+		try {
+			run.skipped( "skipped-leaf", "native reason" );
+			Throwable cause = run.stopCause();
+			assertEquals( "Native Flow skipped: native reason", cause.getMessage() );
+			run.skipped( "skipped-leaf", "native reason" );
+			assertTrue( grant.released() );
+			assertEquals( 0, run.status().owners() );
+			assertEquals( 0, run.status().nativeTerminals() );
+			assertEquals( 0, run.status().entered() );
+			assertEquals( Result.PENDING, run.history().get( flow ) );
+			assertSame( cause, assertThrows( IllegalStateException.class, run::poll ).getCause() );
+			assertThrows( IllegalStateException.class, () -> run.started( "skipped-leaf" ) );
+			assertThrows( IllegalStateException.class,
+					() -> run.skipped( "skipped-leaf", "different reason" ) );
+			assertThrows( IllegalStateException.class,
+					() -> run.finished( "skipped-leaf", SUCCESSFUL, null ) );
+			assertSame( cause, run.stopCause() );
+		}
+		finally {
+			run.enclosingFinished( new IllegalStateException( "test scope ended" ) );
+			run.release();
+		}
+	}
+
+	/**
+	 * Receipt delivery is factory-owned, outside History, and restored after a
+	 * callback throws.
+	 */
+	@Test
+	void receiptFailureRestoresFactoryDeliveryWithoutRetiringTheGrant() throws Exception {
+		FlowAdmission run = prepare( 1, List.of( flow( "receipt" ) ) );
+		assertEquals( 0, run.poll() );
+		Grant grant = run.reservation( 0 );
+		var cause = new IllegalArgumentException( "delivery" );
+		try {
+			assertSame( cause, assertThrows( IllegalArgumentException.class, () -> run.receipt( 0, g -> {
+				assertSame( grant, g );
+				assertFalse( Thread.holdsLock( run.history() ) );
+				assertThrows( IllegalStateException.class,
+						() -> run.receipt( 0, nested -> fail( "nested delivery" ) ) );
+				throw cause;
+			} ) ) );
+			FutureTask<Void> foreign = new FutureTask<>( () -> {
+				assertThrows( IllegalStateException.class,
+						() -> run.receipt( 0, g -> fail( "foreign delivery" ) ) );
+				return null;
+			} );
+			Thread thread = new Thread( foreign, "foreign-receipt" );
+			thread.start();
+			foreign.get( 5, TimeUnit.SECONDS );
+			thread.join( 1000 );
+			assertFalse( thread.isAlive() );
+			run.receipt( 0, g -> assertSame( grant, g ) );
+			assertFalse( grant.released() );
+			assertNull( run.stopCause() );
+			enter( run, 0 );
+			complete( run, 0 );
+			finish( run );
+		}
+		finally {
+			run.enclosingFinished( new IllegalStateException( "test scope ended" ) );
+			if( run.disposable() )
+				run.release();
+		}
+	}
+
 	private static Flow flow( String name, Flow... prerequisites ) {
 		return Creator.build( f -> {
 			f.meta( m -> m.description( name ) );
