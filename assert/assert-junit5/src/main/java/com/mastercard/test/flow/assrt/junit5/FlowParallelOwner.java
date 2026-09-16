@@ -18,7 +18,10 @@ import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.platform.engine.TestExecutionResult;
+import org.junit.platform.engine.TestSource;
 import org.junit.platform.engine.support.descriptor.ClassSource;
+import org.junit.platform.engine.support.descriptor.MethodSource;
+import org.junit.platform.engine.support.descriptor.UriSource;
 import org.junit.platform.launcher.TestIdentifier;
 import org.opentest4j.TestAbortedException;
 
@@ -44,7 +47,7 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 	private FlowNativeCall.Attachment attachment;
 	private boolean disposalRegistered;
 	private final List<DynamicTest> descriptions = new ArrayList<>();
-	private final List<ClassSource> sources = new ArrayList<>();
+	private final List<URI> sources = new ArrayList<>();
 	private final Map<String, Integer> names = new HashMap<>();
 
 	/**
@@ -110,13 +113,8 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 				}
 			}
 			DynamicTest description = (DynamicTest) nodes.get( i );
-			URI uri = description.getTestSourceUri().orElseThrow(
-					() -> unsupported( flow, "missing class source URI" ) );
-			if( !"class".equals( uri.getScheme() ) ) {
-				throw unsupported( flow, "non-class source URI" );
-			}
 			descriptions.add( description );
-			sources.add( ClassSource.from( uri ) );
+			sources.add( description.getTestSourceUri().orElse( null ) );
 			names.put( description.getDisplayName(), i );
 		}
 		admission.prepare( flows, chains );
@@ -246,11 +244,31 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 				: admission.index( id.getUniqueId() );
 		if( index == null || !id.isTest() || id.isContainer()
 				|| !id.getParentId().filter( factoryId::equals ).isPresent()
-				|| !id.getSource().filter( sources.get( index )::equals ).isPresent()
+				|| !sourceMatches( sources.get( index ), id )
 				|| !id.getDisplayName().equals( descriptions.get( index ).getDisplayName() ) ) {
 			throw new IllegalStateException( "Unexpected native Flow identity/source: " + id );
 		}
 		return index;
+	}
+
+	/**
+	 * Compares source evidence only when both sides expose compatible evidence.
+	 * Native ownership remains established by the surrounding identity checks when
+	 * either side has no Flow source.
+	 */
+	private static boolean sourceMatches( URI expected, TestIdentifier id ) {
+		if( expected == null || id.getSource().isEmpty() )
+			return true;
+		TestSource actual = id.getSource().get();
+		if( actual instanceof ClassSource )
+			return "class".equals( expected.getScheme() )
+					&& ClassSource.from( expected ).equals( actual );
+		if( actual instanceof MethodSource method )
+			return "class".equals( expected.getScheme() )
+					&& ClassSource.from( expected ).getClassName().equals( method.getClassName() );
+		if( actual instanceof UriSource uri )
+			return expected.equals( uri.getUri() );
+		return true;
 	}
 
 	@Override

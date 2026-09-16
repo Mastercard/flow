@@ -1,6 +1,7 @@
 package com.mastercard.test.flow.assrt.junit5;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.DynamicNode;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.extension.DynamicTestInvocationContext;
@@ -357,6 +359,14 @@ class FlowParallelBindingTest {
 			assertEquals( 0, e.starts.size(), mode );
 			assertFalse( e.events.stream().anyMatch( s -> s.startsWith( "body:" ) ), mode );
 		}
+	}
+
+	/** Comparable source evidence from a substituted native leaf remains fatal. */
+	@Test
+	void substitutedNativeSourceIsRejectedBeforeSutUse() {
+		Evidence e = execute( "source-transform", "true", 3 );
+		assertFalse( e.failures.isEmpty() );
+		assertFalse( e.events.stream().anyMatch( event -> event.startsWith( "body:" ) ) );
 	}
 
 	/**
@@ -927,6 +937,12 @@ class ParallelBindingFixture {
 		assertThrows( IllegalStateException.class, () -> runner.independent( "late", f -> true ) );
 		if( e.scenario.equals( "transform" ) )
 			return tests.skip( 1 );
+		if( e.scenario.equals( "source-transform" ) )
+			return tests.map( node -> {
+				DynamicTest test = (DynamicTest) node;
+				return DynamicTest.dynamicTest( test.getDisplayName(),
+						URI.create( "class:java.lang.String" ), test.getExecutable() );
+			} );
 		if( e.scenario.startsWith( "busy" ) )
 			return tests.onClose( e.release::countDown );
 		return tests;
