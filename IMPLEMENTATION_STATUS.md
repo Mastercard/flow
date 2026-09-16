@@ -6,6 +6,24 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Post-functional cleanup clarification — 2026-09-16
+
+The user clarified that the remaining simplification/refactoring/test-reduction
+tickets 29–32 were meant to be deferred, not cancelled. Finish retained functional
+work and focused integration first, then the user's trial in their consuming
+repository (26), and address its functional feedback before starting cleanup.
+These tickets remain planned work, but do not block reporting, ticket 25 or that
+initial trial. The unrelated deferred capabilities remain deferred.
+
+Re-evaluate cleanup candidates against the completed implementation; prefer
+removing redundant branch-added tests and unnecessary indirection without losing
+distinct behavior or rewriting main-existing tests unnecessarily. Preserve ticket
+28 and delivered corrections. Fresh before/after regression/mutation evidence and
+a combined coverage review belong to the later cleanup phase, with existing gates
+unchanged. Refresh affected integration evidence after cleanup rather than treating
+the user's earlier trial as validation of later changes. No cleanup, test run,
+workload enablement or release is performed by this documentation correction.
+
 ## Approved focused delivery — 2026-09-16
 
 The user confirmed the reduced scope after a Q1–Q7 interview. This section
@@ -23,7 +41,7 @@ publication; other native reporting modes remain guarded.
 
 | Work | Approved disposition |
 | --- | --- |
-| 29–32 | Cancel remaining simplification/test-reduction work and remove it as an integration prerequisite. Retain existing tests and already-delivered corrections. |
+| 29–32 | Defer simplification/refactoring/test reduction until functional completion and the user's repository trial/feedback. Not an integration or initial-trial prerequisite; retain existing tests and corrections until reviewed cleanup. |
 | 21–22 | Defer per-flow parallel capture and correlated collector/file-source work. External logging remains; no unsupported per-flow attribution is claimed. |
 | 20 | Preserve existing capture lifecycle correctness and finish only what reporting integration/serial compatibility still needs. |
 | 23 | Finish normal-run final-only reporting, including genuine failure/skip outcomes and visible non-fatal report-only errors without changing processing semantics. |
@@ -37,6 +55,8 @@ The active integration dependency is 16/23/33 → 25, not 24/29–32 → 25. Rep
 retains 03, the automated part of 10, narrowed 20 and completed 28 as prerequisites;
 human host acceptance remains at final integration. Then 05/25 → 26 → 27.
 Deferred collector and partial-report work must not re-enter this critical path.
+After 26 and completion of functional feedback, resume 29–32 as post-functional
+cleanup; do not restore the old 29–32 → 25 blocking edges.
 
 Required acceptance still includes combined parallel/reporting and relevant
 serial/safety regressions, real command outcomes, existing packaged-runtime checks,
@@ -60,9 +80,9 @@ acceptance; its publication does not mark any production or test work complete.
 **Existing mutation gates remain:** API 100/100, report-core 90/90, core 94/95,
 Jupiter 82/97 mutation/line coverage. Current valid results are required; no
 threshold reduction or silent exclusion is authorized. Any necessary discovery
-correction requires separate justification. Cancellation of test reductions removes
-their before/after reduction comparisons, not these gates. Reporting work can
-proceed independently of mutation repair and the cancelled cleanup programme.
+correction requires separate justification. Deferral of test reductions postpones
+their before/after reduction comparisons to cleanup, not these gates. Reporting
+work can proceed independently of mutation repair and the deferred cleanup phase.
 
 The core threshold failure and Jupiter's 38 unmutated failures were observed at
 historical endpoint 15177819, not freshly reproduced at the reconciliation endpoint
@@ -73,8 +93,8 @@ prove production defects. The four application setup errors and unavailable
 host/platform/workload evidence remain recorded, not converted into passes.
 
 Local spec, plan/analysis, design map and affected implementation tickets now carry
-this amendment. Original checklists/results remain historical; cancelled and
-deferred work is not marked complete. No production/test changes, test runs or
+this amendment. Original checklists/results remain historical; deferred work is
+not marked complete. No production/test changes, test runs or
 workload enablement are performed by this update.
 
 ## Documentation follow-up — 2026-09-16
