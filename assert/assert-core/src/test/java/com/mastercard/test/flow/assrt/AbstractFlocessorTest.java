@@ -13,6 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -57,23 +62,37 @@ import com.mastercard.test.flow.util.Option.Temporary;
 class AbstractFlocessorTest {
 
 	@Test
-	void scopedCompletionAllowsReportReuseAfterRepeatedExecution() {
+	void scopedCompletionAllowsReportReuseAfterRepeatedExecution() throws Exception {
 		try( Temporary name = AssertionOptions.REPORT_NAME.temporarily( "reused" ) ) {
-			for( int run = 0; run < 2; run++ ) {
-				try( TestFlocessor tf = new TestFlocessor( "scoped completion", TestModel.abc() )
-						.system( State.LESS, B ).reporting( Reporting.QUIETLY, "scoped-completion" )
-						.behaviour( a -> a.actual().response( a.expected().response().content() ) ) ) {
-					tf.execute();
-					assertEquals( "abc [] SUCCESS", tf.results(), tf::events );
-					Reader report = new Reader( tf.report() );
-					assertEquals( Set.of( "PASS" ), report.read().entries.get( 0 ).tags );
-					tf.behaviour( a -> {
-					} );
-					tf.execute();
-					assertEquals( "abc [] SKIP", tf.results() );
-					assertTrue( report.read().entries.get( 0 ).tags.contains( "SKIP" ) );
+			assertReportReuse();
+			Path legacyClaim = Path.of( AssertionOptions.ARTIFACT_DIR.value(), "scoped-completion",
+					".reused.flow-writer.lock" );
+			Files.createDirectories( legacyClaim.getParent() );
+			try {
+				try( FileChannel channel = FileChannel.open( legacyClaim, StandardOpenOption.CREATE,
+						StandardOpenOption.WRITE ); FileLock ignored = channel.lock() ) {
+					assertReportReuse();
 				}
 			}
+			finally {
+				Files.deleteIfExists( legacyClaim );
+			}
+		}
+	}
+
+	private static void assertReportReuse() {
+		try( TestFlocessor tf = new TestFlocessor( "scoped completion", TestModel.abc() )
+				.system( State.LESS, B ).reporting( Reporting.QUIETLY, "scoped-completion" )
+				.behaviour( a -> a.actual().response( a.expected().response().content() ) ) ) {
+			tf.execute();
+			assertEquals( "abc [] SUCCESS", tf.results(), tf::events );
+			Reader report = new Reader( tf.report() );
+			assertEquals( Set.of( "PASS" ), report.read().entries.get( 0 ).tags );
+			tf.behaviour( a -> {
+			} );
+			tf.execute();
+			assertEquals( "abc [] SKIP", tf.results() );
+			assertTrue( report.read().entries.get( 0 ).tags.contains( "SKIP" ) );
 		}
 	}
 

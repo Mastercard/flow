@@ -38,10 +38,9 @@ retains 03, the automated part of 10, narrowed 20 and completed 28 as prerequisi
 human host acceptance remains at final integration. Then 05/25 → 26 → 27.
 Deferred collector and partial-report work must not re-enter this critical path.
 
-Required acceptance still includes resolution of the report-reuse finding,
-combined parallel/reporting and relevant serial/safety
-regressions, real command outcomes, existing packaged-runtime checks, IntelliJ
-Run/Debug/navigation/selection/Stop and comparable user-workload assessment with
+Required acceptance still includes combined parallel/reporting and relevant
+serial/safety regressions, real command outcomes, existing packaged-runtime checks,
+IntelliJ Run/Debug/navigation/selection/Stop and comparable user-workload assessment with
 the supplied 12-target/20-cap reference profile plus at least one different valid
 application-selected fixed profile. The exact 12/20 values are not a product limit;
 retain structural profile validation and derive admission from the actual pool.
@@ -123,8 +122,9 @@ times in the tracked suite. The isolated diagnostic ran both shapes 100 times
 (16,000 genuine children) without a stall. Final affected-module validation passed
 all **320 assert-core** cases (two existing skips) and **300 assert-junit5** cases,
 with zero failures/errors. The temporary two-second state probe and sandbox-only
-fixture changes are not production changes. Report reuse and the remaining combined,
-packaged-runtime, mutation, host and workload acceptance stay open.
+fixture changes are not production changes. The report-reuse resolution below and
+the remaining combined, packaged-runtime, mutation, host and workload acceptance
+stay separate.
 
 ## Ticket 19 final reactor — 2026-09-16
 
@@ -468,15 +468,29 @@ diagnostics. Legacy assertion runners retain immediate reporting.
 
 ## Blocking work and unpassed gates
 
-### Unresolved report-reuse failure
+### Resolved report-reuse failure — 2026-09-16
 
-One focused run failed `scopedCompletionAllowsReportReuseAfterRepeatedExecution`:
-expected `abc [] SUCCESS`, observed `abc [] ERROR`. Its cause remains unestablished.
-The original failed log is retained; later passes are not an explanation or a fix.
-Fifty sequential exact-method runs and twelve seeded class-order runs (336 cases)
-did not reproduce it. A 200-run attempt was incomplete and is not a passing gate.
-The assertion now includes existing processing events on failure; temporary debug
-instrumentation was removed. Reporting/final acceptance must retain this open item.
+One historical focused run at `02e3bb5c` failed
+`scopedCompletionAllowsReportReuseAfterRepeatedExecution`: expected
+`abc [] SUCCESS`, observed `abc [] ERROR`. Its archived output did not retain the
+underlying exception, so later passing repetitions alone were correctly treated as
+nonrecurrence. That revision still opened and locked a persistent sibling
+`.flow-writer.lock` for every Writer. A controlled same-revision experiment now
+locks the stale sidecar between the test's two sequential runner instances. Built
+with the historical report module in the same reactor, it deterministically produces
+the same first-execution `abc [] ERROR`; the event has a null message, consistent
+with the same-JVM `OverlappingFileLockException` from `FileChannel.tryLock()`.
+
+Ticket 28 commit `4a3e8ca0` removed the cross-run claim subsystem under the approved
+single-active-writer contract. The tracked regression now repeats the two complete
+runner lifecycles while that exact legacy sidecar remains locked. Current code passes,
+because the sidecar is outside the report tree and no longer participates in Writer
+construction or publication. The complete assert-core suite passes **320 cases**,
+with two existing skips and zero failures/errors. This is an old-code red/current-
+code green causal test of the removed failure path, not merely another unlocked
+reuse rerun. The original unrecorded throwable cannot be reconstructed, but the
+claim path that could turn harmless stale lock interference into the observed Flow
+ERROR is structurally absent and guarded against regression. This finding is closed.
 
 ### 04: destination claims and explicit completion
 
