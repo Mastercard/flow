@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,72 @@ import com.mastercard.test.flow.assrt.resource.ResourceReservations.Request;
  * Pure public planning/reservation seam, shared by runners and fixture owners.
  */
 class ResourcePlanningTest {
+	/**
+	 * Callback failures cannot undo actual proof or strand another owner's wakeup.
+	 *
+	 * @param mode Which callback boundaries fail, including identical exceptions
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = { "callback", "notification", "both", "same" })
+	void cancellationFailurePreservesProofAndNotifiesEveryWaiter( String mode ) {
+		var scope = ResourceReservations.shared();
+		var capacity = scope.capacity( 1 );
+		var primary = mode.equals( "notification" ) ? null
+				: new IllegalStateException( "client cancellation failed" );
+		RuntimeException cleanup = mode.equals( "callback" ) ? null
+				: mode.equals( "same" ) ? primary : new IllegalArgumentException( "owner wakeup failed" );
+		AtomicBoolean callbackReturned = new AtomicBoolean();
+		AtomicInteger callbacks = new AtomicInteger();
+		AtomicInteger wakeups = new AtomicInteger();
+		Request owner = scope.register( capacity, requirements( "cancellation-proof" ), () -> {
+			if( callbackReturned.get() && cleanup != null )
+				throw cleanup;
+		} );
+		try( Grant grant = owner.tryAcquire() ) {
+			assertNotNull( grant );
+			Request waiter = scope.register( scope.capacity( 1 ), requirements( "cancellation-proof" ),
+					wakeups::incrementAndGet );
+			var operation = grant.operation( proof -> {
+				callbacks.incrementAndGet();
+				assertEquals( 1, capacity.callbacks() );
+				proof.complete();
+				assertEquals( 0, capacity.operations() );
+				assertTrue( grant.pending(), "claimed cancellation still owns the grant after proof" );
+				assertFalse( grant.released() );
+				callbackReturned.set( true );
+				if( primary != null )
+					throw primary;
+			} );
+			try {
+				grant.close();
+				var stopped = new IllegalStateException( "owning run stopped" );
+				var failure = assertThrows( RuntimeException.class, () -> grant.stopping( stopped ) );
+				assertSame( primary == null ? cleanup : primary, failure );
+				assertEquals( mode.equals( "both" ) ? List.of( cleanup ) : List.of(),
+						List.of( failure.getSuppressed() ) );
+				assertSame( stopped, capacity.uncertainty() );
+				assertEquals( 0, capacity.callbacks() );
+				assertEquals( 0, capacity.owned() );
+				assertFalse( grant.pending() );
+				assertTrue( grant.released() );
+				assertEquals( 4, wakeups.get(), "close, Stop, proof, and callback completion all notify" );
+				grant.stopping( stopped );
+				assertEquals( 1, callbacks.get() );
+				try( Grant next = waiter.tryAcquire() ) {
+					assertNotNull( next, "cancellation failure is not uncertain fixture damage" );
+				}
+			}
+			finally {
+				callbackReturned.set( false );
+				waiter.cancel();
+				operation.complete();
+			}
+		}
+		finally {
+			owner.cancel();
+		}
+	}
+
 	/** A failing owner callback must not strand another factory's wakeup. */
 	@Test
 	void operationProofNotifiesEveryWaiterAndPreservesCallbackFailure() {
