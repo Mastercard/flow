@@ -50,7 +50,7 @@ class ServedIndexTest extends AbstractIndexTest {
 	 * Checks that the interaction diagram for a filtered flow list is show as
 	 * expected
 	 */
-	@Test
+	@org.junit.jupiter.api.RepeatedTest(30)
 	@DisabledIf(value = "java.awt.GraphicsEnvironment#isHeadless",
 			disabledReason = "mysterious failure in CI")
 	void filteredInteractions() {
