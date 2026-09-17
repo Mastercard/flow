@@ -641,14 +641,16 @@ class AbstractFlocessorTest {
 
 	/**
 	 * A binding error stops that publication but reporting still compares later
-	 * messages. Earlier writes and mutation side effects are never rolled back.
+	 * messages. Earlier writes and mutation side effects are never rolled back. The
+	 * operation-level fault sequences are proven in the API module's
+	 * DependenciesTest; this checks the caller's handling of a fault before any
+	 * write and of one after a partial write.
 	 *
 	 * @param reporting Immediate or accumulated mode
 	 * @param fault     The synchronous publication operation that fails
 	 */
 	@ParameterizedTest
-	@CsvSource({ "NEVER,peer", "NEVER,get", "NEVER,mutation", "NEVER,set", "NEVER,set-after",
-			"QUIETLY,peer", "QUIETLY,get", "QUIETLY,mutation", "QUIETLY,set", "QUIETLY,set-after" })
+	@CsvSource({ "NEVER,peer", "NEVER,set-after", "QUIETLY,peer", "QUIETLY,set-after" })
 	void publicationErrorRetainsEarlierWritesAndAccumulatesOnlyWhenConfigured( Reporting reporting,
 			String fault ) {
 		Thread caller = Thread.currentThread();
@@ -677,8 +679,6 @@ class AbstractFlocessorTest {
 						assertSame( caller, Thread.currentThread() );
 						int call = gets.incrementAndGet();
 						operations.add( "get" + call );
-						if( call == 2 && fault.equals( "get" ) )
-							throw original;
 						return "write" + call;
 					}
 				};
@@ -697,8 +697,6 @@ class AbstractFlocessorTest {
 				assertSame( caller, Thread.currentThread() );
 				int call = sets.incrementAndGet();
 				operations.add( "set" + call );
-				if( call == 2 && fault.equals( "set" ) )
-					throw original;
 				super.set( field, value );
 				if( call == 2 && fault.equals( "set-after" ) )
 					throw original;
@@ -714,10 +712,7 @@ class AbstractFlocessorTest {
 			for( int binding = 1; binding <= 3; binding++ ) {
 				f.dependency( producer, d -> d.from( i -> true, REQUEST, ".+" ).mutate( value -> {
 					assertSame( caller, Thread.currentThread() );
-					int call = mutations.incrementAndGet();
-					operations.add( "mutation" + call );
-					if( call == 2 && fault.equals( "mutation" ) )
-						throw original;
+					operations.add( "mutation" + mutations.incrementAndGet() );
 					return value;
 				} ).to( i -> true, REQUEST, ".+" ) );
 			}
@@ -771,19 +766,14 @@ class AbstractFlocessorTest {
 					() -> runner.process( producer ) );
 			assertSame( original, failure.getCause().getCause(),
 					"execution error outranks later comparison failure" );
-			assertEquals(
-					fault.equals( "peer" ) ? "initial" : fault.equals( "set-after" ) ? "write2" : "write1",
+			assertEquals( fault.equals( "peer" ) ? "initial" : "write2",
 					sink.root().request().assertable() );
 			assertEquals( reporting == Reporting.NEVER ? "response" : "later write",
 					sink.root().response().assertable() );
-			List<String> expected = new ArrayList<>( switch( fault ) {
-				case "peer" -> List.of( "body", "peer" );
-				case "get" -> List.of( "body", "peer", "get1", "mutation1", "set1", "get2" );
-				case "mutation" -> List.of( "body", "peer", "get1", "mutation1", "set1", "get2",
-						"mutation2" );
-				default -> List.of( "body", "peer", "get1", "mutation1", "set1", "get2", "mutation2",
-						"set2" );
-			} );
+			List<String> expected = new ArrayList<>( fault.equals( "peer" )
+					? List.of( "body", "peer" )
+					: List.of( "body", "peer", "get1", "mutation1", "set1", "get2", "mutation2",
+							"set2" ) );
 			if( reporting == Reporting.QUIETLY )
 				expected.add( "response" );
 			assertEquals( expected, operations, "no third binding, retry or replay" );

@@ -44,7 +44,6 @@ import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.Residue;
-import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.filter.Filter;
 import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.AssertedData;
@@ -69,8 +68,14 @@ import com.mastercard.test.flow.util.Flows;
  * Selection can rebuild dependency indexing; enumeration neither completes a
  * run nor closes a report or fixture.
  */
-abstract class FlowProcessor {
+class FlowProcessor {
 
+	/**
+	 * The adapter that owns this processor. It supplies the live statefulness
+	 * setting, the log source name and the framework-specific skip and comparison
+	 * behaviour.
+	 */
+	private final AbstractFlocessor<?> owner;
 	private FlowConfiguration config;
 	private final History history;
 	private Dependencies dependencies;
@@ -90,10 +95,12 @@ abstract class FlowProcessor {
 	private final AtomicInteger executions = new AtomicInteger();
 
 	/**
+	 * @param owner   The adapter that this processor works on behalf of
 	 * @param config  Configuration owned by the caller
 	 * @param history The one History shared with the adapter's result recording
 	 */
-	FlowProcessor( FlowConfiguration config, History history ) {
+	FlowProcessor( AbstractFlocessor<?> owner, FlowConfiguration config, History history ) {
+		this.owner = owner;
 		this.config = config;
 		this.history = history;
 	}
@@ -113,21 +120,21 @@ abstract class FlowProcessor {
 		contextDomain = domain;
 	}
 
-	/** @return The live statefulness setting of the caller */
-	abstract State statefulness();
-
-	/** @return The adapter's log source name */
-	abstract String logSource();
-
-	/** @param reason The framework-specific skip reason */
-	abstract void skip( String reason );
+	private String logSource() {
+		return owner.getClass().getName();
+	}
 
 	/**
+	 * Comparison on behalf of an {@link Assertion}, which has no reference to the
+	 * adapter.
+	 *
 	 * @param message  Description of the comparison
 	 * @param expected Expected content
 	 * @param actual   Observed content
 	 */
-	abstract void compare( String message, String expected, String actual );
+	void compare( String message, String expected, String actual ) {
+		owner.compare( message, expected, actual );
+	}
 
 	/** @return The live set of actors under test */
 	Set<Actor> system() {
@@ -328,12 +335,12 @@ abstract class FlowProcessor {
 				throw comparisonFailures.get( 0 );
 			}
 			if( !skipReasons.isEmpty() ) {
-				skip( skipReasons.get( 0 ) );
+				owner.skip( skipReasons.get( 0 ) );
 			}
 			if( assertionCount.get() == 0 ) {
 				// we're not really skipping anything here (we've already processed the flow),
 				// but this will make things more obvious to whatever is driving the test
-				skip( "No assertions made" );
+				owner.skip( "No assertions made" );
 			}
 		}
 
@@ -464,7 +471,7 @@ abstract class FlowProcessor {
 
 		private void reportAndSkip( Flow skipped, String reason ) {
 			try {
-				skip( reason );
+				owner.skip( reason );
 			}
 			catch( RuntimeException | Error primary ) {
 				preserving( primary, () -> reportSkip( skipped, reason ) );
@@ -586,7 +593,7 @@ abstract class FlowProcessor {
 								} );
 
 						assertionCount.incrementAndGet();
-						compare( String.format( "Residue '%s'", residue.name() ),
+						owner.compare( String.format( "Residue '%s'", residue.name() ),
 								cm.maskedExpect,
 								cm.maskedActual );
 					}
@@ -671,7 +678,7 @@ abstract class FlowProcessor {
 
 		// If the history suggests we're going to fail...
 		// (this could be missing flow dependencies or a failing basis)
-		history.skipReason( flow, statefulness(), config.systemUnderTest )
+		history.skipReason( flow, owner.statefulness, config.systemUnderTest )
 				.ifPresent( reportAndSkip );
 	}
 
@@ -844,7 +851,7 @@ abstract class FlowProcessor {
 					expected.assertable( config.masks ),
 					am.assertable( config.masks ) );
 			reportUpdate.accept( messages );
-			compare(
+			owner.compare(
 					String.format( "%s%n%s %s->%s %s %s",
 							flow.meta().id(), flow.meta().trace(),
 							interaction.requester(), interaction.responder(), interaction.tags(), type ),

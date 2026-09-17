@@ -6,6 +6,48 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Cleanup ticket 29 — shared processing and binding validation — 2026-09-17
+
+Applied against `1e6a8996` with the existing formatter, PIT 1.25.8 and unchanged
+thresholds (API 100/100, core 94/95). Provenance was classified against `main`
+(`483c5428`): every reduced test is branch-added; no main-existing fixture or
+assertion changed.
+
+- `FlowProcessor` is now concrete and collaborates directly with its owning
+  `AbstractFlocessor` instead of four abstract hooks implemented by a single
+  anonymous subclass. Live protected `statefulness`, the adapter class as log
+  source, and the subclass `skip`/`compare` overrides are read through the owner
+  at the same call sites; one package-private `compare` delegate remains because
+  `Assertion` calls it. Frozen prepared configuration, the shared `History`,
+  invocation-local evidence and legacy behaviour are unchanged and verified
+  through the existing legacy and prepared callers, not new dispatch tests.
+- `FlowAdmission.successorVisits()` is package-private; only the core complexity
+  oracle reads it, and that deterministic oracle is retained.
+- API `DependenciesTest`: the branch-added `peer` row was removed. Main's
+  `parseFailure` already proves the peer failure and its cause, and nothing can
+  execute after a `peer` fault; the get/mutation/set/set-after operation-level
+  rows remain with their original-cause, partial-write, caller-identity and
+  no-retry assertions. `parseFailure` itself is unchanged.
+- Core `AbstractFlocessorTest`: the ten caller-level fault/mode rows became four:
+  a before-publication (`peer`) and an after-partial-write (`set-after`) fault
+  under `NEVER` and `QUIETLY`. Those rows keep the accumulation-mode, later
+  publication/comparison, capture cleanup, report `ERROR` evidence, original-cause
+  identity and no-replay-on-completion checks; the removed get/mutation/set
+  rows differed only in the operation sequence, which the API test proves.
+
+Evidence (`C:/Data/Code/flow-ticket29-{before,after}*`): before — API 63 tests,
+164/164 mutants, 263/263 lines; core 386 tests (two existing skips), 1,404
+mutants, 1,288 detected (92%), 68 survived, 48 uncovered, 2,545/2,676 lines.
+After — API 62 tests, 164/164, 263/263 with identical individual mutants; core
+380 tests (two skips), 1,402 mutants, 1,286 detected (92%), 68 survived, 48
+uncovered, 2,542/2,673 lines. The per-mutant comparison shows the same
+surviving and uncovered mutants; the only differences are the four removed
+anonymous-hook mutants (replaced by equivalent killed mutants on
+`FlowProcessor`), renamed call targets, and killed/timed-out flips, which are
+both detections. The core gate was already failing 92 < 94 before this ticket
+and is not repaired or waived by it; this slice neither improved nor reduced
+sensitivity. No other module references the changed members.
+
 ## Correlated parallel log capture — 2026-09-17 (tickets 20–22, first delivery)
 
 Follow-up the same day: the parallel guard accepted only `Reporting.QUIETLY`, so a

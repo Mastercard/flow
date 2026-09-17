@@ -92,28 +92,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	protected AbstractFlocessor( String title, Model model, History history ) {
 		this.history = history;
 		config = new FlowConfiguration( title, model );
-		processor = new FlowProcessor( config, history ) {
-			@Override
-			State statefulness() {
-				// Keep the existing protected field live for legacy subclasses.
-				return statefulness;
-			}
-
-			@Override
-			String logSource() {
-				return AbstractFlocessor.this.getClass().getName();
-			}
-
-			@Override
-			void skip( String reason ) {
-				AbstractFlocessor.this.skip( reason );
-			}
-
-			@Override
-			void compare( String message, String expected, String actual ) {
-				AbstractFlocessor.this.compare( message, expected, actual );
-			}
-		};
+		processor = new FlowProcessor( this, config, history );
 	}
 
 	/**

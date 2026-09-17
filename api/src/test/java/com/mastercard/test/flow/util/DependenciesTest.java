@@ -127,11 +127,12 @@ class DependenciesTest {
 	/**
 	 * Synchronous failure retains earlier writes and even a setter's own partial
 	 * change. Repeated scheduling pairs must not erase any binding operation.
+	 * Parsing failure before any binding is covered by {@link #parseFailure()}.
 	 *
 	 * @param fault The operation that throws
 	 */
 	@ParameterizedTest
-	@ValueSource(strings = { "peer", "get", "mutation", "set", "set-after" })
+	@ValueSource(strings = { "get", "mutation", "set", "set-after" })
 	void publicationFaultsPreservePartialWritesAndOriginalCaller( String fault ) {
 		Mocks mocks = new Mocks();
 		Thread caller = Thread.currentThread();
@@ -146,8 +147,6 @@ class DependenciesTest {
 		Mockito.when( mocks.srcMsg.peer( mocks.actual ) ).thenAnswer( invocation -> {
 			assertSame( caller, Thread.currentThread() );
 			operations.add( "peer" );
-			if( fault.equals( "peer" ) )
-				throw original;
 			return mocks.peer;
 		} );
 		Mockito.when( mocks.peer.get( "source field" ) ).thenAnswer( invocation -> {
@@ -182,11 +181,8 @@ class DependenciesTest {
 		var failure = assertThrows( IllegalArgumentException.class,
 				() -> publisher.publish( mocks.src, mocks.srcNtr, mocks.srcMsg, mocks.actual ) );
 		assertSame( original, failure.getCause() );
-		assertEquals(
-				fault.equals( "peer" ) ? "initial" : fault.equals( "set-after" ) ? "value2" : "value1",
-				sink.get() );
+		assertEquals( fault.equals( "set-after" ) ? "value2" : "value1", sink.get() );
 		List<String> expected = switch( fault ) {
-			case "peer" -> List.of( "peer" );
 			case "get" -> List.of( "peer", "get1", "mutation1", "set1", "get2" );
 			case "mutation" -> List.of( "peer", "get1", "mutation1", "set1", "get2", "mutation2" );
 			default -> List.of( "peer", "get1", "mutation1", "set1", "get2", "mutation2", "set2" );

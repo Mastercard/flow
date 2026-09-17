@@ -1106,7 +1106,7 @@ public final class FlowAdmission {
 	/**
 	 * @return Direct-successor visits only, excluding planning and resource retries
 	 */
-	public long successorVisits() {
+	long successorVisits() {
 		synchronized( history ) {
 			return successorVisits;
 		}
