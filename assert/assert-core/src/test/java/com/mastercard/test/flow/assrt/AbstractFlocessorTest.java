@@ -8,6 +8,7 @@ import static com.mastercard.test.flow.util.Transmission.Type.RESPONSE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -33,10 +34,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -53,6 +56,7 @@ import com.mastercard.test.flow.assrt.mock.TestResidue;
 import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.msg.txt.Text;
 import com.mastercard.test.flow.report.Reader;
+import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.Entry;
 import com.mastercard.test.flow.report.data.FlowData;
 import com.mastercard.test.flow.report.data.Index;
@@ -64,6 +68,97 @@ import com.mastercard.test.flow.util.Option.Temporary;
  */
 @SuppressWarnings("static-method")
 class AbstractFlocessorTest {
+	/**
+	 * Safe detachment clears run results, but is not report completion or fixture
+	 * work.
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void safeDetachmentIsTerminalAndDoesNotPublish( boolean execute, @TempDir Path directory ) {
+		AtomicInteger bodies = new AtomicInteger();
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() ) ) {
+			TestFlocessor runner = new TestFlocessor( "detached processing", TestModel.abc() )
+					.system( State.LESS, B ).reporting( Reporting.QUIETLY );
+			runner.behaviour( a -> {
+				bodies.incrementAndGet();
+				assertEquals( "Cannot detach active Flow processing",
+						assertThrows( IllegalStateException.class, runner::detachProcessing ).getMessage() );
+				a.actual().response( "B response to A".getBytes( UTF_8 ) );
+			} );
+			runner.finalOnlyReporting();
+			try {
+				Flow flow;
+				try( var prepared = runner.prepareFlows() ) {
+					flow = prepared.findFirst().orElseThrow();
+				}
+				if( execute ) {
+					runner.execute();
+					assertEquals( History.Result.SUCCESS, runner.history.get( flow ), runner::events );
+					assertFalse( Files.exists( runner.report().resolve( Writer.INDEX_FILE_NAME ) ) );
+				}
+				runner.detachProcessing();
+				assertEquals( History.Result.PENDING, runner.history.get( flow ) );
+				assertEquals( "Flow processing is closed",
+						assertThrows( IllegalStateException.class, () -> runner.process( flow ) )
+								.getMessage() );
+				assertEquals( execute ? 1 : 0, bodies.get() );
+				if( execute )
+					assertFalse( Files.exists( runner.report().resolve( Writer.INDEX_FILE_NAME ) ) );
+				else
+					assertNull( runner.report() );
+			}
+			finally {
+				runner.detachProcessing();
+			}
+		}
+	}
+
+	/** A prepared subclass can reject every inherited fluent mutation. */
+	@ParameterizedTest
+	@ValueSource(strings = { "reporting", "masking", "system", "autonomous", "applicators",
+			"checkers", "logs", "listening", "filtering", "exercising", "behaviour", "motivation" })
+	void preparedSubclassGuardsInheritedConfiguration( String setting ) {
+		AtomicBoolean prepared = new AtomicBoolean();
+		var rejection = new IllegalStateException( "configuration is frozen" );
+		Consumer<TestFlocessor> configure = switch( setting ) {
+			case "reporting" -> runner -> runner.reporting( Reporting.NEVER );
+			case "masking" -> runner -> runner.masking( CheckerTest.Nprdct.DIGITS );
+			case "system" -> runner -> runner.system( State.FUL, B );
+			case "autonomous" -> runner -> runner.autonomous( B );
+			case "applicators" -> runner -> runner.applicators( ApplicatorTest.APPLICATOR );
+			case "checkers" -> runner -> runner.checkers( new CheckerTest.TestChecker() );
+			case "logs" -> runner -> runner.logs( LogCapture.NO_OP );
+			case "listening" -> runner -> runner.listening( new Listener() {
+			} );
+			case "filtering" -> runner -> runner.filtering( filter -> {
+			} );
+			case "exercising" -> runner -> runner.exercising( flow -> true, ignored -> {
+			} );
+			case "behaviour" -> runner -> runner.behaviour( a -> a.actual()
+					.response( "B response to A".getBytes( UTF_8 ) ) );
+			case "motivation" -> runner -> runner.motivation( ( text, assertion ) -> text );
+			default -> throw new AssertionError( setting );
+		};
+		try( TestFlocessor runner = new TestFlocessor( "guarded configuration", TestModel.abc() ) {
+			@Override
+			protected void beforeConfiguration() {
+				if( prepared.get() )
+					throw rejection;
+			}
+		}.system( State.FUL, B ) ) {
+			configure.accept( runner );
+			try( var flows = runner.prepareFlows() ) {
+				assertEquals( 1, flows.count() );
+			}
+			prepared.set( true );
+			assertSame( rejection,
+					assertThrows( IllegalStateException.class, () -> configure.accept( runner ) ) );
+			assertEquals( Set.of( B ), runner.system(),
+					"rejected mutation retains the configured scope" );
+			assertEquals( "", runner.events(), "configuration must not invoke processing" );
+		}
+	}
+
 	/**
 	 * The shared prepared seam snapshots registrations even though this legacy test
 	 * adapter still permits mutation of its original configuration.
@@ -153,8 +248,9 @@ class AbstractFlocessorTest {
 			"FAILURES,false,false", "FAILURES,true,false" })
 	void nativeReportingRequiresSupportedCompletionOwnership( Reporting mode, boolean finalOnly,
 			boolean supported ) {
-		try( TestFlocessor runner = new TestFlocessor( "native reporting guard", TestModel.abc() )
-				.reporting( mode ) ) {
+		TestFlocessor runner = new TestFlocessor( "native reporting guard", TestModel.abc() )
+				.reporting( mode );
+		try {
 			if( finalOnly )
 				runner.finalOnlyReporting();
 			if( supported )
@@ -163,6 +259,11 @@ class AbstractFlocessorTest {
 				assertThrows( IllegalStateException.class, runner::requireIndependentTracerConfiguration );
 			assertNull( runner.report(), "authorization alone must not initialize reporting" );
 		}
+		finally {
+			// Authorization does not own completion: do not publish/open an empty report.
+			runner.detachProcessing();
+		}
+		assertNull( runner.report(), "authorization cleanup must not initialize reporting" );
 	}
 
 	/**

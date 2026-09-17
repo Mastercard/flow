@@ -82,6 +82,18 @@ class SysOutTest {
 				"PrintStream original = System.err;",
 				"System.setErr( captured );",
 				"System.setErr( original );" );
+		// Core report-fault tests likewise capture and restore the required diagnostic.
+		accept( "../assert/assert-core/src/test/java/com/mastercard/test/flow/assrt/"
+				+ "ReportingTest.java",
+				"PrintStream original = System.err;" );
+		// This external Launcher command exposes native outcomes to its shell gate.
+		accept( "../assert/assert-junit5/src/it/packaged-consumer/src/test/java/consumer/"
+				+ "ReportCommand.java",
+				"result.printTo( new PrintWriter( System.out, true ) );",
+				"result.printFailuresTo( new PrintWriter( System.out, true ) );",
+				"System.out.println( \"REPORT-NATIVE started=\" + result.getTestsStartedCount()",
+				"System.out.println( \"REPORT-ROOT \" + root.toAbsolutePath() );",
+				"System.out.println( \"REPORT-CHECK fault=\" + FAULT + \" mixed=\" + MIXED" );
 	}
 
 	private static void accept( String file, String... line ) {
