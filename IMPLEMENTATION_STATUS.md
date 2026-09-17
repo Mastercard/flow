@@ -6,6 +6,60 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Cleanup ticket 30 — native validation duplication — 2026-09-18
+
+Applied against `00fc0d55` with the existing formatter, PIT 1.25.8 and the
+unchanged Jupiter 82/97 thresholds. Every reduced test is branch-added:
+provenance was checked against `main` (`483c5428`), whose `assert-junit5`
+module contains only `Flocessor` and three small test classes, none of which
+changed.
+
+- `PreparedFlowLifecycleTest.descriptionsArePureAndOnlyTheOwnedNativeRunCanProcessThem`
+  removed: `retainedDescriptionDetachesTheHeavyExecutionGraph` runs the same
+  `PureFactory` (preparation-purity assertions, nine real bodies,
+  post-completion rejection) and adds the graph-detachment check.
+- `FlowParallelBindingTest.missingEarlyHookRejectsBeforeTheOriginalFactory` and
+  its `nohook` fixture branch removed: the bridge's
+  `missingEarlyHookCannotBeRepairedByALateRequestParameter` proves the same
+  `receiver` rejection plus the handshake receipt, no factory and no body entry.
+  The packaged provider-free/no-hook controls are untouched.
+- `selectedBasesPreserveSerialHistoryWithoutBlockingUnrelatedWork` now runs
+  serial target 2 and parallel 12/20 only; serial ownership never enters
+  `FlowNativeProfile`, so targets 1 and 5 were identical executions.
+- `bindingAndSuccessorFinishWhileIndependentCRemainsActive` is parameterised
+  over targets 4 and 12, retaining the stronger assertion set (ordering,
+  binding, durations, restoration, class sources, detached backstop) for both
+  profiles; `suppliedTwelveTargetTwentyCapPreservesRealFlowOwnership` removed.
+- `FlowParallelRuntime` removed with its `SysOutTest` console exemption: its
+  hardcoded 13-case completeness check no longer matched the selected suites
+  (38 cases) and nothing referenced it. `SysOutTest` passes (556 files).
+- Legacy/prepared result classification stays separate: `Flocessor.processFlow`
+  is main-existing and records History inside each catch, while
+  `PreparedFlocessor.processSelected` defers to a finally block with a fatal
+  path; sharing would restructure main code for two near-identical blocks.
+- `busyTargetTwoMakesRealInlineProgressAndRestoresContextOnReuse` is
+  **temporarily `@Disabled`** at the owner's direction: under PIT it reproduced
+  the deferred native idle-worker stall (factory in `FlowAdmission.next`, other
+  worker idle) and hung minions for 23 and 57 minutes in the first attempt. It
+  is not a reduction; it must be re-enabled when that TODO is resolved.
+
+Evidence (`C:/Data/Code/flow-ticket30-{main,branch-pre,after}*`): main
+(`483c5428`, isolated Maven repository) — 6 tests, 22 `Flocessor` mutants, 19
+killed (86%), 67/69 lines (97%). Branch before this ticket — 308 tests (1
+skip), 866 mutants, 644 killed (74%), 1,407/1,575 lines (89%). After — 306
+tests (1 skip), 866 mutants, 640 killed (74%), 1,407/1,575 lines (89%). Both
+branch runs report 0 `RUN_ERROR`; the abandoned first attempt's stall stacks
+are under `flow-ticket30-before-ABANDONED`. `Flocessor` outcomes are identical
+to main plus one killed mutant on the branch-added `close()`. Against the
+branch, 42 mutants changed status, all `TIMED_OUT`↔`SURVIVED`/`KILLED` flips in
+classes the removed tests do not exercise (`FlowNativeCall`,
+`FlowParallelOwner`, `FlowNativeProfile`, `FlowExtension`, …); the two
+`KILLED`→`SURVIVED` flips in `FlowExecution$1.tryAdvance` were killed before by
+`SerialCleanupTest` and `PreparedCaptureTest`, both unchanged and still run
+against those mutants. The Jupiter gate (74 < 82) was failing before this
+ticket and is neither repaired nor waived. The owner accepted committing on
+this evidence, with tests to be restored if a coverage gap is later shown.
+
 ## Cleanup ticket 31 — retained reporting and its tests — 2026-09-17
 
 Applied against `6c737a57` with the existing formatter, PIT 1.25.8 and the

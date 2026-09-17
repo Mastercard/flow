@@ -52,8 +52,8 @@ class SysOutTest {
 				"System.err.println( diagnostic );" );
 		// Standalone compatibility runners deliberately print their native test
 		// summaries and failures for the same-binary, cross-runtime evidence logs.
-		for( String runner : new String[] { "FlowLauncherBridgeRuntime", "FlowNativeProfileRuntime",
-				"FlowParallelRuntime" } ) {
+		for( String runner : new String[] { "FlowLauncherBridgeRuntime",
+				"FlowNativeProfileRuntime" } ) {
 			accept( "../assert/assert-junit5/src/test/java/com/mastercard/test/flow/assrt/junit5/"
 					+ runner + ".java",
 					"listener.getSummary().printTo( new PrintWriter( System.out, true ) );",

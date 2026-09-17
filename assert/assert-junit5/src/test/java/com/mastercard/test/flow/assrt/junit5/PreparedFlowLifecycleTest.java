@@ -206,7 +206,9 @@ class PreparedFlowLifecycleTest {
 	}
 
 	/**
-	 * Verifies that retained descriptions release the completed execution graph.
+	 * Verifies that description creation is inert, that only the owned native run
+	 * can process descriptions, and that retained descriptions release the
+	 * completed execution graph.
 	 *
 	 * @throws Exception If reflective inspection of the retained graph fails
 	 */
@@ -240,18 +242,6 @@ class PreparedFlowLifecycleTest {
 				}
 			}
 		}
-	}
-
-	/**
-	 * Verifies that description creation is inert and execution requires ownership.
-	 */
-	@Test
-	void descriptionsArePureAndOnlyTheOwnedNativeRunCanProcessThem() {
-		PureFactory.bodies = 0;
-		List<Throwable> failures = launch( PureFactory.class );
-		assertEquals( List.of(), failures );
-		assertEquals( 9, PureFactory.bodies );
-		assertThrows( IllegalStateException.class, () -> PureFactory.saved.getExecutable().execute() );
 	}
 
 	/**
