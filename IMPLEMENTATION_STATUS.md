@@ -75,14 +75,10 @@ After the successful consuming-repository trial, the owner has reordered the
 remaining work. This changes sequence only; no gate, oracle or deferred scope
 is waived or redefined by this note.
 
-1. **Parallel per-flow log capture (tickets 20, 21, 22) — now required.**
-   Currently `requireIndependentTracerConfiguration()` rejects any capture other
-   than `LogCapture.NO_OP` in parallel mode, so consumers must disable capture
-   and rely on external logging. The owner needs captured logs in parallel
-   reports. Resume 20's remaining execution-scope items first, then 21's
-   correlation-aware bounded collector, then 22's incremental file source, under
-   their existing checklists: correlation identity, not thread/time guessing;
-   finite budgets; no second body executor; serial capture unchanged.
+1. **Parallel per-flow log capture (tickets 20, 21, 22) — delivered 2026-09-17**
+   in commit `7434b77b` (see the section above). Correlation identity, not
+   thread/time guessing; finite budgets; no second body executor; serial capture
+   unchanged.
 2. **Deferred cleanup (tickets 29–32)** — the user-trial prerequisite is met;
    proceed with fresh before/after regression and mutation evidence per ticket.
 3. **Direct Surefire host** — agreed plan: capture the exact Surefire 3.6.0
@@ -95,6 +91,9 @@ is waived or redefined by this note.
 4. **Native scheduling stall** — remains deferred TODO (see below).
 5. Remaining acceptance (Jupiter PIT 82/97, IntelliJ Debug/selection/Stop,
    ticket 25 combined evidence, ticket 27 adoption) follows the above.
+6. **Logging-backend appender examples (new ticket 34)** — logback/log4j2
+   `CorrelatedCapture` adapters with one concurrent test each; nice to have,
+   explicitly last. No backend dependency is added to `assert-core`.
 
 ## Current priority: native stall deferred — 2026-09-17
 
