@@ -1,5 +1,7 @@
 package com.mastercard.test.flow.assrt.junit5;
 
+import static org.junit.platform.engine.discovery.DiscoverySelectors.selectMethod;
+
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -281,9 +283,16 @@ final class FlowParallelOwner implements FlowNativeCall.Observer {
 		if( actual instanceof ClassSource )
 			return "class".equals( expected.getScheme() )
 					&& ClassSource.from( expected ).equals( actual );
-		if( actual instanceof MethodSource method )
+		if( actual instanceof MethodSource method ) {
+			if( "method".equals( expected.getScheme() ) ) {
+				var selected = selectMethod(
+						expected.getSchemeSpecificPart() + "#" + expected.getFragment() );
+				return MethodSource.from( selected.getClassName(), selected.getMethodName(),
+						selected.getParameterTypeNames() ).equals( method );
+			}
 			return "class".equals( expected.getScheme() )
 					&& ClassSource.from( expected ).getClassName().equals( method.getClassName() );
+		}
 		if( actual instanceof UriSource uri )
 			return expected.equals( uri.getUri() );
 		return true;

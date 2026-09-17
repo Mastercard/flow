@@ -6,6 +6,50 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Native method-source compatibility — 2026-09-17
+
+A real Launcher regression exposed a remaining ticket-33 compatibility defect:
+an explicit method URI produced a native MethodSource, but the source guard only
+accepted class-scheme expectations for that source type. The shallow correction
+uses JUnit's public method-selector parser and compares the resulting full method
+identity. Existing class-source fallback, absent-source tolerance and native
+unique-ID, parent, display-name and executable ownership checks remain unchanged.
+There is no metadata rewriting, alternate identity subsystem or scheduler change.
+
+The trace-form test now executes seven real Flow leaves and verifies preserved
+method navigation and original trace text. Five receiver-seam cases replay genuine
+native identity with matching, absent or substituted method-source evidence.
+Matching/absent evidence permits the body; changing the class, method name or
+parameter signature rejects it before SUT entry. The original compatibility case
+failed before the correction; all six cases pass afterwards, as does the existing
+substituted-class-source regression. Same compiled production/test classes also
+passed six cases on each coherent cached runtime: Jupiter 5.10.0/Platform 1.10.0
+and Jupiter/Platform 6.0.3, with actual loaded JAR paths checked. Expected rejected
+evidence produces stopped-cleanup diagnostics on the older runtime, not outer test
+failures. Independent Standards and Spec reviews found no actionable issues.
+
+The uninterrupted 42-project install completed in 12m48s. Fresh reactor XML
+records 2,950 cases across 191 suites, seven failures, zero errors and 21 skips.
+Core completed 369 cases with its two existing skips; Jupiter passed all 306 cases.
+Only the documentation module failed: the same six imported-skill link checks and
+one historical root analysis property check remain visible. This is not a green
+full-reactor result, and zero-case example summaries are not native host acceptance.
+
+All four refreshed packaged-consumer points passed (two outer cases each), as did
+all 16 external report-command points with their expected native outcomes and exits.
+The same six source regressions then passed on both JUnit generations using only
+the installed adapter JAR for production classes, with its loaded location checked.
+Built and installed core/adapter JAR SHA-256 values matched. No scratch harness was
+executed. No fresh PIT measurement is claimed: the unchanged core's earlier 94/95
+result remains historical evidence; native progress, direct Surefire hosting,
+remaining mutation/acceptance gates and the human consumer trial remain open.
+
+Current logs use the `flow-ticket33-method-` prefix under `C:/Data/Code/`. The
+separate `method-source-evidence.tar.gz` archive in
+`C:/Data/Code/flow-ticket25-acceptance-20260917/` preserves this slice's source,
+fresh reactor XML, packaged evidence, artifacts and logs without replacing earlier
+snapshots. The unrelated packaged-consumer source edit remains untouched.
+
 ## Core lifecycle gate and packaged refresh — 2026-09-17
 
 Fourteen new shared-core cases verify the inherited configuration guard and safe
