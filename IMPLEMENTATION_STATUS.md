@@ -6,6 +6,33 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Successful consuming-repository trial — 2026-09-17
+
+The user reports that their local consuming-workload test now passes in about
+3 minutes, compared with about 53 minutes previously, and that no trace-to-addenda
+migration was required. They confirm validation is good for their use case. This
+completes the previously outstanding user trial/assessment for that use case; it
+must not continue to be listed as unavailable. These are user-reported timings,
+not an independently measured benchmark or a general performance guarantee.
+Exact selected/outcome totals, repetitions and final loaded-artifact provenance
+were not supplied with this confirmation, so none are inferred here.
+
+The earlier consumer Writer linkage-error investigation is superseded by this
+successful user report, not by an agent-applied consumer dependency correction.
+No further edits to either consuming repository are needed for that investigation.
+Existing serial/reporting behavior, external logging and the absence of required
+trace migration remain the supported direction; parallel per-flow capture is
+still deferred.
+
+Next retained work is the reproduced native-progress stall, then a complete
+Jupiter mutation result and remaining focused host/integration acceptance. The
+successful workload run does not resolve that intermittent library reproducer or
+the separate direct-Surefire issue. It does not certify unreported IntelliJ
+Debug/selection/Stop actions or authorize release/adoption. Cleanup 29–32 remains
+after retained functional completion and any functional feedback; the user-trial
+prerequisite itself is now satisfied. Historical entries below retain their
+original evidence and are superseded on the user-trial status by this section.
+
 ## Native method-source compatibility — 2026-09-17
 
 A real Launcher regression exposed a remaining ticket-33 compatibility defect:
