@@ -33,6 +33,67 @@ after retained functional completion and any functional feedback; the user-trial
 prerequisite itself is now satisfied. Historical entries below retain their
 original evidence and are superseded on the user-trial status by this section.
 
+## Native progress: prerequisite-only helper rejected — 2026-09-17
+
+After recording the successful user trial, the retained three-flow Launcher
+reproducer was restored at the existing native test seam. With unchanged
+production code it failed its bounded coordination check in 5.93 seconds: one
+worker holds independent work while the only queued prerequisite cannot progress.
+No scratch harness or consuming SUT workload was executed by the agent.
+
+A narrower candidate tracked actual registered/unstarted leaves and permitted
+factory-side help for a lone predecessor with selected successors, retaining the
+existing wide-backlog behavior. The reproducer and independent-progress checks
+at four workers and the reference 12/20 profile passed (three cases). The core
+admission suite passed 124 cases, including duplicate-registration/start lifecycle
+coverage. The wider native contract run nevertheless failed six of 233 cases:
+five fixture-cancellation checks and the previously observed busy-chain terminal
+listener-order assertion. All 77 native-resource and 18 stop-budget cases passed.
+
+The five cancellation failures timed out waiting for cancellation callbacks while
+native cleanup was deliberately held. A prerequisite can itself retain native
+cleanup on the factory stack; being a predecessor does not establish that inline
+execution returns in time for factory-owned cancellation-query observation. The
+JUnit 6.0.3 public CancellationToken API offers query/cancel, not a notification
+subscription to replace that observation. The listener-order failure is recorded
+separately; it does not establish the cause of the readiness stall.
+
+This candidate is rejected, not a production fix. All four edited source/test
+files were restored exactly to the committed baseline before revalidation. The
+new candidate-only tests and implementation are retained in
+`C:/Data/Code/flow-ticket25-acceptance-20260917/native-single-predecessor-rejected.tar.gz`
+(SHA-256 `b7d2affb3e4d0a35ae07e25ccd76e711e009437b7862307e160a08086e8f7158`).
+Logs use the `flow-native-progress-followup-` prefix under `C:/Data/Code/`;
+interrupted attempts are distinct from the completed contract run. There is no
+new PIT score and no permission to weaken cancellation, hide the bounded red
+case, force-release ownership or substitute another body executor. A native-wait
+solution must preserve reachable cancellation observation as well as readiness.
+
+Rollback validation completed in stages. The initial 42-project run ended after
+the report module's 168 cases, before completion of packaging. The first resume
+failed a GUI-test cleanup because Windows reported a generated JavaScript file
+in use by another process; that failure is preserved separately. The unchanged
+filter suite passed all 72 cases with its two existing skips on the next resume.
+No unrelated process was stopped or environment repair applied.
+
+The final combined fresh reactor XML contains 2,950 cases across 191 suites:
+seven failures, zero errors and 21 skips. Only the same six imported-skill link
+checks and historical analysis property check failed, all in the documentation
+module (1,212 cases). This is neither an uninterrupted nor a green full-reactor
+result. Both the separate rollback install and the final resumed run completed
+the core's 369 cases with two existing skips and all 306 Jupiter cases without
+failures or errors. Passing restored tests do not resolve the bounded stall.
+Built and installed core/adapter JAR hashes match; the unrelated consumer-probe
+edit is unchanged. Final source, XML, JARs and logs are retained separately in
+`native-single-predecessor-restored.tar.gz` in the same evidence directory; the
+earlier GUI failure is in `native-followup-restored-gui-lock.tar.gz`.
+
+Standards and Spec reviews found no actionable issues in this investigation
+record. Tickets 19/25 retain the existing cancellation design and prohibit new
+broader machinery. A proposal to observe cancellation independently of the
+enumerating factory therefore needs an explicit scope decision before coding;
+no such redesign or new mutation acceptance is claimed here.
+
 ## Native method-source compatibility — 2026-09-17
 
 A real Launcher regression exposed a remaining ticket-33 compatibility defect:
