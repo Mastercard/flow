@@ -47,8 +47,6 @@ class WriterPublicationTest {
 		assertEquals( indexing == Indexing.IMMEDIATE ? 14 : 4, files.indexEntries );
 		assertEquals( 5, files.detailWrites );
 		assertEquals( indexing == Indexing.FINAL_ONLY ? 1 : 0, files.diagnosticWrites );
-		assertTrue( files.indexBytes > 0 );
-		assertTrue( files.detailBytes > 0 );
 	}
 
 	/**

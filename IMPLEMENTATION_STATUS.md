@@ -6,6 +6,44 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Cleanup ticket 31 — retained reporting and its tests — 2026-09-17
+
+Applied against `6c737a57` with the existing formatter, PIT 1.25.8 and the
+unchanged report-core 90/90 thresholds. Provenance was classified against
+`main` (`483c5428`): every report-core file touched here is branch-added;
+main's `WriterTest` (including `basisChaining`) is unchanged.
+
+- `Writer.correctFinalLinks` now resolves report membership and the nearest
+  present basis, then delegates the per-entry rewrite to the new package-private
+  `IndexedFlowData.correctSerializedLinks`, which already owns the last
+  serialized basis/dependency state. No replacement abstraction; the rename,
+  basis and dependency correction, single corrective rewrite and last-snapshot
+  read are unchanged.
+- The `indexBytes`/`detailBytes` counters and their two positivity assertions
+  were removed from the branch-added `CountingReportFiles`/`indexWork`. Parsed
+  index entry counts, detail/index/diagnostic write counts and `Reader` reads of
+  those files already subsume them; no size or complexity assertion consumed
+  the byte totals.
+
+Retained after evaluation: `missingBasesSnapshot` (its detachment and
+outer-map/inner-list immutability assertions are unique and already minimal);
+the `finalOnly` lifecycle test alongside `indexWork`'s `FINAL_ONLY` row (one
+observes through `Reader`, the other counts filesystem writes — folding them
+would add mode conditionals without removing an oracle); `ReportTestUtilTest`
+(two cases, no duplicated replacement or timestamp setup found beyond the
+shared helper); the `ReportFiles` fault-injection seam. Core (`assert-core`) is
+not touched by this ticket, so its 94/95 gate state is unchanged from ticket 29.
+
+Evidence (`C:/Data/Code/flow-ticket31-{branch-pre,after}*`): before — 168
+tests (16 existing symlink skips on this host), 233 mutants, 213 killed (91%),
+578/620 lines (93%). After — 168 tests (16 skips), 234 mutants, 215 killed
+(92%), 581/623 lines (93%). Per-mutant comparison: the `correctFinalLinks`
+lambda mutants reappear with identical killed outcomes on
+`correctSerializedLinks`, plus one new killed mutant for the delegation call;
+remaining differences are lambda renumbering and two flips toward detection
+(a `QuietFiles` survivor and a `Reader.mostRecent` timeout, both order-dependent
+and both now killed). No mutant lost sensitivity. Both runs meet 90/90.
+
 ## Cleanup ticket 29 — shared processing and binding validation — 2026-09-17
 
 Applied against `1e6a8996` with the existing formatter, PIT 1.25.8 and unchanged

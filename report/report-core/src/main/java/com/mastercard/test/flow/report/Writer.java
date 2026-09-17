@@ -26,6 +26,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -344,31 +345,9 @@ public class Writer implements AutoCloseable {
 		Map<Flow, Flow> resolved = new HashMap<>();
 		data.forEach( ( flow, indexed ) -> {
 			Flow nearest = nearestPresent( bases.get( flow ), resolved );
-			String basis = nearest == null ? null : data.get( nearest ).indexEntry().detail;
-			Map<String, String> renamed = new HashMap<>();
-			indexed.dependencySources.forEach( ( path, source ) -> {
-				IndexedFlowData present = data.get( source );
-				if( present != null && indexed.serializedDependencies.contains( path )
-						&& !path.equals( present.indexEntry().detail ) ) {
-					renamed.put( path, present.indexEntry().detail );
-				}
-			} );
-			if( !Objects.equals( indexed.serializedBasis, basis ) || !renamed.isEmpty() ) {
-				Path path = root.resolve( DETAIL_DIR_NAME )
-						.resolve( indexed.indexEntry().detail + ".html" );
-				// The file is the last successful serialized snapshot. No second full
-				// payload is retained and no live execution callback is read again.
-				ObjectNode snapshot = Template.extract(
-						new String( QuietFiles.readAllBytes( path ), UTF_8 ),
-						ObjectNode.class );
-				snapshot.put( "basis", basis );
-				ObjectNode dependencies = (ObjectNode) snapshot.get( "dependencies" );
-				Map<String, JsonNode> moved = new HashMap<>();
-				renamed.forEach(
-						( oldPath, newPath ) -> moved.put( newPath, dependencies.remove( oldPath ) ) );
-				moved.forEach( dependencies::set );
-				app.write( snapshot, path );
-			}
+			indexed.correctSerializedLinks(
+					nearest == null ? null : data.get( nearest ).indexEntry().detail,
+					data::get, root, app );
 		} );
 	}
 
@@ -621,6 +600,45 @@ public class Writer implements AutoCloseable {
 					.resolve( indexEntry().detail + ".html" ) );
 			serializedBasis = detail.basis;
 			serializedDependencies = new HashSet<>( detail.dependencies.keySet() );
+		}
+
+		/**
+		 * Rewrites the last serialized detail when the resolved basis differs from what
+		 * was written, or when a serialized dependency's source has since been renamed
+		 * within the report.
+		 *
+		 * @param basis   Detail filename of the nearest basis present in the report, or
+		 *                null
+		 * @param present Looks up the current data for a flow in the report
+		 * @param root    The report root directory
+		 * @param app     The application
+		 */
+		void correctSerializedLinks( String basis, Function<Flow, IndexedFlowData> present,
+				Path root, JsApp app ) {
+			Map<String, String> renamed = new HashMap<>();
+			dependencySources.forEach( ( path, source ) -> {
+				IndexedFlowData owner = present.apply( source );
+				if( owner != null && serializedDependencies.contains( path )
+						&& !path.equals( owner.indexEntry().detail ) ) {
+					renamed.put( path, owner.indexEntry().detail );
+				}
+			} );
+			if( Objects.equals( serializedBasis, basis ) && renamed.isEmpty() ) {
+				return;
+			}
+			Path path = root.resolve( DETAIL_DIR_NAME ).resolve( indexEntry().detail + ".html" );
+			// The file is the last successful serialized snapshot. No second full
+			// payload is retained and no live execution callback is read again.
+			ObjectNode snapshot = Template.extract(
+					new String( QuietFiles.readAllBytes( path ), UTF_8 ),
+					ObjectNode.class );
+			snapshot.put( "basis", basis );
+			ObjectNode dependencies = (ObjectNode) snapshot.get( "dependencies" );
+			Map<String, JsonNode> moved = new HashMap<>();
+			renamed.forEach(
+					( oldPath, newPath ) -> moved.put( newPath, dependencies.remove( oldPath ) ) );
+			moved.forEach( dependencies::set );
+			app.write( snapshot, path );
 		}
 	}
 

@@ -21,10 +21,6 @@ class CountingReportFiles extends ReportFiles {
 	int detailWrites;
 	/** Number of complete diagnostic companions written. */
 	int diagnosticWrites;
-	/** Bytes written in complete index files. */
-	long indexBytes;
-	/** Bytes written in complete detail files. */
-	long detailBytes;
 
 	@Override
 	OutputStream open( Path path ) throws IOException {
@@ -42,11 +38,9 @@ class CountingReportFiles extends ReportFiles {
 				}
 				else if( path.getParent().getFileName().toString().equals( Writer.DETAIL_DIR_NAME ) ) {
 					detailWrites++;
-					detailBytes += Files.size( path );
 				}
 				else {
 					indexWrites++;
-					indexBytes += Files.size( path );
 					indexEntries += Template.extract( Files.readString( path ), Index.class ).entries.size();
 				}
 			}
