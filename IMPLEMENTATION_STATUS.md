@@ -6,6 +6,33 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Current priority — owner decision 2026-09-17 (supersedes the order below)
+
+After the successful consuming-repository trial, the owner has reordered the
+remaining work. This changes sequence only; no gate, oracle or deferred scope
+is waived or redefined by this note.
+
+1. **Parallel per-flow log capture (tickets 20, 21, 22) — now required.**
+   Currently `requireIndependentTracerConfiguration()` rejects any capture other
+   than `LogCapture.NO_OP` in parallel mode, so consumers must disable capture
+   and rely on external logging. The owner needs captured logs in parallel
+   reports. Resume 20's remaining execution-scope items first, then 21's
+   correlation-aware bounded collector, then 22's incremental file source, under
+   their existing checklists: correlation identity, not thread/time guessing;
+   finite budgets; no second body executor; serial capture unchanged.
+2. **Deferred cleanup (tickets 29–32)** — the user-trial prerequisite is met;
+   proceed with fresh before/after regression and mutation evidence per ticket.
+3. **Direct Surefire host** — agreed plan: capture the exact Surefire 3.6.0
+   discovery request in the packaged consumer; add a red test for its rejection;
+   narrow the `FlowNativeCall` guard to accept selectors/filters that still
+   resolve to exactly one top-level `@FlowTest` class with its sole factory,
+   rejecting everything else; verify serial/parallel counts under 3.6.0; document
+   that 3.5.3 undercounts cross-class dynamic sources (pre-existing on main).
+   No arbitrary filter allowance, no metadata rewrite, no `failIfNoTests` change.
+4. **Native scheduling stall** — remains deferred TODO (see below).
+5. Remaining acceptance (Jupiter PIT 82/97, IntelliJ Debug/selection/Stop,
+   ticket 25 combined evidence, ticket 27 adoption) follows the above.
+
 ## Current priority: native stall deferred — 2026-09-17
 
 The user has requested that the scheduling investigation remain TODO work while
