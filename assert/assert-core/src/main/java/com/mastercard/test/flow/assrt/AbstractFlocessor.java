@@ -402,13 +402,13 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	/**
 	 * Temporary real-native tracer guard, not general parallel authorization.
 	 * Interval-attributed capture and replay remain guarded; correlated capture is
-	 * supported. Prepared quiet reports use completion-owned final-only
-	 * publication. Applied contexts and residue require explicit actual fixture
-	 * ownership.
+	 * supported. Any writing report mode is supported when publication is
+	 * completion-owned: the report is published once at completion and, for
+	 * {@link Reporting#ALWAYS}/{@link Reporting#FAILURES}, opened then. Applied
+	 * contexts and residue require explicit actual fixture ownership.
 	 */
 	protected final void requireIndependentTracerConfiguration() {
-		boolean unsupportedReporting = config.reporting != Reporting.NEVER
-				&& (!config.finalOnlyReporting || config.reporting != Reporting.QUIETLY);
+		boolean unsupportedReporting = config.reporting.writing() && !config.finalOnlyReporting;
 		if( config.logCapture != LogCapture.NO_OP ) {
 			throw new IllegalStateException(
 					"Flow parallel tracer cannot attribute interval-based LogCapture to concurrent flows; "
@@ -418,7 +418,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 				|| config.replay.hasData() || !ownedContext && (!config.applicators.isEmpty()
 						|| !config.checkers.isEmpty() || !config.autonomous.isEmpty()) ) {
 			throw new IllegalStateException(
-					"Flow parallel tracer requires reporting NEVER or final-only QUIETLY, "
+					"Flow parallel tracer requires completion-owned reporting, "
 							+ "no replay, and fixture ownership for applicators, checkers or autonomous actors" );
 		}
 	}

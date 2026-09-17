@@ -59,6 +59,7 @@ import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
 import com.mastercard.test.flow.assrt.junit5.mock.Msg;
 import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.builder.Deriver;
+import com.mastercard.test.flow.report.LocalBrowse;
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.Entry;
@@ -361,12 +362,33 @@ class FlowParallelBindingTest {
 	 */
 	@Test
 	void allPreparationMustBeAuditedBeforeAnySutUse() {
-		for( String mode : List.of( "report-open", "capture",
+		for( String mode : List.of( "capture",
 				"transform" ) ) {
 			Evidence e = execute( mode, "true", 3 );
 			assertFalse( e.failures.isEmpty(), mode );
 			assertEquals( 0, e.starts.size(), mode );
 			assertFalse( e.events.stream().anyMatch( s -> s.startsWith( "body:" ) ), mode );
+		}
+	}
+
+	/**
+	 * Browser-opening modes are completion-owned too: the report is published once
+	 * after native completion and only then presented. Opening itself is suppressed
+	 * here by the standard property, so the observable is the single publication.
+	 *
+	 * @param dir Isolated report artifact directory
+	 */
+	@Test
+	void parallelOpeningModesPublishOnceAtCompletion( @TempDir Path dir ) {
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "prepared-open" );
+				Temporary suppressed = LocalBrowse.SUPPRESS.temporarily( "true" ) ) {
+			Evidence e = execute( "report-open", "true", 3 );
+			assertEquals( List.of(), e.failures );
+			assertEquals( 3, e.results.size() );
+			assertEquals( 3, e.visibleReportDirectories.get() );
+			assertEquals( 0, e.visibleReportIndexes.get(), "no index while bodies run" );
+			assertEquals( 3, new Reader( dir.resolve( "prepared-open" ) ).read().entries.size() );
 		}
 	}
 
@@ -1110,7 +1132,7 @@ class ParallelBindingFixture {
 				e.bound = assertion.expected().request().assertable();
 				assertEquals( e.scenario.equals( "comparison" ) ? "unexpected" : "published", e.bound );
 			}
-			if( e.scenario.equals( "report" ) && Files.exists( Path
+			if( e.scenario.startsWith( "report" ) && Files.exists( Path
 					.of( AssertionOptions.ARTIFACT_DIR.value(), AssertionOptions.REPORT_NAME.value() ) ) ) {
 				Path report = Path.of( AssertionOptions.ARTIFACT_DIR.value(),
 						AssertionOptions.REPORT_NAME.value() );

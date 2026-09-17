@@ -174,8 +174,9 @@ and global-exclusion policy used by admission; `reservation(flow).isolationRules
 lists the matching whole-chain audit names separately from resource classification.
 Both queries use frozen preparation results and reject detached or unselected flows.
 
-Temporary tracer limits permit completion-owned `Reporting.QUIETLY` and reject other
-reporting modes, interval-based `LogCapture` (use `logs( CorrelatedCapture )`, which
+Temporary tracer limits require completion-owned reporting (any `Reporting` mode: the
+report is published once after native completion and, for `ALWAYS`/`FAILURES`, opened
+then) and reject interval-based `LogCapture` (use `logs( CorrelatedCapture )`, which
 attributes events by a correlation identifier rather than by time), replay, foreign
 binding destinations, noncanonical
 prerequisites and non-class source URIs. Contexts/applicators, residue/checkers and

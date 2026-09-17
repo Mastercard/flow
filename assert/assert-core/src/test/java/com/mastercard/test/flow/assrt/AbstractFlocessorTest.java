@@ -239,13 +239,14 @@ class AbstractFlocessorTest {
 	}
 
 	/**
-	 * Native reporting authorization depends on publication ownership, not just the
-	 * mode.
+	 * Native reporting authorization depends on publication ownership, not the
+	 * mode: any writing mode is fine once publication (and any browser opening) is
+	 * owned by completion.
 	 */
 	@ParameterizedTest
 	@CsvSource({ "NEVER,false,true", "NEVER,true,true", "QUIETLY,false,false",
-			"QUIETLY,true,true", "ALWAYS,false,false", "ALWAYS,true,false",
-			"FAILURES,false,false", "FAILURES,true,false" })
+			"QUIETLY,true,true", "ALWAYS,false,false", "ALWAYS,true,true",
+			"FAILURES,false,false", "FAILURES,true,true" })
 	void nativeReportingRequiresSupportedCompletionOwnership( Reporting mode, boolean finalOnly,
 			boolean supported ) {
 		TestFlocessor runner = new TestFlocessor( "native reporting guard", TestModel.abc() )

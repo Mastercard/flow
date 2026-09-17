@@ -8,6 +8,17 @@ and the original decision records remain historical.
 
 ## Correlated parallel log capture — 2026-09-17 (tickets 20–22, first delivery)
 
+Follow-up the same day: the parallel guard accepted only `Reporting.QUIETLY`, so a
+consumer keeping its default `ALWAYS` still failed preparation. Publication has
+been completion-owned since ticket 23, and `complete()` already presents the
+final report through the mode's open policy, so the mode itself was never the
+hazard — only immediate publication was. The guard now requires completion-owned
+reporting in any mode. `AbstractFlocessorTest` rows for `ALWAYS`/`FAILURES` with
+final-only publication flipped from rejected to accepted (red, then green), and a
+new real-Launcher case publishes an `ALWAYS` report once after completion with
+browser opening suppressed by the standard property. `report-open` left the
+adapter's rejection list.
+
 Parallel runs can now capture per-flow system logs. Attribution is by a
 correlation identifier carried in the events, never by time, thread or file
 position, so it is exact when flows execute concurrently.
