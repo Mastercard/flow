@@ -175,7 +175,9 @@ lists the matching whole-chain audit names separately from resource classificati
 Both queries use frozen preparation results and reject detached or unselected flows.
 
 Temporary tracer limits permit completion-owned `Reporting.QUIETLY` and reject other
-reporting modes, capture other than `LogCapture.NO_OP`, replay, foreign binding destinations, noncanonical
+reporting modes, interval-based `LogCapture` (use `logs( CorrelatedCapture )`, which
+attributes events by a correlation identifier rather than by time), replay, foreign
+binding destinations, noncanonical
 prerequisites and non-class source URIs. Contexts/applicators, residue/checkers and
 autonomous actors require an explicit actual fixture domain, not just named resource
 rules. These are fail-closed implementation boundaries, **not new permanent support

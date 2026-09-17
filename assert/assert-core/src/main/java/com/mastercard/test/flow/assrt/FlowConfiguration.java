@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.mastercard.test.flow.Actor;
@@ -53,8 +54,14 @@ final class FlowConfiguration {
 	};
 	/** Ordered sources of unpredictable data. */
 	Unpredictable[] masks = {};
-	/** Source of captured system logs. */
+	/** Interval-attributed source of captured system logs. */
 	LogCapture logCapture = LogCapture.NO_OP;
+	/** Correlation-attributed source of captured system logs, if configured. */
+	CorrelatedCapture correlatedCapture;
+	/** Extracts the correlation identifier from a flow; null means generated. */
+	Function<Flow, String> correlation;
+	/** Retention limits for correlated capture. */
+	CaptureBudget captureBudget = CaptureBudget.DEFAULT;
 	/** Synchronous processing listener. */
 	Listener progress = new Listener() {
 		// default to no-op behaviour
@@ -110,6 +117,9 @@ final class FlowConfiguration {
 		copy.test = test;
 		copy.masks = masks.clone();
 		copy.logCapture = logCapture;
+		copy.correlatedCapture = correlatedCapture;
+		copy.correlation = correlation;
+		copy.captureBudget = captureBudget;
 		copy.progress = progress;
 		copy.filterCfg = filterCfg;
 		copy.flowFilter = flowFilter;

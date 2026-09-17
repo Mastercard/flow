@@ -5,8 +5,10 @@ import static java.util.stream.Collectors.joining;
 
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -219,6 +221,49 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	public T logs( LogCapture lc ) {
 		beforeConfiguration();
 		config.logCapture = lc;
+		config.correlatedCapture = null;
+		return self();
+	}
+
+	/**
+	 * Configures correlation-attributed log capture, which remains accurate when
+	 * {@link Flow}s execute concurrently. Replaces any {@link LogCapture}.
+	 *
+	 * @param source A source of log events carrying correlation identifiers
+	 * @return <code>this</code>
+	 * @see Assertion#correlation()
+	 */
+	public T logs( CorrelatedCapture source ) {
+		beforeConfiguration();
+		config.correlatedCapture = source;
+		config.logCapture = LogCapture.NO_OP;
+		return self();
+	}
+
+	/**
+	 * Configures how the correlation identifier for a {@link Flow} execution is
+	 * chosen. Use this when the flow's messages already carry a unique identifier
+	 * that the system under test logs. Without it the runner generates one.
+	 *
+	 * @param extractor Returns the identifier for a flow, or <code>null</code> to
+	 *                  fall back to a generated identifier for that flow
+	 * @return <code>this</code>
+	 */
+	public T correlation( Function<Flow, String> extractor ) {
+		beforeConfiguration();
+		config.correlation = extractor;
+		return self();
+	}
+
+	/**
+	 * Limits how much correlated log capture is retained.
+	 *
+	 * @param budget The finite limits
+	 * @return <code>this</code>
+	 */
+	public T captureBudget( CaptureBudget budget ) {
+		beforeConfiguration();
+		config.captureBudget = Objects.requireNonNull( budget, "budget" );
 		return self();
 	}
 
@@ -356,20 +401,25 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 
 	/**
 	 * Temporary real-native tracer guard, not general parallel authorization.
-	 * Replay and capture remain guarded. Prepared quiet reports use
-	 * completion-owned final-only publication. Applied contexts and residue require
-	 * explicit actual fixture ownership.
+	 * Interval-attributed capture and replay remain guarded; correlated capture is
+	 * supported. Prepared quiet reports use completion-owned final-only
+	 * publication. Applied contexts and residue require explicit actual fixture
+	 * ownership.
 	 */
 	protected final void requireIndependentTracerConfiguration() {
 		boolean unsupportedReporting = config.reporting != Reporting.NEVER
 				&& (!config.finalOnlyReporting || config.reporting != Reporting.QUIETLY);
+		if( config.logCapture != LogCapture.NO_OP ) {
+			throw new IllegalStateException(
+					"Flow parallel tracer cannot attribute interval-based LogCapture to concurrent flows; "
+							+ "configure logs( CorrelatedCapture ) instead" );
+		}
 		if( unsupportedReporting
-				|| config.logCapture != LogCapture.NO_OP
 				|| config.replay.hasData() || !ownedContext && (!config.applicators.isEmpty()
 						|| !config.checkers.isEmpty() || !config.autonomous.isEmpty()) ) {
 			throw new IllegalStateException(
 					"Flow parallel tracer requires reporting NEVER or final-only QUIETLY, "
-							+ "NO_OP capture, no replay, and fixture ownership for applicators, checkers or autonomous actors" );
+							+ "no replay, and fixture ownership for applicators, checkers or autonomous actors" );
 		}
 	}
 

@@ -441,7 +441,10 @@ class AbstractFlocessorTest {
 		assertSame( tf, tf.masking() );
 		assertSame( tf, tf.applicators() );
 		assertSame( tf, tf.checkers() );
-		assertSame( tf, tf.logs( null ) );
+		assertSame( tf, tf.logs( (LogCapture) null ) );
+		assertSame( tf, tf.logs( (CorrelatedCapture) null ) );
+		assertSame( tf, tf.correlation( null ) );
+		assertSame( tf, tf.captureBudget( CaptureBudget.DEFAULT ) );
 		assertSame( tf, tf.autonomous() );
 		assertSame( tf, tf.motivation( null ) );
 	}

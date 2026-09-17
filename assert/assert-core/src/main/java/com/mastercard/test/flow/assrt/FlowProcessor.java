@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -81,6 +82,12 @@ abstract class FlowProcessor {
 	private int active;
 	private boolean closed;
 	private boolean closing;
+	/** Run-owned correlated capture, created on first processing while enabled */
+	private LogCollector collector;
+	/** Makes generated correlation identifiers distinct across concurrent runs */
+	private final String runToken = String.format( "%016x",
+			ThreadLocalRandom.current().nextLong() );
+	private final AtomicInteger executions = new AtomicInteger();
 
 	/**
 	 * @param config  Configuration owned by the caller
@@ -208,6 +215,9 @@ abstract class FlowProcessor {
 				throw new IllegalStateException( "Flow processing is closed" );
 			}
 			active++;
+			if( collector == null && config.correlatedCapture != null && config.reporting.writing() ) {
+				collector = new LogCollector( config.correlatedCapture, config.captureBudget, logSource() );
+			}
 		}
 		try {
 			new Invocation( flow ).process();
@@ -229,9 +239,24 @@ abstract class FlowProcessor {
 		private final List<RuntimeException> executionFailures = new ArrayList<>();
 		private final List<Assertion> actualMessages = new ArrayList<>();
 		private final Capture capture = new Capture();
+		private final Correlation correlation;
 
 		private Invocation( Flow flow ) {
 			this.flow = flow;
+			String extracted = config.correlation == null ? null : config.correlation.apply( flow );
+			String id = extracted != null ? extracted
+					: "flow-" + runToken + "-" + executions.incrementAndGet();
+			correlation = new Correlation() {
+				@Override
+				public String id() {
+					return id;
+				}
+
+				@Override
+				public void alias( String alias ) {
+					capture.bind( alias );
+				}
+			};
 		}
 
 		private void process() {
@@ -315,7 +340,7 @@ abstract class FlowProcessor {
 		private int processInteraction( Interaction ntr ) throws AssertionError {
 			config.progress.interaction( ntr );
 			// provoke the system with input data and capture the outputs
-			Assertion assrt = new Assertion( flow, ntr, FlowProcessor.this );
+			Assertion assrt = new Assertion( flow, ntr, FlowProcessor.this, correlation );
 
 			try {
 				if( config.replay.hasData() ) {
@@ -461,7 +486,7 @@ abstract class FlowProcessor {
 		 * Owns only this entered invocation, never a writer callback or live FlowData.
 		 */
 		private final class Capture implements AutoCloseable {
-			private final LogCapture source = config.logCapture;
+			private final LogCapture source = collector != null ? collector : config.logCapture;
 			private boolean begun;
 			private boolean ended;
 			private List<LogEvent> logs = Collections.emptyList();
@@ -471,10 +496,18 @@ abstract class FlowProcessor {
 					try {
 						source.start( flow );
 						begun = true;
+						bind( correlation.id() );
 					}
 					catch( RuntimeException e ) {
 						diagnose( "begin", e );
 					}
+				}
+			}
+
+			/** Identifiers only route while this execution's capture is open. */
+			void bind( String id ) {
+				if( begun && !ended && source == collector ) {
+					collector.bind( flow, id );
 				}
 			}
 
@@ -990,6 +1023,7 @@ abstract class FlowProcessor {
 			config = null;
 			dependencies = null;
 			contextDomain = null;
+			collector = null;
 			currentContext.clear();
 		}
 		synchronized( history ) {
@@ -1005,6 +1039,7 @@ abstract class FlowProcessor {
 		initializeReport();
 		Writer closingReport;
 		boolean finalPublication;
+		LogCollector capture;
 		synchronized( this ) {
 			if( active != 0 || closing ) {
 				throw new IllegalStateException( "Flow processing is still active or completing" );
@@ -1013,15 +1048,23 @@ abstract class FlowProcessor {
 			closed = true;
 			closing = true;
 			closingReport = reportFailure == null ? report : null;
+			capture = collector;
 		}
 		try {
+			// The source is cut before the report is finalized, whether or not the
+			// report is usable; its accounting is part of the run diagnostics.
+			String captureSummary = "Capture: completed\n";
+			if( capture != null ) {
+				capture.close( FlowProcessor::ordinaryPeripheralFailure );
+				captureSummary = capture.summary();
+			}
 			// Keep the failed writer: repeated close must expose its original failure.
 			if( closingReport != null ) {
 				try {
 					if( finalPublication ) {
 						closingReport.diagnostics( "Flow run: " + config.title + "\n"
 								+ "Execution: completed and drained\n"
-								+ "Capture: completed\n"
+								+ captureSummary
 								+ "Final index: pending atomic publication\n" );
 					}
 					closingReport.close();

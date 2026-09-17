@@ -28,6 +28,7 @@ public class Assertion {
 	private final Flow flow;
 	private final Interaction expected;
 	private final FlowProcessor flocessor;
+	private final Correlation correlation;
 	private final Actual actual = new Actual();
 
 	/**
@@ -36,14 +37,16 @@ public class Assertion {
 	private final Map<Interaction, Assertion> children = new HashMap<>();
 
 	/**
-	 * @param flow      The context for the {@link Interaction}
-	 * @param expected  The expected {@link Interaction}
-	 * @param flocessor The engine driving the test
+	 * @param flow        The context for the {@link Interaction}
+	 * @param expected    The expected {@link Interaction}
+	 * @param flocessor   The engine driving the test
+	 * @param correlation The identity of this flow execution
 	 */
-	Assertion( Flow flow, Interaction expected, FlowProcessor flocessor ) {
+	Assertion( Flow flow, Interaction expected, FlowProcessor flocessor, Correlation correlation ) {
 		this.flow = flow;
 		this.expected = expected;
 		this.flocessor = flocessor;
+		this.correlation = correlation;
 	}
 
 	/**
@@ -53,6 +56,16 @@ public class Assertion {
 	 */
 	public Flow flow() {
 		return flow;
+	}
+
+	/**
+	 * The identity of this {@link Flow} execution. Send {@link Correlation#id()} to
+	 * the system under test so that its logs can be attributed to this flow.
+	 *
+	 * @return The execution's correlation identity
+	 */
+	public Correlation correlation() {
+		return correlation;
 	}
 
 	/**
@@ -84,7 +97,7 @@ public class Assertion {
 		return expected.children()
 				.filter( selector )
 				.map( i -> children.computeIfAbsent( i,
-						ntr -> new Assertion( flow, ntr, flocessor ) ) );
+						ntr -> new Assertion( flow, ntr, flocessor, correlation ) ) );
 	}
 
 	/**

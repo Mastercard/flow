@@ -24,6 +24,8 @@ import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
 import org.junit.platform.launcher.core.LauncherFactory;
 
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
+import com.mastercard.test.flow.assrt.CorrelatedCapture;
+import com.mastercard.test.flow.assrt.LogCapture;
 import com.mastercard.test.flow.assrt.junit5.mock.Actrs;
 import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
 
@@ -61,7 +63,9 @@ class FlowExecutionTest {
 			List<Runnable> setters = List.of(
 					() -> runner.system( State.FUL, Actrs.AVA ), () -> runner.autonomous( Actrs.BEN ),
 					() -> runner.masking(), () -> runner.applicators(), () -> runner.checkers(),
-					() -> runner.logs( null ), () -> runner.listening( null ),
+					() -> runner.logs( (LogCapture) null ), () -> runner.logs( (CorrelatedCapture) null ),
+					() -> runner.correlation( null ), () -> runner.captureBudget( null ),
+					() -> runner.listening( null ),
 					() -> runner.filtering( null ), () -> runner.exercising( null, null ),
 					() -> runner.behaviour( null ), () -> runner.motivation( null ),
 					() -> runner.reporting( null ) );

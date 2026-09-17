@@ -6,6 +6,69 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Correlated parallel log capture — 2026-09-17 (tickets 20–22, first delivery)
+
+Parallel runs can now capture per-flow system logs. Attribution is by a
+correlation identifier carried in the events, never by time, thread or file
+position, so it is exact when flows execute concurrently.
+
+- `Assertion.correlation().id()` gives the test the execution's identifier to
+  send to the system under test; `alias(id)` binds a system-generated identifier
+  as well. By default the identifier is generated and unique within the run;
+  `correlation(Function<Flow,String>)` extracts one from the flow instead when
+  its messages already carry a unique value. The accessor works whether or not
+  capture is configured.
+- `logs(CorrelatedCapture)` configures a push source (open/flush/close, events
+  delivered to the runner's `Collector` with their identifier). The runner
+  routes each event to the executing flow's snapshot, to origin-labelled late
+  diagnostics when that flow has ended, or to unattributed diagnostics when the
+  identifier is unknown, absent, or claimed by two executions. It never guesses
+  or rebinds.
+- Retention is bounded by `CaptureBudget` (defaults: 2,000 events/1 MiB per flow,
+  50,000 events/64 MiB per run, 64 KiB records). First events are kept; omissions
+  are counted in the flow's report entry and the run's `diagnostics.txt`, which
+  also summarises late, unattributed and ambiguous events and source faults.
+  These defaults are finite choices, not measured recommendations.
+- `CorrelatedTail` reads a log file incrementally from the run's start offset,
+  in bounded chunks, with multiline framing, held-back partial lines, UTF-8
+  replacement, and truncation/missing-file problems recorded rather than guessed.
+  Its pattern must capture `time`, `level`, `source` and `correlation` groups.
+- Legacy interval `LogCapture`/`Tail` are unchanged for serial use. The parallel
+  guard still rejects them, now with a message pointing to `CorrelatedCapture`.
+  Capture faults that are ordinary peripheral failures stay non-fatal and
+  visible; control/fatal faults and primary test failures propagate unchanged.
+  The final source cut happens in `complete()` before report finalisation.
+
+Evidence: core `CorrelatedCaptureTest` (9 cases: concurrent attribution by
+identifier with late/unattributed routing, generated identifiers, correlation
+without capture, reporting-off never opens the source, alias/ambiguity,
+budgets, ordinary and control source faults, end-to-end `CorrelatedTail`),
+`CorrelatedTailTest` (7 cases), and a real-Launcher parallel case in the adapter's
+`PreparedCaptureTest` using a top-level `@FlowTest` factory. Existing capture
+oracles (`CaptureScopeTest`, `LogCaptureTest`, `TailTest`, `MergeTest`) pass
+unchanged. Module suites: core 377 cases (two existing skips), adapter 307. One
+adapter run stalled in the known pre-existing busy-chain reproducer (factory in
+`FlowAdmission.next`, other worker idle, no capture configured); the fork was
+stopped and the unchanged suite passed on rerun. That stall remains the deferred
+TODO above and is not affected by this change. No PIT rerun is claimed here.
+Logs use the `flow-capture2[12]-` prefix under `C:/Data/Code/`.
+
+The end-of-work 42-project reactor run was completed in three segments
+(`flow-capture-full-reactor{,-resume,-resume3}-20260917.log`), 3,626 cases in
+total. Three failures, none in changed code: the Swing-robot `FilterGuiTest`
+(desktop-interaction condition seen on earlier days; it skipped the downstream
+modules until resumed), one `AbstractFlocessorTest.missingImplicit` error where
+the default timestamp-named report directory collided so the skip path found no
+report (three class-level and two full core reruns of 385 cases then passed; a
+pre-existing fixture race, not a capture change), and the ignored-file property
+check. Core 385 cases with two existing skips, adapter 307, doc all other
+validators pass. This is a resumed result, not an uninterrupted green reactor.
+
+Not delivered: automatic MDC/child-thread propagation (the test passes the
+identifier explicitly), a logging-backend appender module (the guide shows how
+to write one), and any cancellation-budget integration beyond the existing
+synchronous cut at completion.
+
 ## Current priority — owner decision 2026-09-17 (supersedes the order below)
 
 After the successful consuming-repository trial, the owner has reordered the
