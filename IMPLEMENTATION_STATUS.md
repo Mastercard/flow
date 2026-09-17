@@ -42,6 +42,28 @@ Other file/directory checks remain unchanged. This is a narrow validation fix,
 not new heading validation, a scanner exclusion or a runtime scheduling change.
 Standards and Spec reviews found no actionable issues.
 
+The checker also now ignores link syntax inside fenced code blocks (``` or ~~~)
+and inline code spans, which the imported skill documents use to illustrate link
+formats. A second file-based regression failed before that change and passes
+afterwards; a link after a closed fence is still validated. All 114 link checks
+pass. The one remaining documentation failure is the ignored, untracked local
+`PARALLEL_EXECUTION_ANALYSIS.md`, which records another branch's historical
+parallelism property name; that record is deliberately unchanged and ignored
+files are not excluded from scanning.
+
+The full-suite run for this change was not clean end to end. The Swing-robot
+filter GUI tests (12 failures, one error across three classes) failed on three
+consecutive attempts while the same unchanged module had passed twice earlier
+in the day; the frame appeared but clicks did not register, which is a desktop
+focus/interaction condition rather than a code change here, and no GUI test was
+altered. A duct serve test also failed once because an orphaned duct process
+from an earlier interrupted run of that same test still held its port; that
+process was identified by its command line and stopped, after which duct passed
+20/20. Resuming from the core: core 369 cases (two existing skips), Jupiter 306,
+aggregator, examples and doc all completed with the single ignored-file property
+failure as the only remaining documentation failure (1,214 doc cases). This is
+a partial, resumed run and not a green reactor result.
+
 The uninterrupted 42-project test run completed with 2,951 cases across 191
 fresh XML suites: four failures, zero errors and 21 existing skips. The three
 previous same-page-link failures now pass. The remaining failures are three

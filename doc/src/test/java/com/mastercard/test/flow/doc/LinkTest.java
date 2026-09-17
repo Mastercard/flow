@@ -29,6 +29,8 @@ class LinkTest {
 
 	private static final Pattern STD_LINK = Pattern.compile( "\\[.*?\\]\\((.*?)\\)" );
 	private static final Pattern REF_LINK = Pattern.compile( "^\\[.*?\\]: (.*)$" );
+	private static final Pattern FENCE = Pattern.compile( "^\\s*(```|~~~)" );
+	private static final Pattern INLINE_CODE = Pattern.compile( "`[^`]*`" );
 
 	/**
 	 * @return per-file tests that throw a wobbler if we find an invalid link
@@ -56,8 +58,32 @@ class LinkTest {
 		Assertions.assertTrue( failure.getMessage().contains( "missing.md" ) );
 	}
 
+	/**
+	 * @param directory Standalone documentation, without a module README
+	 * @throws IOException If the fixture cannot be written
+	 */
+	@Test
+	void codeExamplesAreNotLinks( @TempDir Path directory ) throws IOException {
+		Path document = directory.resolve( "guide.md" );
+		Files.writeString( document, "Write `[title](example.md)` in prose.\n"
+				+ "```md\n"
+				+ "- [<closed ticket title>](link)\n"
+				+ "```\n"
+				+ "~~~\n"
+				+ "[Ordering](./src/ordering/CONTEXT.md)\n"
+				+ "~~~\n" );
+		Assertions.assertDoesNotThrow( () -> checkLinks( document ) );
+
+		Files.writeString( document, "```md\n"
+				+ "```\n"
+				+ "[missing](missing.md)\n" );
+		AssertionError failure = Assertions.assertThrows( AssertionError.class,
+				() -> checkLinks( document ) );
+		Assertions.assertTrue( failure.getMessage().contains( "missing.md" ) );
+	}
+
 	private static void checkLinks( Path file ) {
-		QuietFiles.lines( file )
+		proseLines( file )
 				.flatMap( line -> Stream.of( STD_LINK.matcher( line ), REF_LINK.matcher( line ) ) )
 				.forEach( mtch -> {
 					while( mtch.find() ) {
@@ -85,5 +111,24 @@ class LinkTest {
 						}
 					}
 				} );
+	}
+
+	/**
+	 * Code examples illustrate link syntax without referencing project files.
+	 *
+	 * @param file A markdown file
+	 * @return The file's lines with fenced blocks removed and inline code blanked
+	 */
+	private static Stream<String> proseLines( Path file ) {
+		boolean[] fenced = { false };
+		return QuietFiles.lines( file )
+				.filter( line -> {
+					if( FENCE.matcher( line ).find() ) {
+						fenced[0] = !fenced[0];
+						return false;
+					}
+					return !fenced[0];
+				} )
+				.map( line -> INLINE_CODE.matcher( line ).replaceAll( "" ) );
 	}
 }
