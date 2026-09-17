@@ -168,6 +168,26 @@ class CorrelatedTailTest {
 		assertTrue( summary.contains( "NoSuchFileException" ), summary );
 	}
 
+	/**
+	 * Headers are recognised only at the line start, so an unanchored pattern
+	 * cannot match header-like text embedded in a body line, and long body lines
+	 * are scanned once rather than from every offset.
+	 */
+	@Test
+	void unanchoredPatternMatchesOnlyAtLineStart( @TempDir Path dir ) throws IOException {
+		Path file = dir.resolve( "app.log" );
+		Files.createFile( file );
+		CorrelatedTail tail = new CorrelatedTail( file, PATTERN.substring( 1 ) );
+		Sink sink = new Sink();
+		tail.open( sink );
+		String body = "x".repeat( 4000 ) + " 999 [b] ERROR fake header inside a body line";
+		append( file, "016 [a] INFO src request", body, "017 [a] INFO src response" );
+		tail.close();
+		assertEquals( List.of(
+				"a|016|INFO|src|[]   request\n" + body,
+				"a|017|INFO|src|[]   response" ), sink.delivered );
+	}
+
 	@Test
 	void patternMustCaptureAllGroups() {
 		assertThrows( IllegalArgumentException.class,

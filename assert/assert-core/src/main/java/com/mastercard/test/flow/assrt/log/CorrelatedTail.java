@@ -50,13 +50,16 @@ public class CorrelatedTail implements CorrelatedCapture {
 
 	/**
 	 * @param file    The path to the file to extract from
-	 * @param pattern A regular expression that matches the start of a new log line
-	 *                and captures named groups <code>time</code>,
+	 * @param pattern A regular expression that matches the <em>start</em> of a new
+	 *                log line and captures named groups <code>time</code>,
 	 *                <code>level</code>, <code>source</code> and
-	 *                <code>correlation</code>. The remaining content of the line
-	 *                and following lines until the next match are the event
-	 *                content. An empty <code>correlation</code> capture means the
-	 *                event carries no identifier.
+	 *                <code>correlation</code>. It is matched at the beginning of
+	 *                each line only (as if anchored with <code>^</code>), so a line
+	 *                is scanned once whether or not the pattern is anchored. The
+	 *                remaining content of the line and following lines until the
+	 *                next match are the event content. An empty
+	 *                <code>correlation</code> capture means the event carries no
+	 *                identifier.
 	 */
 	public CorrelatedTail( Path file, String pattern ) {
 		for( String group : new String[] { TIME_GROUP, LEVEL_GROUP, SOURCE_GROUP,
@@ -179,7 +182,9 @@ public class CorrelatedTail implements CorrelatedCapture {
 		StringBuilder content = new StringBuilder();
 		for( String line : lines ) {
 			Matcher m = pattern.matcher( line );
-			if( m.find() ) {
+			// lookingAt, not find: a header is only ever at the line start, and find()
+			// would retry from every offset of long body lines (quadratic per flush).
+			if( m.lookingAt() ) {
 				emit( header, content );
 				header = new String[] { m.group( CORRELATION_GROUP ), m.group( TIME_GROUP ),
 						m.group( LEVEL_GROUP ), m.group( SOURCE_GROUP ) };
