@@ -6,6 +6,51 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Current priority: native stall deferred — 2026-09-17
+
+The user has requested that the scheduling investigation remain TODO work while
+smaller fixes proceed. This changes implementation order, not the finding's
+status or the retained acceptance gates. It supersedes the earlier instruction
+below to take the native stall next.
+
+- [ ] Diagnose the captured native stall: one registered task remains queued,
+  the factory waits for prerequisite completion and the other worker is idle.
+  Isolate the Flow/Jupiter/JDK interaction before choosing a correction; an
+  upstream Jupiter defect has not been established.
+- [ ] Prove a correction preserves independent progress, dependency order and
+  existing cancellation/cleanup behavior, then complete the blocked Jupiter
+  mutation and relevant acceptance checks without weakening their gates.
+
+The first recorded stress timeout was at zero-based repetition 93: the 94th
+busy-chain attempt and 188th invocation across two alternating scenarios. This
+is not a production failure-rate estimate. The separate small-backlog fixture
+deliberately held independent work with a test latch; that coordination is not
+a domain dependency or proof of the idle-worker stall's precise cause.
+Cancellation tests exercise a separate externally requested Stop, not cancelling
+independent work to make a prerequisite run. No cancellation monitor or broader
+scheduling redesign is approved by this deferral. The successful user trial
+remains accepted for their reported use case, not blanket release acceptance.
+
+## Same-document link validation — 2026-09-17
+
+The Markdown link checker now resolves fragment-only and empty destinations to
+the source document rather than its containing directory. Standalone documents
+therefore do not need a module README for same-page links. One file-based
+regression failed before the correction and passes afterwards; it covers inline,
+reference and empty destinations, and still rejects a missing relative file.
+Other file/directory checks remain unchanged. This is a narrow validation fix,
+not new heading validation, a scanner exclusion or a runtime scheduling change.
+Standards and Spec reviews found no actionable issues.
+
+The uninterrupted 42-project test run completed with 2,951 cases across 191
+fresh XML suites: four failures, zero errors and 21 existing skips. The three
+previous same-page-link failures now pass. The remaining failures are three
+code-example link checks and the historical analysis property check, all in
+the documentation module (1,213 cases); this is not a green reactor result.
+Core completed 369 cases with two skips, and Jupiter passed all 306 cases.
+No new PIT or packaged-host acceptance is claimed for this test-only change.
+Evidence uses the `flow-doc-fragment-` log prefix under `C:/Data/Code/`.
+
 ## Successful consuming-repository trial — 2026-09-17
 
 The user reports that their local consuming-workload test now passes in about
