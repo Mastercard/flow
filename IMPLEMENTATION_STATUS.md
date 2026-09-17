@@ -6,6 +6,62 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Core lifecycle gate and packaged refresh — 2026-09-17
+
+Fourteen new shared-core cases verify the inherited configuration guard and safe
+detachment through existing adapter seams. Active processing rejects detachment;
+safe detachment clears real run History, prevents new processing, and does not
+publish a final report. Legacy configuration mutability remains unchanged. The
+authorization-only reporting test now detaches instead of completing its fixture,
+avoiding the unintended empty-report browser opening. No runtime source changed.
+
+The final affected class passed 56 cases. The whole core suite passed 369 cases
+with two existing skips, and the Jupiter adapter passed all 301 cases. Final full
+core PIT passed the unchanged 94/95 gates: 1,145/1,221 detected mutations (94%,
+1,121 killed plus 24 timed out) and 2,261/2,368 covered lines (95%). There are 38
+survivors and 38 uncovered mutations. Targets, mutators and thresholds are unchanged.
+
+The full 42-project install attempt was interrupted during browser tests; its
+shutdown dump and partial output were preserved, then execution resumed from
+report-core. The combined fresh XML snapshot contains 3,360 cases across 190
+suites, 24 failures, zero errors and 21 skips. All failures were documentation
+checks. This is not a green full-reactor result; zero-case example summaries also
+do not establish native host acceptance. The arriving Jupiter import corruption
+was repaired to the committed source without changing test bodies. Two legitimate
+report diagnostic/command output uses were registered under the existing exact
+file/line convention, reducing the focused scanner failures from 24 to 22.
+
+The installed core and Jupiter JARs matched the reactor-built artifacts by SHA-256.
+All four existing packaged-consumer points passed on Jupiter 5.10.0/Platform 1.10.0
+and Jupiter/Platform 6.0.3, serial and parallel (two outer tests per point). All 16
+external public-Launcher report-command points passed their expected native outcome,
+report-fault and process-exit checks. This refresh includes the previous report
+completion correction, but does not waive the separate direct-Surefire limitation.
+Independent Standards and Spec reviews found no remaining actionable issues.
+The native progress stall, remaining programme gates and human trial remain open.
+
+## Scratch validation scope — owner decision, 2026-09-17
+
+Inspection confirmed the ignored scratch projects are disposable feasibility
+harnesses, not reactor modules or library test sources. Their fake fixtures and
+observation output are historical research; the same directory also holds approved
+specifications and tickets. No scratch harness was executed during this continuation.
+Routine documentation scanners had been reading those files, not running them.
+
+Per the owner's instruction, routine validation now prunes exactly named scratch
+directories for all five scanned file types. Five filesystem cases failed before
+the change and passed afterwards, retaining normal sources and similarly named
+directories. Contributor guidance records that research harnesses require an
+explicit reproduction request; specs and evidence remain available for reference.
+The full affected documentation module now reports 1,212 cases, seven failures,
+zero errors/skips: six imported-skill link checks and one historical root analysis
+property check. These remaining ignored-file failures were not suppressed. Both
+independent review axes found no actionable issues in this scope change.
+
+Fresh logs use the `flow-ticket25-lifecycle-` and `flow-ticket25-scratch-` prefixes
+under `C:/Data/Code/`; separate lifecycle/scratch archives preserve the interrupted,
+resumed and final evidence without replacing the preceding prepared/report archives.
+
 ## Prepared processing and repeated report completion — 2026-09-17
 
 Continued ticket-25 validation through the existing shared processing/reporting
