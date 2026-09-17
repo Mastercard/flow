@@ -8,10 +8,16 @@ import static com.mastercard.test.flow.assrt.Reporting.NEVER;
 import static com.mastercard.test.flow.assrt.Reporting.QUIETLY;
 import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -26,11 +32,13 @@ import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mastercard.test.flow.Actor;
+import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.Writer;
@@ -44,6 +52,104 @@ import com.mastercard.test.flow.util.Option.Temporary;
  */
 @SuppressWarnings("static-method")
 class ReportingTest {
+	/**
+	 * Empty prepared runs still publish a real final report, never a synthetic
+	 * flow.
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void emptyFinalReportIsPublishedOnlyAtCompletion( boolean initialize, @TempDir Path directory )
+			throws Exception {
+		var diagnostic = new ByteArrayOutputStream();
+		PrintStream original = System.err;
+		try( var captured = new PrintStream( diagnostic, true, UTF_8 );
+				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "empty" );
+				TestFlocessor runner = new TestFlocessor( "empty prepared run", TestModel.abc() )
+						.reporting( QUIETLY ).exercising( flow -> false, ignored -> {
+						} ).behaviour( a -> {
+							throw new AssertionError( "filtered flow entered SUT" );
+						} ) ) {
+			System.setErr( captured );
+			runner.finalOnlyReporting();
+			try( var flows = runner.prepareFlows() ) {
+				assertEquals( 0, flows.count() );
+			}
+			assertNull( runner.report() );
+			if( initialize ) {
+				runner.initializeReporting();
+				assertEquals( directory.resolve( "empty" ).toRealPath(), runner.report() );
+			}
+			assertFalse( Files.exists( directory.resolve( "empty" ).resolve( Writer.INDEX_FILE_NAME ) ) );
+			runner.completeProcessing();
+			Index index = new Reader( runner.report() ).read();
+			assertEquals( "empty prepared run", index.meta.testTitle );
+			assertTrue( index.entries.isEmpty() );
+			assertTrue( Files.readString( runner.report().resolve( Writer.DIAGNOSTICS_FILE_NAME ) )
+					.contains( "Execution: completed and drained" ) );
+			runner.completeProcessing();
+			assertEquals( "", diagnostic.toString( UTF_8 ),
+					"repeated completion is not a report failure" );
+		}
+		finally {
+			System.setErr( original );
+		}
+	}
+
+	/**
+	 * Ordinary creation/finalization faults must not become processing failures.
+	 */
+	@ParameterizedTest
+	@CsvSource({ "creation,false", "creation,true", "completion,false", "completion,true" })
+	void finalReportFaultPreservesProcessingOutcome( String phase, boolean sutFails,
+			@TempDir Path directory ) throws Exception {
+		Path root = directory.resolve( "reports" );
+		if( "creation".equals( phase ) )
+			Files.createFile( root );
+		var diagnostic = new ByteArrayOutputStream();
+		PrintStream original = System.err;
+		var primary = new IllegalArgumentException( "original SUT failure" );
+		int[] calls = { 0 };
+		try( var captured = new PrintStream( diagnostic, true, UTF_8 );
+				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( root.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "run" );
+				TestFlocessor runner = new TestFlocessor( "final report fault", TestModel.abc() )
+						.system( State.LESS, B ).reporting( QUIETLY ).behaviour( a -> {
+							calls[0]++;
+							if( sutFails )
+								throw primary;
+							a.actual().response( "B response to A".getBytes( UTF_8 ) );
+						} ) ) {
+			System.setErr( captured );
+			runner.finalOnlyReporting();
+			Flow flow;
+			try( var prepared = runner.prepareFlows() ) {
+				flow = prepared.findFirst().orElseThrow();
+			}
+			runner.initializeReporting();
+			if( sutFails )
+				assertSame( primary,
+						assertThrows( IllegalArgumentException.class, () -> runner.process( flow ) ) );
+			else
+				assertDoesNotThrow( () -> runner.process( flow ) );
+			assertEquals( 1, calls[0] );
+			if( "completion".equals( phase ) ) {
+				Files.createDirectory( runner.report().resolve( Writer.DIAGNOSTICS_FILE_NAME ) );
+				assertEquals( "", diagnostic.toString( UTF_8 ) );
+			}
+			assertDoesNotThrow( runner::completeProcessing );
+			assertDoesNotThrow( runner::completeProcessing );
+			assertThrows( IllegalStateException.class, () -> runner.process( flow ) );
+			assertEquals( 1, calls[0], "report failure must not reopen processing" );
+			assertEquals( 0, primary.getSuppressed().length );
+			assertFalse( Files.isRegularFile( root.resolve( "run" ).resolve( Writer.INDEX_FILE_NAME ) ) );
+			assertEquals( 1, diagnostic.toString( UTF_8 ).lines()
+					.filter( line -> line.startsWith( "Flow report failed: " ) ).count() );
+		}
+		finally {
+			System.setErr( original );
+		}
+	}
 
 	/**
 	 * Identifies those modes that generate a report

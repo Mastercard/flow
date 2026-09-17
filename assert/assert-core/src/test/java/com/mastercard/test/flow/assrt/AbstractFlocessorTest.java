@@ -22,6 +22,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -47,6 +48,7 @@ import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.TestModel.Actors;
 import com.mastercard.test.flow.assrt.mock.Mdl;
+import com.mastercard.test.flow.assrt.mock.TestContext;
 import com.mastercard.test.flow.assrt.mock.TestResidue;
 import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.msg.txt.Text;
@@ -62,6 +64,85 @@ import com.mastercard.test.flow.util.Option.Temporary;
  */
 @SuppressWarnings("static-method")
 class AbstractFlocessorTest {
+	/**
+	 * The shared prepared seam snapshots registrations even though this legacy test
+	 * adapter still permits mutation of its original configuration.
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void preparedProcessingRetainsFixtureCallbacks( boolean resolveDeclarations ) {
+		List<String> calls = new ArrayList<>();
+		var model = TestModel.withBoth();
+		Flow flow = model.flows().findFirst().orElseThrow();
+		try( TestFlocessor runner = new TestFlocessor( "prepared callbacks", model )
+				.system( State.FUL, B )
+				.applicators( new Applicator<TestContext>( TestContext.class, 0 ) {
+					@Override
+					public void transition( TestContext from, TestContext to ) {
+						assertNull( from );
+						calls.add( "context " + to.value() );
+					}
+
+					@Override
+					public Comparator<TestContext> order() {
+						return Comparator.comparing( TestContext::value );
+					}
+				} )
+				.checkers( new CheckerTest.TestChecker() {
+					@Override
+					public byte[] actual( TestResidue residue, List<Assertion> behaviour ) {
+						assertEquals( 2, behaviour.size(), "observed parent and unobserved child" );
+						calls.add( "residue " + residue.value() );
+						return "1st residue".getBytes( UTF_8 );
+					}
+				} )
+				.behaviour( a -> {
+					calls.add( "SUT" );
+					a.actual().response( "B response to A".getBytes( UTF_8 ) );
+				} )
+				.listening( new Listener() {
+					@Override
+					public void flowComplete( Flow completed ) {
+						assertSame( flow, completed );
+						calls.add( "complete" );
+					}
+				} ) ) {
+			List<Flow> resolved = new ArrayList<>();
+			try( Stream<Flow> prepared = resolveDeclarations
+					? runner.prepareFlows( resolved::add )
+					: runner.prepareFlows() ) {
+				assertEquals( List.of( flow ), prepared.toList() );
+			}
+			assertEquals( resolveDeclarations ? List.of( flow ) : List.of(), resolved );
+			assertEquals( List.of(), calls, "preparation must not execute fixture work" );
+			runner.system( State.FUL, A )
+					.applicators( new Applicator<TestContext>( TestContext.class, 0 ) {
+						@Override
+						public void transition( TestContext from, TestContext to ) {
+							throw new AssertionError( "replacement applicator" );
+						}
+
+						@Override
+						public Comparator<TestContext> order() {
+							return Comparator.comparing( TestContext::value );
+						}
+					} )
+					.checkers( new CheckerTest.TestChecker() )
+					.behaviour( a -> {
+						throw new AssertionError( "replacement behaviour" );
+					} )
+					.listening( new Listener() {
+						@Override
+						public void flowComplete( Flow completed ) {
+							throw new AssertionError( "replacement listener" );
+						}
+					} );
+			runner.execute();
+			assertEquals( "abc [] SUCCESS", runner.results(), runner::events );
+			assertEquals( List.of( "context ctx", "SUT", "residue 1st residue", "complete" ), calls );
+		}
+	}
+
 	/**
 	 * Native reporting authorization depends on publication ownership, not just the
 	 * mode.

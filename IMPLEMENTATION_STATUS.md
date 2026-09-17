@@ -6,6 +6,50 @@ The original 27-ticket backlog and Q1–Q10/T01–T36 acceptance programme remai
 authoritative subject to explicit approved amendments. Frozen feasibility evidence
 and the original decision records remain historical.
 
+## Prepared processing and repeated report completion — 2026-09-17
+
+Continued ticket-25 validation through the existing shared processing/reporting
+seams. Two new cases exercise both preparation overloads with real context,
+residue, SUT and completion callbacks: preparation performs no fixture work and
+subsequent mutation of the original configuration cannot replace its snapshot's
+registrations. Six report cases cover filtered-empty final output and ordinary
+creation/companion-publication faults with passing or genuinely failing SUT work.
+They check Reader-visible output, original SUT failure identity, terminal processing,
+one visible report-fault diagnostic and no advertised final index after failure.
+
+These checks exposed a real repeated-completion defect. Both empty-report cases
+failed when a second successful completion tried to update diagnostics on an
+already-closed Writer, emitting a false report-failure diagnostic. The correction
+uses the existing closed state to make diagnostics/presentation one-shot, while
+still calling Writer.close on repeats to retain its established failed-close
+semantics. No scheduler, resource, capture or report-ownership architecture changed.
+
+The corrected focused gate passed 95 cases with zero failures/errors and the same
+two platform skips. Independent Standards and Spec reviews found no actionable
+issues. The full 42-project reactor was attempted once with both test-skip flags
+and failure-ignore false. Fresh XML records 1,414 cases across 147 suites, zero
+failures/errors and 21 skips; the whole core suite completed 355 cases with its
+two existing skips. The build failed at Jupiter's formatter validation of the
+pre-existing, unrelated SerialCleanupTest working-tree edit, before its tests.
+Downstream adapter consumers and documentation were reactor-skipped, not passed.
+Both unrelated arriving files remain unchanged; no scanner or build gate was
+disabled. This run does not refresh their earlier native/packaged acceptance.
+
+The completed full core PIT measurement reports 2,248/2,368 lines (95%) and
+1,133/1,221 detected mutations (93%: 1,114 killed plus 19 timed out), with 42
+uncovered and 46 surviving. Line coverage now meets the unchanged 95 gate;
+mutation coverage still fails the unchanged 94 gate. Compared with the preceding
+measurement, coverage increased by 40 lines and 17 detected mutations; the small
+production correction adds one executable line and two mutations to the respective
+denominators. This is progress, not core acceptance or a threshold waiver.
+
+Logs use the `flow-ticket25-prepared-` prefix under `C:/Data/Code/`. A separate
+`prepared-full-reactor-reports.tar.gz` in the evidence directory below preserves
+the report snapshot (including older reports for skipped modules; only the fresh
+147 suites count above). This slice does not resolve the native stall, direct-host
+decision or manual trial. Current packaged evidence must be refreshed after the
+unrelated Jupiter build blocker is resolved.
+
 ## Ticket 25 acceptance refresh — 2026-09-17
 
 At `b7a4f070`, the focused 16-project packaging/install reactor passed, followed by

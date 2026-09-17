@@ -1004,10 +1004,12 @@ abstract class FlowProcessor {
 	void complete() {
 		initializeReport();
 		Writer closingReport;
+		boolean finalPublication;
 		synchronized( this ) {
 			if( active != 0 || closing ) {
 				throw new IllegalStateException( "Flow processing is still active or completing" );
 			}
+			finalPublication = config.finalOnlyReporting && !closed;
 			closed = true;
 			closing = true;
 			closingReport = reportFailure == null ? report : null;
@@ -1016,14 +1018,14 @@ abstract class FlowProcessor {
 			// Keep the failed writer: repeated close must expose its original failure.
 			if( closingReport != null ) {
 				try {
-					if( config.finalOnlyReporting ) {
+					if( finalPublication ) {
 						closingReport.diagnostics( "Flow run: " + config.title + "\n"
 								+ "Execution: completed and drained\n"
 								+ "Capture: completed\n"
 								+ "Final index: pending atomic publication\n" );
 					}
 					closingReport.close();
-					if( config.finalOnlyReporting )
+					if( finalPublication )
 						present( closingReport, reportError );
 				}
 				catch( RuntimeException failure ) {
