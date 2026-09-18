@@ -1,11 +1,7 @@
 package com.mastercard.test.flow.assrt;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -21,15 +17,12 @@ import java.util.LinkedHashSet;
 import java.util.stream.Stream;
 
 import com.mastercard.test.flow.Flow;
-import com.mastercard.test.flow.Interaction;
-import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.resource.ChainPlan;
 import com.mastercard.test.flow.assrt.resource.ResourceRequirements;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations.Grant;
 import com.mastercard.test.flow.assrt.resource.ResourceReservations.Request;
-import com.mastercard.test.flow.util.Flows;
 
 /**
  * Internal prepared-run admission shared by native adapters. The existing
@@ -67,6 +60,8 @@ public final class FlowAdmission {
 	private final Runnable resourceChanged = this::resourcesChanged;
 	private Thread factoryThread = Thread.currentThread();
 	private List<Node> nodes = List.of();
+	private Precedence precedence;
+	private Precedence.Readiness readiness;
 	private final Map<String, Integer> nativeIds = new HashMap<>();
 	private final NavigableSet<Integer> ready = new TreeSet<>();
 	private boolean prepared;
@@ -182,10 +177,9 @@ public final class FlowAdmission {
 	}
 
 	/**
-	 * Builds direct precedence once from validated canonical order. Comparable
-	 * selected basis ancestors/descendants keep that order, even across absent
-	 * ancestors or inverted ranks. This neither selects more flows nor changes
-	 * History eligibility.
+	 * Builds direct precedence once from validated canonical order, via
+	 * {@link Precedence}. This neither selects more flows nor changes History
+	 * eligibility.
 	 *
 	 * @param flows        Selected flows in validated serial order
 	 * @param requirements Stored whole-set requirements in the same order
@@ -199,42 +193,23 @@ public final class FlowAdmission {
 	 * @param chains Frozen whole-chain plan shared with serial consumption
 	 */
 	public void prepare( List<Flow> flows, ChainPlan chains ) {
+		Precedence order = new Precedence( flows );
 		List<Node> planned = new ArrayList<>();
-		Map<Flow, Integer> indices = new IdentityHashMap<>();
 		for( int i = 0; i < flows.size(); i++ ) {
-			if( indices.put( flows.get( i ), i ) != null ) {
-				throw new IllegalArgumentException( "Duplicate selected Flow reference" );
-			}
 			planned.add( new Node( flows.get( i ), chains.requirements( i ) ) );
 		}
 		for( int i = 0; i < planned.size(); i++ ) {
 			planned.get( i ).owner = planned.get( chains.first( i ) );
 			planned.get( i ).last = chains.last( i ) == i;
 		}
-		for( int i = 0; i < flows.size(); i++ ) {
-			Flow flow = flows.get( i );
-			int index = i;
-			flow.dependencies().map( d -> d.source().flow() )
-					.filter( f -> f != null && f != flow ).forEach( source -> {
-						Integer before = indices.get( source );
-						if( before == null || before >= index ) {
-							throw new IllegalArgumentException( "Absent or noncanonical Flow prerequisite" );
-						}
-						precedence( planned, before, index );
-					} );
-		}
-		basisPrecedence( flows, indices, planned );
-		publicationPrecedence( flows, indices, planned );
-		chainPrecedence( chains, planned );
-		List<Integer> roots = new ArrayList<>();
-		for( int i = 0; i < planned.size(); i++ )
-			if( planned.get( i ).remaining == 0 )
-				roots.add( i );
+		List<Integer> roots = new ArrayList<>( order.roots() );
 		synchronized( history ) {
 			if( prepared || released || stopped != null ) {
 				throw new IllegalStateException( "Flow admission cannot be prepared", stopped );
 			}
 			nodes = planned;
+			precedence = order;
+			readiness = order.readiness();
 			selected = planned.size();
 			prepared = true;
 		}
@@ -260,133 +235,6 @@ public final class FlowAdmission {
 		}
 		if( !keep )
 			effects( null, requests.stream().<Runnable>map( r -> r::cancel ).toArray( Runnable[]::new ) );
-	}
-
-	private static void precedence( List<Node> planned, int before, int after ) {
-		if( planned.get( before ).successors.add( after ) )
-			planned.get( after ).remaining++;
-	}
-
-	private static void chainPrecedence( ChainPlan chains, List<Node> planned ) {
-		List<Set<Integer>> original = planned.stream().map( n -> Set.copyOf( n.successors ) ).toList();
-		for( int i = 0; i < planned.size(); i++ ) {
-			for( int successor : original.get( i ) ) {
-				if( chains.first( i ) != chains.first( successor ) )
-					precedence( planned, chains.last( i ), chains.first( successor ) );
-			}
-			if( chains.next( i ) >= 0 )
-				precedence( planned, i, chains.next( i ) );
-		}
-		int[] remaining = planned.stream().mapToInt( n -> n.remaining ).toArray();
-		Deque<Integer> ready = new ArrayDeque<>();
-		for( int i = 0; i < remaining.length; i++ )
-			if( remaining[i] == 0 )
-				ready.add( i );
-		int visited = 0;
-		while( !ready.isEmpty() ) {
-			visited++;
-			for( int successor : planned.get( ready.removeFirst() ).successors )
-				if( --remaining[successor] == 0 )
-					ready.add( successor );
-		}
-		if( visited != planned.size() )
-			throw new IllegalArgumentException( "Contradictory contracted chain precedence" );
-	}
-
-	private static void publicationPrecedence( List<Flow> flows, Map<Flow, Integer> indices,
-			List<Node> planned ) {
-		Map<Flow, NavigableSet<Integer>> destinations = new IdentityHashMap<>();
-		Map<Message, NavigableSet<Integer>> participants = new IdentityHashMap<>();
-		for( Flow flow : flows ) {
-			int owner = indices.get( flow );
-			Interaction root = flow.root();
-			Stream<Interaction> interactions = root == null ? Stream.empty()
-					: Stream.concat( Stream.of( root ), Flows.descendents( root ) );
-			interactions.forEach( interaction -> {
-				for( Message message : new Message[] { interaction.request(), interaction.response() } ) {
-					if( message != null )
-						participants.computeIfAbsent( message, m -> new TreeSet<>() ).add( owner );
-				}
-			} );
-			flow.dependencies().filter( d -> d.source().isComplete() && d.sink().isComplete() )
-					.forEach( dependency -> {
-						int publisher = indices.get( dependency.source().flow() );
-						destinations.computeIfAbsent( dependency.sink().flow(), f -> new TreeSet<>() )
-								.add( publisher );
-						dependency.source().getMessage().ifPresent( message -> participants
-								.computeIfAbsent( message, m -> new TreeSet<>() ).add( publisher ) );
-						dependency.sink().getMessage().ifPresent( message -> participants
-								.computeIfAbsent( message, m -> new TreeSet<>() ).add( publisher ) );
-					} );
-		}
-		// Whole-flow destination groups do not protect aliases read by another flow.
-		// Include actual message users as well as publishers, in the same serial order.
-		orderGroups( destinations.values(), planned );
-		orderGroups( participants.values(), planned );
-	}
-
-	private static void orderGroups( Iterable<NavigableSet<Integer>> groups, List<Node> planned ) {
-		for( NavigableSet<Integer> ranks : groups ) {
-			Integer previous = null;
-			for( int rank : ranks ) {
-				if( previous != null )
-					precedence( planned, previous, rank );
-				previous = rank;
-			}
-		}
-	}
-
-	private static void basisPrecedence( List<Flow> flows, Map<Flow, Integer> indices,
-			List<Node> planned ) {
-		List<List<Integer>> children = new ArrayList<>();
-		List<Integer> roots = new ArrayList<>();
-		for( int i = 0; i < flows.size(); i++ )
-			children.add( new ArrayList<>() );
-		// Cache the nearest selected ancestor across shared unselected paths. Selected
-		// identities are stopping points, but each one's own basis is still read once.
-		Map<Flow, Integer> nearest = new IdentityHashMap<>( indices );
-		for( int i = 0; i < flows.size(); i++ ) {
-			Flow ancestor = flows.get( i ).basis();
-			List<Flow> path = new ArrayList<>();
-			while( ancestor != null && !nearest.containsKey( ancestor ) ) {
-				nearest.put( ancestor, -2 ); // Unresolved on this path: a repeat is a cycle.
-				path.add( ancestor );
-				ancestor = ancestor.basis();
-			}
-			int parent = ancestor == null ? -1 : nearest.get( ancestor );
-			if( parent == -2 )
-				throw new IllegalArgumentException( "Cyclic Flow basis" );
-			for( Flow absent : path )
-				nearest.put( absent, parent );
-			if( parent < 0 )
-				roots.add( i );
-			else
-				children.get( parent ).add( i );
-		}
-		NavigableSet<Integer> ancestry = new TreeSet<>();
-		Deque<Integer> traversal = new ArrayDeque<>( roots );
-		int visited = 0;
-		while( !traversal.isEmpty() ) {
-			int index = traversal.removeLast();
-			if( index < 0 ) {
-				ancestry.remove( ~index );
-				continue;
-			}
-			visited++;
-			Integer before = ancestry.lower( index );
-			Integer after = ancestry.higher( index );
-			// Inserting a canonical rank into the ordered ancestral path needs at most
-			// two forward edges. Older redundant edges may stay: still at most 2V.
-			if( before != null )
-				precedence( planned, before, index );
-			if( after != null )
-				precedence( planned, index, after );
-			ancestry.add( index );
-			traversal.addLast( ~index ); // Exit marker removes the rank before a sibling.
-			traversal.addAll( children.get( index ) );
-		}
-		if( visited != flows.size() )
-			throw new IllegalArgumentException( "Cyclic Flow basis" );
 	}
 
 	/**
@@ -719,7 +567,8 @@ public final class FlowAdmission {
 				observeBudget();
 				checkFixture();
 				planned = nodes;
-				Node node = nodes.get( index( id ) );
+				int index = index( id );
+				Node node = nodes.get( index );
 				if( node.skipped != null )
 					throw fault( "Native finish conflicts with skip" );
 				if( node.outcome != null ) {
@@ -737,12 +586,8 @@ public final class FlowAdmission {
 							new IllegalStateException( "Native terminal without drained Flow processing" ) );
 				}
 				else if( stopped == null ) {
-					for( int successor : node.successors ) {
-						successorVisits++;
-						if( --nodes.get( successor ).remaining == 0 ) {
-							cohort.add( successor );
-						}
-					}
+					successorVisits += precedence.successors( index ).size();
+					cohort.addAll( readiness.finished( index ) );
 				}
 				finished = finishedGrant( node );
 				wake();
@@ -1218,8 +1063,6 @@ public final class FlowAdmission {
 		private final Flow flow;
 		private final String label;
 		private final ResourceRequirements requirements;
-		private final Set<Integer> successors = new HashSet<>();
-		private int remaining;
 		private Request request;
 		private Grant grant;
 		private Node owner;
