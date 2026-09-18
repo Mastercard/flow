@@ -143,10 +143,22 @@ class JsApp {
 	 */
 	public void write( Object payload, Path destination ) {
 		QuietFiles.createDirectories( destination.getParent() );
-		QuietFiles.write( destination, indexTemplate.insert(
+		QuietFiles.write( destination, render( payload, destination ) );
+	}
+
+	/**
+	 * Renders an instance of this application without touching the disk
+	 *
+	 * @param payload     The data to insert into the index {@link Template}
+	 * @param destination Where the populated index file will be written to, which
+	 *                    determines the relative resource paths
+	 * @return The populated index file content
+	 */
+	public byte[] render( Object payload, Path destination ) {
+		return indexTemplate.insert(
 				payload,
 				destination.getParent().relativize( originalIndexPath.getParent() ) )
-				.getBytes( UTF_8 ) );
+				.getBytes( UTF_8 );
 	}
 
 	private static void copy( InputStream in, FileOutputStream out ) throws IOException {

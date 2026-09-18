@@ -21,8 +21,10 @@ This module provides an object model for the data in an execution report along w
 
 ### Writing reports
 
-`Writer` may be shared by several threads: each `with()` call writes its flow's
-detail immediately and is serialised against the others. By default the index is
+`Writer` may be shared by several threads: each `with()` call renders its flow's
+detail under the writer's lock, then writes the file outside it, so detail IO
+from different threads overlaps and `close()` waits for any writes still in
+flight. By default the index is
 rewritten after every flow; `Writer.Indexing.FINAL_ONLY` writes it once, on close,
 which is cheaper for large reports:
 

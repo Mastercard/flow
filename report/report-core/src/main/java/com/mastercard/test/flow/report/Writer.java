@@ -26,6 +26,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -106,9 +107,12 @@ public class Writer implements AutoCloseable {
 	private final Map<String, IndexedFlowData> detailOwners = new HashMap<>();
 	private final JsApp app;
 	private final Indexing indexing;
+	private final BiConsumer<Path, byte[]> files;
 	private State state = State.OPEN;
 	private Throwable failure;
 	private boolean updating;
+	/** Detail writes that have left the monitor but not yet landed on disk */
+	private int writing;
 
 	private enum State {
 		OPEN, FINALIZING, CLOSED, FAILED
@@ -135,10 +139,25 @@ public class Writer implements AutoCloseable {
 	 *                   the writer after submitting all updates
 	 */
 	public Writer( String modelTitle, String testTitle, Path root, Indexing indexing ) {
+		this( modelTitle, testTitle, root, indexing, QuietFiles::write );
+	}
+
+	/**
+	 * Test seam: detail file writes go through the supplied consumer
+	 *
+	 * @param modelTitle A human-readable title for the model
+	 * @param testTitle  A human-readable title for the test
+	 * @param root       Where to write the report
+	 * @param indexing   When to publish the index
+	 * @param files      Writes detail file content to a path
+	 */
+	Writer( String modelTitle, String testTitle, Path root, Indexing indexing,
+			BiConsumer<Path, byte[]> files ) {
 		this.modelTitle = modelTitle;
 		this.testTitle = testTitle;
 		this.root = root;
 		this.indexing = Objects.requireNonNull( indexing, "indexing" );
+		this.files = files;
 
 		// delete whatever might be there already
 		QuietFiles.recursiveDelete( root );
@@ -161,10 +180,12 @@ public class Writer implements AutoCloseable {
 	/**
 	 * Adds or updates a {@link Flow} in the report
 	 * <p>
-	 * Updates, callbacks, detail IO and link/index publication are serialized on
-	 * this writer. Callbacks execute synchronously on the calling thread. Callers
-	 * remain responsible for the semantic order of updates to the same flow and
-	 * must not wait for another thread to update this writer from a callback.
+	 * Callbacks, detail rendering and index publication are serialized on this
+	 * writer; the detail file write then happens on the calling thread outside the
+	 * monitor, so concurrent updates overlap their disk IO. Callbacks execute
+	 * synchronously on the calling thread. Callers remain responsible for the
+	 * semantic order of updates to the same flow and must not wait for another
+	 * thread to update this writer from a callback.
 	 * </p>
 	 *
 	 * @param flow  The {@link Flow}
@@ -172,19 +193,50 @@ public class Writer implements AutoCloseable {
 	 * @return <code>this</code>
 	 */
 	@SafeVarargs
-	public final synchronized Writer with( Flow flow, Consumer<FlowData>... extra ) {
-		requireOpen();
-		updating = true;
+	public final Writer with( Flow flow, Consumer<FlowData>... extra ) {
+		Runnable write;
+		synchronized( this ) {
+			requireOpen();
+			updating = true;
+			try {
+				write = update( flow, extra );
+			}
+			catch( RuntimeException | Error e ) {
+				fail( e );
+				throw e;
+			}
+			finally {
+				updating = false;
+			}
+			writing++;
+		}
 		try {
-			return update( flow, extra );
+			write.run();
 		}
 		catch( RuntimeException | Error e ) {
-			state = State.FAILED;
-			failure = e;
+			synchronized( this ) {
+				fail( e );
+			}
 			throw e;
 		}
 		finally {
-			updating = false;
+			synchronized( this ) {
+				writing--;
+				notifyAll();
+			}
+		}
+		return this;
+	}
+
+	/**
+	 * Latches the first failure; later calls report it as their cause
+	 *
+	 * @param e The failure
+	 */
+	private void fail( Throwable e ) {
+		if( state != State.FAILED ) {
+			state = State.FAILED;
+			failure = e;
 		}
 	}
 
@@ -199,7 +251,14 @@ public class Writer implements AutoCloseable {
 		}
 	}
 
-	private Writer update( Flow flow, Consumer<FlowData>[] extra ) {
+	/**
+	 * Applies an update under the monitor
+	 *
+	 * @param flow  The {@link Flow}
+	 * @param extra Extra data, above and beyond what the flow holds
+	 * @return The detail file write, to be run outside the monitor
+	 */
+	private Runnable update( Flow flow, Consumer<FlowData>[] extra ) {
 		IndexedFlowData idf = data.computeIfAbsent( flow,
 				f -> {
 					if( indexing == Indexing.FINAL_ONLY ) {
@@ -223,8 +282,8 @@ public class Writer implements AutoCloseable {
 			QuietFiles.recursiveDelete( root.resolve( "detail/" + oldname + ".html" ) );
 		}
 
-		// write the new detail
-		idf.writeTo( root, app );
+		// render the new detail
+		Runnable write = idf.render( root, app, files );
 		detailOwners.put( newname, idf );
 
 		// refresh the index
@@ -233,7 +292,7 @@ public class Writer implements AutoCloseable {
 		}
 		else {
 			// Final membership, not arrival order, determines link correction.
-			return this;
+			return write;
 		}
 
 		// refresh the details of those who were waiting for that flow as a better basis
@@ -251,7 +310,7 @@ public class Writer implements AutoCloseable {
 					pi.remove();
 					IndexedFlowData toUpdate = data.get( unhappy );
 					toUpdate.detail = toUpdate.detail.withBasis( detailFilename( flow ) );
-					toUpdate.writeTo( root, app );
+					toUpdate.render( root, app, files ).run();
 				}
 			}
 		} );
@@ -262,7 +321,7 @@ public class Writer implements AutoCloseable {
 						.filter( e -> e.getValue().isEmpty() )
 						.collect( toSet() ) );
 
-		return this;
+		return write;
 	}
 
 	private void captureBases( Flow flow ) {
@@ -312,11 +371,12 @@ public class Writer implements AutoCloseable {
 	}
 
 	/**
-	 * Completes this report. Final-only indexes are written to a same-directory
-	 * temporary file before an atomic move, with no non-atomic fallback. A
-	 * successful repeated close does nothing; further updates are rejected. After
-	 * an update or publication fails, subsequent close/update calls throw an
-	 * exception whose cause is the original failure, without retrying IO.
+	 * Completes this report. Close waits for detail writes still in flight on other
+	 * threads, then final-only indexes are written to a same-directory temporary
+	 * file before an atomic move, with no non-atomic fallback. A successful
+	 * repeated close does nothing; further updates are rejected. After an update or
+	 * publication fails, subsequent close/update calls throw an exception whose
+	 * cause is the original failure, without retrying IO.
 	 */
 	@Override
 	public synchronized void close() {
@@ -326,6 +386,7 @@ public class Writer implements AutoCloseable {
 		requireOpen();
 		state = State.FINALIZING;
 		try {
+			awaitWrites();
 			if( indexing == Indexing.FINAL_ONLY ) {
 				correctFinalLinks();
 				publishIndex();
@@ -333,9 +394,28 @@ public class Writer implements AutoCloseable {
 			state = State.CLOSED;
 		}
 		catch( RuntimeException | Error e ) {
-			state = State.FAILED;
-			failure = e;
+			fail( e );
 			throw e;
+		}
+	}
+
+	/**
+	 * Waits for in-flight detail writes to land. Link correction reads the detail
+	 * files back, so it must not run over a half-written file.
+	 */
+	private void awaitWrites() {
+		while( writing > 0 ) {
+			try {
+				wait();
+			}
+			catch( InterruptedException e ) {
+				Thread.currentThread().interrupt();
+				throw new IllegalStateException( "Interrupted awaiting detail writes for " + root, e );
+			}
+		}
+		if( state == State.FAILED ) {
+			// a write failed while we waited
+			requireOpen();
 		}
 	}
 
@@ -421,6 +501,13 @@ public class Writer implements AutoCloseable {
 		private Set<String> serializedDependencies;
 		private final Map<String, Flow> dependencySources = new HashMap<>();
 		FlowData detail;
+		/**
+		 * Render and landing counters. Writes land outside the writer monitor, so a
+		 * corrective rewrite can overtake an earlier in-flight write of the same
+		 * detail; the stale write is skipped when it arrives.
+		 */
+		private int rendered;
+		private int landed;
 
 		public IndexedFlowData( Flow flow,
 				Set<Flow> flowsInReport,
@@ -488,17 +575,30 @@ public class Writer implements AutoCloseable {
 		}
 
 		/**
-		 * Writes the detail data
+		 * Renders the detail data. Called under the writer monitor, so the detail
+		 * cannot change under the render.
 		 *
-		 * @param root The report root directory
-		 * @param app  The application
+		 * @param root  The report root directory
+		 * @param app   The application
+		 * @param files Writes file content to a path
+		 * @return The file write, which may run outside the writer monitor
 		 */
-		void writeTo( Path root, JsApp app ) {
-			app.write( detail, root
-					.resolve( DETAIL_DIR_NAME )
-					.resolve( indexEntry().detail + ".html" ) );
+		Runnable render( Path root, JsApp app, BiConsumer<Path, byte[]> files ) {
+			Path path = root.resolve( DETAIL_DIR_NAME ).resolve( indexEntry().detail + ".html" );
+			byte[] bytes = app.render( detail, path );
 			serializedBasis = detail.basis;
 			serializedDependencies = new HashSet<>( detail.dependencies.keySet() );
+			int version = ++rendered;
+			return () -> land( version, path, bytes, files );
+		}
+
+		private synchronized void land( int version, Path path, byte[] bytes,
+				BiConsumer<Path, byte[]> files ) {
+			if( version > landed ) {
+				QuietFiles.createDirectories( path.getParent() );
+				files.accept( path, bytes );
+				landed = version;
+			}
 		}
 
 		/**
