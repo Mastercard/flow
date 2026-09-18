@@ -77,14 +77,10 @@ public class MyTest {
 }
 ```
 
-The legacy runner implements `AutoCloseable`. Close it from `@AfterClass`, after
-all parameterized cases finish, including failures and skips. Parameter enumeration
-does not complete execution, and configuration remains live until completion.
-Create the runner in `@Parameters` so another JUnit run of the class gets a fresh
-runner; `@BeforeClass` is too late because parameter enumeration happens first.
-
-`close()` rejects active processing rather than waiting or cancelling it. Otherwise
-it permanently prevents further SUT calls, even with `Reporting.NEVER`, and closes
-only an already-created report. Successful close is idempotent; failed reporting
-remains observable on repeated close. Omitting completion skips the report's
-successful-finalization action, including latest-link publication.
+The `Flocessor` is `AutoCloseable`. Close it from `@AfterClass`, after all
+parameterized cases have finished, which is what publishes the report. Create it in
+`@Parameters` rather than `@BeforeClass`: parameter enumeration happens first, and a
+fresh runner is needed for each JUnit run of the class. `close()` fails if a flow is
+still being processed; afterwards no further flows can be processed. Closing a
+second time does nothing, unless the report failed to close, in which case the
+failure is thrown again.

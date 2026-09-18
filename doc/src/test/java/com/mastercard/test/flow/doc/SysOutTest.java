@@ -58,50 +58,10 @@ class SysOutTest {
 		accept( "../assert/assert-core/src/test/java/com/mastercard/test/flow/assrt/log/"
 				+ "CorrelatedTailTest.java",
 				"PrintStream original = System.err;" );
-		// Standalone compatibility runners deliberately print their native test
-		// summaries and failures for the same-binary, cross-runtime evidence logs.
-		for( String runner : new String[] { "FlowLauncherBridgeRuntime",
-				"FlowNativeProfileRuntime" } ) {
-			accept( "../assert/assert-junit5/src/test/java/com/mastercard/test/flow/assrt/junit5/"
-					+ runner + ".java",
-					"listener.getSummary().printTo( new PrintWriter( System.out, true ) );",
-					"listener.getSummary().printFailuresTo( new PrintWriter( System.out, true ) );" );
-		}
-		// The standalone consumer records actual JAR provenance and native outcomes.
-		accept( "../assert/assert-junit5/src/it/packaged-consumer/src/test/java/consumer/"
-				+ "PackagedConsumerTest.java",
-				"System.out.println( \"FLOW-FILE \" + path + \" SHA256=\" + HexFormat.of().formatHex(",
-				"System.out.println( \"ARTIFACT \" + type.getName() + \" \" + path + \" SHA256=\"",
-				"System.out",
-				"evidence.summary.getSummary().printTo( new PrintWriter( System.out, true ) );",
-				"evidence.summary.getSummary().printFailuresTo( new PrintWriter( System.out, true ) );" );
-		// Resource controls report native counts and isolated unsafe-retention
-		// evidence.
-		accept( "../assert/assert-junit5/src/test/java/com/mastercard/test/flow/assrt/junit5/"
-				+ "NativeResourceAdmissionTest.java", "System.out.printf(" );
-		accept( "../assert/assert-junit5/src/test/java/com/mastercard/test/flow/assrt/junit5/"
-				+ "SerialCleanupTest.java",
-				"System.out.print( evidence );",
-				"System.out.println( \"Unsafe serial \" + args[0]" );
-		// Reporting-fault acceptance captures the runner's required stderr diagnostic
-		// around an isolated real-Launcher invocation and restores it immediately.
-		accept( "../assert/assert-junit5/src/test/java/com/mastercard/test/flow/assrt/junit5/"
-				+ "FlowParallelBindingTest.java",
-				"PrintStream original = System.err;",
-				"System.setErr( captured );",
-				"System.setErr( original );" );
-		// Core report-fault tests likewise capture and restore the required diagnostic.
+		// Report-fault tests capture and restore the required diagnostic.
 		accept( "../assert/assert-core/src/test/java/com/mastercard/test/flow/assrt/"
 				+ "ReportingTest.java",
 				"PrintStream original = System.err;" );
-		// This external Launcher command exposes native outcomes to its shell gate.
-		accept( "../assert/assert-junit5/src/it/packaged-consumer/src/test/java/consumer/"
-				+ "ReportCommand.java",
-				"result.printTo( new PrintWriter( System.out, true ) );",
-				"result.printFailuresTo( new PrintWriter( System.out, true ) );",
-				"System.out.println( \"REPORT-NATIVE started=\" + result.getTestsStartedCount()",
-				"System.out.println( \"REPORT-ROOT \" + root.toAbsolutePath() );",
-				"System.out.println( \"REPORT-CHECK fault=\" + FAULT + \" mixed=\" + MIXED" );
 	}
 
 	private static void accept( String file, String... line ) {

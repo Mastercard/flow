@@ -54,16 +54,12 @@ class MyTest {
 }
 ```
 
-The legacy runner implements `AutoCloseable`. Retain it until `@AfterAll`:
-factory return, description enumeration and stream closure can all precede actual
-test execution. Do not wrap a factory's returned stream in try-with-resources to
-close the runner. Configuration remains live until explicit completion.
-
-`close()` rejects active processing rather than waiting or cancelling it. Otherwise
-it permanently prevents further SUT calls, even with `Reporting.NEVER`, and closes
-only an already-created report. Successful close is idempotent; failed reporting
-remains observable on repeated close. Omitting completion prevents completion-time
-publication. This does not add a public close method to `PreparedFlocessor`.
+The `Flocessor` is `AutoCloseable`, but the factory returns before its dynamic
+tests run, so do not close it in the factory or with try-with-resources: close it
+from `@AfterAll`, which is what publishes the report. `close()` fails if a flow is
+still being processed; afterwards no further flows can be processed. Closing a
+second time does nothing, unless the report failed to close, in which case the
+failure is thrown again.
 
 ## Concurrent flows
 

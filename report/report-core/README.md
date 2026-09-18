@@ -19,17 +19,12 @@ It is unlikely that you'll need to depend directly on this module, it will be tr
 
 This module provides an object model for the data in an execution report along with facilities for writing and reading that data to and from storage.
 
-### Direct writers and final-only indexing
+### Writing reports
 
-The three-argument `Writer` constructor retains immediate indexing: each successful
-`with()` writes its detail, index and incremental basis links before returning.
-Updates and accessor snapshots are serialized on the writer; callbacks run once,
-synchronously on the calling thread. Callers still order repeated updates to the
-same flow and must not wait inside a callback for another thread to update that
-writer. `missingBases()` returns detached, immutable maps and lists, retaining the
-original Flow references.
-
-For a report that only needs a final index, select `Writer.Indexing.FINAL_ONLY`:
+`Writer` may be shared by several threads: each `with()` call writes its flow's
+detail immediately and is serialised against the others. By default the index is
+rewritten after every flow; `Writer.Indexing.FINAL_ONLY` writes it once, on close,
+which is cheaper for large reports:
 
 ```java
 try (Writer writer = new Writer("model", "test", destination,
@@ -38,29 +33,11 @@ try (Writer writer = new Writer("model", "test", destination,
 }
 ```
 
-Details are written synchronously. Close resolves links against final membership
-and supported renames, using previously serialized detail snapshots rather than
-rerunning callbacks or reading mutable execution data. Final entries are sorted
-by their existing detail identities. The index is written and closed in a temporary
-file in the report directory, then atomically moved into place. Unsupported or
-failed atomic moves fail reporting; there is no non-atomic fallback.
-
-Successful repeated close does no work, and subsequent updates are rejected.
-Within one writer, a decorated detail identity already owned by another flow is
-rejected before destructive IO. A first decorator may still move a shared initial
-identity to a free path. This narrow check does not change detail hashes or add
-model-wide identity validation.
-Update/publication failures are latched: subsequent update/close calls throw an
-`IllegalStateException` whose cause is the original failure, without retrying IO.
-Closing is not proof that the surrounding test run has completed; the caller must
-stop submissions and drain its work first. Direct Writer failures remain visible.
-
-Construction clears whatever exists at the destination. A single active writer per
-destination is assumed; multiple producers may share one writer. The `latest`
-link, run naming and browser presentation belong to the assertion runner, not to
-Writer.
-
-## Testing
+The index is written to a temporary file in the report directory and then moved
+atomically into place. Once the writer fails, subsequent calls throw an
+`IllegalStateException` carrying the original failure; once it is closed,
+subsequent updates are rejected. Construction clears whatever exists at the
+destination, and a single writer per destination is assumed.
 
 In addition to the unit tests for the report input/output functionality, this module also contains [selenium-powered](https://www.selenium.dev/) tests to exercise the functionality of the [report webapp](../report-ng).
 

@@ -15,10 +15,7 @@ buildNumber.properties
 .settings
 .idea
 
-
 .agents/
 .scratch/
-PARALLEL_EXECUTION_ANALYSIS.md
-PARALLEL_EXECUTION_PLAN.md
 skills-lock.json
 CONTEXT.md

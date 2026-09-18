@@ -64,14 +64,7 @@ Some aspects of assertion behaviour can be controlled by system properties:
 The framework will default to exercising all flows in the model that are relevant to the system under test. It is possible to run a subset of flows by setting the filter system properties described above.
 
 Note that flows will automatically be brought into the execution order as required to satisfy flow dependencies in the system model.
-
-Selection expands transitive prerequisites once per flow identity within that
-preparation, after filtering. Multiple bindings are retained; only repeated
-visits and ordering edges are deduplicated. Hard prerequisite cycles, including
-contradictions introduced by contracting explicit chains, fail preparation
-before system behavior runs. Legitimate bindings within one flow do not require
-a previous result for that same flow. This does not alter the public duplicate-
-preserving `Flows.dependencies()` traversal contract or enable parallel admission.
+A hard prerequisite cycle fails preparation before any system behaviour runs.
 
 ## Failure avoidance
 
@@ -95,19 +88,14 @@ The assert components will work out a flow execution order that:
 The results of flow execution can be (depending on how the `Flocessor` is configured) collated into a human-readable report that details observed system behaviour and the results of comparing that against the system model.
 The location of the report can be controlled with the `mctf.dir` and `mctf.report.dir` system properties.
 
-### Capture lifetime
+### Log capture
 
-When configured reporting enables capture, each entered flow invocation owns its
-capture scope. A successfully started source is ended once; its events are
-materialized and its stream closed before report callbacks consume a copied
-snapshot. Early skips and execution failures also balance the scope. Replay still
-uses live capture rather than copying an old report's logs.
-
-Known ordinary capture-source failures emit diagnostics without failing an
-otherwise passing test. Execution, assertion, control and fatal failures are not
-reclassified as ordinary capture faults; a genuine primary failure is retained
-if cleanup or reporting also fails. `Merge` balances all successfully started
-child sources and closes their streams even when another source fails.
+A `LogCapture` configured with `logs( LogCapture )` is started as each flow begins
+and ended when it finishes, and the captured events are attached to that flow's
+report entry. Failures of the capture source itself are reported as diagnostics
+without failing an otherwise passing flow; a genuine test failure is retained if
+cleanup or reporting also fails. Replay uses live capture rather than copying an
+old report's logs.
 
 ### Correlated capture
 
