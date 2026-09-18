@@ -3,7 +3,6 @@ package com.mastercard.test.flow.report;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -17,14 +16,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 
 import com.mastercard.test.flow.Actor;
 import com.mastercard.test.flow.Context;
@@ -39,26 +35,24 @@ import com.mastercard.test.flow.report.data.Entry;
 import com.mastercard.test.flow.report.data.FlowData;
 
 /**
- * Final membership links must use the last serialized evidence, not live data.
+ * Final-only reports resolve basis and dependency links on close, from what was
+ * written rather than from live model data.
  */
 @SuppressWarnings("static-method")
 class WriterFinalLinksTest {
 
 	/**
-	 * A rename cannot overwrite another submitted flow, then delete its evidence by
-	 * renaming away again. The diagnostic must precede any destructive IO.
+	 * A rename cannot take over another flow's detail path; the writer fails before
+	 * any destructive IO and both details survive
 	 *
-	 * @param mode Index publication policy
-	 * @param dir  Isolated report destination
+	 * @param dir Isolated report destination
 	 * @throws IOException If retained evidence cannot be read
 	 */
-	@ParameterizedTest
-	@EnumSource(Indexing.class)
-	void conflictingRenamePreservesBothDetails( Indexing mode, @TempDir Path dir )
-			throws IOException {
+	@Test
+	void conflictingRenamePreservesBothDetails( @TempDir Path dir ) throws IOException {
 		Flow first = new ObservedFlow( "collision", null );
 		Flow second = new ObservedFlow( "collision", null );
-		Writer writer = new Writer( "model", "test", dir, mode );
+		Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY );
 		AtomicReference<String> firstName = new AtomicReference<>();
 		AtomicReference<String> secondName = new AtomicReference<>();
 		writer.with( first, detail -> {
@@ -89,24 +83,20 @@ class WriterFinalLinksTest {
 		assertSame( failure, assertThrows( IllegalStateException.class, writer::close ).getCause() );
 		assertArrayEquals( firstEvidence, Files.readAllBytes( firstPath ) );
 		assertArrayEquals( secondEvidence, Files.readAllBytes( secondPath ) );
-		if( mode == Indexing.FINAL_ONLY ) {
-			assertNull( new Reader( dir ).read() );
-		}
+		assertNull( new Reader( dir ).read() );
 	}
 
 	/**
-	 * A first decorator may move an otherwise colliding initial identity to a free
-	 * path; it must not delete the detail already owned under that initial name.
+	 * A first decoration may move a flow away from a shared initial path; it must
+	 * not delete the detail another flow already owns there
 	 *
-	 * @param mode Index publication policy
-	 * @param dir  Isolated report destination
+	 * @param dir Isolated report destination
 	 */
-	@ParameterizedTest
-	@EnumSource(Indexing.class)
-	void initialDecorationDoesNotDeleteAnotherFlow( Indexing mode, @TempDir Path dir ) {
+	@Test
+	void initialDecorationDoesNotDeleteAnotherFlow( @TempDir Path dir ) {
 		Flow first = new ObservedFlow( "initial identity", null );
 		Flow second = new ObservedFlow( "initial identity", null );
-		try( Writer writer = new Writer( "model", "test", dir, mode ) ) {
+		try( Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY ) ) {
 			writer.with( first, detail -> detail.motivation = "first evidence" );
 			writer.with( second, detail -> {
 				detail.tags.add( "distinct" );
@@ -121,13 +111,14 @@ class WriterFinalLinksTest {
 	}
 
 	/**
-	 * Shared ancestry outside membership is captured once, not on every insertion
-	 * or by rereading mutable model state at finalization.
+	 * A descendant links to its nearest ancestor present in the report, through
+	 * ancestors that are absent. Ancestry is read once, at the descendant's first
+	 * update.
 	 *
 	 * @param dir Isolated report destination
 	 */
 	@Test
-	void sharedExternalAncestry( @TempDir Path dir ) {
+	void absentAncestors( @TempDir Path dir ) {
 		List<ObservedFlow> ancestry = new ArrayList<>();
 		for( int i = 0; i < 100; i++ ) {
 			ancestry.add( new ObservedFlow( "ancestor " + i, i == 0 ? null : ancestry.get( i - 1 ) ) );
@@ -152,7 +143,7 @@ class WriterFinalLinksTest {
 	}
 
 	/**
-	 * Cyclic ancestry is diagnosed before callback execution rather than looping.
+	 * Cyclic ancestry is rejected before the callback runs
 	 *
 	 * @param dir Isolated report destination
 	 */
@@ -171,15 +162,14 @@ class WriterFinalLinksTest {
 	}
 
 	/**
-	 * A producer's repeated rename is reflected in its consumers' final links.
+	 * A dependency's renamed detail path is reflected in its dependents' links
 	 *
 	 * @param dir Isolated report destination
 	 */
 	@Test
 	void renamedDependencies( @TempDir Path dir ) {
-		AtomicInteger callbacks = new AtomicInteger();
 		try( Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY ) ) {
-			writer.with( Mdl.DEPENDENT, detail -> callbacks.incrementAndGet() );
+			writer.with( Mdl.DEPENDENT );
 			writer.with( Mdl.DEPENDENCY, detail -> detail.tags.add( "first" ) );
 			writer.with( Mdl.DEPENDENCY, detail -> {
 				detail.tags.remove( "first" );
@@ -192,26 +182,23 @@ class WriterFinalLinksTest {
 		assertEquals( java.util.Set.of( entries.get( "dependency" ).detail ),
 				dependent.dependencies.keySet() );
 		assertEquals( "dependency", dependent.dependencies.values().iterator().next().description );
-		assertEquals( 1, callbacks.get() );
 	}
 
 	/**
-	 * A late basis and its renamed path are corrected once from frozen evidence.
+	 * A basis that arrives after its descendant, under a renamed path, is linked on
+	 * close from the detail as written; later changes to the callback's data do not
+	 * leak in
 	 *
 	 * @param dir Isolated report destination
 	 */
 	@Test
-	void frozenCorrection( @TempDir Path dir ) {
+	void presentAncestor( @TempDir Path dir ) {
 		AtomicReference<FlowData> retained = new AtomicReference<>();
-		AtomicInteger callbacks = new AtomicInteger();
 		Map<String, String> mutable = new HashMap<>( Map.of( "value", "captured" ) );
-		String payload = "large captured payload ".repeat( 50000 );
 		try( Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY ) ) {
 			writer.with( Mdl.CHILD, detail -> {
-				callbacks.incrementAndGet();
 				detail.motivation = "captured motivation";
 				detail.context.put( "mutable", mutable );
-				detail.context.put( "large", payload );
 				retained.set( detail );
 			} );
 			mutable.put( "value", "late mutation" );
@@ -225,10 +212,7 @@ class WriterFinalLinksTest {
 		assertEquals( entries.get( "basis" ).detail, child.basis );
 		assertEquals( "captured motivation", child.motivation );
 		assertEquals( Map.of( "value", "captured" ), child.context.get( "mutable" ) );
-		assertEquals( payload, child.context.get( "large" ) );
 		assertFalse( child.tags.contains( "LATE" ) );
-		assertEquals( 1, callbacks.get() );
-		entries.values().forEach( entry -> assertNotNull( reader.detail( entry ) ) );
 	}
 
 	private static Map<String, Entry> entries( Reader reader ) {

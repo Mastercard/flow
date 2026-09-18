@@ -129,25 +129,22 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 
 		@Override
 		public boolean tryAdvance( Consumer<? super DynamicNode> action ) {
-			int index;
 			synchronized( history ) {
 				if( emitted == flows.size() ) {
 					return false;
 				}
 			}
-			awaitReady();
-			synchronized( history ) {
-				index = ready.pollFirst();
-				emitted++;
-				running.add( index );
-			}
+			int index = awaitReady();
 			Flow flow = flows.get( index );
 			action.accept( DynamicTest.dynamicTest( flow.meta().id(), Flocessor.testSource( flow ),
 					() -> run( index ) ) );
 			return true;
 		}
 
-		private void awaitReady() {
+		/**
+		 * @return The index of the next ready flow, now counted as emitted and running
+		 */
+		private int awaitReady() {
 			long timeout = progressTimeout.toNanos();
 			Blocker blocker = new Blocker( System.nanoTime() + timeout );
 			try {
@@ -169,6 +166,10 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 					throw new IllegalStateException( "No Flow completed within " + progressTimeout
 							+ "; " + outstanding() );
 				}
+				int index = ready.pollFirst();
+				emitted++;
+				running.add( index );
+				return index;
 			}
 		}
 

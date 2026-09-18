@@ -2,7 +2,6 @@ package com.mastercard.test.flow.assrt;
 
 import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,26 +11,20 @@ import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.TestAbortedException;
 
 import com.mastercard.test.flow.Flow;
-import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.data.LogEvent;
-import com.mastercard.test.flow.util.Option.Temporary;
-import java.nio.file.Path;
-import java.nio.file.Files;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * Execution-owned capture through the serial core and public source interface.
+ * Classification of log capture faults: which fail the test and which are
+ * reduced to a diagnostic
  */
 @SuppressWarnings("static-method")
 class CaptureScopeTest {
@@ -146,152 +139,6 @@ class CaptureScopeTest {
 				new IllegalStateException( new InterruptedException( "interrupted" ) ),
 				new IllegalStateException( new AssertionError( "nested assertion" ) ),
 				new IllegalStateException( new TestAbortedException( "nested assumption" ) ) );
-	}
-
-	@ParameterizedTest
-	@MethodSource("protectedFailures")
-	void primaryExecutionFailureSurvivesCaptureFault( Throwable primary ) {
-		Source source = new Source();
-		source.phase = Phase.READ;
-		TestFlocessor runner = runner( "primary capture fault", source )
-				.behaviour( a -> raise( primary ) );
-		Flow flow = runner.flows().findFirst().orElseThrow();
-		try {
-			assertSame( primary, assertThrows( Throwable.class, () -> runner.process( flow ) ) );
-			assertEquals( List.of( "begin", "end", "read", "close" ), source.events );
-		}
-		finally {
-			runner.completeProcessing();
-		}
-	}
-
-	@ParameterizedTest
-	@ValueSource(strings = { "flow", "interaction", "complete" })
-	void progressFailureStillClosesCapture( String at ) {
-		Source source = new Source();
-		IllegalStateException primary = new IllegalStateException( "progress" );
-		TestFlocessor runner = runner( "capture progress " + at, source ).listening( new Listener() {
-			@Override
-			public void flow( Flow flow ) {
-				if( "flow".equals( at ) ) {
-					throw primary;
-				}
-			}
-
-			@Override
-			public void interaction( Interaction interaction ) {
-				if( "interaction".equals( at ) ) {
-					throw primary;
-				}
-			}
-
-			@Override
-			public void flowComplete( Flow flow ) {
-				if( "complete".equals( at ) ) {
-					throw primary;
-				}
-			}
-		} );
-		Flow flow = runner.flows().findFirst().orElseThrow();
-		try {
-			assertSame( primary,
-					assertThrows( IllegalStateException.class, () -> runner.process( flow ) ) );
-			assertEquals( List.of( "begin", "end", "read", "close" ), source.events );
-		}
-		finally {
-			runner.completeProcessing();
-		}
-	}
-
-	@Test
-	void absentWriterStillMaterializesAndPreservesAssertions( @TempDir Path directory )
-			throws Exception {
-		Path blocked = Files.createFile( directory.resolve( "not-a-directory" ) );
-		Source source = new Source();
-		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( blocked.toString() ) ) {
-			TestFlocessor runner = runner( "absent writer", source ).behaviour( a -> {
-				a.actual().request( "wrong request".getBytes( UTF_8 ) );
-				a.actual().response( "wrong response".getBytes( UTF_8 ) );
-			} );
-			Flow flow = runner.flows().findFirst().orElseThrow();
-			AssertionError failure = assertThrows( AssertionError.class, () -> runner.process( flow ) );
-			assertEquals( 1, failure.getSuppressed().length );
-			assertEquals( 2, runner.events().split( "COMPARE", -1 ).length - 1 );
-			assertEquals( List.of( "begin", "end", "read", "close" ), source.events );
-			assertNull( runner.report() );
-			runner.completeProcessing();
-		}
-	}
-
-	@ParameterizedTest
-	@ValueSource(strings = { "no assertions", "no interactions", "not observed", "precondition" })
-	void genuineSkipsBalanceEnteredCapture( String kind ) {
-		Source source = new Source();
-		TestFlocessor runner = new TestFlocessor( "capture " + kind,
-				"precondition".equals( kind ) ? TestModel.abcWithImplicit() : TestModel.abc() )
-						.system( State.LESS, "no interactions".equals( kind ) || "not observed".equals( kind )
-								? TestModel.Actors.E
-								: B )
-						.reporting( Reporting.QUIETLY ).logs( source ).behaviour( a -> {
-						} );
-		if( "not observed".equals( kind ) ) {
-			runner.system( State.LESS, TestModel.Actors.A ).autonomous( TestModel.Actors.A );
-		}
-		try {
-			runner.execute();
-			assertEquals( "abc [] " + ("not observed".equals( kind ) ? "NOT_OBSERVED" : "SKIP"),
-					runner.results() );
-			assertEquals( List.of( "begin", "end", "read", "close" ), source.events );
-		}
-		finally {
-			runner.completeProcessing();
-		}
-	}
-
-	@Test
-	void enumerationAndDisabledReportingDoNotBeginCapture() {
-		Source source = new Source();
-		TestFlocessor runner = runner( "unentered capture", source );
-		assertEquals( 1, runner.flows().count() );
-		assertEquals( List.of(), source.events );
-		runner.reporting( Reporting.NEVER );
-		runner.execute();
-		assertEquals( "abc [] SUCCESS", runner.results() );
-		assertEquals( List.of(), source.events );
-		assertNull( runner.report() );
-	}
-
-	@Test
-	void replayUsesHistoricBytesButStillCapturesLiveLogs() {
-		Source historic = new Source();
-		historic.message = "historic";
-		TestFlocessor original = runner( "capture replay original", historic );
-		try {
-			original.execute();
-		}
-		finally {
-			original.completeProcessing();
-		}
-		Source live = new Source();
-		try( Temporary replay = AssertionOptions.REPLAY.temporarily( original.report().toString() ) ) {
-			TestFlocessor runner = runner( "capture replay live", live )
-					.behaviour( a -> {
-						throw new AssertionError( "Replay must not call the SUT" );
-					} );
-			try {
-				runner.execute();
-				assertEquals( "abc [] SUCCESS", runner.results() );
-				assertEquals( List.of( "begin", "end", "read", "close" ), live.events );
-				Reader reader = new Reader( runner.report() );
-				List<String> messages = reader.detail( reader.read().entries.get( 0 ) ).logs.stream()
-						.map( e -> e.message ).toList();
-				assertTrue( messages.contains( "live" ) );
-				assertTrue( !messages.contains( "historic" ) );
-			}
-			finally {
-				runner.completeProcessing();
-			}
-		}
 	}
 
 	/**

@@ -42,6 +42,11 @@ public final class FlowExtension implements ParameterResolver {
 		return handle;
 	}
 
+	/**
+	 * A class can carry {@code @Execution(CONCURRENT)} while the global parallel
+	 * switch is off, in which case Jupiter runs it on one thread; both must hold
+	 * for the leaves to run concurrently.
+	 */
 	private static boolean concurrent( ExtensionContext context ) {
 		return context.getExecutionMode() == ExecutionMode.CONCURRENT
 				&& context.getConfigurationParameter( "junit.jupiter.execution.parallel.enabled" )

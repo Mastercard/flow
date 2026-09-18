@@ -53,14 +53,22 @@ import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.Applicator;
 import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.CorrelatedCapture;
+import com.mastercard.test.flow.assrt.Listener;
 import com.mastercard.test.flow.assrt.LogCapture;
 import com.mastercard.test.flow.assrt.Reporting;
 import com.mastercard.test.flow.assrt.junit5.mock.Actrs;
 import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
 import com.mastercard.test.flow.assrt.junit5.mock.Msg;
 import com.mastercard.test.flow.builder.Creator;
+import com.mastercard.test.flow.builder.Deriver;
+import com.mastercard.test.flow.builder.concrete.ConcreteFlow;
+import com.mastercard.test.flow.builder.concrete.ConcreteMetadata;
+import com.mastercard.test.flow.builder.concrete.ConcreteRootInteraction;
+import com.mastercard.test.flow.builder.mutable.MutableDependency;
 import com.mastercard.test.flow.report.Reader;
+import com.mastercard.test.flow.report.data.LogEvent;
 import com.mastercard.test.flow.util.Option.Temporary;
+import com.mastercard.test.flow.util.Tags;
 import com.mastercard.test.flow.util.Transmission.Type;
 
 /**
@@ -465,6 +473,247 @@ class FlowExecutionTest {
 	}
 
 	/**
+	 * An order that cannot be honoured fails preparation, before any leaf is
+	 * emitted or any flow body runs, with the one cycle message
+	 *
+	 * @param kind How the cycle is formed
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = { "hard", "inside-chain", "contracted" })
+	void impossibleOrdersFailBeforeLeavesOrSutWork( String kind ) {
+		InvalidFactory.kind = kind;
+		InvalidFactory.bodies = 0;
+		Run run = execute( InvalidFactory.class, false );
+		assertEquals( List.of(), run.results );
+		assertEquals( 0, InvalidFactory.bodies );
+		assertTrue( run.failures.stream().anyMatch( f -> f instanceof IllegalArgumentException
+				&& f.getMessage().contains( "Hard prerequisite cycle" ) ), run.failures::toString );
+	}
+
+	@FlowTest
+	static class InvalidFactory {
+		static String kind;
+		static int bodies;
+
+		@TestFactory
+		Stream<DynamicNode> flows( FlowExecution execution ) {
+			ConcreteFlow a = unfinished( "A1",
+					kind.equals( "hard" ) ? new String[0] : new String[] { "chain:A" } );
+			ConcreteFlow b = unfinished( "B1",
+					kind.equals( "inside-chain" ) ? new String[] { "chain:A" } : new String[0] );
+			ConcreteFlow c = unfinished( "A2",
+					kind.equals( "hard" ) ? new String[0] : new String[] { "chain:A" } );
+			b.with( new MutableDependency().source( s -> s.flow( a ) ).build( b ) );
+			c.with( new MutableDependency().source( s -> s.flow( b ) ).build( c ) );
+			if( !kind.equals( "contracted" ) ) {
+				a.with( new MutableDependency().source( s -> s.flow( c ) ).build( a ) );
+			}
+			return execution
+					.flocessor( "invalid order",
+							modelOf( List.of( c.complete(), b.complete(), a.complete() ) ) )
+					.system( State.FUL, Actrs.BEN ).reporting( Reporting.NEVER )
+					.behaviour( assertion -> {
+						bodies++;
+						assertion.actual().response( assertion.expected().response().content() );
+					} ).tests();
+		}
+
+		/** Keeps construction open until the cyclic references have been connected */
+		private static ConcreteFlow unfinished( String name, String... tags ) {
+			Flow template = Creator.build( f -> f
+					.meta( m -> m.description( name ).tags( t -> t.addAll( List.of( tags ) ) ) )
+					.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN ).request( new Fields( "left:right" ) )
+							.response( new Msg( "response" ) ) ) );
+			return new ConcreteFlow( null, (ConcreteMetadata) template.meta(),
+					(ConcreteRootInteraction) template.root(), Set.of(), Map.of(), Map.of() );
+		}
+	}
+
+	/**
+	 * Tag filtering and the programmatic filter select flows, their prerequisites
+	 * are pulled in, and every field binding between them is applied, in either
+	 * execution mode
+	 *
+	 * @param parallel Whether Jupiter parallel execution is enabled
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void filtersThenExactClosurePreserveAllFieldBindings( boolean parallel ) {
+		SelectionFactory.bodies.clear();
+		SelectionFactory.mutations.clear();
+		SelectionFactory.exercised.clear();
+		SelectionFactory.orderings = 0;
+		Run run = execute( SelectionFactory.class, parallel );
+		assertEquals( List.of(), run.failures, run.failures::toString );
+		assertEquals( List.of( "A [chain:scenario]:SUCCESSFUL",
+				"B [chain:scenario, pick]:SUCCESSFUL" ), run.results );
+		assertEquals( List.of( "A", "B" ), SelectionFactory.bodies );
+		assertEquals( Set.of( "B", "rejected" ), Set.copyOf( SelectionFactory.exercised ) );
+		assertEquals( 2, SelectionFactory.exercised.size() );
+		assertEquals( List.of( "left", "right" ), SelectionFactory.mutations );
+		assertEquals( 1, SelectionFactory.orderings );
+	}
+
+	@FlowTest
+	static class SelectionFactory {
+		static final List<String> bodies = Collections.synchronizedList( new ArrayList<>() );
+		static final List<String> mutations = Collections.synchronizedList( new ArrayList<>() );
+		static final List<String> exercised = new ArrayList<>();
+		static int orderings;
+
+		@TestFactory
+		Stream<DynamicNode> flows( FlowExecution execution ) {
+			Flow a = flow( "A", "chain:scenario" );
+			Flow basis = flow( "basis" );
+			Flow b = Deriver.build( basis, f -> f
+					.meta( m -> m.description( "B" )
+							.tags( t -> t.addAll( Set.of( "pick", "chain:scenario" ) ) ) )
+					.dependency( a, d -> d.from( i -> true, Type.REQUEST, "left" )
+							.mutate( value -> {
+								mutations.add( "left" );
+								return "new-" + value;
+							} ).to( i -> true, Type.REQUEST, "left" ) )
+					.dependency( a, d -> d.from( i -> true, Type.REQUEST, "right" )
+							.mutate( value -> {
+								mutations.add( "right" );
+								return "new-" + value;
+							} ).to( i -> true, Type.REQUEST, "right" ) ) );
+			Flow c = Creator.build( f -> f.meta( m -> m.description( "C" ) ).prerequisite( b ) );
+			Flow sameChain = flow( "same-chain-only", "chain:scenario" );
+			Flow otherChain = flow( "other-chain", "chain:other" );
+			Flow rejectedSource = flow( "rejected-source" );
+			Flow rejected = Creator
+					.build( f -> f.meta( m -> m.description( "rejected" ).tags( t -> t.add( "pick" ) ) )
+							.prerequisite( rejectedSource ) );
+			List<Flow> all = List.of( c, b, a, basis, sameChain, otherChain, rejected, rejectedSource );
+			PreparedFlocessor runner = execution.flocessor( "minimal selection", modelOf( all ) )
+					.system( State.FUL, Actrs.BEN ).reporting( Reporting.NEVER )
+					.filtering( filter -> filter.includedTags( Set.of( "pick" ) ) )
+					.exercising( f -> {
+						exercised.add( f.meta().description() );
+						return f == b;
+					}, rejection -> {
+					} )
+					.listening( new Listener() {
+						@Override
+						public void ordering() {
+							orderings++;
+						}
+					} )
+					.behaviour( assertion -> {
+						bodies.add( assertion.flow().meta().description() );
+						if( assertion.flow() == b ) {
+							assertEquals( "new-left:new-right", assertion.expected().request().assertable() );
+						}
+						assertion.actual().request( assertion.expected().request().content() )
+								.response( assertion.expected().response().content() );
+					} );
+			Stream<DynamicNode> tests = runner.tests();
+			assertTrue( bodies.isEmpty() );
+			assertTrue( mutations.isEmpty() );
+			return tests;
+		}
+	}
+
+	/**
+	 * Configuration is snapshotted at preparation; the ambient options are not
+	 * re-read.
+	 */
+	@Test
+	void preparationSnapshotsConfiguration() {
+		assertEquals( List.of(), execute( ReplaySnapshotFactory.class, false ).failures );
+	}
+
+	@FlowTest
+	static class ReplaySnapshotFactory {
+		@TestFactory
+		Stream<DynamicNode> flows( FlowExecution execution ) {
+			PreparedFlocessor runner = execution.flocessor( "snapshot", new Mdl() )
+					.system( State.LESS, Actrs.BEN )
+					.behaviour( a -> a.actual().response( a.expected().response().content() ) );
+			try( Temporary replay = AssertionOptions.REPLAY.temporarily( "nonexistent-replay" ) ) {
+				return runner.tests();
+			}
+		}
+	}
+
+	/** Duplicate flow identities are rejected before any flow body runs. */
+	@Test
+	void duplicateIdentitiesFailPreparation() {
+		DuplicateFactory.bodies = 0;
+		Run run = execute( DuplicateFactory.class, false );
+		assertEquals( 0, DuplicateFactory.bodies );
+		assertEquals( List.of(), run.results );
+		assertTrue( run.failures.stream().anyMatch( f -> f instanceof IllegalArgumentException
+				&& f.getMessage().contains( "Duplicate prepared Flow identity: success []" ) ),
+				run.failures::toString );
+	}
+
+	@FlowTest
+	static class DuplicateFactory {
+		static int bodies;
+
+		@TestFactory
+		Stream<DynamicNode> flows( FlowExecution execution ) {
+			return execution.flocessor( "ambiguous", modelOf( List.of(
+					new Mdl().flows().findFirst().orElseThrow(),
+					new Mdl().flows().findFirst().orElseThrow() ) ) )
+					.system( State.LESS, Actrs.BEN ).behaviour( a -> {
+						bodies++;
+						a.actual().response( a.expected().response().content() );
+					} ).tests();
+		}
+	}
+
+	/**
+	 * Interval-based log capture attributes by time, so it is accepted when the
+	 * class runs serially and rejected at preparation when it runs concurrently
+	 *
+	 * @param parallel Whether Jupiter parallel execution is enabled
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void intervalCaptureIsSerialOnly( boolean parallel ) {
+		IntervalCaptureFactory.events.clear();
+		Run run = execute( IntervalCaptureFactory.class, parallel );
+		if( parallel ) {
+			assertEquals( List.of(), run.results );
+			assertEquals( List.of(), IntervalCaptureFactory.events );
+			assertTrue( run.failures.stream().anyMatch( f -> f instanceof IllegalStateException
+					&& f.getMessage().contains( "Interval-based LogCapture" ) ), run.failures::toString );
+		}
+		else {
+			assertEquals( List.of(), run.failures, run.failures::toString );
+			assertEquals( List.of( "a []:SUCCESSFUL" ), run.results );
+			assertEquals( List.of( "start", "end" ), IntervalCaptureFactory.events );
+		}
+	}
+
+	@FlowTest
+	static class IntervalCaptureFactory {
+		static final List<String> events = new ArrayList<>();
+
+		@TestFactory
+		Stream<DynamicNode> flows( FlowExecution execution ) {
+			return execution.flocessor( "interval capture", modelOf( List.of( flow( "a" ) ) ) )
+					.system( State.LESS, Actrs.BEN ).reporting( Reporting.QUIETLY )
+					.logs( new LogCapture() {
+						@Override
+						public void start( Flow flow ) {
+							events.add( "start" );
+						}
+
+						@Override
+						public Stream<LogEvent> end( Flow flow ) {
+							events.add( "end" );
+							return Stream.empty();
+						}
+					} )
+					.behaviour( a -> a.actual().response( a.expected().response().content() ) ).tests();
+		}
+	}
+
+	/**
 	 * Fixture shared by the ordering tests: a model whose flow bodies record
 	 * start/finish events and can be held open by the test.
 	 */
@@ -595,9 +844,14 @@ class FlowExecutionTest {
 	}
 
 	private static Flow flow( String name, String tag ) {
-		return Creator.build( f -> f.meta( m -> m.description( name ).tags( t -> t.add( tag ) ) )
-				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN ).request( new Fields( "left:right" ) )
-						.response( new Msg( "response" ) ) ) );
+		return flow( name, new String[] { tag } );
+	}
+
+	private static Flow flow( String name, String[] tags ) {
+		return Creator
+				.build( f -> f.meta( m -> m.description( name ).tags( t -> t.addAll( List.of( tags ) ) ) )
+						.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN ).request( new Fields( "left:right" ) )
+								.response( new Msg( "response" ) ) ) );
 	}
 
 	private static Flow contextual( String name ) {
@@ -606,11 +860,15 @@ class FlowExecutionTest {
 						.response( new Msg( "response" ) ) ) );
 	}
 
+	/**
+	 * @param flows The flows in the model
+	 * @return A model of exactly those flows, honouring tag filters
+	 */
 	static Model modelOf( List<Flow> flows ) {
 		return new Mdl() {
 			@Override
 			public Stream<Flow> flows( Set<String> include, Set<String> exclude ) {
-				return flows.stream();
+				return flows.stream().filter( f -> Tags.filter( f.meta().tags(), include, exclude ) );
 			}
 		};
 	}

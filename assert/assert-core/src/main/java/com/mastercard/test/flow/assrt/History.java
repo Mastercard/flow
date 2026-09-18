@@ -120,8 +120,7 @@ public class History {
 			// the system is stateful and the check has not been suppressed...
 			Optional<String> depFailure = flow.dependencies()
 					.map( d -> d.source().flow() )
-					// Within-flow publication is performed during this invocation; it
-					// cannot require a previously recorded result for the same flow.
+					// within-flow bindings are not prerequisites
 					.filter( f -> f != flow )
 					// ... and the flow has a dependency that intersects with the system ...
 					.filter( f -> Flows.intersects( f, system ) )

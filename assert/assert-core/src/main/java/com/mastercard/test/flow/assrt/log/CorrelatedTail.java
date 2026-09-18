@@ -204,8 +204,8 @@ public class CorrelatedTail implements CorrelatedCapture {
 	}
 
 	/**
-	 * Source problems are not flow evidence and cannot be attributed, so they are
-	 * reported once each on stderr, like the runner's own capture diagnostics.
+	 * Problems with the source file cannot be attributed to a flow, so they are
+	 * reported on stderr like the runner's own diagnostics, up to a limit.
 	 */
 	private void problem( String description ) {
 		if( reportedProblems++ < REPORTED_PROBLEMS ) {

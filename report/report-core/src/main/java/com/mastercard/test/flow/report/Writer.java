@@ -242,8 +242,8 @@ public class Writer implements AutoCloseable {
 
 	private void requireOpen() {
 		if( state == State.FAILED ) {
-			// A fresh wrapper avoids self-suppression when try-with-resources closes
-			// a writer whose update already threw the original exception.
+			// wrapped so that try-with-resources does not suppress the original
+			// exception with itself
 			throw new IllegalStateException( "Writer previously failed: " + root, failure );
 		}
 		if( state != State.OPEN || updating ) {
@@ -276,8 +276,7 @@ public class Writer implements AutoCloseable {
 					+ " is already owned by another flow" );
 		}
 
-		// A first decoration has not written its initial name. It must never
-		// remove another flow's evidence merely because that name was shared.
+		// delete the detail under the old name, if this flow owned it
 		if( !newname.equals( oldname ) && detailOwners.remove( oldname, idf ) ) {
 			QuietFiles.recursiveDelete( root.resolve( "detail/" + oldname + ".html" ) );
 		}
@@ -614,8 +613,7 @@ public class Writer implements AutoCloseable {
 				return;
 			}
 			Path path = root.resolve( DETAIL_DIR_NAME ).resolve( indexEntry().detail + ".html" );
-			// The file is the last successful serialized snapshot. No second full
-			// payload is retained and no live execution callback is read again.
+			// patch the file that was written rather than re-rendering the detail
 			ObjectNode snapshot = Template.extract(
 					new String( QuietFiles.readAllBytes( path ), UTF_8 ),
 					ObjectNode.class );

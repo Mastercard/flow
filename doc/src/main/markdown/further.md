@@ -129,7 +129,7 @@ The flow of responsibility is:
  1. The runner gives each flow execution an identity, available in the test body as [`assertion.correlation().id()`][Assertion!.correlation()]. By default this is generated and unique; if the flow's messages already carry a suitable unique identifier, configure [`correlation()`][AbstractFlocessor.correlation(Function)] to extract it from the `Flow` instead.
  2. The test sends the identifier to the system under test, typically as a request header. If the system generates its own identifier and returns it (e.g. a transaction ID), bind it with `assertion.correlation().alias( id )` so that events carrying either value are attributed.
  3. The system under test propagates the identifier into its logging context (e.g. an MDC field in its log pattern).
- 4. A `CorrelatedCapture` source delivers each event to the runner's `Collector` together with the identifier it carried. The runner adds it to the report entry of the flow that identifier belongs to, including events that arrive after the flow has finished. Events whose identifier is unknown, absent, or claimed by more than one execution are never attached to another flow. It never guesses.
+ 4. A `CorrelatedCapture` source delivers each event to the runner's `Collector` together with the identifier it carried. The runner adds it to the report entry of the flow that identifier belongs to, including events that arrive after the flow has finished. Events whose identifier is unknown, absent, or claimed by more than one execution are not attached to any flow.
 
 Two kinds of source are supported:
 

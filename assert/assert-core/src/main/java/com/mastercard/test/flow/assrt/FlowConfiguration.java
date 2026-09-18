@@ -17,12 +17,11 @@ import com.mastercard.test.flow.Unpredictable;
 import com.mastercard.test.flow.assrt.filter.FilterConfiguration;
 
 /**
- * Internal configuration shared by selection and invocation processing. Legacy
- * fluent callers own and mutate this object; it is deliberately not frozen or
- * copied on enumeration. Registered callbacks and domain objects retain their
- * identities. This is not a claim that those objects are safe for concurrent
- * use. Runtime state (dependencies, History, applied contexts and the report)
- * belongs to the processor, not to configuration or individual invocations.
+ * Configuration shared by selection and invocation processing. The fluent
+ * adapters own and mutate this object; it is not copied on enumeration, so
+ * registered callbacks and domain objects keep their identities. Runtime state
+ * (dependencies, History, applied contexts and the report) belongs to the
+ * processor.
  */
 final class FlowConfiguration {
 

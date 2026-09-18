@@ -335,27 +335,27 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	/**
-	 * Adapter-specific mutation guard. The default deliberately imposes no new
-	 * restrictions on legacy callers.
+	 * Adapter-specific mutation guard. The default imposes no restrictions.
 	 */
 	protected void beforeConfiguration() {
-		// Legacy callers remain mutable even after enumeration.
+		// callers may keep configuring after enumeration
 	}
 
 	/**
-	 * Snapshots registrations in the existing processor before selecting flows.
-	 * Prepared adapters must enforce their one-preparation invocation contract.
+	 * Freezes configuration and selects the flows to process.
 	 *
 	 * @return Selected flows in canonical serial order
 	 */
 	protected final Stream<Flow> prepareFlows() {
 		return prepareFlows( flow -> {
-			/* No additional preparation for legacy adapters. */ } );
+			// no per-flow preparation
+		} );
 	}
 
 	/**
-	 * Resolves per-flow declarations after selection/dependency expansion, before
-	 * canonical ordering contracts chains. The callback must not execute SUT work.
+	 * Freezes configuration and selects the flows to process, calling back for each
+	 * one after dependency expansion and before ordering. The callback must not
+	 * exercise the system under test.
 	 *
 	 * @param prepare Called once for each selected or required flow
 	 * @return Selected flows in canonical serial order
@@ -381,7 +381,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		}
 	}
 
-	/** Selects completion-owned report publication for a prepared adapter. */
+	/** Publishes the report once, on completion, rather than after every flow */
 	protected final void finalOnlyReporting() {
 		config.finalOnlyReporting = true;
 	}
@@ -396,14 +396,14 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	/**
-	 * Disposes existing processor-owned reporting only at an adapter's proven
-	 * completion boundary. Never call merely because descriptions were enumerated.
+	 * Closes the report and log source. Call this when the adapter has finished
+	 * processing flows, not when it has merely enumerated them.
 	 */
 	protected final void completeProcessing() {
 		processor.complete();
 	}
 
-	/** Initializes enabled final-only output after actual preparation is valid. */
+	/** Opens final-only reporting once preparation has succeeded */
 	protected final void initializeReporting() {
 		processor.initializeReport();
 	}

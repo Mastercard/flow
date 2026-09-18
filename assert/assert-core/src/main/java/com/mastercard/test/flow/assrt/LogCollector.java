@@ -19,10 +19,9 @@ import com.mastercard.test.flow.report.data.LogEvent;
  * {@link LogCapture} shape to the processor's per-invocation capture so that
  * the existing begin/end balancing applies unchanged.
  * <p>
- * Bookkeeping is guarded by this object's monitor and never performs IO or
- * calls the source. Source calls (open/flush/close) are serialised separately
- * so that a polled source is never read by two workers at once; a source may
- * call {@link #accept} while its own flush is in progress.
+ * Routing is guarded by this object's monitor; source calls (open/flush/close)
+ * are serialised on a separate lock so that a source may deliver events via
+ * {@link #accept} while one of its flushes is in progress.
  */
 final class LogCollector implements LogCapture, Collector {
 
@@ -81,17 +80,15 @@ final class LogCollector implements LogCapture, Collector {
 			bindings.put( id, buffer );
 		}
 		else if( existing != buffer ) {
-			// Two executions in this run claim the same identifier. Neither can be
-			// trusted with its events, and old events must never move to new work.
+			// two executions claim the same identifier, so its events belong to neither
 			bindings.put( id, AMBIGUOUS );
 		}
 	}
 
 	/**
 	 * Flushes the source, then freezes this execution's snapshot; events for it
-	 * that arrive afterwards are retained as late evidence. A source flush failure
-	 * is surfaced when the returned stream is closed, so the caller still
-	 * materialises the events that were captured.
+	 * that arrive afterwards are kept as late evidence. A flush failure is thrown
+	 * when the returned stream is closed, after the captured events have been read.
 	 */
 	@Override
 	public Stream<LogEvent> end( Flow flow ) {

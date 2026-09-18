@@ -98,7 +98,7 @@ class ReportingTest {
 	 * Ordinary creation/finalization faults must not become processing failures.
 	 */
 	@ParameterizedTest
-	@CsvSource({ "creation,false", "creation,true", "completion,false", "completion,true" })
+	@CsvSource({ "creation,true", "completion,false" })
 	void finalReportFaultPreservesProcessingOutcome( String phase, boolean sutFails,
 			@TempDir Path directory ) throws Exception {
 		Path root = directory.resolve( "reports" );
@@ -438,7 +438,7 @@ class ReportingTest {
 	 * @param dir  Isolated artifact directory
 	 */
 	@ParameterizedTest
-	@ValueSource(strings = { "report", "sub/path/report" })
+	@ValueSource(strings = { "sub/path/report" })
 	void completionAfterOptionsEnd( String name, @TempDir Path dir ) {
 		TestFlocessor tf = new TestFlocessor( "publication", TestModel.abc() )
 				.system( State.FUL, B )

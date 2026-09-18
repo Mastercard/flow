@@ -243,8 +243,8 @@ public final class Precedence {
 								.computeIfAbsent( message, m -> new TreeSet<>() ).add( publisher ) );
 					} );
 		}
-		// Whole-flow destination groups do not protect aliases read by another flow.
-		// Include actual message users as well as publishers, in the same serial order.
+		// Whole-flow destination groups do not protect aliases read by another flow,
+		// so message users are ordered as well as publishers
 		orderGroups( destinations.values(), edges );
 		orderGroups( participants.values(), edges );
 	}

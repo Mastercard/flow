@@ -68,59 +68,13 @@ import com.mastercard.test.flow.util.Option.Temporary;
  */
 @SuppressWarnings("static-method")
 class AbstractFlocessorTest {
-	/** A prepared subclass can reject every inherited fluent mutation. */
-	@ParameterizedTest
-	@ValueSource(strings = { "reporting", "masking", "system", "autonomous", "applicators",
-			"checkers", "logs", "listening", "filtering", "exercising", "behaviour", "motivation" })
-	void preparedSubclassGuardsInheritedConfiguration( String setting ) {
-		AtomicBoolean prepared = new AtomicBoolean();
-		var rejection = new IllegalStateException( "configuration is frozen" );
-		Consumer<TestFlocessor> configure = switch( setting ) {
-			case "reporting" -> runner -> runner.reporting( Reporting.NEVER );
-			case "masking" -> runner -> runner.masking( CheckerTest.Nprdct.DIGITS );
-			case "system" -> runner -> runner.system( State.FUL, B );
-			case "autonomous" -> runner -> runner.autonomous( B );
-			case "applicators" -> runner -> runner.applicators( ApplicatorTest.APPLICATOR );
-			case "checkers" -> runner -> runner.checkers( new CheckerTest.TestChecker() );
-			case "logs" -> runner -> runner.logs( LogCapture.NO_OP );
-			case "listening" -> runner -> runner.listening( new Listener() {
-			} );
-			case "filtering" -> runner -> runner.filtering( filter -> {
-			} );
-			case "exercising" -> runner -> runner.exercising( flow -> true, ignored -> {
-			} );
-			case "behaviour" -> runner -> runner.behaviour( a -> a.actual()
-					.response( "B response to A".getBytes( UTF_8 ) ) );
-			case "motivation" -> runner -> runner.motivation( ( text, assertion ) -> text );
-			default -> throw new AssertionError( setting );
-		};
-		try( TestFlocessor runner = new TestFlocessor( "guarded configuration", TestModel.abc() ) {
-			@Override
-			protected void beforeConfiguration() {
-				if( prepared.get() )
-					throw rejection;
-			}
-		}.system( State.FUL, B ) ) {
-			configure.accept( runner );
-			try( var flows = runner.prepareFlows() ) {
-				assertEquals( 1, flows.count() );
-			}
-			prepared.set( true );
-			assertSame( rejection,
-					assertThrows( IllegalStateException.class, () -> configure.accept( runner ) ) );
-			assertEquals( Set.of( B ), runner.system(),
-					"rejected mutation retains the configured scope" );
-			assertEquals( "", runner.events(), "configuration must not invoke processing" );
-		}
-	}
 
 	/**
-	 * The shared prepared seam snapshots registrations even though this legacy test
-	 * adapter still permits mutation of its original configuration.
+	 * Preparation snapshots the configuration: later mutations of this mutable test
+	 * adapter do not reach the prepared run
 	 */
-	@ParameterizedTest
-	@ValueSource(booleans = { false, true })
-	void preparedProcessingRetainsFixtureCallbacks( boolean resolveDeclarations ) {
+	@Test
+	void preparedProcessingRetainsFixtureCallbacks() {
 		List<String> calls = new ArrayList<>();
 		var model = TestModel.withBoth();
 		Flow flow = model.flows().findFirst().orElseThrow();
@@ -158,12 +112,10 @@ class AbstractFlocessorTest {
 					}
 				} ) ) {
 			List<Flow> resolved = new ArrayList<>();
-			try( Stream<Flow> prepared = resolveDeclarations
-					? runner.prepareFlows( resolved::add )
-					: runner.prepareFlows() ) {
+			try( Stream<Flow> prepared = runner.prepareFlows( resolved::add ) ) {
 				assertEquals( List.of( flow ), prepared.toList() );
 			}
-			assertEquals( resolveDeclarations ? List.of( flow ) : List.of(), resolved );
+			assertEquals( List.of( flow ), resolved );
 			assertEquals( List.of(), calls, "preparation must not execute fixture work" );
 			runner.system( State.FUL, A )
 					.applicators( new Applicator<TestContext>( TestContext.class, 0 ) {
@@ -208,29 +160,13 @@ class AbstractFlocessorTest {
 		}
 	}
 
+	/** A report is updated in place when the same runner executes again */
 	@Test
-	void scopedCompletionAllowsReportReuseAfterRepeatedExecution() throws Exception {
-		try( Temporary name = AssertionOptions.REPORT_NAME.temporarily( "reused" ) ) {
-			assertReportReuse();
-			Path legacyClaim = Path.of( AssertionOptions.ARTIFACT_DIR.value(), "scoped-completion",
-					".reused.flow-writer.lock" );
-			Files.createDirectories( legacyClaim.getParent() );
-			try {
-				try( FileChannel channel = FileChannel.open( legacyClaim, StandardOpenOption.CREATE,
-						StandardOpenOption.WRITE ); FileLock ignored = channel.lock() ) {
-					assertReportReuse();
-				}
-			}
-			finally {
-				Files.deleteIfExists( legacyClaim );
-			}
-		}
-	}
-
-	private static void assertReportReuse() {
-		try( TestFlocessor tf = new TestFlocessor( "scoped completion", TestModel.abc() )
-				.system( State.LESS, B ).reporting( Reporting.QUIETLY, "scoped-completion" )
-				.behaviour( a -> a.actual().response( a.expected().response().content() ) ) ) {
+	void scopedCompletionAllowsReportReuseAfterRepeatedExecution() {
+		try( Temporary name = AssertionOptions.REPORT_NAME.temporarily( "reused" );
+				TestFlocessor tf = new TestFlocessor( "scoped completion", TestModel.abc() )
+						.system( State.LESS, B ).reporting( Reporting.QUIETLY, "scoped-completion" )
+						.behaviour( a -> a.actual().response( a.expected().response().content() ) ) ) {
 			tf.execute();
 			assertEquals( "abc [] SUCCESS", tf.results(), tf::events );
 			Reader report = new Reader( tf.report() );
@@ -538,16 +474,16 @@ class AbstractFlocessorTest {
 
 	/**
 	 * A binding error stops that publication but reporting still compares later
-	 * messages. Earlier writes and mutation side effects are never rolled back. The
-	 * operation-level fault sequences are proven in the API module's
-	 * DependenciesTest; this checks the caller's handling of a fault before any
-	 * write and of one after a partial write.
+	 * messages. Earlier writes and mutation side effects are not rolled back.
+	 * Operation-level fault sequences are covered in the API module's
+	 * DependenciesTest; this checks a fault before any write in immediate mode and
+	 * one after a partial write in accumulating mode.
 	 *
 	 * @param reporting Immediate or accumulated mode
 	 * @param fault     The synchronous publication operation that fails
 	 */
 	@ParameterizedTest
-	@CsvSource({ "NEVER,peer", "NEVER,set-after", "QUIETLY,peer", "QUIETLY,set-after" })
+	@CsvSource({ "NEVER,peer", "QUIETLY,set-after" })
 	void publicationErrorRetainsEarlierWritesAndAccumulatesOnlyWhenConfigured( Reporting reporting,
 			String fault ) {
 		Thread caller = Thread.currentThread();

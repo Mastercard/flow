@@ -93,33 +93,19 @@ The location of the report can be controlled with the `mctf.dir` and `mctf.repor
 A `LogCapture` configured with `logs( LogCapture )` is started as each flow begins
 and ended when it finishes, and the captured events are attached to that flow's
 report entry. Failures of the capture source itself are reported as diagnostics
-without failing an otherwise passing flow; a genuine test failure is retained if
-cleanup or reporting also fails. Replay uses live capture rather than copying an
-old report's logs.
+without failing an otherwise passing flow; a test failure is retained if cleanup
+or reporting also fails. Replay uses live capture rather than copying an old
+report's logs.
 
 ### Correlated capture
 
-Interval-based `LogCapture` cannot tell concurrent flows' events apart, so
-concurrent runs use `CorrelatedCapture`: events are attributed by a correlation
-identifier carried in the event itself, including events that arrive after their
-flow has finished. To make this work the identifier must reach the log line:
-
- 1. Read the execution's identifier in the test body with
-    `assertion.correlation().id()`, or configure `correlation( Function )` to
-    derive it from the flow. If the system returns its own identifier, bind it with
-    `assertion.correlation().alias( id )`.
- 2. Send it to the system under test, typically as a request header.
- 3. Have the system put it in its logging context (for example an MDC field) so
-    that every log line for that request carries it.
- 4. Supply the source: `logs( new CorrelatedTail( path, pattern ) )` reads a log
-    file incrementally, where `pattern` matches the start of each line and captures
-    named groups `time`, `level`, `source` and `correlation`, for example
-    `^(?<time>\S+) \[(?<correlation>[^\]]*)\] (?<level>[A-Z]+) (?<source>\S+) `.
-    For an in-JVM system, implement `CorrelatedCapture` and push events from your
-    logging backend's appender.
-
-Events with an unknown or absent identifier, or one claimed by more than one
-execution, are never attached to another flow.
+When flows run concurrently, capture by time interval cannot tell their events
+apart. `CorrelatedCapture` attributes events by a correlation identifier carried
+in the event itself: the test sends the flow's identifier to the system, the
+system logs it, and a source such as `CorrelatedTail` delivers each event with
+the identifier it carried. See the
+[further reading](../../doc/src/main/markdown/further.md#correlated-capture) for
+the full explanation.
 
 ## Report replay
 

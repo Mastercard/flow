@@ -6,15 +6,14 @@ import com.mastercard.test.flow.report.data.LogEvent;
 /**
  * A source of log events that are attributed to {@link Flow} executions by a
  * correlation identifier carried in the events themselves, rather than by the
- * time interval in which they were observed. This is the capture mechanism that
- * remains truthful when flows execute concurrently.
+ * time interval in which they were observed, so that attribution holds when
+ * flows execute concurrently.
  * <p>
  * The identifier is supplied to the test through
  * {@link Assertion#correlation()}; the test puts it on the request (typically
  * as a header) and the system under test propagates it into its logging
  * context. Sources push each event to the run-owned {@link Collector} with the
- * identifier they observed. Attribution is exact or absent - never guessed from
- * thread names, timestamps or file offsets.
+ * identifier they observed; an event without one is not attributed.
  * <p>
  * One instance is opened once per test run and closed at completion. All
  * methods are invoked by the runner; {@link Collector#accept} may be called

@@ -58,13 +58,10 @@ import com.mastercard.test.flow.util.Dependencies;
 import com.mastercard.test.flow.util.Flows;
 
 /**
- * Shared serial processing, independent of the fluent adapter. One processor
- * uses one configuration, dependency publisher and History across all flows.
- * Each call to {@link #process(Flow)} creates only invocation-local evidence
- * and failures; it does not clone the model or create another runner.
- * <p>
- * Selection can rebuild dependency indexing; enumeration neither completes a
- * run nor closes a report.
+ * Flow processing shared by the fluent adapters. One processor uses one
+ * configuration, dependency publisher and History across all flows; each call
+ * to {@link #process(Flow)} keeps its evidence and failures local to that
+ * invocation. Enumerating flows neither completes a run nor closes a report.
  */
 class FlowProcessor {
 
@@ -184,11 +181,9 @@ class FlowProcessor {
 					.collect( toCollection( FlowProcessor::identities ) );
 		}
 
-		// collect dependencies of those flows - we need them in the execution too
+		// collect dependencies of those flows - we need them in the execution too.
+		// A worklist rather than recursion, as dependency paths can be long
 		config.progress.dependencies();
-		// Mark identities before descending. This is run-local closure, not the
-		// public helper's deliberately duplicate-preserving traversal. An explicit
-		// worklist also avoids using the Java call stack for long dependency paths.
 		Deque<Flow> pending = new ArrayDeque<>( toRun );
 		while( !pending.isEmpty() ) {
 			try( Stream<Flow> prerequisites = pending.removeFirst().dependencies()
@@ -212,7 +207,7 @@ class FlowProcessor {
 	}
 
 	/**
-	 * Invokes real flow processing synchronously on the calling thread.
+	 * Processes a flow synchronously on the calling thread.
 	 *
 	 * @param flow The flow to process after selection has indexed dependencies
 	 */
@@ -236,7 +231,7 @@ class FlowProcessor {
 		}
 	}
 
-	/** Evidence and deferred failures belong only to this actual invocation. */
+	/** The evidence and deferred failures of one flow's processing */
 	private final class Invocation {
 
 		private final Flow flow;
@@ -489,9 +484,7 @@ class FlowProcessor {
 			} ), false );
 		}
 
-		/**
-		 * Owns only this entered invocation, never a writer callback or live FlowData.
-		 */
+		/** The log capture of one invocation */
 		private final class Capture implements AutoCloseable {
 			private final LogCapture source = collector != null ? collector : config.logCapture;
 			private boolean begun;
@@ -974,11 +967,11 @@ class FlowProcessor {
 		}
 	}
 
-	/** Initializes enabled final-only output without adding synthetic Flow data. */
+	/** Creates the final-only report so that an empty run still publishes one */
 	void initializeReport() {
 		if( config.finalOnlyReporting )
 			report( ignored -> {
-				/* Ownership only; an empty run has no Flow data. */
+				// no flow data to add
 			}, false );
 	}
 
@@ -1016,8 +1009,8 @@ class FlowProcessor {
 	}
 
 	/**
-	 * Disposes an existing writer at proven owned completion. Legacy adapters
-	 * deliberately do not call this on enumeration.
+	 * Closes the report and the log source. Called once the owning adapter has
+	 * finished processing; enumerating flows does not complete a run.
 	 */
 	void complete() {
 		initializeReport();
@@ -1035,16 +1028,13 @@ class FlowProcessor {
 			capture = collector;
 		}
 		try {
-			// The source is cut before the report is finalized, whether or not the
-			// report is usable.
+			// close the log source first, so that late events can go into the report
 			if( capture != null ) {
 				capture.close( FlowProcessor::ordinaryPeripheralFailure );
-				// Events that carried a flow's identifier after it finished still belong
-				// to that flow's evidence.
 				capture.late().forEach( ( flow, events ) -> report(
 						writer -> writer.with( flow, detail -> detail.logs.addAll( events ) ), false ) );
 			}
-			// Keep the failed writer: repeated close must expose its original failure.
+			// a failed writer is kept so that repeated close rethrows its failure
 			if( closingReport != null ) {
 				try {
 					closingReport.close();
