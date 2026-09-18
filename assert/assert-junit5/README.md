@@ -92,12 +92,20 @@ Flows are kept apart only by what the model already declares:
  * a flow starts after the flows it has dependency bindings on have finished;
  * a flow starts after its nearest selected basis ancestor, so an ancestor's
    unexpected failure still skips its descendants as "Ancestor failed";
- * chain members run in order, one after another, with no outside flow between them;
+ * chain members run in order, one after another, as a single unit: whatever a
+   member depends on finishes before the first member starts, and whatever depends
+   on a member waits for the last;
  * flows that publish into or read the same destination message run one after another;
  * flows that apply a `Context` to the system run one after another, while flows
    without contexts may overlap them and leave the applied state untouched.
 
-Everything else may overlap. Configuration is frozen at `tests()`; the report is
+Everything else may overlap, including unrelated flows running alongside a chain.
+A chain is not a lock on the system under test. System state that flows share
+without a model link — no dependency binding, basis, shared destination message
+or applied context between them — is not protected in a concurrent run. Declare
+the link (a dependency or a context) or run that class serially.
+
+Configuration is frozen at `tests()`; the report is
 written once and closed when the test class finishes, including when the factory is
 aborted or skipped. Interval-based `LogCapture` and replay are rejected for
 concurrent runs; configure `logs( CorrelatedCapture )` to attribute log events by

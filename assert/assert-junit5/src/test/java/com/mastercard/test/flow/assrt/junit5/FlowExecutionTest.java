@@ -201,7 +201,8 @@ class FlowExecutionTest {
 
 	/**
 	 * Chain members run in order, one after another, and the chain's outside edges
-	 * attach to its first and last members.
+	 * attach to its first and last members. A chain does not exclude unrelated
+	 * flows: {@code a} runs while the chain is still open.
 	 */
 	@Test
 	void chainMembersAreContiguousAndOrdered() throws Exception {
@@ -217,6 +218,7 @@ class FlowExecutionTest {
 		gated.release( "c1" );
 		Run run = gated.join( launcher );
 		assertEquals( List.of(), run.failures, run.failures::toString );
+		gated.assertBefore( "start:a", "finish:c1" );
 		gated.assertBefore( "finish:c1", "start:c2" );
 		gated.assertBefore( "finish:c2", "start:d" );
 	}

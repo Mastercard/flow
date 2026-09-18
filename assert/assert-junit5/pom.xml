@@ -24,10 +24,10 @@
 		</dependency>
 
 		<dependency>
-			<!-- Public, baseline-compatible native execution notifications. Versions
-			     remain selected by the consumer's coherent JUnit dependency set. -->
+			<!-- Required for the metatest that exercises our example test -->
 			<groupId>org.junit.platform</groupId>
 			<artifactId>junit-platform-launcher</artifactId>
+			<scope>test</scope>
 		</dependency>
 
 		<dependency>
@@ -46,14 +46,10 @@
 				<groupId>org.pitest</groupId>
 				<artifactId>pitest-maven</artifactId>
 				<configuration>
-					<!-- Match Surefire's four default controlling-test naming patterns. Auxiliary
-					     native factories require their controller's registry/configuration;
-					     they remain exercised by its nested Launcher, not as standalone tests. -->
+					<!-- The @FlowTest fixture classes are driven by their controlling *Test
+					     through a nested Launcher; they are not runnable on their own -->
 					<targetTests>
-						<param>com.mastercard.test.flow.assrt.junit5.Test*</param>
 						<param>com.mastercard.test.flow.assrt.junit5.*Test</param>
-						<param>com.mastercard.test.flow.assrt.junit5.*Tests</param>
-						<param>com.mastercard.test.flow.assrt.junit5.*TestCase</param>
 					</targetTests>
 					<!-- I'm not saying these *have* to stay where they are, just that 
 				     we shouldn't let them slip down by accident -->

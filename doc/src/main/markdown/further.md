@@ -415,6 +415,8 @@ While a dependency on flow `A` from flow `B` will guarantee that `A` will be pro
 
 If you add a tag with the prefix of `chain:` to a group of flows, they will be scheduled as a unit in the overall execution order - flows that do not bear the same chain tag will not be interleaved into that unit. The order of flows within a chain is still determined by the standard constraints described above. A flow should only belong to a single chain.
 
+When flows run concurrently the chain remains one ordered unit - members run one after another, and the chain's outside edges attach to its first and last members - but unrelated flows may run alongside it. A chain does not lock the system under test against flows that share no model relationship with it.
+
 The [`Chain`][builder.Chain] class offers a convenient way to add the chain tag to flows. An example of its usage can be seen in [`Deferred`][Deferred] in the example system model.
 
 <!-- code_link_start -->
