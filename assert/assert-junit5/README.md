@@ -108,3 +108,8 @@ concurrent runs; configure `logs( CorrelatedCapture )` to attribute log events b
 correlation identifier. `progressTimeout( Duration )` bounds how long the factory
 waits for a running flow before failing the run with a diagnostic naming the flows
 still running; the default is ten minutes.
+
+How many flows actually run at once is Jupiter's decision. Its `ForkJoinPool`
+executor may run an emitted flow on the factory thread itself — when the queue is
+already saturated, or once the last flow has been emitted and the factory joins its
+children — so do not write flow bodies that wait for a sibling flow to start.

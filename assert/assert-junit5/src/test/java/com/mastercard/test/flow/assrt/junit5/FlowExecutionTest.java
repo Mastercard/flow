@@ -3,7 +3,7 @@ package com.mastercard.test.flow.assrt.junit5;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -158,33 +159,44 @@ class FlowExecutionTest {
 		}
 	}
 
-	/** Independent flows run at the same time on different threads. */
+	/**
+	 * Independent flows are emitted together and run on more than one thread.
+	 * <p>
+	 * Once the factory has emitted its last leaf it joins the forked leaves, and a
+	 * ForkJoinPool lets it run one inline while an idle worker is not signalled to
+	 * steal the other. A rendezvous inside two held bodies can therefore park with
+	 * no defect in this library, so overlap is shown through the threads that ran
+	 * the flows. The ordering tests below are unaffected: each holds a flow while a
+	 * successor is still pending, so the factory blocks in its own managed wait,
+	 * which does compensate the pool.
+	 */
 	@Test
 	void independentFlowsOverlap() throws Exception {
-		Gated gated = Gated.model( flow( "a" ), flow( "x" ) );
-		gated.hold( "a" );
-		Thread launcher = gated.launch( true );
-		gated.awaitStart( "x" );
-		assertTrue( gated.started( "a" ) );
-		gated.release( "a" );
-		Run run = gated.join( launcher );
-		assertEquals( List.of(), run.failures, run.failures::toString );
-		assertNotEquals( gated.thread( "a" ), gated.thread( "x" ) );
+		Set<Thread> threads = new HashSet<>();
+		for( int attempt = 0; attempt < 5 && threads.size() < 2; attempt++ ) {
+			Gated gated = Gated.model( flow( "a" ), flow( "b" ), flow( "c" ), flow( "d" ) );
+			Run run = gated.join( gated.launch( true ) );
+			assertEquals( List.of(), run.failures, run.failures::toString );
+			assertEquals( 4, run.results.size() );
+			threads.addAll( gated.threads.values() );
+		}
+		assertTrue( threads.size() > 1, "independent flows never left the factory thread" );
 	}
 
 	/** A flow waits for the flows it binds values from, and nothing else. */
 	@Test
 	void dependentStartsAfterItsSourceFinishes() throws Exception {
-		Flow a = flow( "a" );
-		Gated gated = Gated.model( a, flow( "b", a ), flow( "x" ) );
-		gated.hold( "a" );
+		Flow m = flow( "m" );
+		Gated gated = Gated.model( flow( "a" ), m, flow( "n", m ) );
+		gated.hold( "m" );
 		Thread launcher = gated.launch( true );
-		gated.awaitStart( "x" );
-		assertFalse( gated.started( "b" ) );
-		gated.release( "a" );
+		gated.awaitStart( "a" );
+		gated.awaitStart( "m" );
+		assertFalse( gated.started( "n" ) );
+		gated.release( "m" );
 		Run run = gated.join( launcher );
 		assertEquals( List.of(), run.failures, run.failures::toString );
-		gated.assertBefore( "finish:a", "start:b" );
+		gated.assertBefore( "finish:m", "start:n" );
 	}
 
 	/**
@@ -195,10 +207,11 @@ class FlowExecutionTest {
 	void chainMembersAreContiguousAndOrdered() throws Exception {
 		Flow c1 = flow( "c1", "chain:C" );
 		Flow c2 = flow( "c2", "chain:C" );
-		Gated gated = Gated.model( c1, c2, flow( "d", c1 ), flow( "x" ) );
+		Gated gated = Gated.model( flow( "a" ), c1, c2, flow( "d", c1 ) );
 		gated.hold( "c1" );
 		Thread launcher = gated.launch( true );
-		gated.awaitStart( "x" );
+		gated.awaitStart( "a" );
+		gated.awaitStart( "c1" );
 		assertFalse( gated.started( "c2" ) );
 		assertFalse( gated.started( "d" ) );
 		gated.release( "c1" );
@@ -211,26 +224,27 @@ class FlowExecutionTest {
 	/** Flows that publish into the same destination never overlap. */
 	@Test
 	void sameDestinationPublishersAreSerialised() throws Exception {
-		Flow a = flow( "a" );
-		Flow b = flow( "b" );
-		Flow c = Creator.build( f -> f.meta( m -> m.description( "c" ) )
+		Flow p = flow( "p" );
+		Flow q = flow( "q" );
+		Flow r = Creator.build( f -> f.meta( m -> m.description( "r" ) )
 				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN ).request( new Fields( "left:right" ) )
 						.response( new Msg( "response" ) ) )
-				.dependency( a, d -> d.from( i -> true, Type.REQUEST, "left" ).to( i -> true, Type.REQUEST,
+				.dependency( p, d -> d.from( i -> true, Type.REQUEST, "left" ).to( i -> true, Type.REQUEST,
 						"left" ) )
-				.dependency( b, d -> d.from( i -> true, Type.REQUEST, "right" ).to( i -> true,
+				.dependency( q, d -> d.from( i -> true, Type.REQUEST, "right" ).to( i -> true,
 						Type.REQUEST, "right" ) ) );
-		Gated gated = Gated.model( a, b, c, flow( "x" ) );
-		gated.hold( "a" );
+		Gated gated = Gated.model( flow( "a" ), p, q, r );
+		gated.hold( "p" );
 		Thread launcher = gated.launch( true );
-		gated.awaitStart( "x" );
-		assertFalse( gated.started( "b" ) );
-		assertFalse( gated.started( "c" ) );
-		gated.release( "a" );
+		gated.awaitStart( "a" );
+		gated.awaitStart( "p" );
+		assertFalse( gated.started( "q" ) );
+		assertFalse( gated.started( "r" ) );
+		gated.release( "p" );
 		Run run = gated.join( launcher );
 		assertEquals( List.of(), run.failures, run.failures::toString );
-		gated.assertBefore( "finish:a", "start:b" );
-		gated.assertBefore( "finish:b", "start:c" );
+		gated.assertBefore( "finish:p", "start:q" );
+		gated.assertBefore( "finish:q", "start:r" );
 	}
 
 	/**
@@ -239,7 +253,7 @@ class FlowExecutionTest {
 	 */
 	@Test
 	void contextApplyingFlowsAreSerialisedAmongThemselves() throws Exception {
-		Gated gated = Gated.model( contextual( "k1" ), flow( "f" ), contextual( "k2" ) );
+		Gated gated = Gated.model( flow( "a" ), contextual( "k1" ), contextual( "k2" ) );
 		gated.configure = r -> r.applicators( new Applicator<>( Setting.class, 1 ) {
 			@Override
 			public Comparator<Setting> order() {
@@ -253,7 +267,8 @@ class FlowExecutionTest {
 		} );
 		gated.hold( "k1" );
 		Thread launcher = gated.launch( true );
-		gated.awaitStart( "f" );
+		gated.awaitStart( "a" );
+		gated.awaitStart( "k1" );
 		assertFalse( gated.started( "k2" ) );
 		gated.release( "k1" );
 		Run run = gated.join( launcher );
@@ -326,6 +341,68 @@ class FlowExecutionTest {
 			run = aborted.join( aborted.launch( true ) );
 			assertEquals( List.of(), run.results );
 			assertEquals( 0, new Reader( dir.resolve( "published" ) ).read().entries.size() );
+		}
+	}
+
+	/**
+	 * A concurrent run's report holds each executed flow once, with basis links
+	 * resolved against final detail identities, and includes flows whose bodies
+	 * were skipped.
+	 *
+	 * @param parallel Whether Jupiter parallel execution is enabled
+	 * @param dir      Isolated artifact directory
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void reportLinksAndSkipsAreIdenticalInBothModes( boolean parallel, @TempDir Path dir ) {
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "linked" ) ) {
+			Run run = execute( LinkedFactory.class, parallel );
+			assertEquals( List.of(), run.diagnostics, run.diagnostics::toString );
+			List<String> results = new ArrayList<>( run.results );
+			Collections.sort( results );
+			assertEquals( List.of( "error []:FAILED", "errorChild []:FAILED", "errorDependent []:ABORTED",
+					"failure []:FAILED", "failureChild []:ABORTED", "failureDependent []:FAILED",
+					"success []:SUCCESSFUL", "successChild []:SUCCESSFUL", "successDependent []:SUCCESSFUL" ),
+					results );
+			Reader reader = new Reader( dir.resolve( "linked" ) );
+			var index = reader.read();
+			Map<String, com.mastercard.test.flow.report.data.Entry> entries = new java.util.TreeMap<>();
+			index.entries.forEach( e -> entries.put( e.description, e ) );
+			assertEquals( 9, index.entries.size() );
+			assertEquals( 9, entries.size(), "each executed flow appears exactly once" );
+			// Result tags decorate details after their first write; children's basis
+			// links must still point at the parent's final detail path.
+			for( String child : List.of( "successChild", "failureChild", "errorChild" ) ) {
+				String parent = child.replace( "Child", "" );
+				assertEquals( entries.get( parent ).detail, reader.detail( entries.get( child ) ).basis,
+						child + " basis" );
+			}
+			assertTrue( entries.get( "failureChild" ).tags.contains( "SKIP" ) );
+			assertTrue( entries.get( "errorDependent" ).tags.contains( "SKIP" ) );
+			assertTrue( entries.get( "success" ).tags.contains( "PASS" ) );
+			assertTrue( entries.get( "failure" ).tags.contains( "FAIL" ) );
+			assertTrue( entries.get( "error" ).tags.contains( "ERROR" ) );
+		}
+	}
+
+	@FlowTest
+	static class LinkedFactory {
+		@TestFactory
+		Stream<DynamicNode> flows( FlowExecution execution ) {
+			return execution.flocessor( "linked", new Mdl() )
+					.system( State.FUL, Actrs.BEN ).reporting( Reporting.QUIETLY )
+					.behaviour( asrt -> {
+						if( asrt.flow().meta().id().contains( "success" ) ) {
+							asrt.actual().response( asrt.expected().response().content() );
+						}
+						else if( asrt.flow().meta().id().contains( "failure" ) ) {
+							asrt.actual().response( "unexpected content!".getBytes( UTF_8 ) );
+						}
+						else {
+							throw new IllegalArgumentException( "no thanks!" );
+						}
+					} ).tests();
 		}
 	}
 
@@ -431,7 +508,16 @@ class FlowExecutionTest {
 
 	private static void await( CountDownLatch latch ) {
 		try {
-			assertTrue( latch.await( 10, TimeUnit.SECONDS ), "coordination timed out" );
+			if( !latch.await( 10, TimeUnit.SECONDS ) ) {
+				StringBuilder dump = new StringBuilder( "coordination timed out; threads:\n" );
+				Thread.getAllStackTraces().forEach( ( thread, stack ) -> {
+					dump.append( thread.getName() ).append( ' ' ).append( thread.getState() ).append( '\n' );
+					for( StackTraceElement frame : stack ) {
+						dump.append( "    " ).append( frame ).append( '\n' );
+					}
+				} );
+				throw new AssertionError( dump.toString() );
+			}
 		}
 		catch( InterruptedException e ) {
 			Thread.currentThread().interrupt();
