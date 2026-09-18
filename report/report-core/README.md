@@ -44,10 +44,6 @@ rerunning callbacks or reading mutable execution data. Final entries are sorted
 by their existing detail identities. The index is written and closed in a temporary
 file in the report directory, then atomically moved into place. Unsupported or
 failed atomic moves fail reporting; there is no non-atomic fallback.
-Final-only writers also write the bounded text supplied through `diagnostics()` to
-`diagnostics.txt` before publishing the index. A companion-write failure is latched
-as a report failure and cannot leave a newly published final index. Immediate writers
-ignore companion text and retain their existing write-after-`with()` behavior.
 
 Successful repeated close does no work, and subsequent updates are rejected.
 Within one writer, a decorated detail identity already owned by another flow is
@@ -59,56 +55,10 @@ Update/publication failures are latched: subsequent update/close calls throw an
 Closing is not proof that the surrounding test run has completed; the caller must
 stop submissions and drain its work first. Direct Writer failures remain visible.
 
-### Sequential replacement and completion publication
-
-Supported reporting assumes a single active writer per actual output namespace
-and publication location: no competing writer may replace the same destination,
-an overlapping parent/child destination, or the publication location. Overlap is
-unsupported and may delete, mix or misleadingly publish output. Neither safe
-last-writer-wins nor deterministic collision failure is promised. There are no
-cross-run locks, rejection registries or automatic serialization. This does not
-relax shared SUT resource, chain, context, fixture or cancellation coordination
-across cooperating runners; multiple producers may still share one writer.
-
-Construction resolves existing filesystem aliases before replacing output.
-Sequential runs replace existing output at the requested destination without
-nonempty-directory rejection, relocation, backup or recovery. Readers/replay
-inputs remain read-only and must not be chosen as replacement output. Hard
-termination may leave useful details but does not guarantee a browsable final-only
-index or crash recovery. Failed initialization/finalization preserves surviving
-partial files; it does not retry into apparent success.
-
-`writer.onClose(Consumer<Path>)` registers one synchronous completion action. The
-existing `close()` finalizes the report, then invokes the action with its canonical
-path, creating the configured advertisement parent first if needed. No action runs
-after failed detail/index finalization or publication setup.
-The action must finish all publication-related use before returning; asynchronous
-work must not escape that scope. Repeated successful close does not invoke it again;
-an action failure is latched, not retried or rolled back. Immediate reads do not
-require close, but completion actions do; final-only indexes also require close.
-
-Before replacing a destination, Writer withdraws its configured `latest` symlink
-only if it resolves to that canonical destination; unrelated links and ordinary
-files are left alone. An explicitly configured output path named `latest`, including
-an alias to an old report, is an output access path rather than an advertisement to
-withdraw: it remains readable through `writer.path()` during immediate writes and
-after close. Ordinary files/directories chosen as explicit output remain replaceable.
-The five-argument constructor
-`Writer(model, test, root, indexing, latest)` supplies that location before clearing;
-existing constructors default to a sibling. Only the advertisement's parent is
-canonicalized, not its possibly foreign link target.
-
-Writer does not create an advertisement itself. Completion actions advertising
-`latest` use the configured location. After successful finalization, the assertion
-runner may replace an existing symlink there, even one pointing to an older report;
-it removes only the link, never that link's target report. Ordinary files and
-directories at the advertisement location are preserved. This publication step is
-distinct from the destination-specific withdrawal before replacement and from an
-explicit `latest` output path. Automatic run naming and replay-source separation
-remain unchanged. Caller drainage, exactly-once initialization before concurrent
-bodies and latest/browse integration remain runner work; prepared assertion adapters
-use final-only reporting while legacy assertion adapters retain immediate reporting.
-Broader real caller/host acceptance remains separate.
+Construction clears whatever exists at the destination. A single active writer per
+destination is assumed; multiple producers may share one writer. The `latest`
+link, run naming and browser presentation belong to the assertion runner, not to
+Writer.
 
 ## Testing
 

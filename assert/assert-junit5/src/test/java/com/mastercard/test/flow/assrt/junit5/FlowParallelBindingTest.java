@@ -391,11 +391,6 @@ class FlowParallelBindingTest {
 					assertEquals( 0, e.visibleReportIndexes.get() );
 					assertEquals( 3,
 							new Reader( dir.resolve( "prepared-final" ) ).read().entries.size() );
-					String diagnostic = assertDoesNotThrow( () -> Files.readString(
-							dir.resolve( "prepared-final" ).resolve( Writer.DIAGNOSTICS_FILE_NAME ) ) );
-					assertTrue( diagnostic.contains( "Execution: completed and drained" ), diagnostic );
-					assertTrue( diagnostic.contains( "Final index: pending atomic publication" ),
-							diagnostic );
 				}
 			}
 		}
@@ -412,8 +407,6 @@ class FlowParallelBindingTest {
 			assertEquals( List.of(), e.failures );
 			assertEquals( List.of(), e.results );
 			assertEquals( 0, new Reader( dir.resolve( "parallel-empty" ) ).read().entries.size() );
-			assertTrue( Files.exists(
-					dir.resolve( "parallel-empty" ).resolve( Writer.DIAGNOSTICS_FILE_NAME ) ) );
 		}
 	}
 
@@ -475,11 +468,9 @@ class FlowParallelBindingTest {
 				diagnostic::toString );
 	}
 
-	/** Final companion/index faults remain non-fatal and are never advertised. */
-	@ParameterizedTest
-	@ValueSource(strings = { "report-diagnostic-fault", "report-close-fault" })
-	void parallelFinalPublicationFailureIsVisibleAndNonFatal( String scenario,
-			@TempDir Path dir ) {
+	/** Final index faults remain non-fatal and are never advertised. */
+	@Test
+	void parallelFinalPublicationFailureIsVisibleAndNonFatal( @TempDir Path dir ) {
 		ByteArrayOutputStream diagnostic = new ByteArrayOutputStream();
 		PrintStream original = System.err;
 		Evidence e;
@@ -488,7 +479,7 @@ class FlowParallelBindingTest {
 				PrintStream captured = new PrintStream( diagnostic, true, UTF_8 ) ) {
 			System.setErr( captured );
 			try {
-				e = execute( scenario, "true", 3 );
+				e = execute( "report-close-fault", "true", 3 );
 			}
 			finally {
 				System.setErr( original );
@@ -499,10 +490,8 @@ class FlowParallelBindingTest {
 		assertEquals( 1, diagnostic.toString( UTF_8 ).lines()
 				.filter( line -> line.startsWith( "Flow report failed: " ) ).count(),
 				diagnostic::toString );
-		String blocked = scenario.equals( "report-diagnostic-fault" )
-				? Writer.DIAGNOSTICS_FILE_NAME
-				: Writer.INDEX_FILE_NAME;
-		assertTrue( Files.isDirectory( dir.resolve( "parallel-close-failed" ).resolve( blocked ) ) );
+		assertTrue( Files.isDirectory(
+				dir.resolve( "parallel-close-failed" ).resolve( Writer.INDEX_FILE_NAME ) ) );
 	}
 
 	/**
@@ -1045,14 +1034,10 @@ class ParallelBindingFixture {
 				assertEquals( token, FlowExtension.invocationContext().getUniqueId() );
 			e.threads.add( Thread.currentThread() );
 			e.events.add( "body:" + name );
-			if( (e.scenario.equals( "report-diagnostic-fault" )
-					|| e.scenario.equals( "report-close-fault" )) && name.equals( "A" ) ) {
-				String blocked = e.scenario.equals( "report-diagnostic-fault" )
-						? Writer.DIAGNOSTICS_FILE_NAME
-						: Writer.INDEX_FILE_NAME;
+			if( e.scenario.equals( "report-close-fault" ) && name.equals( "A" ) ) {
 				assertDoesNotThrow( () -> Files.createDirectory( Path
 						.of( AssertionOptions.ARTIFACT_DIR.value(), AssertionOptions.REPORT_NAME.value() )
-						.resolve( blocked ) ) );
+						.resolve( Writer.INDEX_FILE_NAME ) ) );
 			}
 			if( e.scenario.equals( "intraflow" ) ) {
 				assertion.actual().request( "request".getBytes( UTF_8 ) )

@@ -924,13 +924,11 @@ class FlowProcessor {
 
 				reportDir = testDir.resolve( name );
 
-				Path latest = testDir.resolve( "latest" );
 				report = new Writer( config.model.title(), testTitle, reportDir,
 						config.finalOnlyReporting ? Writer.Indexing.FINAL_ONLY
-								: Writer.Indexing.IMMEDIATE,
-						latest );
+								: Writer.Indexing.IMMEDIATE );
 				if( !"latest".equals( reportDir.getFileName().toString() ) ) {
-					report.onClose( path -> linkLatest( latest, path ) );
+					linkLatest( testDir.resolve( "latest" ), reportDir );
 				}
 			}
 			target = report;
@@ -985,9 +983,6 @@ class FlowProcessor {
 
 	private static void linkLatest( Path linkPath, Path reportDir ) {
 		try {
-			// Writer supplies a canonical report path; resolve only the link's parent
-			// so relative targets also work through an aliased artifact directory.
-			linkPath = linkPath.getParent().toRealPath().resolve( linkPath.getFileName() );
 			boolean shouldLink;
 			// Ordinary files and directories at latest may be user-owned.
 			if( Files.exists( linkPath, LinkOption.NOFOLLOW_LINKS ) ) {
@@ -1059,21 +1054,13 @@ class FlowProcessor {
 		}
 		try {
 			// The source is cut before the report is finalized, whether or not the
-			// report is usable; its accounting is part of the run diagnostics.
-			String captureSummary = "Capture: completed\n";
+			// report is usable.
 			if( capture != null ) {
 				capture.close( FlowProcessor::ordinaryPeripheralFailure );
-				captureSummary = capture.summary();
 			}
 			// Keep the failed writer: repeated close must expose its original failure.
 			if( closingReport != null ) {
 				try {
-					if( finalPublication ) {
-						closingReport.diagnostics( "Flow run: " + config.title + "\n"
-								+ "Execution: completed and drained\n"
-								+ captureSummary
-								+ "Final index: pending atomic publication\n" );
-					}
 					closingReport.close();
 					if( finalPublication )
 						present( closingReport, reportError );

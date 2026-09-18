@@ -58,8 +58,7 @@ class WriterFinalLinksTest {
 			throws IOException {
 		Flow first = new ObservedFlow( "collision", null );
 		Flow second = new ObservedFlow( "collision", null );
-		CountingReportFiles files = new CountingReportFiles();
-		Writer writer = new Writer( "model", "test", dir, mode, files );
+		Writer writer = new Writer( "model", "test", dir, mode );
 		AtomicReference<String> firstName = new AtomicReference<>();
 		AtomicReference<String> secondName = new AtomicReference<>();
 		writer.with( first, detail -> {
@@ -90,7 +89,6 @@ class WriterFinalLinksTest {
 		assertSame( failure, assertThrows( IllegalStateException.class, writer::close ).getCause() );
 		assertArrayEquals( firstEvidence, Files.readAllBytes( firstPath ) );
 		assertArrayEquals( secondEvidence, Files.readAllBytes( secondPath ) );
-		assertEquals( 2, files.detailWrites );
 		if( mode == Indexing.FINAL_ONLY ) {
 			assertNull( new Reader( dir ).read() );
 		}
@@ -134,13 +132,11 @@ class WriterFinalLinksTest {
 		for( int i = 0; i < 100; i++ ) {
 			ancestry.add( new ObservedFlow( "ancestor " + i, i == 0 ? null : ancestry.get( i - 1 ) ) );
 		}
-		CountingReportFiles files = new CountingReportFiles();
-		try( Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY, files ) ) {
+		try( Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY ) ) {
 			for( int i = 0; i < 20; i++ ) {
 				writer.with( new ObservedFlow( "leaf " + i, ancestry.get( 99 ) ) );
 			}
 			writer.with( ancestry.get( 0 ) );
-			assertEquals( 21, files.detailWrites );
 			assertEquals( 1, ancestry.get( 50 ).basisReads );
 			// Changing the external model later must not change captured ancestry.
 			ancestry.get( 50 ).basis = null;
@@ -153,8 +149,6 @@ class WriterFinalLinksTest {
 		}
 		assertNull( reader.detail( entries.get( "ancestor 0" ) ).basis );
 		assertEquals( 1, ancestry.get( 50 ).basisReads );
-		assertEquals( 41, files.detailWrites );
-		assertEquals( 21, files.indexEntries );
 	}
 
 	/**
@@ -183,16 +177,14 @@ class WriterFinalLinksTest {
 	 */
 	@Test
 	void renamedDependencies( @TempDir Path dir ) {
-		CountingReportFiles files = new CountingReportFiles();
 		AtomicInteger callbacks = new AtomicInteger();
-		try( Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY, files ) ) {
+		try( Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY ) ) {
 			writer.with( Mdl.DEPENDENT, detail -> callbacks.incrementAndGet() );
 			writer.with( Mdl.DEPENDENCY, detail -> detail.tags.add( "first" ) );
 			writer.with( Mdl.DEPENDENCY, detail -> {
 				detail.tags.remove( "first" );
 				detail.tags.add( "last" );
 			} );
-			assertEquals( 3, files.detailWrites );
 		}
 		Reader reader = new Reader( dir );
 		Map<String, Entry> entries = entries( reader );
@@ -201,7 +193,6 @@ class WriterFinalLinksTest {
 				dependent.dependencies.keySet() );
 		assertEquals( "dependency", dependent.dependencies.values().iterator().next().description );
 		assertEquals( 1, callbacks.get() );
-		assertEquals( 4, files.detailWrites );
 	}
 
 	/**
@@ -211,12 +202,11 @@ class WriterFinalLinksTest {
 	 */
 	@Test
 	void frozenCorrection( @TempDir Path dir ) {
-		CountingReportFiles files = new CountingReportFiles();
 		AtomicReference<FlowData> retained = new AtomicReference<>();
 		AtomicInteger callbacks = new AtomicInteger();
 		Map<String, String> mutable = new HashMap<>( Map.of( "value", "captured" ) );
 		String payload = "large captured payload ".repeat( 50000 );
-		try( Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY, files ) ) {
+		try( Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY ) ) {
 			writer.with( Mdl.CHILD, detail -> {
 				callbacks.incrementAndGet();
 				detail.motivation = "captured motivation";
@@ -228,7 +218,6 @@ class WriterFinalLinksTest {
 			retained.get().motivation = "late motivation";
 			retained.get().tags.add( "LATE" );
 			writer.with( Mdl.BASIS, detail -> detail.tags.add( "renamed" ) );
-			assertEquals( 2, files.detailWrites, "Final-only updates must not scan/correct old details" );
 		}
 		Reader reader = new Reader( dir );
 		Map<String, Entry> entries = entries( reader );
@@ -239,8 +228,6 @@ class WriterFinalLinksTest {
 		assertEquals( payload, child.context.get( "large" ) );
 		assertFalse( child.tags.contains( "LATE" ) );
 		assertEquals( 1, callbacks.get() );
-		assertEquals( 3, files.detailWrites, "One corrective rewrite of the child" );
-		assertEquals( 2, files.indexEntries );
 		entries.values().forEach( entry -> assertNotNull( reader.detail( entry ) ) );
 	}
 

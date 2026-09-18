@@ -40,7 +40,6 @@ import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
 import com.mastercard.test.flow.assrt.junit5.mock.Msg;
 import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.report.Reader;
-import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.Entry;
 import com.mastercard.test.flow.report.data.LogEvent;
 import com.mastercard.test.flow.util.Option.Temporary;
@@ -168,45 +167,22 @@ class PreparedCaptureTest {
 					CorrelatedFactory.source.lifecycle );
 
 			// Each flow's snapshot holds exactly the events that carried its identifier.
-			// An event for a flow that had already ended is late diagnostics and one for
-			// a flow not yet begun is unattributed; neither attaches to the flow that
-			// happened to be running.
+			// An event for a flow that had already ended or not yet begun does not
+			// attach to the flow that happened to be running.
 			Reader reader = new Reader( dir.resolve( "correlated" ) );
 			Map<String, List<String>> logs = new TreeMap<>();
 			for( Entry entry : reader.read().entries ) {
 				logs.put( entry.description, reader.detail( entry ).logs.stream()
 						.map( e -> e.message ).collect( Collectors.toList() ) );
 			}
-			String diagnostics = Files.readString( dir.resolve( "correlated" )
-					.resolve( Writer.DIAGNOSTICS_FILE_NAME ) );
-			int accepted = 2;
-			int unattributed = 2;
 			for( String flow : List.of( "first", "second" ) ) {
 				String other = flow.equals( "first" ) ? "second" : "first";
 				switch( CorrelatedFactory.outcomes.get( other ) ) {
-					case ACCEPTED -> {
-						assertEquals( List.of( flow + "-1", flow + "-2" ), logs.get( flow ) );
-						accepted++;
-					}
-					case LATE -> {
-						assertEquals( List.of( flow + "-1" ), logs.get( flow ) );
-						assertTrue(
-								diagnostics.contains( "late " + flow + " []: time INFO sut " + flow + "-2" ),
-								diagnostics );
-					}
-					case UNATTRIBUTED -> {
-						assertEquals( List.of( flow + "-1" ), logs.get( flow ) );
-						assertTrue( diagnostics.contains(
-								"unattributed " + flow + ": time INFO sut " + flow + "-2" ), diagnostics );
-						unattributed++;
-					}
+					case ACCEPTED -> assertEquals( List.of( flow + "-1", flow + "-2" ), logs.get( flow ) );
+					case LATE, UNATTRIBUTED -> assertEquals( List.of( flow + "-1" ), logs.get( flow ) );
 					default -> throw new AssertionError( CorrelatedFactory.outcomes.toString() );
 				}
 			}
-			assertTrue( diagnostics.contains( "Capture: " + accepted + " events retained" ),
-					diagnostics );
-			assertTrue( diagnostics.contains(
-					"Capture unattributed: " + unattributed + " unattributed events" ), diagnostics );
 		}
 	}
 

@@ -36,7 +36,6 @@ import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome;
 import com.mastercard.test.flow.assrt.log.CorrelatedTail;
 import com.mastercard.test.flow.report.Reader;
-import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.Entry;
 import com.mastercard.test.flow.report.data.LogEvent;
 import com.mastercard.test.flow.util.Option.Temporary;
@@ -104,10 +103,6 @@ class CorrelatedCaptureTest {
 		return logs;
 	}
 
-	private static String diagnostics( Path report ) throws IOException {
-		return Files.readString( report.resolve( Writer.DIAGNOSTICS_FILE_NAME ), UTF_8 );
-	}
-
 	private static void await( CountDownLatch latch ) throws InterruptedException {
 		assertTrue( latch.await( 10, TimeUnit.SECONDS ), "coordination timed out" );
 	}
@@ -171,15 +166,6 @@ class CorrelatedCaptureTest {
 			assertEquals( List.of( "INFO s1", "INFO s2", "INFO s3" ), logs.get( "second" ) );
 			assertEquals( List.of(), logs.get( "third" ) );
 
-			String diagnostics = diagnostics( runner.report() );
-			assertTrue( diagnostics.contains( "Capture: 4 events retained (8 bytes)" ), diagnostics );
-			assertTrue( diagnostics.contains( "1 late event: first [a, b, c] (1)" ), diagnostics );
-			assertTrue( diagnostics.contains( "2 unattributed events" ), diagnostics );
-			assertTrue( diagnostics.contains( "late first [a, b, c]: time INFO sut f-late" ),
-					diagnostics );
-			assertTrue( diagnostics.contains( "unattributed nobody: time INFO sut orphan" ),
-					diagnostics );
-			assertTrue( diagnostics.contains( "unattributed: time INFO sut anonymous" ), diagnostics );
 		}
 	}
 
@@ -263,9 +249,6 @@ class CorrelatedCaptureTest {
 			Map<String, List<String>> logs = flowLogs( runner.report() );
 			assertEquals( List.of( "INFO by alias same", "INFO by shared same" ), logs.get( "first" ) );
 			assertEquals( List.of(), logs.get( "second" ) );
-			String diagnostics = diagnostics( runner.report() );
-			assertTrue( diagnostics.contains( "2 ambiguous identifiers: same, txn" ), diagnostics );
-			assertTrue( diagnostics.contains( "2 unattributed events" ), diagnostics );
 		}
 	}
 
@@ -297,9 +280,6 @@ class CorrelatedCaptureTest {
 					"INFO second one",
 					"WARN Log capture omitted 2 events (54 bytes) beyond the run budget" ),
 					logs.get( "second" ) );
-			String diagnostics = diagnostics( runner.report() );
-			assertTrue( diagnostics.contains( "Capture: 3 events retained (31 bytes)" ), diagnostics );
-			assertTrue( diagnostics.contains( "3 omitted events (65 bytes)" ), diagnostics );
 		}
 	}
 
@@ -318,10 +298,6 @@ class CorrelatedCaptureTest {
 			assertEquals( List.of( "INFO before",
 					"WARN Log capture end/materialize/close failed: java.io.UncheckedIOException" ),
 					logs.get( "first" ) );
-			String diagnostics = diagnostics( runner.report() );
-			assertTrue( diagnostics.contains( "Capture: 1 event retained (6 bytes)" ), diagnostics );
-			assertTrue( diagnostics.contains( "close failed: java.io.UncheckedIOException" ),
-					diagnostics );
 			assertEquals( List.of( "open", "flush", "flush", "close" ), source.lifecycle );
 		}
 	}
@@ -355,11 +331,6 @@ class CorrelatedCaptureTest {
 						logs.toString() );
 				assertEquals( "DEBUG []   detail\n   with continuation", logs.get( flow ).get( 1 ) );
 			}
-			String diagnostics = diagnostics( runner.report() );
-			assertTrue( diagnostics.contains( "Capture: 4 events retained" ), diagnostics );
-			assertTrue( diagnostics.contains( "2 unattributed events" ), diagnostics );
-			assertTrue( diagnostics.contains( "unattributed other: 3 WARN sut []   not mine" ),
-					diagnostics );
 		}
 	}
 

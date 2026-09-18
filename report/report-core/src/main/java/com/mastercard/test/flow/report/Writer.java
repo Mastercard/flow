@@ -1,13 +1,14 @@
 package com.mastercard.test.flow.report;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -47,10 +48,8 @@ import com.mastercard.test.flow.util.Bytes;
 /**
  * For writing a new report
  * <p>
- * Callers must use a single active writer per output namespace and publication
- * location. Competing writers, including overlapping parent/child destinations,
- * are unsupported and may delete, mix or misleadingly publish output. Updates
- * from multiple producers on the same writer are supported.
+ * Callers must use a single active writer per output destination; updates from
+ * multiple threads on the same writer are supported.
  * </p>
  */
 public class Writer implements AutoCloseable {
@@ -69,8 +68,6 @@ public class Writer implements AutoCloseable {
 	 * The file name under which the report index is saved
 	 */
 	public static final String INDEX_FILE_NAME = "index.html";
-	/** Bounded run diagnostics written before a final-only index is published. */
-	public static final String DIAGNOSTICS_FILE_NAME = "diagnostics.txt";
 	/**
 	 * The directory in which {@link Flow} detail data is stored
 	 */
@@ -105,19 +102,13 @@ public class Writer implements AutoCloseable {
 	private final String modelTitle;
 	private final String testTitle;
 	private final Path root;
-	private final Path requestedRoot;
-	private final Path latest;
 	private final Map<Flow, IndexedFlowData> data = new LinkedHashMap<>();
 	private final Map<String, IndexedFlowData> detailOwners = new HashMap<>();
 	private final JsApp app;
 	private final Indexing indexing;
-	private final ReportFiles files;
 	private State state = State.OPEN;
 	private Throwable failure;
 	private boolean updating;
-	private Consumer<Path> publication;
-	private String diagnostics = "";
-	private static final int MAX_DIAGNOSTIC_CHARS = 16 * 1024;
 
 	private enum State {
 		OPEN, FINALIZING, CLOSED, FAILED
@@ -144,55 +135,15 @@ public class Writer implements AutoCloseable {
 	 *                   the writer after submitting all updates
 	 */
 	public Writer( String modelTitle, String testTitle, Path root, Indexing indexing ) {
-		this( modelTitle, testTitle, root, indexing, new ReportFiles() );
-	}
-
-	/**
-	 * @param modelTitle Model title
-	 * @param testTitle  Test title
-	 * @param root       Report destination
-	 * @param indexing   Index publication policy
-	 * @param latest     Advertisement location, named latest; null uses a sibling
-	 *                   of the canonical destination. Its parent is canonicalized,
-	 *                   not the advertisement's target. No link is created
-	 *                   automatically.
-	 */
-	public Writer( String modelTitle, String testTitle, Path root, Indexing indexing, Path latest ) {
-		this( modelTitle, testTitle, root, indexing, new ReportFiles(), latest );
-	}
-
-	/**
-	 * @param modelTitle Model title
-	 * @param testTitle  Test title
-	 * @param root       Report destination
-	 * @param indexing   Index publication policy
-	 * @param files      Payload filesystem operations
-	 */
-	Writer( String modelTitle, String testTitle, Path root, Indexing indexing, ReportFiles files ) {
-		this( modelTitle, testTitle, root, indexing, files, null );
-	}
-
-	/**
-	 * @param modelTitle Model title
-	 * @param testTitle  Test title
-	 * @param root       Report destination
-	 * @param indexing   Index publication policy
-	 * @param files      Payload filesystem operations
-	 * @param latest     Advertisement location known before replacement; null uses
-	 *                   a sibling
-	 */
-	Writer( String modelTitle, String testTitle, Path root, Indexing indexing, ReportFiles files,
-			Path latest ) {
 		this.modelTitle = modelTitle;
 		this.testTitle = testTitle;
-		requestedRoot = root;
+		this.root = root;
 		this.indexing = Objects.requireNonNull( indexing, "indexing" );
-		this.files = Objects.requireNonNull( files, "files" );
-		this.root = QuietFiles.wrap( () -> ReportFiles.canonical( root.toAbsolutePath() ) );
-		this.latest = QuietFiles.wrap( () -> ReportFiles.latest( this.root, latest ) );
-		files.withdrawLatest( root, this.root, this.latest );
-		files.clear( this.root );
-		app = new JsApp( "/com/mastercard/test/flow/report", this.root.resolve( "res" ), files );
+
+		// delete whatever might be there already
+		QuietFiles.recursiveDelete( root );
+		// write static content
+		app = new JsApp( "/com/mastercard/test/flow/report", root.resolve( "res" ) );
 	}
 
 	/**
@@ -361,48 +312,11 @@ public class Writer implements AutoCloseable {
 	}
 
 	/**
-	 * Registers one synchronous publication action for successful finalization. It
-	 * runs inside close and must finish its use before returning, not wait for
-	 * another thread to use this writer. A thrown failure is latched and is not
-	 * retried. Actions advertising latest must use the location supplied at
-	 * construction (a sibling by default). They may replace an existing symlink,
-	 * but preserve its target and ordinary files/directories at that location.
-	 * Actions handle their own partial side effects.
-	 *
-	 * @param action Receives the canonical report destination
-	 * @return This writer
-	 */
-	public synchronized Writer onClose( Consumer<Path> action ) {
-		requireOpen();
-		if( publication != null ) {
-			throw new IllegalStateException( "Publication action already registered" );
-		}
-		publication = Objects.requireNonNull( action, "action" );
-		return this;
-	}
-
-	/**
-	 * Supplies bounded run diagnostics for final-only publication. The text is
-	 * written before the atomic index move; immediate Writers ignore it.
-	 *
-	 * @param text Complete run diagnostic snapshot
-	 * @return This writer
-	 */
-	public synchronized Writer diagnostics( String text ) {
-		requireOpen();
-		String supplied = Objects.requireNonNull( text, "text" );
-		diagnostics = supplied.length() <= MAX_DIAGNOSTIC_CHARS ? supplied
-				: supplied.substring( 0, MAX_DIAGNOSTIC_CHARS );
-		return this;
-	}
-
-	/**
-	 * Completes this report. Final-only indexes are closed in a same-directory
+	 * Completes this report. Final-only indexes are written to a same-directory
 	 * temporary file before an atomic move, with no non-atomic fallback. A
 	 * successful repeated close does nothing; further updates are rejected. After
 	 * an update or publication fails, subsequent close/update calls throw an
-	 * exception whose cause is the original failure, without retrying IO. Failed
-	 * finalization does not invoke the publication action.
+	 * exception whose cause is the original failure, without retrying IO.
 	 */
 	@Override
 	public synchronized void close() {
@@ -413,13 +327,8 @@ public class Writer implements AutoCloseable {
 		state = State.FINALIZING;
 		try {
 			if( indexing == Indexing.FINAL_ONLY ) {
-				writeDiagnostics();
 				correctFinalLinks();
 				publishIndex();
-			}
-			if( publication != null ) {
-				QuietFiles.createDirectories( latest.getParent() );
-				publication.accept( root );
 			}
 			state = State.CLOSED;
 		}
@@ -430,23 +339,13 @@ public class Writer implements AutoCloseable {
 		}
 	}
 
-	private void writeDiagnostics() {
-		Path destination = root.resolve( DIAGNOSTICS_FILE_NAME );
-		try( OutputStream output = files.open( destination ) ) {
-			output.write( diagnostics.getBytes( UTF_8 ) );
-		}
-		catch( IOException e ) {
-			throw new UncheckedIOException( "Failed to write report diagnostics " + destination, e );
-		}
-	}
-
 	private void publishIndex() {
 		Path temporary = null;
 		try {
 			Files.createDirectories( root.resolve( DETAIL_DIR_NAME ) );
-			temporary = files.temporary( root );
+			temporary = Files.createTempFile( root, ".index-", ".tmp" );
 			writeIndex( temporary );
-			files.publish( temporary, root.resolve( INDEX_FILE_NAME ) );
+			Files.move( temporary, root.resolve( INDEX_FILE_NAME ), ATOMIC_MOVE, REPLACE_EXISTING );
 		}
 		catch( IOException e ) {
 			UncheckedIOException problem = new UncheckedIOException(
@@ -477,7 +376,7 @@ public class Writer implements AutoCloseable {
 	 * @return The path to the report directory
 	 */
 	public Path path() {
-		return requestedRoot;
+		return root;
 	}
 
 	/**

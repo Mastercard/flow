@@ -78,15 +78,13 @@ class ReportingTest {
 			assertNull( runner.report() );
 			if( initialize ) {
 				runner.initializeReporting();
-				assertEquals( directory.resolve( "empty" ).toRealPath(), runner.report() );
+				assertEquals( directory.resolve( "empty" ), runner.report() );
 			}
 			assertFalse( Files.exists( directory.resolve( "empty" ).resolve( Writer.INDEX_FILE_NAME ) ) );
 			runner.completeProcessing();
 			Index index = new Reader( runner.report() ).read();
 			assertEquals( "empty prepared run", index.meta.testTitle );
 			assertTrue( index.entries.isEmpty() );
-			assertTrue( Files.readString( runner.report().resolve( Writer.DIAGNOSTICS_FILE_NAME ) )
-					.contains( "Execution: completed and drained" ) );
 			runner.completeProcessing();
 			assertEquals( "", diagnostic.toString( UTF_8 ),
 					"repeated completion is not a report failure" );
@@ -134,7 +132,7 @@ class ReportingTest {
 				assertDoesNotThrow( () -> runner.process( flow ) );
 			assertEquals( 1, calls[0] );
 			if( "completion".equals( phase ) ) {
-				Files.createDirectory( runner.report().resolve( Writer.DIAGNOSTICS_FILE_NAME ) );
+				Files.createDirectory( runner.report().resolve( Writer.INDEX_FILE_NAME ) );
 				assertEquals( "", diagnostic.toString( UTF_8 ) );
 			}
 			assertDoesNotThrow( runner::completeProcessing );
@@ -455,7 +453,6 @@ class ReportingTest {
 				Entry entry = reader.read().entries.get( 0 );
 				assertTrue( entry.tags.contains( "PASS" ) );
 				assertTrue( reader.detail( entry ).tags.contains( "PASS" ) );
-				assertFalse( Files.exists( dir.resolve( "latest" ), LinkOption.NOFOLLOW_LINKS ) );
 			}
 		}
 		assertEquals( "publication", new Reader( dir.resolve( name ) ).read().meta.testTitle );
@@ -490,7 +487,6 @@ class ReportingTest {
 
 	/**
 	 * Shows that a stably-named symlink is created that points to the latest report
-	 * only at completion, including when the same destination is reused.
 	 *
 	 * @param name Null for the default name, or a configured nested name
 	 * @throws Exception On filesystem failure
@@ -514,8 +510,6 @@ class ReportingTest {
 			try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( "target/mctf" );
 					Temporary t = AssertionOptions.REPORT_NAME.temporarily( name ) ) {
 				tf.execute();
-				assertFalse( Files.exists( linkedPath, LinkOption.NOFOLLOW_LINKS ),
-						"No advertisement while processing" );
 				assertEquals( 1, new Reader( tf.report() ).read().entries.size() );
 			}
 		}
@@ -544,47 +538,5 @@ class ReportingTest {
 		assertEquals( direct.meta.modelTitle, linked.meta.modelTitle );
 		assertEquals( direct.meta.testTitle, linked.meta.testTitle );
 		assertEquals( direct.meta.timestamp, linked.meta.timestamp );
-
-		try( TestFlocessor replacement = new TestFlocessor( "replacement", TestModel.abc() )
-				.system( State.FUL, B ).reporting( QUIETLY, "symlink" );
-				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( "target/mctf" );
-				Temporary reportName = AssertionOptions.REPORT_NAME.temporarily(
-						linkedPath.getParent().relativize( writtenPath ).toString() ) ) {
-			replacement.execute();
-			assertFalse( Files.exists( linkedPath, LinkOption.NOFOLLOW_LINKS ),
-					"Reusing the advertised destination withdraws latest while processing" );
-		}
-		assertEquals( "replacement", new Reader( linkedPath ).read().meta.testTitle );
-	}
-
-	/**
-	 * An aliased artifact parent keeps an older report advertised until its
-	 * replacement completes, then uses a valid relative link to the new report.
-	 *
-	 * @param dir Isolated artifact directory
-	 * @throws Exception On filesystem failure
-	 */
-	@Test
-	@DisabledOnOs(OS.WINDOWS) // requires special permissions to create symlinks
-	void symlinkedArtifactDirectory( @TempDir Path dir ) throws Exception {
-		Path actual = Files.createDirectories( dir.resolve( "actual/reports" ) );
-		Path alias = Files.createSymbolicLink( dir.resolve( "alias" ), actual );
-		Path latest = alias.resolve( "latest" );
-		try( Writer old = new Writer( "model", "old", actual.resolve( "old" ) ) ) {
-			old.with( TestModel.abc().flows().findFirst().orElseThrow() );
-		}
-		Files.createSymbolicLink( latest, Path.of( "old" ) );
-		TestFlocessor tf = new TestFlocessor( "new", TestModel.abc() )
-				.system( State.FUL, B ).reporting( QUIETLY );
-		try( tf ) {
-			try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( alias.toString() );
-					Temporary name = AssertionOptions.REPORT_NAME.temporarily( "sub/path/report" ) ) {
-				tf.execute();
-				assertEquals( "old", new Reader( latest ).read().meta.testTitle );
-			}
-		}
-		assertEquals( Path.of( "sub/path/report" ), Files.readSymbolicLink( latest ) );
-		assertEquals( tf.report().toRealPath(), latest.toRealPath() );
-		assertEquals( "new", new Reader( latest ).read().meta.testTitle );
 	}
 }
