@@ -50,6 +50,14 @@ class SysOutTest {
 		accept( "../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/"
 				+ "FlowProcessor.java",
 				"System.err.println( diagnostic );" );
+		// Log-file source problems are not flow evidence and cannot be attributed to
+		// a flow, so they are reported the same way as the runner's own diagnostics.
+		accept( "../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/log/"
+				+ "CorrelatedTail.java",
+				"System.err.println( \"Log capture source \" + file + \": \" + description );" );
+		accept( "../assert/assert-core/src/test/java/com/mastercard/test/flow/assrt/log/"
+				+ "CorrelatedTailTest.java",
+				"PrintStream original = System.err;" );
 		// Standalone compatibility runners deliberately print their native test
 		// summaries and failures for the same-binary, cross-runtime evidence logs.
 		for( String runner : new String[] { "FlowLauncherBridgeRuntime",

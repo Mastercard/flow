@@ -107,9 +107,31 @@ Known ordinary capture-source failures emit diagnostics without failing an
 otherwise passing test. Execution, assertion, control and fatal failures are not
 reclassified as ordinary capture faults; a genuine primary failure is retained
 if cleanup or reporting also fails. `Merge` balances all successfully started
-child sources and closes their streams even when another source fails. These
-serial lifetime guarantees do not provide concurrent log correlation or make
-shared capture sources safe for overlapping runs.
+child sources and closes their streams even when another source fails.
+
+### Correlated capture
+
+Interval-based `LogCapture` cannot tell concurrent flows' events apart, so
+concurrent runs use `CorrelatedCapture`: events are attributed by a correlation
+identifier carried in the event itself, including events that arrive after their
+flow has finished. To make this work the identifier must reach the log line:
+
+ 1. Read the execution's identifier in the test body with
+    `assertion.correlation().id()`, or configure `correlation( Function )` to
+    derive it from the flow. If the system returns its own identifier, bind it with
+    `assertion.correlation().alias( id )`.
+ 2. Send it to the system under test, typically as a request header.
+ 3. Have the system put it in its logging context (for example an MDC field) so
+    that every log line for that request carries it.
+ 4. Supply the source: `logs( new CorrelatedTail( path, pattern ) )` reads a log
+    file incrementally, where `pattern` matches the start of each line and captures
+    named groups `time`, `level`, `source` and `correlation`, for example
+    `^(?<time>\S+) \[(?<correlation>[^\]]*)\] (?<level>[A-Z]+) (?<source>\S+) `.
+    For an in-JVM system, implement `CorrelatedCapture` and push events from your
+    logging backend's appender.
+
+Events with an unknown or absent identifier, or one claimed by more than one
+execution, are never attached to another flow.
 
 ## Report replay
 

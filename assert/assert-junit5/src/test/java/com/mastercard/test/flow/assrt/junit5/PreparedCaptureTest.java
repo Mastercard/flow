@@ -30,6 +30,7 @@ import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.CorrelatedCapture;
 import com.mastercard.test.flow.assrt.LogCapture;
+import com.mastercard.test.flow.assrt.log.CorrelatedTail;
 import com.mastercard.test.flow.assrt.Reporting;
 import com.mastercard.test.flow.assrt.junit5.mock.Actrs;
 import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
@@ -135,9 +136,9 @@ class PreparedCaptureTest {
 			assertEquals( List.of( "open", "flush", "flush", "flush", "close" ),
 					CorrelatedFactory.source.lifecycle );
 
-			// Each flow's snapshot holds exactly the events that carried its identifier.
-			// An event for a flow that had already ended or not yet begun does not
-			// attach to the flow that happened to be running.
+			// Each flow's report holds exactly the events that carried its identifier,
+			// including one that arrived after it had ended. An event for a flow not
+			// yet begun does not attach to the flow that happened to be running.
 			Reader reader = new Reader( dir.resolve( "correlated" ) );
 			Map<String, List<String>> logs = new TreeMap<>();
 			for( Entry entry : reader.read().entries ) {
@@ -147,11 +148,45 @@ class PreparedCaptureTest {
 			for( String flow : List.of( "first", "second" ) ) {
 				String other = flow.equals( "first" ) ? "second" : "first";
 				switch( CorrelatedFactory.outcomes.get( other ) ) {
-					case ACCEPTED -> assertEquals( List.of( flow + "-1", flow + "-2" ), logs.get( flow ) );
-					case LATE, UNATTRIBUTED -> assertEquals( List.of( flow + "-1" ), logs.get( flow ) );
+					case ACCEPTED, LATE -> assertEquals( List.of( flow + "-1", flow + "-2" ),
+							logs.get( flow ) );
+					case UNATTRIBUTED -> assertEquals( List.of( flow + "-1" ), logs.get( flow ) );
 					default -> throw new AssertionError( CorrelatedFactory.outcomes.toString() );
 				}
 			}
+		}
+	}
+
+	/**
+	 * Concurrent flows log interleaved lines to one file; each report entry gets
+	 * only the lines carrying its identifier, including one written after the flow
+	 * finished.
+	 *
+	 * @param dir Isolated artifact directory
+	 * @throws Exception On filesystem failure
+	 */
+	@Test
+	void interleavedFileLinesAreAttributedByIdentifier( @TempDir Path dir ) throws Exception {
+		Path log = dir.resolve( "sut.log" );
+		Files.writeString( log, "0 [-] INFO boot started before the run\n" );
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "tailed" ) ) {
+			TailFactory.log = log;
+			FlowExecutionTest.Run run = FlowExecutionTest.execute( TailFactory.class, true );
+			assertEquals( List.of(), run.failures, run.failures::toString );
+			assertEquals( 2, run.results.size(), run.results::toString );
+			Reader reader = new Reader( dir.resolve( "tailed" ) );
+			Map<String, Set<String>> logs = new TreeMap<>();
+			for( Entry entry : reader.read().entries ) {
+				// the tail prefixes content with the header text it did not capture
+				logs.put( entry.description, reader.detail( entry ).logs.stream()
+						.map( e -> e.message.replaceFirst( "^\\[\\]\\s+", "" ) )
+						.collect( Collectors.toSet() ) );
+			}
+			assertEquals( Set.of( "handling first", "more for first", "late for first" ),
+					logs.get( "first" ) );
+			assertEquals( Set.of( "handling second", "more for second", "late for second" ),
+					logs.get( "second" ) );
 		}
 	}
 
@@ -228,5 +263,54 @@ class CorrelatedFactory {
 
 	private static LogEvent event( String message ) {
 		return new LogEvent( "time", "INFO", "sut", message );
+	}
+}
+
+/** Parallel factory whose flows log interleaved lines to one shared file. */
+@FlowTest
+class TailFactory {
+	static Path log;
+
+	@TestFactory
+	Stream<DynamicNode> flows( FlowExecution execution ) {
+		Flow first = Creator.build( f -> f.meta( m -> m.description( "first" ) )
+				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+						.request( new Msg( "req" ) ).response( new Msg( "rsp" ) ) ) );
+		Flow second = Creator.build( f -> f.meta( m -> m.description( "second" ) )
+				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+						.request( new Msg( "req" ) ).response( new Msg( "rsp" ) ) ) );
+		CountDownLatch bothLogged = new CountDownLatch( 2 );
+		return execution.flocessor( "tailed", PreparedFlowLifecycleTest.model( first, second ) )
+				.system( State.LESS, Actrs.BEN ).reporting( Reporting.QUIETLY )
+				.logs( new CorrelatedTail( log,
+						"^(?<time>\\d+) \\[(?<correlation>[^\\]]*)\\] (?<level>[A-Z]+) (?<source>\\S+) " ) )
+				.correlation( f -> f.meta().description() )
+				.behaviour( a -> {
+					String me = a.correlation().id();
+					String other = me.equals( "first" ) ? "second" : "first";
+					// the "system" interleaves its output for both flows, and keeps writing
+					// about the other flow after this one has returned
+					append( "1 [" + me + "] INFO sut handling " + me,
+							"2 [" + other + "] INFO sut more for " + other );
+					bothLogged.countDown();
+					try {
+						bothLogged.await( 2, TimeUnit.SECONDS );
+					}
+					catch( InterruptedException e ) {
+						throw new IllegalStateException( e );
+					}
+					a.actual().response( a.expected().response().content() );
+					append( "3 [" + other + "] INFO sut late for " + other );
+				} ).tests();
+	}
+
+	private static synchronized void append( String... lines ) {
+		try {
+			Files.writeString( log, String.join( "\n", lines ) + "\n",
+					java.nio.file.StandardOpenOption.APPEND );
+		}
+		catch( java.io.IOException e ) {
+			throw new java.io.UncheckedIOException( e );
+		}
 	}
 }

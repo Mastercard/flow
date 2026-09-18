@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -31,8 +30,8 @@ public class CorrelatedTail implements CorrelatedCapture {
 	private static final String SOURCE_GROUP = "source";
 	private static final String LEVEL_GROUP = "level";
 	private static final String TIME_GROUP = "time";
-	/** Recorded source problems kept for the run summary */
-	private static final int RETAINED_PROBLEMS = 20;
+	/** Source problems reported to stderr before further ones are dropped */
+	private static final int REPORTED_PROBLEMS = 20;
 
 	private final Path file;
 	private final Pattern pattern;
@@ -45,8 +44,7 @@ public class CorrelatedTail implements CorrelatedCapture {
 	private byte[] carry = new byte[0];
 	/** Header of the most recent event, for continuation lines in a later read */
 	private String[] lastHeader;
-	private final List<String> problems = new ArrayList<>();
-	private int omittedProblems;
+	private int reportedProblems;
 
 	/**
 	 * @param file    The path to the file to extract from
@@ -117,18 +115,6 @@ public class CorrelatedTail implements CorrelatedCapture {
 			carry = new byte[0];
 		}
 		collector = null;
-	}
-
-	@Override
-	public String summary() {
-		StringBuilder sb = new StringBuilder();
-		problems.forEach( p -> sb.append( "source " ).append( file ).append( ": " ).append( p )
-				.append( '\n' ) );
-		if( omittedProblems > 0 ) {
-			sb.append( "source " ).append( file ).append( ": " ).append( omittedProblems )
-					.append( " further problems\n" );
-		}
-		return sb.toString();
 	}
 
 	/**
@@ -217,12 +203,13 @@ public class CorrelatedTail implements CorrelatedCapture {
 		}
 	}
 
+	/**
+	 * Source problems are not flow evidence and cannot be attributed, so they are
+	 * reported once each on stderr, like the runner's own capture diagnostics.
+	 */
 	private void problem( String description ) {
-		if( problems.size() < RETAINED_PROBLEMS ) {
-			problems.add( description );
-		}
-		else {
-			omittedProblems++;
+		if( reportedProblems++ < REPORTED_PROBLEMS ) {
+			System.err.println( "Log capture source " + file + ": " + description );
 		}
 	}
 

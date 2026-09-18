@@ -3,7 +3,6 @@ package com.mastercard.test.flow.assrt;
 import static com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome.ACCEPTED;
 import static com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome.CLOSED;
 import static com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome.LATE;
-import static com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome.OMITTED;
 import static com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome.UNATTRIBUTED;
 import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -162,7 +161,8 @@ class CorrelatedCaptureTest {
 			assertEquals( CLOSED, source.emit( "third", "too late" ) );
 
 			Map<String, List<String>> logs = flowLogs( runner.report() );
-			assertEquals( List.of( "INFO f1" ), logs.get( "first" ) );
+			// f-late arrived after first had finished, but still carried its identifier
+			assertEquals( List.of( "INFO f1", "INFO f-late" ), logs.get( "first" ) );
 			assertEquals( List.of( "INFO s1", "INFO s2", "INFO s3" ), logs.get( "second" ) );
 			assertEquals( List.of(), logs.get( "third" ) );
 
@@ -249,37 +249,6 @@ class CorrelatedCaptureTest {
 			Map<String, List<String>> logs = flowLogs( runner.report() );
 			assertEquals( List.of( "INFO by alias same", "INFO by shared same" ), logs.get( "first" ) );
 			assertEquals( List.of(), logs.get( "second" ) );
-		}
-	}
-
-	@Test
-	void budgetsRetainFirstEventsAndCountTheRest( @TempDir Path directory ) throws Exception {
-		Source source = new Source();
-		List<Outcome> outcomes = new ArrayList<>();
-		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
-				TestFlocessor runner = runner( "budgets", source, directory, a -> {
-					String id = a.correlation().id();
-					outcomes.add( source.emit( id, id + " one" ) );
-					outcomes.add( source.emit( id, id + " two, which is a rather long message" ) );
-					outcomes.add( source.emit( id, id + " three" ) );
-					a.actual().response( a.expected().response().content() );
-				} ).captureBudget( new CaptureBudget( 2, 1 << 20, 3, 1 << 20, 12 ) ) ) {
-			runner.process( flow( runner, "first" ) );
-			runner.process( flow( runner, "second" ) );
-			assertEquals( List.of( ACCEPTED, ACCEPTED, OMITTED, ACCEPTED, OMITTED, OMITTED ),
-					outcomes );
-			runner.completeProcessing();
-
-			Map<String, List<String>> logs = flowLogs( runner.report() );
-			assertEquals( List.of(
-					"INFO first one",
-					"INFO first two...",
-					"WARN Log capture omitted 1 event (11 bytes) beyond the flow budget" ),
-					logs.get( "first" ) );
-			assertEquals( List.of(
-					"INFO second one",
-					"WARN Log capture omitted 2 events (54 bytes) beyond the run budget" ),
-					logs.get( "second" ) );
 		}
 	}
 

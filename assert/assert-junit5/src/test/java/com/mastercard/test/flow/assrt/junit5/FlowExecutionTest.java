@@ -98,7 +98,7 @@ class FlowExecutionTest {
 					() -> runner.system( State.FUL, Actrs.AVA ), () -> runner.autonomous( Actrs.BEN ),
 					() -> runner.masking(), () -> runner.applicators(), () -> runner.checkers(),
 					() -> runner.logs( (LogCapture) null ), () -> runner.logs( (CorrelatedCapture) null ),
-					() -> runner.correlation( null ), () -> runner.captureBudget( null ),
+					() -> runner.correlation( null ),
 					() -> runner.listening( null ),
 					() -> runner.filtering( null ), () -> runner.exercising( null, null ),
 					() -> runner.behaviour( null ), () -> runner.motivation( null ),

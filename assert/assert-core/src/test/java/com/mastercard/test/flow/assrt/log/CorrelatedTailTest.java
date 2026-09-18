@@ -5,7 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -79,7 +81,6 @@ class CorrelatedTailTest {
 		assertEquals( 4, sink.delivered.size() );
 		assertEquals( "a|005|INFO|src|[]   second for a", sink.delivered.get( 3 ) );
 		tail.close();
-		assertEquals( "", tail.summary() );
 	}
 
 	@Test
@@ -143,7 +144,6 @@ class CorrelatedTailTest {
 		assertEquals( "a|014|INFO|src|[]   event 4", sink.delivered.get( 4 ) );
 		tail.close();
 		assertEquals( 5, sink.delivered.size() );
-		assertEquals( "", tail.summary() );
 	}
 
 	@Test
@@ -152,20 +152,28 @@ class CorrelatedTailTest {
 		Files.createFile( file );
 		CorrelatedTail tail = new CorrelatedTail( file, PATTERN );
 		Sink sink = new Sink();
-		tail.open( sink );
-		append( file, "012 [a] INFO src one", "013 [a] INFO src two" );
-		tail.flush();
-		// rotation: the file is now shorter than the offset we had reached
-		Files.write( file, "014 [a] INFO src after rotation\n".getBytes( UTF_8 ) );
-		tail.flush();
-		Files.delete( file );
-		tail.flush();
-		tail.close();
+		ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+		PrintStream original = System.err;
+		System.setErr( new PrintStream( stderr, true, UTF_8 ) );
+		try {
+			tail.open( sink );
+			append( file, "012 [a] INFO src one", "013 [a] INFO src two" );
+			tail.flush();
+			// rotation: the file is now shorter than the offset we had reached
+			Files.write( file, "014 [a] INFO src after rotation\n".getBytes( UTF_8 ) );
+			tail.flush();
+			Files.delete( file );
+			tail.flush();
+			tail.close();
+		}
+		finally {
+			System.setErr( original );
+		}
 		assertEquals( List.of( "a|012|INFO|src|[]   one", "a|013|INFO|src|[]   two",
 				"a|014|INFO|src|[]   after rotation" ), sink.delivered );
-		String summary = tail.summary();
-		assertTrue( summary.contains( "truncated" ), summary );
-		assertTrue( summary.contains( "NoSuchFileException" ), summary );
+		String problems = stderr.toString( UTF_8 );
+		assertTrue( problems.contains( "truncated" ), problems );
+		assertTrue( problems.contains( "NoSuchFileException" ), problems );
 	}
 
 	/**

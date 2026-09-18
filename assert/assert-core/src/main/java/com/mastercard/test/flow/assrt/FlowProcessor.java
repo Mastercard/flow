@@ -222,7 +222,7 @@ class FlowProcessor {
 			}
 			active++;
 			if( collector == null && config.correlatedCapture != null && config.reporting.writing() ) {
-				collector = new LogCollector( config.correlatedCapture, config.captureBudget, logSource() );
+				collector = new LogCollector( config.correlatedCapture );
 			}
 		}
 		try {
@@ -1023,6 +1023,10 @@ class FlowProcessor {
 			// report is usable.
 			if( capture != null ) {
 				capture.close( FlowProcessor::ordinaryPeripheralFailure );
+				// Events that carried a flow's identifier after it finished still belong
+				// to that flow's evidence.
+				capture.late().forEach( ( flow, events ) -> report(
+						writer -> writer.with( flow, detail -> detail.logs.addAll( events ) ), false ) );
 			}
 			// Keep the failed writer: repeated close must expose its original failure.
 			if( closingReport != null ) {

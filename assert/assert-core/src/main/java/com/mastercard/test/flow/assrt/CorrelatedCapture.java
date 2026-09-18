@@ -24,8 +24,8 @@ public interface CorrelatedCapture {
 
 	/**
 	 * Receives correlated events. Implemented by the runner; acceptance is
-	 * serialised against flow completion so that each event belongs either to a
-	 * flow's frozen snapshot or to the run's late diagnostics, never both.
+	 * serialised against flow completion so that each event is attributed exactly
+	 * once, to the flow whose identifier it carries.
 	 */
 	interface Collector {
 		/**
@@ -44,14 +44,12 @@ public interface CorrelatedCapture {
 		/** Retained in the snapshot of the currently-executing flow it identifies */
 		ACCEPTED,
 		/**
-		 * Identifies a flow whose execution has already ended. Counted against that
-		 * flow in the run diagnostics, not added to any flow's snapshot
+		 * Identifies a flow whose execution has already ended. Retained and added to
+		 * that flow's report entry at run completion
 		 */
 		LATE,
 		/** Identifier absent, unknown to this run, or bound to more than one flow */
 		UNATTRIBUTED,
-		/** Would exceed a finite per-flow or run budget; counted, payload dropped */
-		OMITTED,
 		/** The run has been closed; nothing is retained */
 		CLOSED
 	}
@@ -80,13 +78,4 @@ public interface CorrelatedCapture {
 	 */
 	void close();
 
-	/**
-	 * Called after {@link #close()} to describe source-side problems (unreadable or
-	 * truncated files, bounded reads) for the run's report diagnostics.
-	 *
-	 * @return Bounded human-readable lines, or empty when nothing went wrong
-	 */
-	default String summary() {
-		return "";
-	}
 }

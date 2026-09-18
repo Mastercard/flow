@@ -80,8 +80,8 @@ Note that only the tag/index-based filtering can be used to avoid flow construct
 
 <!-- code_link_start -->
 
-[AbstractFlocessor.filtering(Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L269-L277,269-277
-[AbstractFlocessor.exercising(Predicate,Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L283-L308,283-308
+[AbstractFlocessor.filtering(Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L257-L265,257-265
+[AbstractFlocessor.exercising(Predicate,Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L271-L296,271-296
 
 <!-- code_link_end -->
 
@@ -129,14 +129,14 @@ The flow of responsibility is:
  1. The runner gives each flow execution an identity, available in the test body as [`assertion.correlation().id()`][Assertion!.correlation()]. By default this is generated and unique; if the flow's messages already carry a suitable unique identifier, configure [`correlation()`][AbstractFlocessor.correlation(Function)] to extract it from the `Flow` instead.
  2. The test sends the identifier to the system under test, typically as a request header. If the system generates its own identifier and returns it (e.g. a transaction ID), bind it with `assertion.correlation().alias( id )` so that events carrying either value are attributed.
  3. The system under test propagates the identifier into its logging context (e.g. an MDC field in its log pattern).
- 4. A `CorrelatedCapture` source delivers each event to the runner's `Collector` together with the identifier it carried. The runner routes it to the flow's report entry if that flow is executing; events for a flow that has already finished, or whose identifier is unknown, absent, or bound to more than one execution, are counted but never attached to another flow. It never guesses.
+ 4. A `CorrelatedCapture` source delivers each event to the runner's `Collector` together with the identifier it carried. The runner adds it to the report entry of the flow that identifier belongs to, including events that arrive after the flow has finished. Events whose identifier is unknown, absent, or claimed by more than one execution are never attached to another flow. It never guesses.
 
 Two kinds of source are supported:
 
  * The [`CorrelatedTail`][CorrelatedTail] class reads a log file incrementally from the point at which the run started. Its pattern must capture a `correlation` group alongside `time`, `level` and `source`.
  * For a system in the same JVM, implement `CorrelatedCapture` directly and push events from your logging backend. For example, a logback `AppenderBase<ILoggingEvent>` whose `append` method calls `collector.accept( event.getMDCPropertyMap().get( "correlationId" ), new LogEvent( ... ) )`, registered in `open` and removed in `close`. The library has no logging-backend dependency.
 
-Capture is bounded by a [`CaptureBudget`][CaptureBudget]: per-flow and per-run event and byte limits, with the first events retained and omissions counted visibly in the report. The defaults are finite but arbitrary; adjust them with [`captureBudget()`][AbstractFlocessor.captureBudget(CaptureBudget)]. Capture problems are reported and never fail an otherwise-passing test.
+Capture problems (an unreadable or rotated log file, a source that fails to flush) are reported on standard error and in the affected flow's report entry; they never fail an otherwise-passing test.
  
 <!-- code_link_start -->
 
@@ -146,10 +146,8 @@ Capture is bounded by a [`CaptureBudget`][CaptureBudget]: per-flow and per-run e
 [AbstractFlocessor.logs(LogCapture)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L192-L199,192-199
 [CorrelatedCapture]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/CorrelatedCapture.java
 [CorrelatedTail]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/log/CorrelatedTail.java
-[CaptureBudget]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/CaptureBudget.java
 [Assertion!.correlation()]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Assertion.java#L61-L67,61-67
 [AbstractFlocessor.correlation(Function)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L221-L230,221-230
-[AbstractFlocessor.captureBudget(CaptureBudget)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L236-L242,236-242
 
 <!-- code_link_end -->
 
@@ -159,7 +157,7 @@ The motivation text in the report can be enhanced with additional information su
 <!-- code_link_start -->
 
 [MotivationCustomizer]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/MotivationCustomizer.java
-[AbstractFlocessor.motivation(MotivationCustomizer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L327-L336,327-336
+[AbstractFlocessor.motivation(MotivationCustomizer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L315-L324,315-324
 
 <!--code_link_end-->
 ## Interaction structure

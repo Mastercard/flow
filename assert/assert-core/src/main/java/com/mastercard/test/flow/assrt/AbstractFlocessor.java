@@ -234,18 +234,6 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	/**
-	 * Limits how much correlated log capture is retained.
-	 *
-	 * @param budget The finite limits
-	 * @return <code>this</code>
-	 */
-	public T captureBudget( CaptureBudget budget ) {
-		beforeConfiguration();
-		config.captureBudget = Objects.requireNonNull( budget, "budget" );
-		return self();
-	}
-
-	/**
 	 * Configures progress listening behaviour
 	 *
 	 * @param prg An object that will be informed as processing proceeds
