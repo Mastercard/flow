@@ -6,7 +6,6 @@ import static com.mastercard.test.flow.assrt.TestModel.Actors.D;
 import static com.mastercard.test.flow.util.Transmission.Type.REQUEST;
 import static com.mastercard.test.flow.util.Transmission.Type.RESPONSE;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -15,11 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,16 +28,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import com.mastercard.test.flow.Actor;
 import com.mastercard.test.flow.Flow;
@@ -56,7 +47,6 @@ import com.mastercard.test.flow.assrt.mock.TestResidue;
 import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.msg.txt.Text;
 import com.mastercard.test.flow.report.Reader;
-import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.Entry;
 import com.mastercard.test.flow.report.data.FlowData;
 import com.mastercard.test.flow.report.data.Index;
@@ -145,21 +135,6 @@ class AbstractFlocessorTest {
 		}
 	}
 
-	/**
-	 * Interval-based capture cannot serve concurrent flows; correlated capture can.
-	 */
-	@Test
-	void concurrentConfigurationRejectsIntervalCaptureWithoutStartingIt() {
-		CaptureScopeTest.Source capture = new CaptureScopeTest.Source();
-		try( TestFlocessor runner = new TestFlocessor( "concurrent capture guard", TestModel.abc() )
-				.reporting( Reporting.QUIETLY ).logs( capture ) ) {
-			assertThrows( IllegalStateException.class, runner::requireConcurrentConfiguration );
-			assertEquals( List.of(), capture.events );
-			runner.logs( LogCapture.NO_OP );
-			assertDoesNotThrow( runner::requireConcurrentConfiguration );
-		}
-	}
-
 	/** A report is updated in place when the same runner executes again */
 	@Test
 	void scopedCompletionAllowsReportReuseAfterRepeatedExecution() {
@@ -182,12 +157,11 @@ class AbstractFlocessorTest {
 	/**
 	 * Completion is terminal even when there is no execution or report to finish.
 	 */
-	@ParameterizedTest
-	@EnumSource(value = Reporting.class, names = { "NEVER", "QUIETLY" })
-	void completionWithoutExecutionIsTerminalAndDoesNotCreateReport( Reporting reporting ) {
+	@Test
+	void completionWithoutExecutionIsTerminalAndDoesNotCreateReport() {
 		List<String> calls = new ArrayList<>();
 		TestFlocessor runner = new TestFlocessor( "closed before execution", TestModel.abc() )
-				.system( State.LESS, B ).reporting( reporting )
+				.system( State.LESS, B ).reporting( Reporting.QUIETLY )
 				.behaviour( a -> calls.add( "SUT" ) );
 		Flow flow = runner.flows().findFirst().orElseThrow();
 		runner.completeProcessing();

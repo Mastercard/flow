@@ -30,7 +30,10 @@ import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.support.descriptor.ClassSource;
@@ -313,7 +316,8 @@ class FlowExecutionTest {
 	void hungFlowFailsTheRunWithinTheProgressTimeout() throws Exception {
 		Flow h = flow( "h" );
 		Gated gated = Gated.model( h, flow( "x", h ) );
-		gated.configure = r -> r.progressTimeout( Duration.ofMillis( 300 ) );
+		gated.configure = r -> r.progressTimeout( Duration.ofMillis( 300 ) )
+				.reporting( Reporting.NEVER );
 		gated.hold( "h" );
 		Thread launcher = gated.launch( true );
 		try {
@@ -328,7 +332,8 @@ class FlowExecutionTest {
 		Run run = gated.join( launcher );
 		assertFalse( gated.started( "x" ) );
 		assertTrue( run.failures.stream().anyMatch( f -> f instanceof IllegalStateException
-				&& f.getMessage().contains( "h []" ) && f.getMessage().contains( "PT0.3S" ) ),
+				&& f.getMessage().contains( "PT0.3S" )
+				&& f.getMessage().contains( "running: [h []], not started: 1" ) ),
 				run.failures::toString );
 	}
 
@@ -667,16 +672,20 @@ class FlowExecutionTest {
 
 	/**
 	 * Interval-based log capture attributes by time, so it is accepted when the
-	 * class runs serially and rejected at preparation when it runs concurrently
+	 * class runs serially and rejected at preparation when it runs concurrently. A
+	 * class declared {@code @Execution(SAME_THREAD)} runs serially even with
+	 * Jupiter parallelism enabled.
 	 *
-	 * @param parallel Whether Jupiter parallel execution is enabled
+	 * @param parallel   Whether Jupiter parallel execution is enabled
+	 * @param sameThread Whether the factory class opts out of concurrency
 	 */
 	@ParameterizedTest
-	@ValueSource(booleans = { false, true })
-	void intervalCaptureIsSerialOnly( boolean parallel ) {
+	@CsvSource({ "false,false", "true,false", "true,true" })
+	void intervalCaptureIsSerialOnly( boolean parallel, boolean sameThread ) {
 		IntervalCaptureFactory.events.clear();
-		Run run = execute( IntervalCaptureFactory.class, parallel );
-		if( parallel ) {
+		Run run = execute( sameThread ? SameThreadIntervalCaptureFactory.class
+				: IntervalCaptureFactory.class, parallel );
+		if( parallel && !sameThread ) {
 			assertEquals( List.of(), run.results );
 			assertEquals( List.of(), IntervalCaptureFactory.events );
 			assertTrue( run.failures.stream().anyMatch( f -> f instanceof IllegalStateException
@@ -695,7 +704,11 @@ class FlowExecutionTest {
 
 		@TestFactory
 		Stream<DynamicNode> flows( FlowExecution execution ) {
-			return execution.flocessor( "interval capture", modelOf( List.of( flow( "a" ) ) ) )
+			return flows( execution, "interval capture" );
+		}
+
+		static Stream<DynamicNode> flows( FlowExecution execution, String title ) {
+			return execution.flocessor( title, modelOf( List.of( flow( "a" ) ) ) )
 					.system( State.LESS, Actrs.BEN ).reporting( Reporting.QUIETLY )
 					.logs( new LogCapture() {
 						@Override
@@ -710,6 +723,15 @@ class FlowExecutionTest {
 						}
 					} )
 					.behaviour( a -> a.actual().response( a.expected().response().content() ) ).tests();
+		}
+	}
+
+	@FlowTest
+	@Execution(ExecutionMode.SAME_THREAD)
+	static class SameThreadIntervalCaptureFactory {
+		@TestFactory
+		Stream<DynamicNode> flows( FlowExecution execution ) {
+			return IntervalCaptureFactory.flows( execution, "same-thread interval capture" );
 		}
 	}
 

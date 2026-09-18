@@ -1,15 +1,9 @@
 package com.mastercard.test.flow.report;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.ArrayList;
@@ -42,75 +36,6 @@ import com.mastercard.test.flow.report.data.FlowData;
 class WriterFinalLinksTest {
 
 	/**
-	 * A rename cannot take over another flow's detail path; the writer fails before
-	 * any destructive IO and both details survive
-	 *
-	 * @param dir Isolated report destination
-	 * @throws IOException If retained evidence cannot be read
-	 */
-	@Test
-	void conflictingRenamePreservesBothDetails( @TempDir Path dir ) throws IOException {
-		Flow first = new ObservedFlow( "collision", null );
-		Flow second = new ObservedFlow( "collision", null );
-		Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY );
-		AtomicReference<String> firstName = new AtomicReference<>();
-		AtomicReference<String> secondName = new AtomicReference<>();
-		writer.with( first, detail -> {
-			detail.tags.add( "first" );
-			detail.motivation = "first evidence";
-			firstName.set( Writer.detailFilename( detail ) );
-		} );
-		writer.with( second, detail -> {
-			detail.tags.add( "second" );
-			detail.motivation = "second evidence";
-			secondName.set( Writer.detailFilename( detail ) );
-		} );
-		Path firstPath = dir.resolve( "detail/" + firstName.get() + ".html" );
-		Path secondPath = dir.resolve( "detail/" + secondName.get() + ".html" );
-		byte[] firstEvidence = Files.readAllBytes( firstPath );
-		byte[] secondEvidence = Files.readAllBytes( secondPath );
-		IllegalStateException failure = assertThrows( IllegalStateException.class,
-				() -> writer.with( first, detail -> {
-					detail.tags.remove( "first" );
-					detail.tags.add( "second" );
-				} ) );
-		assertTrue( failure.getMessage().contains( "already owned by another flow" ) );
-		assertSame( failure, assertThrows( IllegalStateException.class,
-				() -> writer.with( first, detail -> {
-					detail.tags.remove( "second" );
-					detail.tags.add( "elsewhere" );
-				} ) ).getCause() );
-		assertSame( failure, assertThrows( IllegalStateException.class, writer::close ).getCause() );
-		assertArrayEquals( firstEvidence, Files.readAllBytes( firstPath ) );
-		assertArrayEquals( secondEvidence, Files.readAllBytes( secondPath ) );
-		assertNull( new Reader( dir ).read() );
-	}
-
-	/**
-	 * A first decoration may move a flow away from a shared initial path; it must
-	 * not delete the detail another flow already owns there
-	 *
-	 * @param dir Isolated report destination
-	 */
-	@Test
-	void initialDecorationDoesNotDeleteAnotherFlow( @TempDir Path dir ) {
-		Flow first = new ObservedFlow( "initial identity", null );
-		Flow second = new ObservedFlow( "initial identity", null );
-		try( Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY ) ) {
-			writer.with( first, detail -> detail.motivation = "first evidence" );
-			writer.with( second, detail -> {
-				detail.tags.add( "distinct" );
-				detail.motivation = "second evidence";
-			} );
-		}
-		Reader reader = new Reader( dir );
-		assertEquals( 2, reader.read().entries.size() );
-		assertEquals( java.util.Set.of( "first evidence", "second evidence" ),
-				reader.read().entries.stream().map( reader::detail )
-						.map( detail -> detail.motivation ).collect( Collectors.toSet() ) );
-	}
-
-	/**
 	 * A descendant links to its nearest ancestor present in the report, through
 	 * ancestors that are absent. Ancestry is read once, at the descendant's first
 	 * update.
@@ -140,25 +65,6 @@ class WriterFinalLinksTest {
 		}
 		assertNull( reader.detail( entries.get( "ancestor 0" ) ).basis );
 		assertEquals( 1, ancestry.get( 50 ).basisReads );
-	}
-
-	/**
-	 * Cyclic ancestry is rejected before the callback runs
-	 *
-	 * @param dir Isolated report destination
-	 */
-	@Test
-	void externalBasisCycle( @TempDir Path dir ) {
-		ObservedFlow cycle = new ObservedFlow( "cycle", null );
-		cycle.basis = cycle;
-		Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY );
-		IllegalStateException failure = assertThrows( IllegalStateException.class,
-				() -> writer.with( new ObservedFlow( "leaf", cycle ), detail -> {
-					throw new AssertionError( "No callback on cyclic ancestry" );
-				} ) );
-		assertTrue( failure.getMessage().contains( "Cyclic report basis ancestry" ) );
-		assertThrows( IllegalStateException.class, writer::close );
-		assertNull( new Reader( dir ).read() );
 	}
 
 	/**

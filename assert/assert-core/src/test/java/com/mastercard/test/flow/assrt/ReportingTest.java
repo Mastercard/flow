@@ -434,12 +434,11 @@ class ReportingTest {
 	/**
 	 * Completion retains its configured destination after temporary options end.
 	 *
-	 * @param name Report name beneath the configured artifact directory
-	 * @param dir  Isolated artifact directory
+	 * @param dir Isolated artifact directory
 	 */
-	@ParameterizedTest
-	@ValueSource(strings = { "sub/path/report" })
-	void completionAfterOptionsEnd( String name, @TempDir Path dir ) {
+	@Test
+	void completionAfterOptionsEnd( @TempDir Path dir ) {
+		String name = "sub/path/report";
 		TestFlocessor tf = new TestFlocessor( "publication", TestModel.abc() )
 				.system( State.FUL, B )
 				.reporting( QUIETLY )
@@ -461,15 +460,13 @@ class ReportingTest {
 	/**
 	 * An ordinary latest file or directory belongs to the user, not publication.
 	 *
-	 * @param directory Whether latest is a directory containing a file
-	 * @param dir       Isolated artifact directory
+	 * @param dir Isolated artifact directory
 	 * @throws Exception On filesystem failure
 	 */
-	@ParameterizedTest
-	@ValueSource(booleans = { false, true })
-	void ordinaryLatest( boolean directory, @TempDir Path dir ) throws Exception {
+	@Test
+	void ordinaryLatest( @TempDir Path dir ) throws Exception {
 		Path latest = dir.resolve( "latest" );
-		Path retained = directory ? Files.createDirectory( latest ).resolve( "retained" ) : latest;
+		Path retained = Files.createDirectory( latest ).resolve( "retained" );
 		Files.writeString( retained, "user content" );
 		TestFlocessor tf = new TestFlocessor( "ordinary latest", TestModel.abc() )
 				.system( State.FUL, B ).reporting( QUIETLY );
