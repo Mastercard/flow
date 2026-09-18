@@ -2,7 +2,6 @@ package com.mastercard.test.flow.assrt.junit5;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,9 +24,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
-import org.junit.platform.launcher.core.LauncherConfig;
-import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
-import org.junit.platform.launcher.core.LauncherFactory;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
@@ -53,7 +49,7 @@ class PreparedCaptureTest {
 		CaptureFactory.runner = null;
 		List<Throwable> failures = new ArrayList<>();
 		List<String> leaves = new ArrayList<>();
-		FlowExecutionTest.execute( CaptureFactory.class, "false", new TestExecutionListener() {
+		FlowExecutionTest.execute( CaptureFactory.class, false, new TestExecutionListener() {
 			@Override
 			public void executionFinished( TestIdentifier id, TestExecutionResult result ) {
 				result.getThrowable().ifPresent( failures::add );
@@ -124,42 +120,15 @@ class PreparedCaptureTest {
 			CorrelatedFactory.reset();
 			List<Throwable> failures = new ArrayList<>();
 			List<String> leaves = Collections.synchronizedList( new ArrayList<>() );
-			String hook = "junit.platform.launcher.interceptors.enabled";
-			String previous = System.getProperty( hook );
-			System.setProperty( hook, "true" );
-			try {
-				LauncherFactory.create( LauncherConfig.builder()
-						.enableTestExecutionListenerAutoRegistration( false )
-						.enableLauncherSessionListenerAutoRegistration( false ).build() )
-						.execute( LauncherDiscoveryRequestBuilder.request()
-								.selectors( selectClass( CorrelatedFactory.class ) )
-								.configurationParameter( "junit.jupiter.execution.parallel.enabled", "true" )
-								.configurationParameter( "junit.jupiter.execution.parallel.mode.default",
-										"concurrent" )
-								.configurationParameter( "junit.jupiter.execution.parallel.config.strategy",
-										"fixed" )
-								.configurationParameter(
-										"junit.jupiter.execution.parallel.config.fixed.parallelism", "2" )
-								.configurationParameter(
-										"junit.jupiter.execution.parallel.config.fixed.max-pool-size", "2" )
-								.configurationParameter( "flow.parallel", "true" ).build(),
-								new TestExecutionListener() {
-									@Override
-									public void executionFinished( TestIdentifier id,
-											TestExecutionResult result ) {
-										result.getThrowable().ifPresent( failures::add );
-										if( id.isTest() ) {
-											leaves.add( id.getDisplayName() + ":" + result.getStatus() );
-										}
-									}
-								} );
-			}
-			finally {
-				if( previous == null )
-					System.clearProperty( hook );
-				else
-					System.setProperty( hook, previous );
-			}
+			FlowExecutionTest.execute( CorrelatedFactory.class, true, new TestExecutionListener() {
+				@Override
+				public void executionFinished( TestIdentifier id, TestExecutionResult result ) {
+					result.getThrowable().ifPresent( failures::add );
+					if( id.isTest() ) {
+						leaves.add( id.getDisplayName() + ":" + result.getStatus() );
+					}
+				}
+			} );
 			assertEquals( List.of(), failures );
 			assertEquals( 2, leaves.size(), leaves::toString );
 			assertTrue( leaves.stream().allMatch( l -> l.endsWith( ":SUCCESSFUL" ) ), leaves::toString );
@@ -235,7 +204,6 @@ class CorrelatedFactory {
 		return execution.flocessor( "correlated parallel", PreparedFlowLifecycleTest.model(
 				first, second ) )
 				.system( State.LESS, Actrs.BEN ).reporting( Reporting.QUIETLY )
-				.independent( "no shared state", f -> true )
 				.logs( source )
 				.correlation( f -> f.meta().description() )
 				.behaviour( a -> {

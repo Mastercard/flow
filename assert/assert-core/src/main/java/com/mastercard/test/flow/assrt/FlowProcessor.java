@@ -62,11 +62,8 @@ import com.mastercard.test.flow.util.Flows;
  * Each call to {@link #process(Flow)} creates only invocation-local evidence
  * and failures; it does not clone the model or create another runner.
  * <p>
- * Legacy callers retain their serial applied-context map. Cooperating prepared
- * callers bind the actual fixture's ContextDomain instead; its map survives
- * this processor and is accessed only under the complete fixture grant.
  * Selection can rebuild dependency indexing; enumeration neither completes a
- * run nor closes a report or fixture.
+ * run nor closes a report.
  */
 class FlowProcessor {
 
@@ -80,7 +77,7 @@ class FlowProcessor {
 	private final History history;
 	private Dependencies dependencies;
 	private final Map<Class<? extends Context>, Context> currentContext = new HashMap<>();
-	private ContextDomain contextDomain;
+	private boolean concurrentContexts;
 	private Writer report;
 	private RuntimeException reportFailure;
 	private boolean reportError;
@@ -114,10 +111,12 @@ class FlowProcessor {
 	}
 
 	/**
-	 * @param domain Fixture-owned applied state, never cleared at runner completion
+	 * Context-applying flows are serialised by the caller's ordering, but flows
+	 * without contexts may run alongside them. Such flows must then leave applied
+	 * state untouched rather than removing it.
 	 */
-	void contextDomain( ContextDomain domain ) {
-		contextDomain = domain;
+	void concurrentContexts() {
+		concurrentContexts = true;
 	}
 
 	private String logSource() {
@@ -685,25 +684,28 @@ class FlowProcessor {
 	private void applyContexts( Flow flow, List<RuntimeException> executionFailures ) {
 		try {
 			// work out the context updates
-			Set<Class<? extends Context>> unupdated = new HashSet<>( currentContexts().keySet() );
 			Set<Context> contextUpdates = new TreeSet<>(
 					Comparator.comparing( ctx -> ctx.getClass().getName() ) );
 			flow.context()
 					.filter( ctx -> ctx.domain().stream().anyMatch( config.systemUnderTest::contains ) )
-					.forEach( ctx -> {
-						contextUpdates.add( ctx );
-						unupdated.remove( ctx.getClass() );
-					} );
+					.forEach( contextUpdates::add );
+			if( concurrentContexts && contextUpdates.isEmpty() ) {
+				return;
+			}
+			synchronized( currentContext ) {
+				Set<Class<? extends Context>> unupdated = new HashSet<>( currentContext.keySet() );
+				contextUpdates.forEach( ctx -> unupdated.remove( ctx.getClass() ) );
 
-			// deactivate the orphaned context types - those that existed on the previous
-			// flow but not on the current one. We're doing this *before* the normal context
-			// changes as there can be dependencies between contexts - the ones on the new
-			// flow might not cope with the ones on the old flow that they know nothing
-			// about
-			unupdated.forEach( this::removeContext );
+				// deactivate the orphaned context types - those that existed on the previous
+				// flow but not on the current one. We're doing this *before* the normal context
+				// changes as there can be dependencies between contexts - the ones on the new
+				// flow might not cope with the ones on the old flow that they know nothing
+				// about
+				unupdated.forEach( this::removeContext );
 
-			// apply the context for the new flow
-			contextUpdates.forEach( this::updateContext );
+				// apply the context for the new flow
+				contextUpdates.forEach( this::updateContext );
+			}
 		}
 		catch( RuntimeException e ) {
 			if( !config.reporting.writing() ) {
@@ -721,34 +723,17 @@ class FlowProcessor {
 		config.progress.context( ctx );
 		Class<? extends Context> ctxt = ctx.getClass();
 		Applicator<C> apl = (Applicator<C>) applicator( ctxt );
-		C current = (C) currentContexts().get( ctxt );
-		transition( apl, current, ctx );
-		currentContexts().put( ctxt, ctx );
+		C current = (C) currentContext.get( ctxt );
+		apl.transition( current, ctx );
+		currentContext.put( ctxt, ctx );
 	}
 
 	@SuppressWarnings("unchecked")
 	private <C extends Context> void removeContext( Class<C> ctxt ) {
 		Applicator<C> apl = applicator( ctxt );
-		C current = (C) currentContexts().get( ctxt );
-		transition( apl, current, null );
-		currentContexts().remove( ctxt );
-	}
-
-	private Map<Class<? extends Context>, Context> currentContexts() {
-		return contextDomain == null ? currentContext : contextDomain.current();
-	}
-
-	private <C extends Context> void transition( Applicator<C> applicator, C from, C to ) {
-		try {
-			applicator.transition( from, to );
-		}
-		catch( Throwable failure ) {
-			// A failed state change has no completed-state contract. Keep the last
-			// successful context, but do not hand this possibly partial state onward.
-			if( contextDomain != null )
-				contextDomain.uncertain( failure );
-			throw failure;
-		}
+		C current = (C) currentContext.get( ctxt );
+		apl.transition( current, null );
+		currentContext.remove( ctxt );
 	}
 
 	private <C extends Context> Applicator<C> applicator( Class<C> ctxt ) {
@@ -1012,25 +997,6 @@ class FlowProcessor {
 	/** @return The report path, or null while disabled or after creation failure */
 	synchronized Path report() {
 		return report == null ? null : report.path();
-	}
-
-	/**
-	 * Disposes safely drained invocation state without advertising report success.
-	 */
-	void detach() {
-		synchronized( this ) {
-			if( active != 0 || closing )
-				throw new IllegalStateException( "Cannot detach active Flow processing" );
-			closed = true;
-			config = null;
-			dependencies = null;
-			contextDomain = null;
-			collector = null;
-			currentContext.clear();
-		}
-		synchronized( history ) {
-			history.clear();
-		}
 	}
 
 	/**

@@ -14,7 +14,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DynamicNode;
-import org.junit.jupiter.api.Test;
+
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -50,7 +50,7 @@ class PreparedSelectionTest {
 		InvalidFactory.bodies = 0;
 		List<String> leaves = new ArrayList<>();
 		List<Throwable> failures = new ArrayList<>();
-		FlowExecutionTest.execute( InvalidFactory.class, "false", new TestExecutionListener() {
+		FlowExecutionTest.execute( InvalidFactory.class, false, new TestExecutionListener() {
 			@Override
 			public void executionStarted( TestIdentifier id ) {
 				if( id.isTest() ) {
@@ -104,33 +104,32 @@ class PreparedSelectionTest {
 				(ConcreteRootInteraction) template.root(), Set.of(), Map.of(), Map.of() );
 	}
 
-	@Test
-	void filtersThenExactClosurePreserveAllFieldBindings() {
-		for( String mode : List.of( "absent", "false" ) ) {
-			SelectionFactory.bodies.clear();
-			SelectionFactory.mutations.clear();
-			SelectionFactory.exercised.clear();
-			SelectionFactory.orderings = 0;
-			List<String> leaves = new ArrayList<>();
-			List<Throwable> failures = new ArrayList<>();
-			FlowExecutionTest.execute( SelectionFactory.class, mode, new TestExecutionListener() {
-				@Override
-				public void executionFinished( TestIdentifier id, TestExecutionResult result ) {
-					result.getThrowable().ifPresent( failures::add );
-					if( id.isTest() ) {
-						leaves.add( id.getDisplayName() + ":" + result.getStatus() );
-					}
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void filtersThenExactClosurePreserveAllFieldBindings( boolean parallel ) {
+		SelectionFactory.bodies.clear();
+		SelectionFactory.mutations.clear();
+		SelectionFactory.exercised.clear();
+		SelectionFactory.orderings = 0;
+		List<String> leaves = new ArrayList<>();
+		List<Throwable> failures = new ArrayList<>();
+		FlowExecutionTest.execute( SelectionFactory.class, parallel, new TestExecutionListener() {
+			@Override
+			public void executionFinished( TestIdentifier id, TestExecutionResult result ) {
+				result.getThrowable().ifPresent( failures::add );
+				if( id.isTest() ) {
+					leaves.add( id.getDisplayName() + ":" + result.getStatus() );
 				}
-			} );
-			assertEquals( List.of(), failures );
-			assertEquals( List.of( "A [chain:scenario]:SUCCESSFUL",
-					"B [chain:scenario, pick]:SUCCESSFUL" ), leaves );
-			assertEquals( List.of( "A", "B" ), SelectionFactory.bodies );
-			assertEquals( Set.of( "B", "rejected" ), Set.copyOf( SelectionFactory.exercised ) );
-			assertEquals( 2, SelectionFactory.exercised.size() );
-			assertEquals( List.of( "left", "right" ), SelectionFactory.mutations );
-			assertEquals( 1, SelectionFactory.orderings );
-		}
+			}
+		} );
+		assertEquals( List.of(), failures );
+		assertEquals( List.of( "A [chain:scenario]:SUCCESSFUL",
+				"B [chain:scenario, pick]:SUCCESSFUL" ), leaves );
+		assertEquals( List.of( "A", "B" ), SelectionFactory.bodies );
+		assertEquals( Set.of( "B", "rejected" ), Set.copyOf( SelectionFactory.exercised ) );
+		assertEquals( 2, SelectionFactory.exercised.size() );
+		assertEquals( List.of( "left", "right" ), SelectionFactory.mutations );
+		assertEquals( 1, SelectionFactory.orderings );
 	}
 
 	@FlowTest
@@ -141,7 +140,7 @@ class PreparedSelectionTest {
 		static int orderings;
 
 		@TestFactory
-		List<DynamicNode> flows( FlowExecution execution ) {
+		Stream<DynamicNode> flows( FlowExecution execution ) {
 			Flow a = flow( "A", "chain:scenario" );
 			Flow basis = flow( "basis" );
 			Flow b = Deriver.build( basis, f -> f
@@ -188,17 +187,12 @@ class PreparedSelectionTest {
 						assertion.actual().request( assertion.expected().request().content() )
 								.response( assertion.expected().response().content() );
 					} );
-			List<DynamicNode> descriptions;
-			try( Stream<DynamicNode> tests = runner.tests() ) {
-				descriptions = tests.toList();
-			}
+			Stream<DynamicNode> tests = runner.tests();
 			assertTrue( bodies.isEmpty() );
 			assertTrue( mutations.isEmpty() );
 			assertEquals( identities, Stream.of( all ).map( f -> f.meta().id() ).toList() );
-			// Re-enumerating the pure returned descriptions must not replan or publish.
-			descriptions.forEach( DynamicNode::toString );
 			assertEquals( 1, orderings );
-			return descriptions;
+			return tests;
 		}
 	}
 

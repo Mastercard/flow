@@ -61,7 +61,6 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 
 	private FlowConfiguration config;
 	private final FlowProcessor processor;
-	private boolean ownedContext;
 
 	/**
 	 * Tracks the outcome of processing {@link Flow}s to inform further processing
@@ -379,26 +378,18 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	/**
-	 * Temporary real-native tracer guard, not general parallel authorization.
-	 * Interval-attributed capture and replay remain guarded; correlated capture is
-	 * supported. Any writing report mode is supported when publication is
-	 * completion-owned: the report is published once at completion and, for
-	 * {@link Reporting#ALWAYS}/{@link Reporting#FAILURES}, opened then. Applied
-	 * contexts and residue require explicit actual fixture ownership.
+	 * Rejects configuration that cannot serve concurrently executing flows.
+	 * Interval-attributed capture and replay remain serial-only; correlated capture
+	 * is supported.
 	 */
-	protected final void requireIndependentTracerConfiguration() {
-		boolean unsupportedReporting = config.reporting.writing() && !config.finalOnlyReporting;
+	protected final void requireConcurrentConfiguration() {
 		if( config.logCapture != LogCapture.NO_OP ) {
 			throw new IllegalStateException(
-					"Flow parallel tracer cannot attribute interval-based LogCapture to concurrent flows; "
+					"Interval-based LogCapture cannot attribute events to concurrent flows; "
 							+ "configure logs( CorrelatedCapture ) instead" );
 		}
-		if( unsupportedReporting
-				|| config.replay.hasData() || !ownedContext && (!config.applicators.isEmpty()
-						|| !config.checkers.isEmpty() || !config.autonomous.isEmpty()) ) {
-			throw new IllegalStateException(
-					"Flow parallel tracer requires completion-owned reporting, "
-							+ "no replay, and fixture ownership for applicators, checkers or autonomous actors" );
+		if( config.replay.hasData() ) {
+			throw new IllegalStateException( "Replay is not supported for concurrent flows" );
 		}
 	}
 
@@ -408,13 +399,12 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	/**
-	 * Binds applied state without transferring fixture lifecycle responsibility.
-	 *
-	 * @param domain The existing fixture owner's shared identity, or null on detach
+	 * Declares that context-applying flows are serialised by the adapter's ordering
+	 * while flows without contexts may run alongside them. Context-free flows then
+	 * leave applied state untouched instead of removing it.
 	 */
-	protected final void useContextDomain( ContextDomain domain ) {
-		processor.contextDomain( domain );
-		ownedContext = domain != null;
+	protected final void concurrentContexts() {
+		processor.concurrentContexts();
 	}
 
 	/**
@@ -474,15 +464,5 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @param actual   The actual message content
 	 */
 	protected abstract void compare( String message, String expected, String actual );
-
-	/**
-	 * Drops a prepared adapter's invocation/configuration references only after its
-	 * native owner proves drainage. This neither publishes a stopped report nor
-	 * changes legacy runner completion semantics.
-	 */
-	protected final void detachProcessing() {
-		processor.detach();
-		config = null;
-	}
 
 }

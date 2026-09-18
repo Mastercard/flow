@@ -6,18 +6,17 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
- * Registers the discovery-time Flow mode and factory-local
- * {@link FlowExecution}. No Launcher service or test-base inheritance is
- * required for serial execution.
+ * Supplies a factory-local {@link FlowExecution} to a {@code @TestFactory}
+ * parameter and closes its report when the class finishes. Enable standard
+ * Jupiter parallel execution to run independent flows concurrently; nothing
+ * Flow-specific needs configuring.
  */
 @Inherited
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@TestMethodOrder(FlowMethodOrderer.class)
 @ExtendWith(FlowExtension.class)
 public @interface FlowTest {
 	// Composed registration.

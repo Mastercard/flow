@@ -71,47 +71,6 @@ class ApplicatorTest {
 		ctxSwitchLog.clear();
 	}
 
-	/** Applied state belongs to the physical fixture, not to any one runner. */
-	@Test
-	void fixtureStateSurvivesRunnerCompletionUntilExplicitReset() {
-		ContextDomain domain = new ContextDomain();
-		var model = TestModel.withContext();
-		var flow = model.flows().findFirst().orElseThrow();
-		try( var use = domain.tryAcquire() ) {
-			assertNotNull( use );
-			try( TestFlocessor first = new TestFlocessor( "first fixture wrapper", model )
-					.system( State.FUL, B ).reporting( Reporting.NEVER )
-					.exercising( f -> f == flow, ignored -> {
-					} )
-					.applicators( APPLICATOR, ALT_APPLICATOR )
-					.behaviour( a -> a.actual().response( a.expected().response().content() ) ) ) {
-				first.useContextDomain( domain );
-				first.execute();
-				assertEquals( "abc [] SUCCESS", first.results() );
-			}
-			try( TestFlocessor second = new TestFlocessor( "second fixture wrapper", model )
-					.system( State.FUL, B ).reporting( Reporting.NEVER )
-					.exercising( f -> f == flow, ignored -> {
-					} )
-					.applicators( APPLICATOR, ALT_APPLICATOR )
-					.behaviour( a -> a.actual().response( a.expected().response().content() ) ) ) {
-				second.useContextDomain( domain );
-				second.execute();
-				use.reset( () -> ctxSwitchLog.add( "explicit fixture reset" ) );
-				second.execute();
-				assertEquals( "abc [] SUCCESS", second.results() );
-			}
-		}
-		assertEquals( List.of(
-				"switch from null to AltTestContext[alt ctx]",
-				"switch from null to TestContext[first ctx]",
-				"switch from AltTestContext[alt ctx] to AltTestContext[alt ctx]",
-				"switch from TestContext[first ctx] to TestContext[first ctx]",
-				"explicit fixture reset",
-				"switch from null to AltTestContext[alt ctx]",
-				"switch from null to TestContext[first ctx]" ), ctxSwitchLog );
-	}
-
 	/**
 	 * Illustrates context switch behaviour
 	 */

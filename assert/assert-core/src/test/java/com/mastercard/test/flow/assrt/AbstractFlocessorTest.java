@@ -68,51 +68,6 @@ import com.mastercard.test.flow.util.Option.Temporary;
  */
 @SuppressWarnings("static-method")
 class AbstractFlocessorTest {
-	/**
-	 * Safe detachment clears run results, but is not report completion or fixture
-	 * work.
-	 */
-	@ParameterizedTest
-	@ValueSource(booleans = { false, true })
-	void safeDetachmentIsTerminalAndDoesNotPublish( boolean execute, @TempDir Path directory ) {
-		AtomicInteger bodies = new AtomicInteger();
-		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() ) ) {
-			TestFlocessor runner = new TestFlocessor( "detached processing", TestModel.abc() )
-					.system( State.LESS, B ).reporting( Reporting.QUIETLY );
-			runner.behaviour( a -> {
-				bodies.incrementAndGet();
-				assertEquals( "Cannot detach active Flow processing",
-						assertThrows( IllegalStateException.class, runner::detachProcessing ).getMessage() );
-				a.actual().response( "B response to A".getBytes( UTF_8 ) );
-			} );
-			runner.finalOnlyReporting();
-			try {
-				Flow flow;
-				try( var prepared = runner.prepareFlows() ) {
-					flow = prepared.findFirst().orElseThrow();
-				}
-				if( execute ) {
-					runner.execute();
-					assertEquals( History.Result.SUCCESS, runner.history.get( flow ), runner::events );
-					assertFalse( Files.exists( runner.report().resolve( Writer.INDEX_FILE_NAME ) ) );
-				}
-				runner.detachProcessing();
-				assertEquals( History.Result.PENDING, runner.history.get( flow ) );
-				assertEquals( "Flow processing is closed",
-						assertThrows( IllegalStateException.class, () -> runner.process( flow ) )
-								.getMessage() );
-				assertEquals( execute ? 1 : 0, bodies.get() );
-				if( execute )
-					assertFalse( Files.exists( runner.report().resolve( Writer.INDEX_FILE_NAME ) ) );
-				else
-					assertNull( runner.report() );
-			}
-			finally {
-				runner.detachProcessing();
-			}
-		}
-	}
-
 	/** A prepared subclass can reject every inherited fluent mutation. */
 	@ParameterizedTest
 	@ValueSource(strings = { "reporting", "masking", "system", "autonomous", "applicators",
@@ -239,74 +194,17 @@ class AbstractFlocessorTest {
 	}
 
 	/**
-	 * Native reporting authorization depends on publication ownership, not the
-	 * mode: any writing mode is fine once publication (and any browser opening) is
-	 * owned by completion.
-	 */
-	@ParameterizedTest
-	@CsvSource({ "NEVER,false,true", "NEVER,true,true", "QUIETLY,false,false",
-			"QUIETLY,true,true", "ALWAYS,false,false", "ALWAYS,true,true",
-			"FAILURES,false,false", "FAILURES,true,true" })
-	void nativeReportingRequiresSupportedCompletionOwnership( Reporting mode, boolean finalOnly,
-			boolean supported ) {
-		TestFlocessor runner = new TestFlocessor( "native reporting guard", TestModel.abc() )
-				.reporting( mode );
-		try {
-			if( finalOnly )
-				runner.finalOnlyReporting();
-			if( supported )
-				assertDoesNotThrow( runner::requireIndependentTracerConfiguration );
-			else
-				assertThrows( IllegalStateException.class, runner::requireIndependentTracerConfiguration );
-			assertNull( runner.report(), "authorization alone must not initialize reporting" );
-		}
-		finally {
-			// Authorization does not own completion: do not publish/open an empty report.
-			runner.detachProcessing();
-		}
-		assertNull( runner.report(), "authorization cleanup must not initialize reporting" );
-	}
-
-	/**
-	 * Each stateful registration needs actual fixture ownership, including after
-	 * detachment.
-	 */
-	@ParameterizedTest
-	@ValueSource(strings = { "applicators", "checkers", "autonomous" })
-	void nativeStatefulRegistrationsRequireCurrentFixtureOwnership( String registration ) {
-		try( TestFlocessor runner = new TestFlocessor( "native fixture guard", TestModel.abc() )
-				.system( State.FUL, A ).reporting( Reporting.NEVER ) ) {
-			assertDoesNotThrow( runner::requireIndependentTracerConfiguration );
-			switch( registration ) {
-				case "applicators" -> runner.applicators( ApplicatorTest.APPLICATOR );
-				case "checkers" -> runner.checkers( new CheckerTest.TestChecker() );
-				case "autonomous" -> runner.autonomous( A );
-				default -> throw new AssertionError( registration );
-			}
-			assertThrows( IllegalStateException.class, runner::requireIndependentTracerConfiguration );
-			runner.useContextDomain( new ContextDomain() );
-			assertDoesNotThrow( runner::requireIndependentTracerConfiguration );
-			runner.useContextDomain( null );
-			assertThrows( IllegalStateException.class, runner::requireIndependentTracerConfiguration );
-			assertEquals( "", runner.events(), "configuration must not execute fixture work" );
-		}
-	}
-
-	/**
-	 * Fixture/report authorization does not authorize per-flow capture in native
-	 * parallel mode.
+	 * Interval-based capture cannot serve concurrent flows; correlated capture can.
 	 */
 	@Test
-	void nativeCaptureGuardDoesNotStartTheSource() {
+	void concurrentConfigurationRejectsIntervalCaptureWithoutStartingIt() {
 		CaptureScopeTest.Source capture = new CaptureScopeTest.Source();
-		try( TestFlocessor runner = new TestFlocessor( "native capture guard", TestModel.abc() )
+		try( TestFlocessor runner = new TestFlocessor( "concurrent capture guard", TestModel.abc() )
 				.reporting( Reporting.QUIETLY ).logs( capture ) ) {
-			runner.finalOnlyReporting();
-			runner.useContextDomain( new ContextDomain() );
-			assertThrows( IllegalStateException.class, runner::requireIndependentTracerConfiguration );
+			assertThrows( IllegalStateException.class, runner::requireConcurrentConfiguration );
 			assertEquals( List.of(), capture.events );
 			runner.logs( LogCapture.NO_OP );
-			assertDoesNotThrow( runner::requireIndependentTracerConfiguration );
+			assertDoesNotThrow( runner::requireConcurrentConfiguration );
 		}
 	}
 
