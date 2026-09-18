@@ -45,11 +45,11 @@ class SysOutTest {
 		accept( "../report/duct/src/main/java/com/mastercard/test/flow/report/duct/"
 				+ "Duct.java",
 				"System.err.println( \"Failed to browse \" + served );" );
-		// Required capture-failure diagnostics must remain visible when reporting
-		// itself is unavailable, without feeding back into a captured log backend.
+		// Report and capture faults that did not fail the test are still reported,
+		// through one helper, without feeding back into a captured log backend.
 		accept( "../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/"
 				+ "FlowProcessor.java",
-				"System.err.println( diagnostic );" );
+				"System.err.println( \"Flow: \" + message );" );
 		// Log-file source problems are not flow evidence and cannot be attributed to
 		// a flow, so they are reported the same way as the runner's own diagnostics.
 		accept( "../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/log/"
@@ -61,6 +61,9 @@ class SysOutTest {
 		// Report-fault tests capture and restore the required diagnostic.
 		accept( "../assert/assert-core/src/test/java/com/mastercard/test/flow/assrt/"
 				+ "ReportingTest.java",
+				"PrintStream original = System.err;" );
+		accept( "../assert/assert-junit5/src/test/java/com/mastercard/test/flow/assrt/junit5/"
+				+ "FlowExecutionTest.java",
 				"PrintStream original = System.err;" );
 	}
 

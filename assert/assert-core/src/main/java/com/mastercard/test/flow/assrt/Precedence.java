@@ -44,11 +44,16 @@ public final class Precedence {
 	 * basis ancestors/descendants keep that order, even across absent ancestors or
 	 * inverted ranks. This neither selects more flows nor changes History
 	 * eligibility.
+	 * <p>
+	 * This is the one place a hard prerequisite cycle is detected: {@link Order}
+	 * breaks such cycles to produce a sequence, and prepared adapters reject the
+	 * result here.
 	 *
 	 * @param flows Selected flows in validated serial order
 	 * @throws IllegalArgumentException On duplicate references, absent or
 	 *                                  noncanonical prerequisites, cyclic bases and
-	 *                                  contradictory chain contraction
+	 *                                  hard cycles, including those created by
+	 *                                  chain contraction
 	 */
 	public Precedence( List<Flow> flows ) {
 		List<Set<Integer>> edges = new ArrayList<>();
@@ -59,17 +64,22 @@ public final class Precedence {
 			}
 			edges.add( new HashSet<>() );
 		}
+		// A prerequisite ordered after its dependent is either caller error or a
+		// cycle that Order had to break; the cycle check below decides which
+		boolean noncanonical = false;
 		for( int i = 0; i < flows.size(); i++ ) {
 			Flow flow = flows.get( i );
 			int index = i;
-			flow.dependencies().map( d -> d.source().flow() )
-					.filter( f -> f != null && f != flow ).forEach( source -> {
-						Integer before = indices.get( source );
-						if( before == null || before >= index ) {
-							throw new IllegalArgumentException( "Absent or noncanonical Flow prerequisite" );
-						}
-						edges.get( before ).add( index );
-					} );
+			try( Stream<Flow> sources = flow.dependencies().map( d -> d.source().flow() ) ) {
+				for( Flow source : sources.filter( f -> f != null && f != flow ).toList() ) {
+					Integer before = indices.get( source );
+					if( before == null ) {
+						throw new IllegalArgumentException( "Absent or noncanonical Flow prerequisite" );
+					}
+					noncanonical |= before >= index;
+					edges.get( before ).add( index );
+				}
+			}
 		}
 		basisPrecedence( flows, indices, edges );
 		publicationPrecedence( flows, indices, edges );
@@ -79,8 +89,12 @@ public final class Precedence {
 		for( Set<Integer> targets : edges )
 			for( int target : targets )
 				predecessors[target]++;
-		if( !acyclic( edges, predecessors ) )
-			throw new IllegalArgumentException( "Contradictory contracted chain precedence" );
+		List<Integer> cyclic = cyclic( edges, predecessors );
+		if( !cyclic.isEmpty() )
+			throw new IllegalArgumentException( "Hard prerequisite cycle (including contracted chains): "
+					+ cyclic.stream().map( i -> flows.get( i ).meta().id() ).sorted().toList() );
+		if( noncanonical )
+			throw new IllegalArgumentException( "Absent or noncanonical Flow prerequisite" );
 		successors = edges.stream().map( Collections::unmodifiableSet ).toList();
 		List<Integer> initial = new ArrayList<>();
 		for( int i = 0; i < predecessors.length; i++ )
@@ -142,20 +156,26 @@ public final class Precedence {
 		}
 	}
 
-	private static boolean acyclic( List<Set<Integer>> edges, int[] predecessors ) {
+	/**
+	 * @param edges        Successor sets
+	 * @param predecessors Predecessor counts
+	 * @return Indices that can never become ready, empty when the graph is acyclic
+	 */
+	private static List<Integer> cyclic( List<Set<Integer>> edges, int[] predecessors ) {
 		int[] remaining = predecessors.clone();
 		Deque<Integer> ready = new ArrayDeque<>();
 		for( int i = 0; i < remaining.length; i++ )
 			if( remaining[i] == 0 )
 				ready.add( i );
-		int visited = 0;
-		while( !ready.isEmpty() ) {
-			visited++;
+		while( !ready.isEmpty() )
 			for( int successor : edges.get( ready.removeFirst() ) )
 				if( --remaining[successor] == 0 )
 					ready.add( successor );
-		}
-		return visited == edges.size();
+		List<Integer> stuck = new ArrayList<>();
+		for( int i = 0; i < remaining.length; i++ )
+			if( remaining[i] != 0 )
+				stuck.add( i );
+		return stuck;
 	}
 
 	private static void chainPrecedence( List<Flow> flows, List<Set<Integer>> edges ) {

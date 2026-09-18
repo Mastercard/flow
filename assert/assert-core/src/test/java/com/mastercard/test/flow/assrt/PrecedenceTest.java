@@ -2,9 +2,11 @@ package com.mastercard.test.flow.assrt;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
@@ -150,9 +152,40 @@ class PrecedenceTest {
 		Flow a1 = chained( "a1", "A" );
 		Flow outside = flow( "b", a1 );
 		Flow a2 = chained( "a2", "A", outside );
-		assertEquals( "Contradictory contracted chain precedence",
+		assertEquals(
+				"Hard prerequisite cycle (including contracted chains): [a1 [chain:A], a2 [chain:A], b []]",
 				assertThrows( IllegalArgumentException.class,
 						() -> new Precedence( List.of( a1, outside, a2 ) ) ).getMessage() );
+	}
+
+	/**
+	 * A hard cycle is reported as such, even though Order had to break it and so
+	 * hands over a sequence with a prerequisite after its dependent.
+	 */
+	@Test
+	void hardCycle() {
+		Flw a = flw( "a []" );
+		Flw b = flw( "b []" ).depedency( a );
+		Flw c = flw( "c []" ).depedency( b );
+		a.depedency( c );
+		List<Flow> ordered = new Order( Stream.of( a, b, c ), List.of() ).order().toList();
+		assertEquals( 3, ordered.size() );
+		assertEquals( "Hard prerequisite cycle (including contracted chains): [a [], b [], c []]",
+				assertThrows( IllegalArgumentException.class,
+						() -> new Precedence( ordered ) ).getMessage() );
+	}
+
+	/** An unchained flow's ID is not a chain membership declaration. */
+	@Test
+	void unchainedIdentityCannotJoinAChain() {
+		Flow a = Creator.build( f -> f.meta( m -> m.description( "A" )
+				.tags( tags -> tags.add( "chain:B []" ) ) ) );
+		Flow b = Creator.build( f -> f.meta( m -> m.description( "B" ) ).prerequisite( a ) );
+		Flow c = Creator.build( f -> f.meta( m -> m.description( "C" )
+				.tags( tags -> tags.add( "chain:B []" ) ) ).prerequisite( b ) );
+		List<Flow> ordered = new Order( Stream.of( c, b, a ), List.of() ).order().toList();
+		assertTrue( assertThrows( IllegalArgumentException.class, () -> new Precedence( ordered ) )
+				.getMessage().contains( "contracted chains" ) );
 	}
 
 	private static Flow chained( String name, String chain, Flow... prerequisites ) {

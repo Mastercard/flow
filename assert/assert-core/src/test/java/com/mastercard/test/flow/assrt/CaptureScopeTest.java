@@ -18,6 +18,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.opentest4j.TestAbortedException;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Interaction;
@@ -114,7 +115,7 @@ class CaptureScopeTest {
 
 	@ParameterizedTest
 	@MethodSource("protectedFailures")
-	void controlFatalAndUnknownCaptureFailuresAreNotSwallowed( Throwable failure ) {
+	void controlFatalAndInterruptedCaptureFailuresAreNotSwallowed( Throwable failure ) {
 		for( Phase phase : Phase.values() ) {
 			Source source = new Source();
 			source.phase = phase;
@@ -134,15 +135,17 @@ class CaptureScopeTest {
 		}
 	}
 
+	/**
+	 * Errors, test-control signals and interruptions, at any depth of the cause
+	 * chain, are never reduced to diagnostics
+	 */
 	static Stream<Throwable> protectedFailures() {
-		IllegalStateException suppressed = new IllegalStateException( "source" );
-		suppressed.addSuppressed( new AssertionError( "unsafe close" ) );
 		return Stream.of( new AssertionError( "assertion" ), new LinkageError( "fatal" ),
-				new CancellationException( "stop" ), new RuntimeException( "unknown" ) {
-					private static final long serialVersionUID = 1L;
-				}, new IllegalStateException( new CancellationException( "nested stop" ) ),
+				new TestAbortedException( "assumption" ), new CancellationException( "stop" ),
+				new IllegalStateException( new CancellationException( "nested stop" ) ),
 				new IllegalStateException( new InterruptedException( "interrupted" ) ),
-				new IllegalStateException( new AssertionError( "nested assertion" ) ), suppressed );
+				new IllegalStateException( new AssertionError( "nested assertion" ) ),
+				new IllegalStateException( new TestAbortedException( "nested assumption" ) ) );
 	}
 
 	@ParameterizedTest
@@ -291,11 +294,21 @@ class CaptureScopeTest {
 		}
 	}
 
+	/**
+	 * Any other runtime exception is an ordinary fault, whatever its subtype and
+	 * whatever it carries as suppressed: the test passes and the fault is diagnosed
+	 *
+	 * @param phase Where the source fails
+	 */
 	@ParameterizedTest
 	@EnumSource(Phase.class)
 	void ordinaryCaptureFaultDoesNotFailPassingWork( Phase phase ) {
 		Source source = new Source();
 		source.phase = phase;
+		source.failure = new RuntimeException( "unknown subtype" ) {
+			private static final long serialVersionUID = 1L;
+		};
+		source.failure.addSuppressed( new AssertionError( "suppressed" ) );
 		TestFlocessor runner = runner( "capture fault " + phase, source );
 		try {
 			runner.execute();

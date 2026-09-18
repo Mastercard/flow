@@ -1,13 +1,10 @@
 package com.mastercard.test.flow.assrt;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -135,45 +132,11 @@ public class Order {
 			Comparator<T> preference ) {
 		Graph<T> graph = new Graph<>( preference );
 		items.forEach( graph::with );
-		// Validate hard precedence before the weighted graph removes soft cycles.
-		// One successor edge/counter per pair, irrespective of binding multiplicity.
-		// Absent references retain Graph's ignored-edge semantics. Intra-flow (or
-		// already internally ordered intra-chain) bindings are not self-waits.
-		Map<T, Set<T>> successors = new HashMap<>();
-		Map<T, Integer> remaining = new HashMap<>();
-		graph.values().forEach( value -> {
-			successors.put( value, new HashSet<>() );
-			remaining.put( value, 0 );
-		} );
-		graph.values().forEach( sink -> prerequisites.apply( sink )
-				.filter( source -> !Objects.equals( source, sink ) && successors.containsKey( source ) )
-				.forEach( source -> {
-					if( successors.get( source ).add( sink ) ) {
-						remaining.compute( sink, ( key, count ) -> count + 1 );
-						graph.edge( Integer.MAX_VALUE, sink, source );
-					}
-				} ) );
-		Deque<T> ready = new ArrayDeque<>();
-		remaining.forEach( ( value, count ) -> {
-			if( count == 0 ) {
-				ready.addLast( value );
-			}
-		} );
-		int visited = 0;
-		while( !ready.isEmpty() ) {
-			T source = ready.removeFirst();
-			visited++;
-			for( T sink : successors.get( source ) ) {
-				if( remaining.compute( sink, ( key, count ) -> count - 1 ) == 0 ) {
-					ready.addLast( sink );
-				}
-			}
-		}
-		if( visited != remaining.size() ) {
-			throw new IllegalArgumentException( "Hard prerequisite cycle (including contracted chains): "
-					+ remaining.entrySet().stream().filter( e -> e.getValue() != 0 )
-							.map( e -> String.valueOf( e.getKey() ) ).sorted().toList() );
-		}
+		// dependencies have max weight - they must be honoured. A hard cycle is
+		// still broken here to yield a sequence; Precedence rejects the result.
+		graph.values().forEach(
+				snk -> prerequisites.apply( snk )
+						.forEach( src -> graph.edge( Integer.MAX_VALUE, snk, src ) ) );
 		// basis links have weight 1 - these will be deleted first to resolve cycles
 		graph.values().forEach(
 				flw -> bases.apply( flw )

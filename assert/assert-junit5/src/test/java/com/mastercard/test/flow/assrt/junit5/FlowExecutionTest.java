@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -37,6 +39,7 @@ import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherConfig;
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
 import org.junit.platform.launcher.core.LauncherFactory;
+import org.opentest4j.TestAbortedException;
 
 import com.mastercard.test.flow.Actor;
 import com.mastercard.test.flow.Context;
@@ -343,6 +346,59 @@ class FlowExecutionTest {
 			run = aborted.join( aborted.launch( true ) );
 			assertEquals( List.of(), run.results );
 			assertEquals( 0, new Reader( dir.resolve( "published" ) ).read().entries.size() );
+		}
+	}
+
+	/**
+	 * A fault while decorating the report is classified by one rule: an ordinary
+	 * runtime exception becomes a diagnostic and the flow still passes; an
+	 * assertion failure or a test abort propagates to the flow's result.
+	 *
+	 * @param kind The kind of decoration fault
+	 * @param dir  Isolated artifact directory
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = { "ordinary", "assertion", "abort" })
+	void reportDecorationFaultsAreClassified( String kind, @TempDir Path dir ) {
+		RuntimeException ordinary = new IllegalStateException( "decoration failed" );
+		Throwable fault = switch( kind ) {
+			case "ordinary" -> ordinary;
+			case "assertion" -> new AssertionError( "decoration assertion" );
+			default -> new TestAbortedException( "decoration abort" );
+		};
+		PrintStream original = System.err;
+		ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "decorated" ) ) {
+			System.setErr( new PrintStream( stderr, true, UTF_8 ) );
+			Gated gated = Gated.model( flow( "a" ) );
+			gated.configure = r -> r.reporting( Reporting.QUIETLY ).motivation( ( text, asrt ) -> {
+				if( fault instanceof Error error ) {
+					throw error;
+				}
+				throw (RuntimeException) fault;
+			} );
+			Run run = gated.join( gated.launch( true ) );
+			String expected = switch( kind ) {
+				case "ordinary" -> "SUCCESSFUL";
+				case "assertion" -> "FAILED";
+				default -> "ABORTED";
+			};
+			assertEquals( List.of( "a []:" + expected ), run.results );
+			if( "ordinary".equals( kind ) ) {
+				assertEquals( List.of(), run.failures, run.failures::toString );
+				assertEquals( List.of( "Flow: Report failed: java.lang.IllegalStateException" ),
+						stderr.toString( UTF_8 ).lines().toList() );
+			}
+			else {
+				// The fault propagates to the flow; the writer it latched then fails the
+				// class-level close as well
+				assertEquals( fault, run.failures.get( 0 ), run.failures::toString );
+				assertEquals( "", stderr.toString( UTF_8 ) );
+			}
+		}
+		finally {
+			System.setErr( original );
 		}
 	}
 

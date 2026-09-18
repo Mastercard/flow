@@ -286,17 +286,20 @@ public class Writer implements AutoCloseable {
 		Runnable write = idf.render( root, app, files );
 		detailOwners.put( newname, idf );
 
-		// refresh the index
 		if( indexing == Indexing.IMMEDIATE ) {
 			writeIndex( root.resolve( INDEX_FILE_NAME ) );
+			refreshWaitingBases( flow );
 		}
-		else {
-			// Final membership, not arrival order, determines link correction.
-			return write;
-		}
+		return write;
+	}
 
-		// refresh the details of those who were waiting for that flow as a better basis
-		// candidate
+	/**
+	 * Immediate mode: rewrites the details of flows that were waiting for the
+	 * supplied flow as a better basis candidate
+	 *
+	 * @param flow A flow that has just been added to the report
+	 */
+	private void refreshWaitingBases( Flow flow ) {
 		missingBases.forEach( ( unhappy, preferred ) -> {
 			Iterator<Flow> pi = preferred.iterator();
 			boolean found = false;
@@ -320,8 +323,6 @@ public class Writer implements AutoCloseable {
 				missingBases.entrySet().stream()
 						.filter( e -> e.getValue().isEmpty() )
 						.collect( toSet() ) );
-
-		return write;
 	}
 
 	private void captureBases( Flow flow ) {
@@ -467,31 +468,18 @@ public class Writer implements AutoCloseable {
 	}
 
 	/**
+	 * Missing-basis tracking is an immediate-mode feature: those reports link each
+	 * flow to its nearest basis present at the time of writing and correct the link
+	 * as better bases arrive. Final-only reports resolve every link on close, so
+	 * this snapshot is always empty for them.
+	 *
 	 * @return An immutable, detached snapshot from {@link Flow}s that are missing
 	 *         their ideal bases to lists of those bases in preference order. Flow
 	 *         references retain their existing identities.
 	 */
 	public synchronized Map<Flow, List<Flow>> missingBases() {
 		Map<Flow, List<Flow>> snapshot = new HashMap<>();
-		if( indexing == Indexing.IMMEDIATE ) {
-			missingBases.forEach( ( flow, desired ) -> snapshot.put( flow, List.copyOf( desired ) ) );
-		}
-		else {
-			// This optional diagnostic can enumerate missing paths; updates and
-			// final publication do not perform this per-member ancestry scan.
-			data.keySet().forEach( flow -> {
-				List<Flow> desired = new ArrayList<>();
-				Set<Flow> seen = new HashSet<>();
-				Flow basis = bases.get( flow );
-				while( basis != null && !data.containsKey( basis ) && seen.add( basis ) ) {
-					desired.add( basis );
-					basis = bases.get( basis );
-				}
-				if( !desired.isEmpty() ) {
-					snapshot.put( flow, List.copyOf( desired ) );
-				}
-			} );
-		}
+		missingBases.forEach( ( flow, desired ) -> snapshot.put( flow, List.copyOf( desired ) ) );
 		return Collections.unmodifiableMap( snapshot );
 	}
 

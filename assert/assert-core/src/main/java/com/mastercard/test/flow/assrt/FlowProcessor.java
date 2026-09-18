@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -540,13 +541,10 @@ class FlowProcessor {
 				if( !ordinaryPeripheralFailure( failure ) ) {
 					throw failure;
 				}
-				// Independent of Writer availability; no backend logging feedback loop or
-				// unbounded source message/stack trace in the prompt diagnostic.
-				String diagnostic = "Log capture " + operation + " failed: "
-						+ failure.getClass().getName();
-				System.err.println( diagnostic );
+				String message = "Log capture " + operation + " failed: " + failure.getClass().getName();
+				diagnostic( message );
 				List<LogEvent> diagnosed = new ArrayList<>( logs );
-				diagnosed.add( warn( diagnostic ) );
+				diagnosed.add( warn( message ) );
 				logs = Collections.unmodifiableList( diagnosed );
 			}
 		}
@@ -636,33 +634,51 @@ class FlowProcessor {
 	}
 
 	/**
-	 * Only known ordinary peripheral faults, including their entire exception
-	 * graph.
+	 * A capture or reporting fault is ordinary when it is a runtime or I/O
+	 * exception that is not an interruption or cancellation and whose cause chain
+	 * holds no {@link Error} and no test-control exception. Ordinary faults become
+	 * diagnostics; anything else must fail or abort the test.
+	 *
+	 * @param failure The fault
+	 * @return <code>true</code> if the fault may be reduced to a diagnostic
 	 */
 	private static boolean ordinaryPeripheralFailure( Throwable failure ) {
-		Set<Throwable> visited = Collections.newSetFromMap( new IdentityHashMap<>() );
-		Deque<Throwable> pending = new ArrayDeque<>();
-		pending.add( failure );
-		while( !pending.isEmpty() ) {
-			Throwable next = pending.removeFirst();
-			if( !visited.add( next ) ) {
-				continue;
-			}
-			Class<?> type = next.getClass();
-			if( !(type == RuntimeException.class || type == IllegalStateException.class
-					|| type == IllegalArgumentException.class || type == NullPointerException.class
-					|| type == UnsupportedOperationException.class || type == SecurityException.class
-					|| type == UncheckedIOException.class
-					|| next instanceof IOException && !(next instanceof InterruptedIOException)
-							&& !(next instanceof ClosedByInterruptException)) ) {
+		if( !(failure instanceof RuntimeException || failure instanceof IOException) ) {
+			return false;
+		}
+		Set<Throwable> seen = Collections.newSetFromMap( new IdentityHashMap<>() );
+		for( Throwable cause = failure; cause != null && seen.add( cause ); cause = cause.getCause() ) {
+			if( cause instanceof Error || cause instanceof InterruptedException
+					|| cause instanceof InterruptedIOException || cause instanceof ClosedByInterruptException
+					|| cause instanceof CancellationException || testControl( cause ) ) {
 				return false;
 			}
-			if( next.getCause() != null ) {
-				pending.addLast( next.getCause() );
-			}
-			Collections.addAll( pending, next.getSuppressed() );
 		}
 		return true;
+	}
+
+	/**
+	 * Test abort and skip signals are runtime exceptions from the test framework.
+	 * The frameworks are not compile-time dependencies of this module, so they are
+	 * recognised by package.
+	 */
+	private static boolean testControl( Throwable failure ) {
+		for( Class<?> type = failure.getClass(); type != null; type = type.getSuperclass() ) {
+			String name = type.getName();
+			if( name.startsWith( "org.opentest4j." ) || name.startsWith( "org.junit." ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Runner diagnostics for report and capture faults that did not fail the test
+	 *
+	 * @param message What went wrong, without stack trace or source message text
+	 */
+	private static void diagnostic( String message ) {
+		System.err.println( "Flow: " + message );
 	}
 
 	private void checkPreconditions( Flow flow, Consumer<String> reportAndSkip ) {
@@ -943,7 +959,7 @@ class FlowProcessor {
 		catch( RuntimeException failure ) {
 			if( !config.finalOnlyReporting || !ordinaryPeripheralFailure( failure ) )
 				throw failure;
-			System.err.println( "Flow report presentation failed: " + failure.getClass().getName() );
+			diagnostic( "Report presentation failed: " + failure.getClass().getName() );
 		}
 	}
 
@@ -954,7 +970,7 @@ class FlowProcessor {
 	private synchronized void reportFailed( RuntimeException failure ) {
 		if( reportFailure == null ) {
 			reportFailure = failure;
-			System.err.println( "Flow report failed: " + failure.getClass().getName() );
+			diagnostic( "Report failed: " + failure.getClass().getName() );
 		}
 	}
 

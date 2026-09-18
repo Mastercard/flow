@@ -142,7 +142,7 @@ class ReportingTest {
 			assertEquals( 0, primary.getSuppressed().length );
 			assertFalse( Files.isRegularFile( root.resolve( "run" ).resolve( Writer.INDEX_FILE_NAME ) ) );
 			assertEquals( 1, diagnostic.toString( UTF_8 ).lines()
-					.filter( line -> line.startsWith( "Flow report failed: " ) ).count() );
+					.filter( line -> line.startsWith( "Flow: Report failed: " ) ).count() );
 		}
 		finally {
 			System.setErr( original );
