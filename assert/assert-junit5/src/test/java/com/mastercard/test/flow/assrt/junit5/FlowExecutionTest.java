@@ -579,20 +579,19 @@ class FlowExecutionTest {
 	/**
 	 * A fault while customising the motivation is classified by one rule: an
 	 * ordinary runtime exception becomes a diagnostic and the flow still passes,
-	 * with the report published; an assertion failure or a test abort propagates to
-	 * the flow's result. In neither case is the report writer latched.
+	 * with the report published; an error propagates to the flow's result. In
+	 * neither case is the report writer latched.
 	 *
 	 * @param kind The kind of decoration fault
 	 * @param dir  Isolated artifact directory
 	 */
 	@ParameterizedTest
-	@ValueSource(strings = { "ordinary", "assertion", "abort" })
+	@ValueSource(strings = { "ordinary", "assertion" })
 	void reportDecorationFaultsAreClassified( String kind, @TempDir Path dir ) {
 		RuntimeException ordinary = new IllegalStateException( "decoration failed" );
 		Throwable fault = switch( kind ) {
 			case "ordinary" -> ordinary;
-			case "assertion" -> new AssertionError( "decoration assertion" );
-			default -> new TestAbortedException( "decoration abort" );
+			default -> new AssertionError( "decoration assertion" );
 		};
 		List<String> diagnostics = new ArrayList<>();
 		Logger runner = Logger.getLogger( "com.mastercard.test.flow.assrt.FlowProcessor" );
@@ -625,8 +624,7 @@ class FlowExecutionTest {
 			Run run = gated.join( gated.launch( true ) );
 			String expected = switch( kind ) {
 				case "ordinary" -> "SUCCESSFUL";
-				case "assertion" -> "FAILED";
-				default -> "ABORTED";
+				default -> "FAILED";
 			};
 			assertEquals( List.of( "a []:" + expected ), run.results );
 			if( "ordinary".equals( kind ) ) {

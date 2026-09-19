@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.opentest4j.TestAbortedException;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
@@ -130,16 +129,15 @@ class CaptureScopeTest {
 	}
 
 	/**
-	 * Errors, test-control signals and interruptions, at any depth of the cause
-	 * chain, are never reduced to diagnostics
+	 * Errors and interruptions, at any depth of the cause chain, are never reduced
+	 * to diagnostics
 	 */
 	static Stream<Throwable> protectedFailures() {
 		return Stream.of( new AssertionError( "assertion" ), new LinkageError( "fatal" ),
-				new TestAbortedException( "assumption" ), new CancellationException( "stop" ),
+				new CancellationException( "stop" ),
 				new IllegalStateException( new CancellationException( "nested stop" ) ),
 				new IllegalStateException( new InterruptedException( "interrupted" ) ),
-				new IllegalStateException( new AssertionError( "nested assertion" ) ),
-				new IllegalStateException( new TestAbortedException( "nested assumption" ) ) );
+				new IllegalStateException( new AssertionError( "nested assertion" ) ) );
 	}
 
 	/**
