@@ -69,8 +69,9 @@ public class Flocessor extends AbstractFlocessor<Flocessor> implements AutoClose
 
 	/**
 	 * Stops processing and closes the report. Call from {@code @AfterClass}, after
-	 * all parameterized cases have finished, not after parameter enumeration.
-	 * Without this call the report is not published.
+	 * all parameterized cases have finished, not after parameter enumeration. The
+	 * report is written as flows are processed; this call waits for in-flight
+	 * detail writes, closes the log source and surfaces any reporting failure.
 	 *
 	 * @throws IllegalStateException if an invocation or completion is still active,
 	 *                               or reporting has failed; a reporting failure

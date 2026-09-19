@@ -78,7 +78,9 @@ public class MyTest {
 ```
 
 The `Flocessor` is `AutoCloseable`. Close it from `@AfterClass`, after all
-parameterized cases have finished, which is what publishes the report. Create it in
+parameterized cases have finished; the report is written as flows are processed,
+and `close()` waits for in-flight detail writes, closes the log source and surfaces
+any reporting failure. Create it in
 `@Parameters` rather than `@BeforeClass`: parameter enumeration happens first, and a
 fresh runner is needed for each JUnit run of the class. `close()` fails if a flow is
 still being processed; afterwards no further flows can be processed. Closing a

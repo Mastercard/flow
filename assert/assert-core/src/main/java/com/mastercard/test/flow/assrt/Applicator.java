@@ -7,7 +7,9 @@ import com.mastercard.test.flow.Flow;
 
 /**
  * Extends this class to provide the mechanism by which {@link Context} data can
- * be applied to the system under test
+ * be applied to the system under test. Flows that apply contexts run one after
+ * another, but under concurrent execution flows without contexts may overlap
+ * them, so implementations must be thread-safe.
  *
  * @param <T> The {@link Context} type
  */

@@ -67,7 +67,9 @@ public class Flocessor extends AbstractFlocessor<Flocessor> implements AutoClose
 	/**
 	 * Stops processing and closes the report. Call from {@code @AfterAll}, after
 	 * all dynamic tests have finished; returning the stream from the factory does
-	 * not mean the tests have run. Without this call the report is not published.
+	 * not mean the tests have run. The report is written as flows are processed;
+	 * this call waits for in-flight detail writes, closes the log source and
+	 * surfaces any reporting failure.
 	 *
 	 * @throws IllegalStateException if an invocation or completion is still active,
 	 *                               or reporting has failed; a reporting failure

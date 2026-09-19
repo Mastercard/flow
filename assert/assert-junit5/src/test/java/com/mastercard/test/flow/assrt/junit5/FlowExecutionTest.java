@@ -577,9 +577,10 @@ class FlowExecutionTest {
 	}
 
 	/**
-	 * A fault while decorating the report is classified by one rule: an ordinary
-	 * runtime exception becomes a diagnostic and the flow still passes; an
-	 * assertion failure or a test abort propagates to the flow's result.
+	 * A fault while customising the motivation is classified by one rule: an
+	 * ordinary runtime exception becomes a diagnostic and the flow still passes,
+	 * with the report published; an assertion failure or a test abort propagates to
+	 * the flow's result. In neither case is the report writer latched.
 	 *
 	 * @param kind The kind of decoration fault
 	 * @param dir  Isolated artifact directory
@@ -630,14 +631,18 @@ class FlowExecutionTest {
 			assertEquals( List.of( "a []:" + expected ), run.results );
 			if( "ordinary".equals( kind ) ) {
 				assertEquals( List.of(), run.failures, run.failures::toString );
-				assertEquals( List.of( "Report failed: java.lang.IllegalStateException" ), diagnostics );
+				assertEquals( List.of(
+						"Motivation customisation failed for a []: java.lang.IllegalStateException" ),
+						diagnostics );
 			}
 			else {
-				// The fault propagates to the flow; the writer it latched then fails the
-				// class-level close as well
-				assertEquals( fault, run.failures.get( 0 ), run.failures::toString );
+				assertEquals( List.of( fault ), run.failures, run.failures::toString );
 				assertEquals( List.of(), diagnostics );
 			}
+			// the fault happened outside the writer, so the report is still published;
+			// a propagated fault pre-empts the flow's own entry
+			assertEquals( "ordinary".equals( kind ) ? 1 : 0,
+					new Reader( dir.resolve( "decorated" ) ).read().entries.size() );
 		}
 		finally {
 			runner.removeHandler( handler );

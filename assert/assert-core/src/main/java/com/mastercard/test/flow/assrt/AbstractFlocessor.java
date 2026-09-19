@@ -301,7 +301,9 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	}
 
 	/**
-	 * How to evaluate the model's expected behaviour against the system
+	 * How to evaluate the model's expected behaviour against the system. Under
+	 * concurrent execution this callback is invoked from several threads at once,
+	 * so it must be thread-safe.
 	 *
 	 * @param t Captures system behaviour
 	 * @return <code>this</code>
