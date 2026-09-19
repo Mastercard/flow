@@ -64,23 +64,7 @@ public final class Precedence {
 			}
 			edges.add( new HashSet<>() );
 		}
-		// A prerequisite ordered after its dependent is either caller error or a
-		// cycle that Order had to break; the cycle check below decides which
-		boolean noncanonical = false;
-		for( int i = 0; i < flows.size(); i++ ) {
-			Flow flow = flows.get( i );
-			int index = i;
-			try( Stream<Flow> sources = flow.dependencies().map( d -> d.source().flow() ) ) {
-				for( Flow source : sources.filter( f -> f != null && f != flow ).toList() ) {
-					Integer before = indices.get( source );
-					if( before == null ) {
-						throw new IllegalArgumentException( "Absent or noncanonical Flow prerequisite" );
-					}
-					noncanonical |= before >= index;
-					edges.get( before ).add( index );
-				}
-			}
-		}
+		boolean noncanonical = dependencyPrecedence( flows, indices, edges );
 		basisPrecedence( flows, indices, edges );
 		publicationPrecedence( flows, indices, edges );
 		chainPrecedence( flows, edges );
@@ -101,6 +85,30 @@ public final class Precedence {
 			if( predecessors[i] == 0 )
 				initial.add( i );
 		roots = Collections.unmodifiableList( initial );
+	}
+
+	/**
+	 * @return <code>true</code> if a prerequisite is ordered after its dependent,
+	 *         which is either caller error or a cycle that {@link Order} had to
+	 *         break; the cycle check decides which
+	 */
+	private static boolean dependencyPrecedence( List<Flow> flows, Map<Flow, Integer> indices,
+			List<Set<Integer>> edges ) {
+		boolean noncanonical = false;
+		for( int i = 0; i < flows.size(); i++ ) {
+			Flow flow = flows.get( i );
+			try( Stream<Flow> sources = flow.dependencies().map( d -> d.source().flow() ) ) {
+				for( Flow source : sources.filter( f -> f != null && f != flow ).toList() ) {
+					Integer before = indices.get( source );
+					if( before == null ) {
+						throw new IllegalArgumentException( "Absent or noncanonical Flow prerequisite" );
+					}
+					noncanonical |= before >= i;
+					edges.get( before ).add( i );
+				}
+			}
+		}
+		return noncanonical;
 	}
 
 	/**

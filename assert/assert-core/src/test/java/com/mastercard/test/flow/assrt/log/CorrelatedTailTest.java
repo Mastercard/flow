@@ -1,8 +1,6 @@
 package com.mastercard.test.flow.assrt.log;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,6 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.mastercard.test.flow.assrt.CorrelatedCapture.Collector;
 import com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome;
+import com.mastercard.test.flow.assrt.Diagnostics;
 import com.mastercard.test.flow.report.data.LogEvent;
 
 /**
@@ -152,10 +151,8 @@ class CorrelatedTailTest {
 		Files.createFile( file );
 		CorrelatedTail tail = new CorrelatedTail( file, PATTERN );
 		Sink sink = new Sink();
-		ByteArrayOutputStream stderr = new ByteArrayOutputStream();
-		PrintStream original = System.err;
-		System.setErr( new PrintStream( stderr, true, UTF_8 ) );
-		try {
+		List<String> problems;
+		try( Diagnostics diagnostics = new Diagnostics( CorrelatedTail.class ) ) {
 			tail.open( sink );
 			append( file, "012 [a] INFO src one", "013 [a] INFO src two" );
 			tail.flush();
@@ -165,15 +162,15 @@ class CorrelatedTailTest {
 			Files.delete( file );
 			tail.flush();
 			tail.close();
-		}
-		finally {
-			System.setErr( original );
+			problems = diagnostics.messages();
 		}
 		assertEquals( List.of( "a|012|INFO|src|[]   one", "a|013|INFO|src|[]   two",
 				"a|014|INFO|src|[]   after rotation" ), sink.delivered );
-		String problems = stderr.toString( UTF_8 );
-		assertTrue( problems.contains( "truncated" ), problems );
-		assertTrue( problems.contains( "NoSuchFileException" ), problems );
+		// the missing file is reported by the flush and again by the close
+		assertEquals( 3, problems.size(), problems.toString() );
+		assertTrue( problems.get( 0 ).contains( "truncated" ), problems.toString() );
+		assertTrue( problems.get( 1 ).contains( "NoSuchFileException" ), problems.toString() );
+		assertTrue( problems.get( 2 ).contains( "NoSuchFileException" ), problems.toString() );
 	}
 
 	/**
@@ -245,20 +242,15 @@ class CorrelatedTailTest {
 		Path file = dir.resolve( "app.log" );
 		Files.createFile( file );
 		CorrelatedTail tail = new CorrelatedTail( file, PATTERN );
-		ByteArrayOutputStream stderr = new ByteArrayOutputStream();
-		PrintStream original = System.err;
-		System.setErr( new PrintStream( stderr, true, UTF_8 ) );
-		try {
+		List<String> problems;
+		try( Diagnostics diagnostics = new Diagnostics( CorrelatedTail.class ) ) {
 			tail.open( new Sink() );
 			Files.delete( file );
 			for( int i = 0; i < 25; i++ ) {
 				tail.flush();
 			}
+			problems = diagnostics.messages();
 		}
-		finally {
-			System.setErr( original );
-		}
-		List<String> problems = stderr.toString( UTF_8 ).lines().toList();
 		assertEquals( 20, problems.size(), problems.toString() );
 		assertTrue( problems.stream().allMatch( p -> p.contains( "read: " ) ), problems.toString() );
 	}

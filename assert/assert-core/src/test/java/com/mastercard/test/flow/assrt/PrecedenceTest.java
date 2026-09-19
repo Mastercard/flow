@@ -133,8 +133,9 @@ class PrecedenceTest {
 		Flw a = flw( "a []" );
 		Flw b = flw( "b []" ).basis( a );
 		a.basis( b );
+		List<Flow> cyclic = List.of( a, b );
 		assertEquals( "Cyclic Flow basis", assertThrows( IllegalArgumentException.class,
-				() -> new Precedence( List.of( a, b ) ) ).getMessage() );
+				() -> new Precedence( cyclic ) ).getMessage() );
 
 		Flow source = flow( "source" );
 		Flow dependent = flow( "dependent", source );
@@ -155,10 +156,11 @@ class PrecedenceTest {
 		Flow a1 = chained( "a1", "A" );
 		Flow outside = flow( "b", a1 );
 		Flow a2 = chained( "a2", "A", outside );
+		List<Flow> contracted = List.of( a1, outside, a2 );
 		assertEquals(
 				"Hard prerequisite cycle (including contracted chains): [a1 [chain:A], a2 [chain:A], b []]",
 				assertThrows( IllegalArgumentException.class,
-						() -> new Precedence( List.of( a1, outside, a2 ) ) ).getMessage() );
+						() -> new Precedence( contracted ) ).getMessage() );
 	}
 
 	/**

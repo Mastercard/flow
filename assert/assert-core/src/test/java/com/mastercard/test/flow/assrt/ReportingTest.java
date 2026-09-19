@@ -16,14 +16,13 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Assertions;
@@ -58,11 +57,8 @@ class ReportingTest {
 	 */
 	@ParameterizedTest
 	@ValueSource(booleans = { false, true })
-	void emptyFinalReportIsPublishedOnlyAtCompletion( boolean initialize, @TempDir Path directory )
-			throws Exception {
-		var diagnostic = new ByteArrayOutputStream();
-		PrintStream original = System.err;
-		try( var captured = new PrintStream( diagnostic, true, UTF_8 );
+	void emptyFinalReportIsPublishedOnlyAtCompletion( boolean initialize, @TempDir Path directory ) {
+		try( Diagnostics diagnostic = new Diagnostics( FlowProcessor.class );
 				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
 				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "empty" );
 				TestFlocessor runner = new TestFlocessor( "empty prepared run", TestModel.abc() )
@@ -70,7 +66,6 @@ class ReportingTest {
 						} ).behaviour( a -> {
 							throw new AssertionError( "filtered flow entered SUT" );
 						} ) ) {
-			System.setErr( captured );
 			runner.finalOnlyReporting();
 			try( var flows = runner.prepareFlows() ) {
 				assertEquals( 0, flows.count() );
@@ -86,11 +81,8 @@ class ReportingTest {
 			assertEquals( "empty prepared run", index.meta.testTitle );
 			assertTrue( index.entries.isEmpty() );
 			runner.completeProcessing();
-			assertEquals( "", diagnostic.toString( UTF_8 ),
+			assertEquals( List.of(), diagnostic.messages(),
 					"repeated completion is not a report failure" );
-		}
-		finally {
-			System.setErr( original );
 		}
 	}
 
@@ -104,11 +96,9 @@ class ReportingTest {
 		Path root = directory.resolve( "reports" );
 		if( "creation".equals( phase ) )
 			Files.createFile( root );
-		var diagnostic = new ByteArrayOutputStream();
-		PrintStream original = System.err;
 		var primary = new IllegalArgumentException( "original SUT failure" );
 		int[] calls = { 0 };
-		try( var captured = new PrintStream( diagnostic, true, UTF_8 );
+		try( Diagnostics diagnostic = new Diagnostics( FlowProcessor.class );
 				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( root.toString() );
 				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "run" );
 				TestFlocessor runner = new TestFlocessor( "final report fault", TestModel.abc() )
@@ -118,7 +108,6 @@ class ReportingTest {
 								throw primary;
 							a.actual().response( "B response to A".getBytes( UTF_8 ) );
 						} ) ) {
-			System.setErr( captured );
 			runner.finalOnlyReporting();
 			Flow flow;
 			try( var prepared = runner.prepareFlows() ) {
@@ -133,7 +122,7 @@ class ReportingTest {
 			assertEquals( 1, calls[0] );
 			if( "completion".equals( phase ) ) {
 				Files.createDirectory( runner.report().resolve( Writer.INDEX_FILE_NAME ) );
-				assertEquals( "", diagnostic.toString( UTF_8 ) );
+				assertEquals( List.of(), diagnostic.messages() );
 			}
 			assertDoesNotThrow( runner::completeProcessing );
 			assertDoesNotThrow( runner::completeProcessing );
@@ -141,11 +130,8 @@ class ReportingTest {
 			assertEquals( 1, calls[0], "report failure must not reopen processing" );
 			assertEquals( 0, primary.getSuppressed().length );
 			assertFalse( Files.isRegularFile( root.resolve( "run" ).resolve( Writer.INDEX_FILE_NAME ) ) );
-			assertEquals( 1, diagnostic.toString( UTF_8 ).lines()
-					.filter( line -> line.startsWith( "Flow: Report failed: " ) ).count() );
-		}
-		finally {
-			System.setErr( original );
+			assertEquals( 1, diagnostic.messages().stream()
+					.filter( line -> line.startsWith( "Report failed: " ) ).count() );
 		}
 	}
 
