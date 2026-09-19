@@ -1,19 +1,19 @@
 package com.mastercard.test.flow.assrt.log;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -198,12 +198,69 @@ class CorrelatedTailTest {
 
 	@Test
 	void patternMustCaptureAllGroups() {
+		Path file = Path.of( "x" );
 		assertThrows( IllegalArgumentException.class,
-				() -> new CorrelatedTail( Path.of( "x" ),
+				() -> new CorrelatedTail( file,
 						"^(?<time>\\d+) (?<level>[A-Z]+) (?<source>\\S+)" ) );
 		assertThrows( IllegalArgumentException.class,
-				() -> new CorrelatedTail( Path.of( "x" ),
+				() -> new CorrelatedTail( file,
 						"^(?<time>\\d+) (?<correlation>\\S+) (?<source>\\S+)" ) );
+	}
+
+	@Test
+	void readLimitMustBePositive() {
+		CorrelatedTail tail = new CorrelatedTail( Path.of( "x" ), PATTERN );
+		assertSame( tail, tail.readLimit( 1 ) );
+		assertEquals( "Read limit must be positive",
+				assertThrows( IllegalArgumentException.class, () -> tail.readLimit( 0 ) ).getMessage() );
+	}
+
+	/**
+	 * Close keeps reading in limit-sized chunks until the file is exhausted, and
+	 * once closed the tail reads nothing more.
+	 */
+	@Test
+	void closeDrainsBeyondTheReadLimitThenStops( @TempDir Path dir ) throws IOException {
+		Path file = dir.resolve( "app.log" );
+		Files.createFile( file );
+		CorrelatedTail tail = new CorrelatedTail( file, PATTERN ).readLimit( 64 );
+		Sink sink = new Sink();
+		tail.open( sink );
+		for( int i = 0; i < 5; i++ ) {
+			append( file, String.format( "%03d [a] INFO src event %d", 20 + i, i ) );
+		}
+		tail.close();
+		assertEquals( 5, sink.delivered.size(), sink.delivered.toString() );
+		assertEquals( "a|024|INFO|src|[]   event 4", sink.delivered.get( 4 ) );
+
+		append( file, "025 [a] INFO src after close" );
+		tail.flush();
+		tail.close();
+		assertEquals( 5, sink.delivered.size(), sink.delivered.toString() );
+	}
+
+	/** Repeated source problems are reported up to a limit, then dropped. */
+	@Test
+	void problemReportsAreBounded( @TempDir Path dir ) throws IOException {
+		Path file = dir.resolve( "app.log" );
+		Files.createFile( file );
+		CorrelatedTail tail = new CorrelatedTail( file, PATTERN );
+		ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+		PrintStream original = System.err;
+		System.setErr( new PrintStream( stderr, true, UTF_8 ) );
+		try {
+			tail.open( new Sink() );
+			Files.delete( file );
+			for( int i = 0; i < 25; i++ ) {
+				tail.flush();
+			}
+		}
+		finally {
+			System.setErr( original );
+		}
+		List<String> problems = stderr.toString( UTF_8 ).lines().toList();
+		assertEquals( 20, problems.size(), problems.toString() );
+		assertTrue( problems.stream().allMatch( p -> p.contains( "read: " ) ), problems.toString() );
 	}
 
 	@Test

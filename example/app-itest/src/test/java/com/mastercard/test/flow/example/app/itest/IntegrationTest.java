@@ -22,8 +22,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.openqa.selenium.WebDriver;
 import org.slf4j.Logger;
@@ -51,13 +49,12 @@ import com.mastercard.test.flow.msg.web.WebSequence;
  */
 @SuppressWarnings("static-method")
 @ExtendWith(Browser.class)
-@TestInstance(Lifecycle.PER_CLASS)
 class IntegrationTest {
 
 	private static final Logger LOG = LoggerFactory.getLogger( IntegrationTest.class );
 
 	private static final ClusterManager clusterManager = new ClusterManager();
-	private Flocessor flocessor;
+	private static Flocessor flocessor;
 
 	static {
 		if( AssertionOptions.REPORT_NAME.value() == null ) {
@@ -80,12 +77,16 @@ class IntegrationTest {
 	}
 
 	/**
-	 * Stops the instance
+	 * Closes reporting after all dynamic interactions, including browser work, then
+	 * stops the instance
 	 *
 	 * @throws Exception if something goes wrong
 	 */
 	@AfterAll
 	public static void stopApp() throws Exception {
+		if( flocessor != null ) {
+			flocessor.close();
+		}
 		clusterManager.stopCluster();
 	}
 
@@ -144,14 +145,6 @@ class IntegrationTest {
 				} );
 
 		return flocessor.tests();
-	}
-
-	/** Closes reporting after all dynamic interactions, including browser work. */
-	@AfterAll
-	void completeFlows() {
-		if( flocessor != null ) {
-			flocessor.close();
-		}
 	}
 
 	private int port( Actor rx ) {

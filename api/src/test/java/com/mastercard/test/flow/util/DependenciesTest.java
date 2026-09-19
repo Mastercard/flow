@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 import java.util.ArrayList;
@@ -49,30 +50,30 @@ class DependenciesTest {
 
 		Mocks() {
 
-			Mockito.when( snk.dependencies() ).thenReturn( Stream.of( dep ) );
+			when( snk.dependencies() ).thenReturn( Stream.of( dep ) );
 
-			Mockito.when( dep.source() ).thenReturn( srcAdr );
-			Mockito.when( dep.sink() ).thenReturn( snkAdr );
-			Mockito.when( dep.mutation() ).thenReturn( o -> String.valueOf( o ).toUpperCase() );
+			when( dep.source() ).thenReturn( srcAdr );
+			when( dep.sink() ).thenReturn( snkAdr );
+			when( dep.mutation() ).thenReturn( o -> String.valueOf( o ).toUpperCase() );
 
-			Mockito.when( srcNtr.requester() ).thenReturn( () -> "AVA" );
-			Mockito.when( srcNtr.responder() ).thenReturn( () -> "BEN" );
-			Mockito.when( srcNtr.tags() ).thenReturn(
+			when( srcNtr.requester() ).thenReturn( () -> "AVA" );
+			when( srcNtr.responder() ).thenReturn( () -> "BEN" );
+			when( srcNtr.tags() ).thenReturn(
 					Stream.of( "a", "b", "c" ).collect( toSet() ) );
 
-			Mockito.when( srcAdr.isComplete() ).thenReturn( true );
-			Mockito.when( srcAdr.flow() ).thenReturn( src );
-			Mockito.when( srcAdr.getInteraction() ).thenReturn( Optional.of( srcNtr ) );
-			Mockito.when( srcAdr.getMessage() ).thenReturn( Optional.of( srcMsg ) );
-			Mockito.when( srcAdr.field() ).thenReturn( "source field" );
+			when( srcAdr.isComplete() ).thenReturn( true );
+			when( srcAdr.flow() ).thenReturn( src );
+			when( srcAdr.getInteraction() ).thenReturn( Optional.of( srcNtr ) );
+			when( srcAdr.getMessage() ).thenReturn( Optional.of( srcMsg ) );
+			when( srcAdr.field() ).thenReturn( "source field" );
 
-			Mockito.when( snkAdr.isComplete() ).thenReturn( true );
-			Mockito.when( snkAdr.getMessage() ).thenReturn( Optional.of( snkMsg ) );
-			Mockito.when( snkAdr.field() ).thenReturn( "sink field" );
+			when( snkAdr.isComplete() ).thenReturn( true );
+			when( snkAdr.getMessage() ).thenReturn( Optional.of( snkMsg ) );
+			when( snkAdr.field() ).thenReturn( "sink field" );
 
-			Mockito.when( srcMsg.peer( actual ) ).thenReturn( peer );
+			when( srcMsg.peer( actual ) ).thenReturn( peer );
 
-			Mockito.when( peer.get( "source field" ) ).thenReturn( "source value" );
+			when( peer.get( "source field" ) ).thenReturn( "source value" );
 		}
 
 		Stream<Flow> flows() {
@@ -107,7 +108,7 @@ class DependenciesTest {
 	void parseFailure() {
 		Mocks mocks = new Mocks();
 		NullPointerException npe = new NullPointerException( "oh no!" );
-		Mockito.when( mocks.srcMsg.peer( ArgumentMatchers.any() ) )
+		when( mocks.srcMsg.peer( ArgumentMatchers.any() ) )
 				.thenThrow( npe );
 
 		Dependencies d = new Dependencies( mocks.flows() );
@@ -142,14 +143,14 @@ class DependenciesTest {
 		AtomicInteger mutations = new AtomicInteger();
 		AtomicInteger sets = new AtomicInteger();
 		AtomicReference<Object> sink = new AtomicReference<>( "initial" );
-		Mockito.when( mocks.snk.dependencies() )
+		when( mocks.snk.dependencies() )
 				.thenReturn( Stream.of( mocks.dep, mocks.dep, mocks.dep ) );
-		Mockito.when( mocks.srcMsg.peer( mocks.actual ) ).thenAnswer( invocation -> {
+		when( mocks.srcMsg.peer( mocks.actual ) ).thenAnswer( invocation -> {
 			assertSame( caller, Thread.currentThread() );
 			operations.add( "peer" );
 			return mocks.peer;
 		} );
-		Mockito.when( mocks.peer.get( "source field" ) ).thenAnswer( invocation -> {
+		when( mocks.peer.get( "source field" ) ).thenAnswer( invocation -> {
 			assertSame( caller, Thread.currentThread() );
 			int call = gets.incrementAndGet();
 			operations.add( "get" + call );
@@ -157,7 +158,7 @@ class DependenciesTest {
 				throw original;
 			return "value" + call;
 		} );
-		Mockito.when( mocks.dep.mutation() ).thenReturn( value -> {
+		when( mocks.dep.mutation() ).thenReturn( value -> {
 			assertSame( caller, Thread.currentThread() );
 			int call = mutations.incrementAndGet();
 			operations.add( "mutation" + call );
@@ -165,7 +166,7 @@ class DependenciesTest {
 				throw original;
 			return value;
 		} );
-		Mockito.when( mocks.snkMsg.set( Mockito.eq( "sink field" ), Mockito.any() ) )
+		when( mocks.snkMsg.set( Mockito.eq( "sink field" ), Mockito.any() ) )
 				.thenAnswer( invocation -> {
 					assertSame( caller, Thread.currentThread() );
 					int call = sets.incrementAndGet();
@@ -198,14 +199,14 @@ class DependenciesTest {
 	void incompleteAddress() {
 		{
 			Mocks mocks = new Mocks();
-			Mockito.when( mocks.srcAdr.isComplete() ).thenReturn( false );
+			when( mocks.srcAdr.isComplete() ).thenReturn( false );
 			new Dependencies( mocks.flows() )
 					.publish( mocks.src, mocks.srcNtr, mocks.srcMsg, mocks.actual );
 			Mockito.verifyNoInteractions( mocks.snkMsg );
 		}
 		{
 			Mocks mocks = new Mocks();
-			Mockito.when( mocks.snkAdr.isComplete() ).thenReturn( false );
+			when( mocks.snkAdr.isComplete() ).thenReturn( false );
 			new Dependencies( mocks.flows() )
 					.publish( mocks.src, mocks.srcNtr, mocks.srcMsg, mocks.actual );
 			Mockito.verifyNoInteractions( mocks.snkMsg );
@@ -247,7 +248,7 @@ class DependenciesTest {
 	@Test
 	void propagateStaticData() {
 		Mocks mocks = new Mocks();
-		Mockito.when( mocks.srcMsg.content() ).thenReturn( mocks.actual );
+		when( mocks.srcMsg.content() ).thenReturn( mocks.actual );
 
 		Dependencies.propagateStaticData( mocks.flows() );
 

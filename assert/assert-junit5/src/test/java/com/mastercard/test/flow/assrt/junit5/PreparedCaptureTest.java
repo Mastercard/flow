@@ -71,52 +71,52 @@ class PreparedCaptureTest {
 					logs.get( "second" ) );
 		}
 	}
-}
 
-/** Parallel factory whose flows log interleaved lines to one shared file. */
-@FlowTest
-class TailFactory {
-	static Path log;
+	/** Parallel factory whose flows log interleaved lines to one shared file. */
+	@FlowTest
+	static class TailFactory {
+		static Path log;
 
-	@TestFactory
-	Stream<DynamicNode> flows( FlowExecution execution ) {
-		Flow first = Creator.build( f -> f.meta( m -> m.description( "first" ) )
-				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
-						.request( new Msg( "req" ) ).response( new Msg( "rsp" ) ) ) );
-		Flow second = Creator.build( f -> f.meta( m -> m.description( "second" ) )
-				.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
-						.request( new Msg( "req" ) ).response( new Msg( "rsp" ) ) ) );
-		CountDownLatch bothLogged = new CountDownLatch( 2 );
-		return execution.flocessor( "tailed", FlowExecutionTest.modelOf( List.of( first, second ) ) )
-				.system( State.LESS, Actrs.BEN ).reporting( Reporting.QUIETLY )
-				.logs( new CorrelatedTail( log,
-						"^(?<time>\\d+) \\[(?<correlation>[^\\]]*)\\] (?<level>[A-Z]+) (?<source>\\S+) " ) )
-				.correlation( f -> f.meta().description() )
-				.behaviour( a -> {
-					String me = a.correlation().id();
-					String other = me.equals( "first" ) ? "second" : "first";
-					// the "system" interleaves its output for both flows, and keeps writing
-					// about the other flow after this one has returned
-					append( "1 [" + me + "] INFO sut handling " + me,
-							"2 [" + other + "] INFO sut more for " + other );
-					bothLogged.countDown();
-					try {
-						bothLogged.await( 2, TimeUnit.SECONDS );
-					}
-					catch( InterruptedException e ) {
-						throw new IllegalStateException( e );
-					}
-					a.actual().response( a.expected().response().content() );
-					append( "3 [" + other + "] INFO sut late for " + other );
-				} ).tests();
-	}
-
-	private static synchronized void append( String... lines ) {
-		try {
-			Files.writeString( log, String.join( "\n", lines ) + "\n", StandardOpenOption.APPEND );
+		@TestFactory
+		Stream<DynamicNode> flows( FlowExecution execution ) {
+			Flow first = Creator.build( f -> f.meta( m -> m.description( "first" ) )
+					.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+							.request( new Msg( "req" ) ).response( new Msg( "rsp" ) ) ) );
+			Flow second = Creator.build( f -> f.meta( m -> m.description( "second" ) )
+					.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+							.request( new Msg( "req" ) ).response( new Msg( "rsp" ) ) ) );
+			CountDownLatch bothLogged = new CountDownLatch( 2 );
+			return execution.flocessor( "tailed", FlowExecutionTest.modelOf( List.of( first, second ) ) )
+					.system( State.LESS, Actrs.BEN ).reporting( Reporting.QUIETLY )
+					.logs( new CorrelatedTail( log,
+							"^(?<time>\\d+) \\[(?<correlation>[^\\]]*)\\] (?<level>[A-Z]+) (?<source>\\S+) " ) )
+					.correlation( f -> f.meta().description() )
+					.behaviour( a -> {
+						String me = a.correlation().id();
+						String other = me.equals( "first" ) ? "second" : "first";
+						// the "system" interleaves its output for both flows, and keeps writing
+						// about the other flow after this one has returned
+						append( "1 [" + me + "] INFO sut handling " + me,
+								"2 [" + other + "] INFO sut more for " + other );
+						bothLogged.countDown();
+						try {
+							bothLogged.await( 2, TimeUnit.SECONDS );
+						}
+						catch( InterruptedException e ) {
+							throw new IllegalStateException( e );
+						}
+						a.actual().response( a.expected().response().content() );
+						append( "3 [" + other + "] INFO sut late for " + other );
+					} ).tests();
 		}
-		catch( IOException e ) {
-			throw new UncheckedIOException( e );
+
+		private static synchronized void append( String... lines ) {
+			try {
+				Files.writeString( log, String.join( "\n", lines ) + "\n", StandardOpenOption.APPEND );
+			}
+			catch( IOException e ) {
+				throw new UncheckedIOException( e );
+			}
 		}
 	}
 }

@@ -1,10 +1,10 @@
 package com.mastercard.test.flow.assrt;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -33,6 +33,8 @@ class ActualTest {
 
 	private static void test( BiConsumer<Actual, byte[]> set, Function<Actual, byte[]> get ) {
 		Actual actual = new Actual();
+		assertSame( actual, actual.request( null ) );
+		assertSame( actual, actual.response( null ) );
 
 		// populate data
 		byte[] accepted = { 1 };

@@ -4,11 +4,9 @@ import static com.mastercard.test.flow.assrt.History.Result.NOT_OBSERVED;
 import static java.time.Instant.now;
 import static java.time.ZoneId.systemDefault;
 import static java.util.stream.Collectors.toCollection;
-import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.io.UncheckedIOException;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -275,7 +273,7 @@ class FlowProcessor {
 					// exercise interactions that *enter* the system, not intra-system
 					.filter( i -> config.systemUnderTest.contains( i.responder() )
 							&& !config.systemUnderTest.contains( i.requester() ) )
-					.collect( toList() );
+					.toList();
 
 			if( toExercise.isEmpty() ) {
 				if( flow.root() != null && config.autonomous.contains( flow.root().requester() ) ) {
@@ -307,7 +305,7 @@ class FlowProcessor {
 				applyContexts( flow, executionFailures );
 			}
 
-			Map<Residue, Message> expectedResidue = expectedResidue( flow );
+			Map<Residue, Message> expectedResidue = expectedResidue();
 
 			// keeps track of how many assertions we make - we don't want to tag a flow as a
 			// pass if we don't actually test anything
@@ -317,8 +315,13 @@ class FlowProcessor {
 			// we've processed all of the appropriate interactions
 
 			assertionCount.addAndGet( checkResidue( expectedResidue ) );
-			Throwable primary = !executionFailures.isEmpty() ? executionFailures.get( 0 )
-					: comparisonFailures.isEmpty() ? null : comparisonFailures.get( 0 );
+			Throwable primary = null;
+			if( !executionFailures.isEmpty() ) {
+				primary = executionFailures.get( 0 );
+			}
+			else if( !comparisonFailures.isEmpty() ) {
+				primary = comparisonFailures.get( 0 );
+			}
 			preserving( primary, () -> finaliseReport( assertionCount.get() ) );
 			preserving( primary, () -> config.progress.flowComplete( flow ) );
 
@@ -357,10 +360,10 @@ class FlowProcessor {
 					config.test.accept( assrt );
 				}
 			}
-			// Sonar would rather we just catch Exception here, but we're not trying to
-			// *recover* from the failure (it gets rethrown below), we're just trying to
-			// make sure it gets recorded to the report
-			catch( Throwable e ) {
+			// We're not trying to *recover* from the failure (it gets rethrown below),
+			// we're just trying to make sure it gets recorded to the report. Assertion
+			// failures are the only Errors that test code is expected to raise.
+			catch( RuntimeException | AssertionError e ) {
 				preserving( e, () -> {
 					reportUpdates.add( d -> d.tags.add( Writer.ERROR_TAG ) );
 					List<LogEvent> logs = capture.snapshot();
@@ -396,7 +399,7 @@ class FlowProcessor {
 						i -> ma.report( i ).full.actualBytes = ma.actual( assertion ) ) );
 
 				try {
-					checkResult( flow, assertion.expected(), ma.name().toLowerCase(),
+					checkResult( assertion.expected(), ma.name().toLowerCase(),
 							ma.expected( assertion ),
 							ma.actual( assertion ),
 							ar -> reportUpdates.add( d -> d.root.update(
@@ -468,7 +471,8 @@ class FlowProcessor {
 			try {
 				owner.skip( reason );
 			}
-			catch( RuntimeException | Error primary ) {
+			catch( RuntimeException primary ) {
+				// framework skip signals are runtime exceptions
 				preserving( primary, () -> reportSkip( skipped, reason ) );
 				throw primary;
 			}
@@ -522,7 +526,7 @@ class FlowProcessor {
 					ended = true;
 					try( Stream<LogEvent> events = source.end( flow ) ) {
 						logs = events.map( e -> new LogEvent( e.time, e.level, e.source, e.message ) )
-								.collect( Collectors.toUnmodifiableList() );
+								.toList();
 					}
 					catch( RuntimeException e ) {
 						diagnose( "end/materialize/close", e );
@@ -543,68 +547,115 @@ class FlowProcessor {
 		}
 
 		private int checkResidue( Map<Residue, Message> expectedResidue ) {
-			AtomicInteger assertionCount = new AtomicInteger();
+			int assertionCount = 0;
+			for( Map.Entry<Residue, Message> e : expectedResidue.entrySet() ) {
+				assertionCount += checkResidue( e.getKey(), e.getValue() );
+			}
+			return assertionCount;
+		}
 
-			expectedResidue.forEach( ( residue, expected ) -> {
-				config.progress.after( residue );
-				byte[] harvested = null;
-				try {
-					harvested = checker( residue ).actual( residue, actualMessages );
+		/**
+		 * @return The number of assertions made, which counts a comparison that failed
+		 *         but not data that could not be extracted or parsed
+		 */
+		private int checkResidue( Residue residue, Message expected ) {
+			config.progress.after( residue );
+			byte[] harvested = null;
+			try {
+				harvested = checker( residue ).actual( residue, actualMessages );
+			}
+			catch( Exception e ) {
+				deferExecutionFailure( new IllegalStateException(
+						"Failed to extract actual residue data for " + residue.name(), e ) );
+			}
+			if( harvested == null ) {
+				return 0;
+			}
+			int assertionCount = 0;
+			try {
+				Message actual = expected.peer( harvested );
+				CheckMessages cm = new CheckMessages(
+						actual.assertable(),
+						expected.assertable( config.masks ),
+						actual.assertable( config.masks ) );
+				reportUpdates.add( fd -> {
+					ResidueData residueData = residueData( fd, residue );
+					residueData.masked = new AssertedData( cm.maskedExpect, cm.maskedActual );
+					residueData.full = new AssertedData( expected.assertable(), cm.fullActual );
+				} );
+				assertionCount = 1;
+				owner.compare( String.format( "Residue '%s'", residue.name() ),
+						cm.maskedExpect,
+						cm.maskedActual );
+			}
+			catch( AssertionError ae ) {
+				if( !config.reporting.writing() ) {
+					throw ae;
 				}
-				catch( Exception e ) {
-					IllegalStateException ise = new IllegalStateException(
-							"Failed to extract actual residue data for " + residue.name(), e );
-					if( !config.reporting.writing() ) {
-						throw ise;
-					}
-					executionFailures.add( ise );
-				}
-				if( harvested != null ) {
-					try {
-						Message actual = expected.peer( harvested );
-						CheckMessages cm = new CheckMessages(
-								actual.assertable(),
-								expected.assertable( config.masks ),
-								actual.assertable( config.masks ) );
+				comparisonFailures.add( ae );
+			}
+			catch( Exception e ) {
+				deferExecutionFailure( new IllegalArgumentException(
+						"Failed to parse actual residue data for " + residue.name(), e ) );
+			}
+			return assertionCount;
+		}
 
-						reportUpdates.add(
-								fd -> {
-									ResidueData residueData = fd.residue
-											.stream()
-											.filter( r -> residue.name().equals( r.name ) )
-											.findFirst()
-											.orElseGet( () -> {
-												ResidueData rd = new ResidueData( residue.name(), residue, null, null );
-												fd.residue.add( rd );
-												return rd;
-											} );
-									residueData.masked = new AssertedData( cm.maskedExpect, cm.maskedActual );
-									residueData.full = new AssertedData( expected.assertable(), cm.fullActual );
-								} );
+		/** Fails immediately when no report will hold the failure */
+		private void deferExecutionFailure( RuntimeException failure ) {
+			if( !config.reporting.writing() ) {
+				throw failure;
+			}
+			executionFailures.add( failure );
+		}
 
-						assertionCount.incrementAndGet();
-						owner.compare( String.format( "Residue '%s'", residue.name() ),
-								cm.maskedExpect,
-								cm.maskedActual );
-					}
-					catch( AssertionError ae ) {
-						if( !config.reporting.writing() ) {
-							throw ae;
-						}
-						comparisonFailures.add( ae );
-					}
-					catch( Exception e ) {
-						IllegalArgumentException iae = new IllegalArgumentException(
-								"Failed to parse actual residue data for " + residue.name(), e );
-						if( !config.reporting.writing() ) {
-							throw iae;
-						}
-						executionFailures.add( iae );
-					}
-				}
-			} );
+		private static ResidueData residueData( FlowData fd, Residue residue ) {
+			return fd.residue.stream()
+					.filter( r -> residue.name().equals( r.name ) )
+					.findFirst()
+					.orElseGet( () -> {
+						ResidueData rd = new ResidueData( residue.name(), residue, null, null );
+						fd.residue.add( rd );
+						return rd;
+					} );
+		}
 
-			return assertionCount.get();
+		private Map<Residue, Message> expectedResidue() {
+			Map<Residue, Message> expected = new HashMap<>();
+			flow.residue()
+					.filter( r -> config.checkers.containsKey( r.getClass() ) )
+					.forEach( r -> {
+						config.progress.before( r );
+						expected.put( r, checker( r ).expected( r ) );
+					} );
+			return expected;
+		}
+
+		private LogEvent error( String msg ) {
+			return new LogEvent( Instant.now(), "ERROR", logSource(), msg );
+		}
+
+		private void checkResult( Interaction interaction, String type,
+				Message expected, byte[] actual, Consumer<CheckMessages> reportUpdate ) {
+			try {
+				Message am = dependencies.publish( flow, interaction, expected, actual );
+
+				CheckMessages messages = new CheckMessages(
+						am.assertable(),
+						expected.assertable( config.masks ),
+						am.assertable( config.masks ) );
+				reportUpdate.accept( messages );
+				owner.compare(
+						String.format( "%s%n%s %s->%s %s %s",
+								flow.meta().id(), flow.meta().trace(),
+								interaction.requester(), interaction.responder(), interaction.tags(), type ),
+						messages.maskedExpect,
+						messages.maskedActual );
+			}
+			catch( Exception e ) {
+				throw new IllegalArgumentException(
+						String.format( "Failed to parse %s message from actual data", type ), e );
+			}
 		}
 	}
 
@@ -616,7 +667,7 @@ class FlowProcessor {
 		try {
 			action.run();
 		}
-		catch( RuntimeException | Error secondary ) {
+		catch( RuntimeException | AssertionError secondary ) {
 			if( primary == null ) {
 				throw secondary;
 			}
@@ -754,17 +805,6 @@ class FlowProcessor {
 		return apl;
 	}
 
-	private Map<Residue, Message> expectedResidue( Flow flow ) {
-		Map<Residue, Message> expected = new HashMap<>();
-		flow.residue()
-				.filter( r -> config.checkers.containsKey( r.getClass() ) )
-				.forEach( r -> {
-					config.progress.before( r );
-					expected.put( r, checker( r ).expected( r ) );
-				} );
-		return expected;
-	}
-
 	@SuppressWarnings("unchecked")
 	private <R extends Residue> Checker<R> checker( R rsd ) {
 		return (Checker<R>) config.checkers.get( rsd.getClass() );
@@ -793,10 +833,6 @@ class FlowProcessor {
 
 	private LogEvent warn( String msg ) {
 		return new LogEvent( Instant.now(), "WARN", logSource(), msg );
-	}
-
-	private LogEvent error( String msg ) {
-		return new LogEvent( Instant.now(), "ERROR", logSource(), msg );
 	}
 
 	private enum MessageAssertion {
@@ -832,29 +868,6 @@ class FlowProcessor {
 
 		public TransmissionData report( InteractionData ntr ) {
 			return report.apply( ntr );
-		}
-	}
-
-	private void checkResult( Flow flow, Interaction interaction, String type, Message expected,
-			byte[] actual, Consumer<CheckMessages> reportUpdate ) {
-		try {
-			Message am = dependencies.publish( flow, interaction, expected, actual );
-
-			CheckMessages messages = new CheckMessages(
-					am.assertable(),
-					expected.assertable( config.masks ),
-					am.assertable( config.masks ) );
-			reportUpdate.accept( messages );
-			owner.compare(
-					String.format( "%s%n%s %s->%s %s %s",
-							flow.meta().id(), flow.meta().trace(),
-							interaction.requester(), interaction.responder(), interaction.tags(), type ),
-					messages.maskedExpect,
-					messages.maskedActual );
-		}
-		catch( Exception e ) {
-			throw new IllegalArgumentException(
-					String.format( "Failed to parse %s message from actual data", type ), e );
 		}
 	}
 

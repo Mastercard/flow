@@ -87,8 +87,9 @@ class FlowExecutionTest {
 	void onePreparedSnapshotPerInvocation() {
 		Run run = execute( FrozenFactory.class, false );
 		assertEquals( List.of(), run.failures );
+		Mdl reuse = new Mdl();
 		assertThrows( IllegalStateException.class,
-				() -> FrozenFactory.handle.flocessor( "reuse", new Mdl() ) );
+				() -> FrozenFactory.handle.flocessor( "reuse", reuse ) );
 		assertThrows( IllegalStateException.class, () -> FrozenFactory.runner.behaviour( a -> {
 		} ) );
 		assertThrows( IllegalStateException.class, () -> FrozenFactory.runner.tests() );
@@ -105,7 +106,8 @@ class FlowExecutionTest {
 			runner = execution.flocessor( "frozen", new Mdl() )
 					.system( State.LESS, Actrs.BEN )
 					.behaviour( a -> a.actual().response( a.expected().response().content() ) );
-			assertThrows( IllegalStateException.class, () -> execution.flocessor( "second", new Mdl() ) );
+			Mdl second = new Mdl();
+			assertThrows( IllegalStateException.class, () -> execution.flocessor( "second", second ) );
 			Stream<DynamicNode> tests = runner.tests();
 			assertThrows( IllegalStateException.class, () -> runner.tests() );
 			List<Runnable> setters = List.of(
@@ -144,7 +146,7 @@ class FlowExecutionTest {
 		assertEquals( "Missing dependency", run.reasons.get( "errorDependent []" ) );
 		assertEquals( Set.of( 22, 27, 32, 37, 41, 45, 49, 55, 61 ), Set.copyOf( run.lines ) );
 		if( !parallel ) {
-			assertEquals( Set.of( OutcomeFactory.factoryThread ), OutcomeFactory.threads );
+			assertEquals( Set.of( OutcomeFactory.factoryThread ), Set.copyOf( OutcomeFactory.threads ) );
 		}
 	}
 
@@ -199,7 +201,7 @@ class FlowExecutionTest {
 
 	/** A flow waits for the flows it binds values from, and nothing else. */
 	@Test
-	void dependentStartsAfterItsSourceFinishes() throws Exception {
+	void dependentStartsAfterItsSourceFinishes() {
 		Flow m = flow( "m" );
 		Gated gated = Gated.model( flow( "a" ), m, flow( "n", m ) );
 		gated.hold( "m" );
@@ -219,7 +221,7 @@ class FlowExecutionTest {
 	 * flows: {@code a} runs while the chain is still open.
 	 */
 	@Test
-	void chainMembersAreContiguousAndOrdered() throws Exception {
+	void chainMembersAreContiguousAndOrdered() {
 		Flow c1 = flow( "c1", "chain:C" );
 		Flow c2 = flow( "c2", "chain:C" );
 		Gated gated = Gated.model( flow( "a" ), c1, c2, flow( "d", c1 ) );
@@ -239,7 +241,7 @@ class FlowExecutionTest {
 
 	/** Flows that publish into the same destination never overlap. */
 	@Test
-	void sameDestinationPublishersAreSerialised() throws Exception {
+	void sameDestinationPublishersAreSerialised() {
 		Flow p = flow( "p" );
 		Flow q = flow( "q" );
 		Flow r = Creator.build( f -> f.meta( m -> m.description( "r" ) )
@@ -268,7 +270,7 @@ class FlowExecutionTest {
 	 * apply no context.
 	 */
 	@Test
-	void contextApplyingFlowsAreSerialisedAmongThemselves() throws Exception {
+	void contextApplyingFlowsAreSerialisedAmongThemselves() {
 		Gated gated = Gated.model( flow( "a" ), contextual( "k1" ), contextual( "k2" ) );
 		gated.configure = r -> r.applicators( new Applicator<>( Setting.class, 1 ) {
 			@Override
@@ -555,7 +557,7 @@ class FlowExecutionTest {
 		assertEquals( List.of( "A", "B" ), SelectionFactory.bodies );
 		assertEquals( Set.of( "B", "rejected" ), Set.copyOf( SelectionFactory.exercised ) );
 		assertEquals( 2, SelectionFactory.exercised.size() );
-		assertEquals( List.of( "left", "right" ), SelectionFactory.mutations );
+		assertEquals( List.of( "left", "right" ), List.copyOf( SelectionFactory.mutations ) );
 		assertEquals( 1, SelectionFactory.orderings );
 	}
 
@@ -694,7 +696,7 @@ class FlowExecutionTest {
 		else {
 			assertEquals( List.of(), run.failures, run.failures::toString );
 			assertEquals( List.of( "a []:SUCCESSFUL" ), run.results );
-			assertEquals( List.of( "start", "end" ), IntervalCaptureFactory.events );
+			assertEquals( List.of( "start", "end" ), List.copyOf( IntervalCaptureFactory.events ) );
 		}
 	}
 

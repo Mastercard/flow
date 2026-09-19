@@ -271,23 +271,47 @@ public final class Precedence {
 		// identities are stopping points, but each one's own basis is still read once.
 		Map<Flow, Integer> nearest = new IdentityHashMap<>( indices );
 		for( int i = 0; i < flows.size(); i++ ) {
-			Flow ancestor = flows.get( i ).basis();
-			List<Flow> path = new ArrayList<>();
-			while( ancestor != null && !nearest.containsKey( ancestor ) ) {
-				nearest.put( ancestor, -2 ); // Unresolved on this path: a repeat is a cycle.
-				path.add( ancestor );
-				ancestor = ancestor.basis();
-			}
-			int parent = ancestor == null ? -1 : nearest.get( ancestor );
-			if( parent == -2 )
-				throw new IllegalArgumentException( "Cyclic Flow basis" );
-			for( Flow absent : path )
-				nearest.put( absent, parent );
+			int parent = nearestSelectedAncestor( flows.get( i ), nearest );
 			if( parent < 0 )
 				roots.add( i );
 			else
 				children.get( parent ).add( i );
 		}
+		if( orderAncestry( roots, children, edges ) != flows.size() )
+			throw new IllegalArgumentException( "Cyclic Flow basis" );
+	}
+
+	/**
+	 * @param flow    A selected flow
+	 * @param nearest Selected ranks by flow, extended with the unselected flows
+	 *                visited on the way to them
+	 * @return The rank of the nearest selected basis ancestor, or -1 if there is
+	 *         none
+	 */
+	private static int nearestSelectedAncestor( Flow flow, Map<Flow, Integer> nearest ) {
+		Flow ancestor = flow.basis();
+		List<Flow> path = new ArrayList<>();
+		while( ancestor != null && !nearest.containsKey( ancestor ) ) {
+			nearest.put( ancestor, -2 ); // Unresolved on this path: a repeat is a cycle.
+			path.add( ancestor );
+			ancestor = ancestor.basis();
+		}
+		int parent = ancestor == null ? -1 : nearest.get( ancestor );
+		if( parent == -2 )
+			throw new IllegalArgumentException( "Cyclic Flow basis" );
+		for( Flow absent : path )
+			nearest.put( absent, parent );
+		return parent;
+	}
+
+	/**
+	 * Orders each flow after its basis ancestors, without a basis descendant of one
+	 * flow ever being ordered before a sibling's descendants.
+	 *
+	 * @return The number of flows reached from the roots
+	 */
+	private static int orderAncestry( List<Integer> roots, List<List<Integer>> children,
+			List<Set<Integer>> edges ) {
 		NavigableSet<Integer> ancestry = new TreeSet<>();
 		Deque<Integer> traversal = new ArrayDeque<>( roots );
 		int visited = 0;
@@ -310,7 +334,6 @@ public final class Precedence {
 			traversal.addLast( ~index ); // Exit marker removes the rank before a sibling.
 			traversal.addAll( children.get( index ) );
 		}
-		if( visited != flows.size() )
-			throw new IllegalArgumentException( "Cyclic Flow basis" );
+		return visited;
 	}
 }
