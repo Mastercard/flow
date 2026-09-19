@@ -88,19 +88,19 @@ class WriterDetailIoTest {
 	@EnumSource(Indexing.class)
 	void updatesOverlapDetailWrites( Indexing indexing, @TempDir Path dir ) throws Exception {
 		HeldWrite held = new HeldWrite();
-		Writer writer = new Writer( "model", "test", dir, indexing, held );
-		try {
-			Future<?> first = workers.submit( () -> writer.with( Mdl.BASIS ) );
-			await( held.entered );
-			Future<?> second = workers.submit( () -> writer.with( Mdl.DEPENDENCY ) );
-			second.get( 10, TimeUnit.SECONDS );
-			assertThrows( TimeoutException.class, () -> first.get( 100, TimeUnit.MILLISECONDS ),
-					"The first write is still held" );
+		try( Writer writer = new Writer( "model", "test", dir, indexing, held ) ) {
+			try {
+				Future<?> first = workers.submit( () -> writer.with( Mdl.BASIS ) );
+				await( held.entered );
+				Future<?> second = workers.submit( () -> writer.with( Mdl.DEPENDENCY ) );
+				second.get( 10, TimeUnit.SECONDS );
+				assertThrows( TimeoutException.class, () -> first.get( 100, TimeUnit.MILLISECONDS ),
+						"The first write is still held" );
+			}
+			finally {
+				held.release.countDown();
+			}
 		}
-		finally {
-			held.release.countDown();
-		}
-		writer.close();
 		Reader reader = new Reader( dir );
 		assertEquals( 2, reader.read().entries.size() );
 		reader.read().entries

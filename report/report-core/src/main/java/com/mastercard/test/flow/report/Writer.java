@@ -201,7 +201,9 @@ public class Writer implements AutoCloseable {
 			try {
 				write = update( flow, extra );
 			}
-			catch( RuntimeException | Error e ) {
+			// assertion errors are how test callbacks fail; other errors are not
+			// recoverable, so they propagate without latching
+			catch( RuntimeException | AssertionError e ) {
 				fail( e );
 				throw e;
 			}
@@ -213,7 +215,7 @@ public class Writer implements AutoCloseable {
 		try {
 			write.run();
 		}
-		catch( RuntimeException | Error e ) {
+		catch( RuntimeException | AssertionError e ) {
 			synchronized( this ) {
 				fail( e );
 			}
@@ -278,7 +280,7 @@ public class Writer implements AutoCloseable {
 
 		// delete the detail under the old name, if this flow owned it
 		if( !newname.equals( oldname ) && detailOwners.remove( oldname, idf ) ) {
-			QuietFiles.recursiveDelete( root.resolve( "detail/" + oldname + ".html" ) );
+			QuietFiles.recursiveDelete( detailPath( root, oldname ) );
 		}
 
 		// render the new detail
@@ -367,7 +369,7 @@ public class Writer implements AutoCloseable {
 			entries = entries.sorted( comparing( entry -> entry.detail ) );
 		}
 		app.write( new Index( new Meta( modelTitle, testTitle, System.currentTimeMillis() ),
-				entries.collect( toList() ) ), destination );
+				entries.toList() ), destination );
 	}
 
 	/**
@@ -393,7 +395,7 @@ public class Writer implements AutoCloseable {
 			}
 			state = State.CLOSED;
 		}
-		catch( RuntimeException | Error e ) {
+		catch( RuntimeException e ) {
 			fail( e );
 			throw e;
 		}
@@ -403,7 +405,7 @@ public class Writer implements AutoCloseable {
 	 * Waits for in-flight detail writes to land. Link correction reads the detail
 	 * files back, so it must not run over a half-written file.
 	 */
-	private void awaitWrites() {
+	private synchronized void awaitWrites() {
 		while( writing > 0 ) {
 			try {
 				wait();
@@ -433,7 +435,7 @@ public class Writer implements AutoCloseable {
 			removeTemporary( temporary, problem );
 			throw problem;
 		}
-		catch( RuntimeException | Error e ) {
+		catch( RuntimeException e ) {
 			removeTemporary( temporary, e );
 			throw e;
 		}
@@ -518,6 +520,11 @@ public class Writer implements AutoCloseable {
 				missingBases.put( flow, desiredBases );
 			}
 
+			flow.dependencies()
+					.map( d -> d.source().flow() )
+					.filter( d -> d != flow )
+					.forEach( source -> dependencySources.put( detailFilename( source ), source ) );
+
 			detail = new FlowData(
 					flow.meta().description(),
 					new TreeSet<>( flow.meta().tags() ),
@@ -526,17 +533,12 @@ public class Writer implements AutoCloseable {
 					Optional.ofNullable( closesBasis )
 							.map( Writer::detailFilename )
 							.orElse( null ),
-					flow.dependencies()
-							.map( d -> d.source().flow() )
-							.filter( d -> d != flow )
-							.map( source -> Map.entry( detailFilename( source ), source ) )
-							.peek( source -> dependencySources.put( source.getKey(), source.getValue() ) )
+					dependencySources.entrySet().stream()
 							.collect( toMap(
 									Map.Entry::getKey,
 									v -> new DependencyData(
 											v.getValue().meta().description(),
-											v.getValue().meta().tags() ),
-									( a, b ) -> b ) ),
+											v.getValue().meta().tags() ) ) ),
 					new InteractionData( flow.root() ),
 					flow.context()
 							.collect( toMap( Context::name, v -> v ) ),
@@ -571,7 +573,7 @@ public class Writer implements AutoCloseable {
 		 * @return The file write, which may run outside the writer monitor
 		 */
 		Runnable render( Path root, JsApp app, BiConsumer<Path, byte[]> files ) {
-			Path path = root.resolve( DETAIL_DIR_NAME ).resolve( indexEntry().detail + ".html" );
+			Path path = detailPath( root, indexEntry().detail );
 			byte[] bytes = app.render( detail, path );
 			serializedBasis = detail.basis;
 			serializedDependencies = new HashSet<>( detail.dependencies.keySet() );
@@ -612,7 +614,7 @@ public class Writer implements AutoCloseable {
 			if( Objects.equals( serializedBasis, basis ) && renamed.isEmpty() ) {
 				return;
 			}
-			Path path = root.resolve( DETAIL_DIR_NAME ).resolve( indexEntry().detail + ".html" );
+			Path path = detailPath( root, indexEntry().detail );
 			// patch the file that was written rather than re-rendering the detail
 			ObjectNode snapshot = Template.extract(
 					new String( QuietFiles.readAllBytes( path ), UTF_8 ),
@@ -625,6 +627,15 @@ public class Writer implements AutoCloseable {
 			moved.forEach( dependencies::set );
 			app.write( snapshot, path );
 		}
+	}
+
+	/**
+	 * @param root The report root directory
+	 * @param name A detail file name, as computed by {@link #detailFilename(Flow)}
+	 * @return The path of that detail file
+	 */
+	private static Path detailPath( Path root, String name ) {
+		return root.resolve( DETAIL_DIR_NAME ).resolve( name + ".html" );
 	}
 
 	/**

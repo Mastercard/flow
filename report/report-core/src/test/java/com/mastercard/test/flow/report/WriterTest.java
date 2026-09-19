@@ -54,13 +54,13 @@ class WriterTest {
 	void missingBasesSnapshot( @TempDir Path dir ) {
 		Writer writer = new Writer( "model", "test", dir ).with( Mdl.CHILD );
 		Map<Flow, List<Flow>> snapshot = writer.missingBases();
+		List<Flow> desired = snapshot.get( Mdl.CHILD );
 		writer.with( Mdl.BASIS );
 
-		assertEquals( List.of( Mdl.BASIS ), snapshot.get( Mdl.CHILD ) );
+		assertEquals( List.of( Mdl.BASIS ), desired );
 		Assertions.assertTrue( writer.missingBases().isEmpty() );
 		Assertions.assertThrows( UnsupportedOperationException.class, snapshot::clear );
-		Assertions.assertThrows( UnsupportedOperationException.class,
-				() -> snapshot.get( Mdl.CHILD ).clear() );
+		Assertions.assertThrows( UnsupportedOperationException.class, desired::clear );
 	}
 
 	/**
@@ -108,7 +108,7 @@ class WriterTest {
 
 			Reader reader = new Reader( dir );
 			assertEquals( List.of( "child", "basis" ), reader.read().entries.stream()
-					.map( entry -> entry.description ).collect( Collectors.toList() ) );
+					.map( entry -> entry.description ).toList() );
 			assertEquals( Writer.detailFilename( Mdl.BASIS ),
 					reader.detail( reader.read().entries.get( 0 ) ).basis );
 			assertEquals( 2, callbacks.get() );

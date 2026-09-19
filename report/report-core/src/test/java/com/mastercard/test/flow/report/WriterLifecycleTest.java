@@ -85,8 +85,9 @@ class WriterLifecycleTest {
 	@Test
 	void tryWithResourcesPreservesPrimary( @TempDir Path dir ) {
 		AssertionError original = new AssertionError( "primary" );
+		Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY );
 		assertSame( original, assertThrows( AssertionError.class, () -> {
-			try( Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY ) ) {
+			try( writer ) {
 				writer.with( Mdl.BASIS, detail -> {
 					throw original;
 				} );
