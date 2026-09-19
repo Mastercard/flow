@@ -44,6 +44,6 @@ class UiTest extends AbstractServiceTest {
 
 	/***/
 	public UiTest() {
-		super( service, Actors.UI, LOG );
+		super( () -> service, Actors.UI, LOG );
 	}
 }

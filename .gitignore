@@ -14,3 +14,8 @@ buildNumber.properties
 .project
 .settings
 .idea
+
+.agents/
+.scratch/
+skills-lock.json
+CONTEXT.md

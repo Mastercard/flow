@@ -4,6 +4,7 @@ import static com.mastercard.test.flow.assrt.AbstractFlocessorTest.copypasta;
 import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
 import static com.mastercard.test.flow.assrt.TestModel.Actors.C;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.ArrayList;
 import java.util.Comparator;

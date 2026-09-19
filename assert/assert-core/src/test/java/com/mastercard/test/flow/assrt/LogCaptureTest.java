@@ -25,6 +25,44 @@ import com.mastercard.test.flow.report.data.LogEvent;
  */
 @SuppressWarnings("static-method")
 class LogCaptureTest {
+	@Test
+	void closesAndFreezesCaptureBeforeReportDecoration() {
+		List<String> lifecycle = new ArrayList<>();
+		List<LogEvent> source = new ArrayList<>();
+		source.add( new LogEvent( "time", "INFO", "source", "original" ) );
+		TestFlocessor tf = new TestFlocessor( "capture snapshot", TestModel.abc() )
+				.system( State.LESS, B ).reporting( Reporting.QUIETLY )
+				.logs( new LogCapture() {
+					@Override
+					public void start( Flow flow ) {
+						lifecycle.add( "start" );
+					}
+
+					@Override
+					public Stream<LogEvent> end( Flow flow ) {
+						lifecycle.add( "end" );
+						return source.stream().peek( e -> lifecycle.add( "read" ) )
+								.onClose( () -> lifecycle.add( "close" ) );
+					}
+				} )
+				.behaviour( a -> a.actual().response( a.expected().response().content() ) )
+				.motivation( ( text, a ) -> {
+					assertEquals( List.of( "start", "end", "read", "close" ), lifecycle );
+					source.clear();
+					return text;
+				} );
+		try {
+			tf.execute();
+			assertEquals( "abc [] SUCCESS", tf.results() );
+			Reader reader = new Reader( tf.report() );
+			assertEquals( "original",
+					reader.detail( reader.read().entries.get( 0 ) ).logs.get( 0 ).message );
+		}
+		finally {
+			tf.completeProcessing();
+		}
+	}
+
 	/**
 	 * A record of context switches made by {@link #CAPTURE}
 	 */
@@ -79,28 +117,29 @@ class LogCaptureTest {
 	@Test
 	void successCapture() {
 
-		TestFlocessor tf = new TestFlocessor( "logCapture", TestModel.abc() )
+		try( TestFlocessor tf = new TestFlocessor( "logCapture", TestModel.abc() )
 				.system( State.LESS, B )
 				.reporting( Reporting.QUIETLY )
 				.logs( CAPTURE )
 				.behaviour( assrt -> {
 					assrt.actual().response( assrt.expected().response().content() );
-				} );
+				} ) ) {
 
-		tf.execute();
+			tf.execute();
 
-		assertEquals( copypasta(
-				"Starting log capture for abc []",
-				"Ending log capture for abc []" ),
-				copypasta( logCaptureLog ) );
+			assertEquals( copypasta(
+					"Starting log capture for abc []",
+					"Ending log capture for abc []" ),
+					copypasta( logCaptureLog ) );
 
-		Reader r = new Reader( tf.report() );
-		Index idx = r.read();
-		FlowData fd = r.detail( idx.entries.get( 0 ) );
-		assertEquals( "time level source log for abc []",
-				fd.logs.stream()
-						.map( LogEvent::toString )
-						.collect( joining( "\n" ) ) );
+			Reader r = new Reader( tf.report() );
+			Index idx = r.read();
+			FlowData fd = r.detail( idx.entries.get( 0 ) );
+			assertEquals( "time level source log for abc []",
+					fd.logs.stream()
+							.map( LogEvent::toString )
+							.collect( joining( "\n" ) ) );
+		}
 	}
 
 	/**
@@ -108,28 +147,29 @@ class LogCaptureTest {
 	 */
 	@Test
 	void failCapture() {
-		TestFlocessor tf = new TestFlocessor( "logCapture", TestModel.abc() )
+		try( TestFlocessor tf = new TestFlocessor( "logCapture", TestModel.abc() )
 				.system( State.LESS, B )
 				.reporting( Reporting.QUIETLY )
 				.logs( CAPTURE )
 				.behaviour( assrt -> {
 					assrt.actual().response( "unexpected data!".getBytes( UTF_8 ) );
-				} );
+				} ) ) {
 
-		tf.execute();
+			tf.execute();
 
-		assertEquals( copypasta(
-				"Starting log capture for abc []",
-				"Ending log capture for abc []" ),
-				copypasta( logCaptureLog ) );
+			assertEquals( copypasta(
+					"Starting log capture for abc []",
+					"Ending log capture for abc []" ),
+					copypasta( logCaptureLog ) );
 
-		Reader r = new Reader( tf.report() );
-		Index idx = r.read();
-		FlowData fd = r.detail( idx.entries.get( 0 ) );
-		assertEquals( "time level source log for abc []",
-				fd.logs.stream()
-						.map( LogEvent::toString )
-						.collect( joining( "\n" ) ) );
+			Reader r = new Reader( tf.report() );
+			Index idx = r.read();
+			FlowData fd = r.detail( idx.entries.get( 0 ) );
+			assertEquals( "time level source log for abc []",
+					fd.logs.stream()
+							.map( LogEvent::toString )
+							.collect( joining( "\n" ) ) );
+		}
 	}
 
 	/**
@@ -137,29 +177,30 @@ class LogCaptureTest {
 	 */
 	@Test
 	void errorCapture() {
-		TestFlocessor tf = new TestFlocessor( "logCapture", TestModel.abc() )
+		try( TestFlocessor tf = new TestFlocessor( "logCapture", TestModel.abc() )
 				.system( State.LESS, B )
 				.reporting( Reporting.QUIETLY )
 				.logs( CAPTURE )
 				.behaviour( assrt -> {
 					throw new RuntimeException( "kaboom!" );
-				} );
+				} ) ) {
 
-		tf.execute();
+			tf.execute();
 
-		assertEquals( copypasta(
-				"Starting log capture for abc []",
-				"Ending log capture for abc []" ),
-				copypasta( logCaptureLog ) );
+			assertEquals( copypasta(
+					"Starting log capture for abc []",
+					"Ending log capture for abc []" ),
+					copypasta( logCaptureLog ) );
 
-		Reader r = new Reader( tf.report() );
-		Index idx = r.read();
-		FlowData fd = r.detail( idx.entries.get( 0 ) );
-		assertEquals( copypasta(
-				"log for abc []",
-				"Encountered error: java.lang.RuntimeException: kaboom!" ),
-				copypasta( fd.logs.stream()
-						.map( e -> e.message.replaceAll( "\tat .*", "" ) ) ) );
+			Reader r = new Reader( tf.report() );
+			Index idx = r.read();
+			FlowData fd = r.detail( idx.entries.get( 0 ) );
+			assertEquals( copypasta(
+					"log for abc []",
+					"Encountered error: java.lang.RuntimeException: kaboom!" ),
+					copypasta( fd.logs.stream()
+							.map( e -> e.message.replaceAll( "\tat .*", "" ) ) ) );
+		}
 	}
 
 	/**
@@ -167,28 +208,29 @@ class LogCaptureTest {
 	 */
 	@Test
 	void skipCapture() {
-		TestFlocessor tf = new TestFlocessor( "logCapture", TestModel.abc() )
+		try( TestFlocessor tf = new TestFlocessor( "logCapture", TestModel.abc() )
 				.system( State.LESS, B )
 				.reporting( Reporting.QUIETLY )
 				.logs( CAPTURE )
 				.behaviour( assrt -> {
 					// no assertions
-				} );
+				} ) ) {
 
-		tf.execute();
+			tf.execute();
 
-		assertEquals( copypasta(
-				"Starting log capture for abc []",
-				"Ending log capture for abc []" ),
-				copypasta( logCaptureLog ) );
+			assertEquals( copypasta(
+					"Starting log capture for abc []",
+					"Ending log capture for abc []" ),
+					copypasta( logCaptureLog ) );
 
-		Reader r = new Reader( tf.report() );
-		Index idx = r.read();
-		FlowData fd = r.detail( idx.entries.get( 0 ) );
-		assertEquals( copypasta(
-				"No assertions made",
-				"log for abc []" ),
-				copypasta( fd.logs.stream()
-						.map( e -> e.message ) ) );
+			Reader r = new Reader( tf.report() );
+			Index idx = r.read();
+			FlowData fd = r.detail( idx.entries.get( 0 ) );
+			assertEquals( copypasta(
+					"No assertions made",
+					"log for abc []" ),
+					copypasta( fd.logs.stream()
+							.map( e -> e.message ) ) );
+		}
 	}
 }

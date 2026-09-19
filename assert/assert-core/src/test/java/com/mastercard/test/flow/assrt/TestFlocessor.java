@@ -16,7 +16,7 @@ import com.mastercard.test.flow.assrt.History.Result;
  * A flocessor that doesn't really do anything, just logs what it's been asked
  * to assert or skip.
  */
-public class TestFlocessor extends AbstractFlocessor<TestFlocessor> {
+public class TestFlocessor extends AbstractFlocessor<TestFlocessor> implements AutoCloseable {
 
 	private final List<String> eventLog = new ArrayList<>();
 
@@ -26,6 +26,11 @@ public class TestFlocessor extends AbstractFlocessor<TestFlocessor> {
 	 */
 	public TestFlocessor( String title, Model model ) {
 		super( title, model );
+	}
+
+	@Override
+	public void close() {
+		completeProcessing();
 	}
 
 	/**

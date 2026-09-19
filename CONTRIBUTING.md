@@ -175,6 +175,15 @@ Test results will be generated at
 <submodule>/target/pit-reports/index.html
 ```
 
+### Local research
+
+The git-ignored scratch directory contains disposable proof-of-concept tests,
+work-in-progress experiments, and design records. It is not part of the Maven
+reactor and is excluded from routine documentation/source scans. Do not run its
+test projects as core-library validation; run a specific harness only when
+explicitly requested to reproduce research. Preserve its specs and evidence for
+reference. Library regression tests belong in the tracked modules.
+
 ### Documentation
 
 Correctly-formed javadoc should exist on all non-private elements.
