@@ -7,6 +7,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import com.mastercard.test.flow.Flow;
@@ -22,11 +24,21 @@ import com.mastercard.test.flow.report.data.LogEvent;
  * Routing is guarded by this object's monitor; source calls (open/flush/close)
  * are serialised on a separate lock so that a source may deliver events via
  * {@link #accept} while one of its flushes is in progress.
+ * <p>
+ * Events that reach no flow are counted and the first few retained for the
+ * completion diagnostic; every one is also traced at {@link Level#FINE} on this
+ * class's logger, for when the summary is not enough to diagnose a pattern or
+ * identifier mismatch.
  */
 final class LogCollector implements LogCapture, Collector {
 
 	/** Binding for identifiers claimed by more than one execution */
 	private static final Object AMBIGUOUS = new Object();
+	/** Unrouted events quoted in the completion diagnostic */
+	private static final int SAMPLES = 5;
+	/** Longest quoted message excerpt: messages may be multi-line stack traces */
+	private static final int EXCERPT = 200;
+	private static final Logger UNROUTED = Logger.getLogger( LogCollector.class.getName() );
 
 	private final CorrelatedCapture source;
 	private final Object sourceLock = new Object();
@@ -40,6 +52,7 @@ final class LogCollector implements LogCapture, Collector {
 	private int unattributed;
 	private int ambiguous;
 	private int refused;
+	private final List<String> samples = new ArrayList<>();
 
 	/**
 	 * Events for one execution. After the execution ends its snapshot is frozen;
@@ -132,7 +145,7 @@ final class LogCollector implements LogCapture, Collector {
 	public synchronized Outcome accept( String correlation, LogEvent event ) {
 		if( closed ) {
 			refused++;
-			return Outcome.CLOSED;
+			return unrouted( "after close", correlation, event, Outcome.CLOSED );
 		}
 		Object binding = correlation == null ? null : bindings.get( correlation );
 		if( binding instanceof Buffer buffer ) {
@@ -145,14 +158,39 @@ final class LogCollector implements LogCapture, Collector {
 		}
 		if( binding == AMBIGUOUS ) {
 			ambiguous++;
+			return unrouted( "ambiguous", correlation, event, Outcome.UNATTRIBUTED );
 		}
-		else {
-			unattributed++;
+		unattributed++;
+		return unrouted( correlation == null ? "no identifier" : "unknown identifier",
+				correlation, event, Outcome.UNATTRIBUTED );
+	}
+
+	private Outcome unrouted( String cause, String correlation, LogEvent event, Outcome outcome ) {
+		// most unrouted events are neither quoted nor traced, so describe only those
+		if( samples.size() < SAMPLES || UNROUTED.isLoggable( Level.FINE ) ) {
+			String description = String.format( "%s [%s] %s %s %s %s",
+					cause, correlation, event.time, event.level, event.source,
+					excerpt( String.valueOf( event.message ) ) );
+			if( samples.size() < SAMPLES ) {
+				samples.add( description );
+			}
+			UNROUTED.fine( () -> "Unrouted event: " + description );
 		}
-		return Outcome.UNATTRIBUTED;
+		return outcome;
+	}
+
+	private static String excerpt( String message ) {
+		int end = message.indexOf( '\n' );
+		if( end < 0 || end > EXCERPT ) {
+			end = Math.min( message.length(), EXCERPT );
+		}
+		return end == message.length() ? message : message.substring( 0, end ) + "...";
 	}
 
 	/**
+	 * Drains the record of events that reached no flow. A repeated call describes
+	 * only the events that arrived since the previous one.
+	 *
 	 * @return A description of the events that reached no flow, or
 	 *         <code>null</code> if every event was attributed
 	 */
@@ -160,16 +198,26 @@ final class LogCollector implements LogCapture, Collector {
 		if( unattributed == 0 && ambiguous == 0 && refused == 0 ) {
 			return null;
 		}
-		return String.format( "Correlated capture attributed no flow to %d events: "
-				+ "%d without a known identifier, %d with an identifier claimed by more than one flow, "
-				+ "%d delivered after the run closed",
-				unattributed + ambiguous + refused, unattributed, ambiguous, refused );
+		StringBuilder summary = new StringBuilder( String.format(
+				"Correlated capture attributed no flow to %d events: "
+						+ "%d without a known identifier, %d with an identifier claimed by more than one flow, "
+						+ "%d delivered after the run closed. First %d:",
+				unattributed + ambiguous + refused, unattributed, ambiguous, refused, samples.size() ) );
+		samples.forEach( sample -> summary.append( "\n  " ).append( sample ) );
+		summary.append( "\nEnable FINE logging on " ).append( UNROUTED.getName() )
+				.append( " to see every unrouted event" );
+		unattributed = 0;
+		ambiguous = 0;
+		refused = 0;
+		samples.clear();
+		return summary.toString();
 	}
 
 	/**
-	 * Final cut: flushes and closes the source. Ordinary source faults are
-	 * swallowed after the source is closed; anything else propagates. Repeated
-	 * calls do nothing.
+	 * Final cut: flushes and closes the source. Events that the source delivers
+	 * while closing are routed as usual; only those arriving after it has closed
+	 * are refused. Ordinary source faults are swallowed after the source is closed;
+	 * anything else propagates. Repeated calls do nothing.
 	 *
 	 * @param ordinary Whether a fault may be swallowed rather than thrown
 	 */
@@ -186,9 +234,6 @@ final class LogCollector implements LogCapture, Collector {
 				failure = e;
 			}
 			finally {
-				synchronized( this ) {
-					closed = true;
-				}
 				try {
 					source.close();
 				}
@@ -198,6 +243,11 @@ final class LogCollector implements LogCapture, Collector {
 					}
 					else {
 						failure.addSuppressed( e );
+					}
+				}
+				finally {
+					synchronized( this ) {
+						closed = true;
 					}
 				}
 			}

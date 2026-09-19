@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.logging.Level;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -51,6 +52,8 @@ class CorrelatedCaptureTest {
 		Collector collector;
 		RuntimeException flushFailure;
 		RuntimeException closeFailure;
+		/** Emits events while the source is closing, as a file source drains */
+		Runnable onClose;
 
 		@Override
 		public void open( Collector c ) {
@@ -69,6 +72,9 @@ class CorrelatedCaptureTest {
 		@Override
 		public void close() {
 			lifecycle.add( "close" );
+			if( onClose != null ) {
+				onClose.run();
+			}
 			if( closeFailure != null ) {
 				throw closeFailure;
 			}
@@ -227,18 +233,10 @@ class CorrelatedCaptureTest {
 		}
 	}
 
-	/**
-	 * Events that reach no flow are counted by cause and reported once at
-	 * completion, so a misconfigured pattern or reused identifier does not produce
-	 * a silently empty report.
-	 *
-	 * @param directory Isolated artifact directory
-	 */
 	@Test
 	void aliasesAttributeAndReusedIdentifiersAreAmbiguous( @TempDir Path directory ) {
 		Source source = new Source();
-		try( Diagnostics diagnostics = new Diagnostics( FlowProcessor.class );
-				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
 				TestFlocessor runner = runner( "aliases", source, a -> {
 					a.correlation().alias( "txn" );
 					assertEquals( ACCEPTED, source.emit( "txn", "by alias " + a.correlation().id() ) );
@@ -251,20 +249,110 @@ class CorrelatedCaptureTest {
 				a.correlation().alias( "txn" );
 				assertEquals( UNATTRIBUTED, source.emit( "txn", "by alias" ) );
 				assertEquals( UNATTRIBUTED, source.emit( "same", "by shared" ) );
-				assertEquals( UNATTRIBUTED, source.emit( "unknown", "no such flow" ) );
-				assertEquals( UNATTRIBUTED, source.emit( null, "no identifier" ) );
 				a.actual().response( a.expected().response().content() );
 			} );
 			runner.process( flow( runner, "second" ) );
-			assertEquals( List.of(), diagnostics.messages() );
 			runner.completeProcessing();
-			assertEquals( List.of( "Correlated capture attributed no flow to 4 events: "
-					+ "2 without a known identifier, 2 with an identifier claimed by more than one flow, "
-					+ "0 delivered after the run closed" ), diagnostics.messages() );
 
 			Map<String, List<String>> logs = flowLogs( runner.report() );
 			assertEquals( List.of( "INFO by alias same", "INFO by shared same" ), logs.get( "first" ) );
 			assertEquals( List.of(), logs.get( "second" ) );
+		}
+	}
+
+	/**
+	 * Events that reach no flow are counted by cause and reported at completion
+	 * with the first few quoted, so a misconfigured pattern or reused identifier
+	 * does not produce a silently empty report. Quoted messages are cut to a single
+	 * bounded line. Every event is traced at FINE for when the samples are not
+	 * enough. A repeated completion describes only the events that arrived since
+	 * the previous one.
+	 *
+	 * @param directory Isolated artifact directory
+	 */
+	@Test
+	void unroutedEventsAreSummarisedAndTraced( @TempDir Path directory ) {
+		Source source = new Source();
+		String longLine = "x".repeat( 250 );
+		try( Diagnostics diagnostics = new Diagnostics( FlowProcessor.class );
+				Diagnostics trace = new Diagnostics( LogCollector.class, Level.FINE );
+				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
+				TestFlocessor runner = runner( "unrouted", source,
+						a -> a.actual().response( a.expected().response().content() ) )
+								.correlation( flow -> "same" ) ) {
+			runner.process( flow( runner, "first" ) );
+			// "same" is now claimed by two executions
+			runner.behaviour( a -> {
+				assertEquals( UNATTRIBUTED, source.emit( "same", "by shared" ) );
+				assertEquals( UNATTRIBUTED, source.emit( "unknown", "no such flow" ) );
+				assertEquals( UNATTRIBUTED, source.emit( null, "no identifier" ) );
+				assertEquals( UNATTRIBUTED, source.emit( "unknown", "first line\n\tat second line" ) );
+				assertEquals( UNATTRIBUTED, source.emit( "unknown", longLine ) );
+				assertEquals( UNATTRIBUTED, source.emit( "unknown", "sixth, beyond the samples" ) );
+				a.actual().response( a.expected().response().content() );
+			} );
+			runner.process( flow( runner, "second" ) );
+			assertEquals( List.of(), diagnostics.messages() );
+
+			runner.completeProcessing();
+			String excerpt = "unknown identifier [unknown] time INFO sut " + longLine.substring( 0, 200 )
+					+ "...";
+			assertEquals( List.of( String.join( "\n",
+					"Correlated capture attributed no flow to 6 events: 5 without a known identifier, "
+							+ "1 with an identifier claimed by more than one flow, 0 delivered after the run closed. First 5:",
+					"  ambiguous [same] time INFO sut by shared",
+					"  unknown identifier [unknown] time INFO sut no such flow",
+					"  no identifier [null] time INFO sut no identifier",
+					"  unknown identifier [unknown] time INFO sut first line...",
+					"  " + excerpt,
+					"Enable FINE logging on com.mastercard.test.flow.assrt.LogCollector to see every unrouted event" ) ),
+					diagnostics.messages() );
+			assertEquals( List.of(
+					"Unrouted event: ambiguous [same] time INFO sut by shared",
+					"Unrouted event: unknown identifier [unknown] time INFO sut no such flow",
+					"Unrouted event: no identifier [null] time INFO sut no identifier",
+					"Unrouted event: unknown identifier [unknown] time INFO sut first line...",
+					"Unrouted event: " + excerpt,
+					"Unrouted event: unknown identifier [unknown] time INFO sut sixth, beyond the samples" ),
+					trace.messages() );
+
+			// the record was drained: a repeated completion reports only what arrived since
+			assertEquals( CLOSED, source.emit( "same", "too late" ) );
+			runner.completeProcessing();
+			assertEquals( 2, diagnostics.messages().size(), diagnostics.messages().toString() );
+			assertEquals(
+					"""
+							Correlated capture attributed no flow to 1 events: 0 without a known identifier, \
+							0 with an identifier claimed by more than one flow, 1 delivered after the run closed. First 1:
+							  after close [same] time INFO sut too late
+							Enable FINE logging on com.mastercard.test.flow.assrt.LogCollector to see every unrouted event""",
+					diagnostics.messages().get( 1 ) );
+			assertEquals( "Unrouted event: after close [same] time INFO sut too late",
+					trace.messages().get( 6 ) );
+		}
+	}
+
+	/**
+	 * A file source delivers whatever remains in the file as it closes. Those
+	 * events belong to the flows that carried their identifiers, so the source must
+	 * be closed before the collector refuses events.
+	 *
+	 * @param directory Isolated artifact directory
+	 */
+	@Test
+	void eventsDeliveredWhileClosingAreLateEvidence( @TempDir Path directory ) {
+		Source source = new Source();
+		source.onClose = () -> assertEquals( LATE, source.emit( "first", "drained at close" ) );
+		try( Diagnostics diagnostics = new Diagnostics( FlowProcessor.class );
+				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
+				TestFlocessor runner = runner( "closing", source,
+						a -> a.actual().response( a.expected().response().content() ) ) ) {
+			runner.process( flow( runner, "first" ) );
+			runner.completeProcessing();
+			assertEquals( CLOSED, source.emit( "first", "after close" ) );
+			assertEquals( List.of(), diagnostics.messages() );
+			assertEquals( List.of( "INFO drained at close" ),
+					flowLogs( runner.report() ).get( "first" ) );
 		}
 	}
 
@@ -302,18 +390,29 @@ class CorrelatedCaptureTest {
 		}
 	}
 
+	/**
+	 * The file source attributes by the logged identifier, including an
+	 * unterminated final line that only its close can deliver. Lines for other
+	 * identifiers are counted in the completion diagnostic.
+	 *
+	 * @param directory Isolated artifact directory
+	 * @throws Exception on file failure
+	 */
 	@Test
 	void fileSourceAttributesByLoggedIdentifier( @TempDir Path directory ) throws Exception {
 		Path log = directory.resolve( "sut.log" );
 		Files.writeString( log, "0 [-] INFO boot started before the run\n" );
 		CorrelatedTail source = new CorrelatedTail( log,
 				"^(?<time>\\d+) \\[(?<correlation>[^\\]]*)\\] (?<level>[A-Z]+) (?<source>\\S+) " );
-		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
+		List<String> ids = new ArrayList<>();
+		try( Diagnostics diagnostics = new Diagnostics( FlowProcessor.class );
+				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
 				TestFlocessor runner = new TestFlocessor( "file source", TestModel.triple() )
 						.system( State.LESS, B ).reporting( Reporting.QUIETLY ).logs( source )
 						.behaviour( a -> {
 							// the "system" logs for this request, and stray lines for others
 							String id = a.correlation().id();
+							ids.add( id );
 							append( log, "1 [" + id + "] INFO sut handling " + id,
 									"2 [" + id + "] DEBUG sut detail", "   with continuation",
 									"3 [other] WARN sut not mine" );
@@ -322,15 +421,29 @@ class CorrelatedCaptureTest {
 			runner.finalOnlyReporting();
 			runner.process( flow( runner, "first" ) );
 			runner.process( flow( runner, "second" ) );
+			// the system is still writing: its last line has no terminator yet
+			Files.writeString( log, "4 [" + ids.get( 1 ) + "] INFO sut unterminated", UTF_8,
+					java.nio.file.StandardOpenOption.APPEND );
 			runner.completeProcessing();
 			Map<String, List<String>> logs = flowLogs( runner.report() );
 			for( String flow : List.of( "first", "second" ) ) {
 				String id = "flow-";
-				assertEquals( 2, logs.get( flow ).size(), logs.toString() );
 				assertTrue( logs.get( flow ).get( 0 ).startsWith( "INFO []   handling " + id ),
 						logs.toString() );
 				assertEquals( "DEBUG []   detail\n   with continuation", logs.get( flow ).get( 1 ) );
 			}
+			assertEquals( 2, logs.get( "first" ).size(), logs.toString() );
+			assertEquals( 3, logs.get( "second" ).size(), logs.toString() );
+			assertEquals( "INFO []   unterminated", logs.get( "second" ).get( 2 ) );
+			assertEquals( 1, diagnostics.messages().size(), diagnostics.messages().toString() );
+			assertTrue(
+					diagnostics.messages().get( 0 ).startsWith(
+							"""
+									Correlated capture attributed no flow to 2 events: 2 without a known identifier, \
+									0 with an identifier claimed by more than one flow, 0 delivered after the run closed. First 2:
+									  unknown identifier [other] 3 WARN sut []   not mine
+									""" ),
+					diagnostics.messages().get( 0 ) );
 		}
 	}
 

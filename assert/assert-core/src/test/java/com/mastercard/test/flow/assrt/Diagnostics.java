@@ -3,6 +3,7 @@ package com.mastercard.test.flow.assrt;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Handler;
+import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
@@ -12,13 +13,30 @@ import java.util.logging.Logger;
 public final class Diagnostics extends Handler implements AutoCloseable {
 
 	private final Logger logger;
+	private final Level previous;
 	private final List<String> messages = new CopyOnWriteArrayList<>();
 
 	/**
+	 * Captures at the logger's current level
+	 *
 	 * @param source The class whose diagnostics should be captured
 	 */
 	public Diagnostics( Class<?> source ) {
+		this( source, null );
+	}
+
+	/**
+	 * @param source The class whose diagnostics should be captured
+	 * @param level  The level to capture at, or <code>null</code> to leave the
+	 *               logger's level alone
+	 */
+	public Diagnostics( Class<?> source, Level level ) {
 		logger = Logger.getLogger( source.getName() );
+		previous = logger.getLevel();
+		if( level != null ) {
+			logger.setLevel( level );
+			setLevel( level );
+		}
 		logger.addHandler( this );
 	}
 
@@ -42,5 +60,6 @@ public final class Diagnostics extends Handler implements AutoCloseable {
 	@Override
 	public void close() {
 		logger.removeHandler( this );
+		logger.setLevel( previous );
 	}
 }
