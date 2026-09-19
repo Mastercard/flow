@@ -30,8 +30,8 @@ public final class Diagnostics extends Handler implements AutoCloseable {
 	}
 
 	@Override
-	public void publish( LogRecord record ) {
-		messages.add( record.getMessage() );
+	public void publish( LogRecord logged ) {
+		messages.add( logged.getMessage() );
 	}
 
 	@Override

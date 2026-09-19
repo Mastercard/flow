@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -391,6 +392,7 @@ class AbstractFlocessorTest {
 	@Test
 	void invocationEvidenceAndFailuresAreLocal() {
 		Thread caller = Thread.currentThread();
+		Set<Thread> threads = ConcurrentHashMap.newKeySet();
 		List<List<Assertion>> evidence = new ArrayList<>();
 		TestFlocessor tf = new TestFlocessor( "invocation-local", TestModel.withResidue() )
 				.system( State.FUL, B )
@@ -398,13 +400,13 @@ class AbstractFlocessorTest {
 				.checkers( new Checker<TestResidue>( TestResidue.class ) {
 					@Override
 					public Message expected( TestResidue residue ) {
-						onThread( caller );
+						threads.add( Thread.currentThread() );
 						return new Text( "residue" );
 					}
 
 					@Override
 					public byte[] actual( TestResidue residue, List<Assertion> actual ) {
-						onThread( caller );
+						threads.add( Thread.currentThread() );
 						evidence.add( List.copyOf( actual ) );
 						if( evidence.size() == 1 ) {
 							throw new IllegalStateException( "checker failed" );
@@ -413,7 +415,7 @@ class AbstractFlocessorTest {
 					}
 				} )
 				.behaviour( a -> {
-					onThread( caller );
+					threads.add( Thread.currentThread() );
 					a.actual().response( a.flow().meta().description().equals( "abc" )
 							? "unexpected".getBytes( UTF_8 )
 							: a.expected().response().content() );
@@ -439,6 +441,7 @@ class AbstractFlocessorTest {
 			assertTrue( second.logs.isEmpty() );
 			assertEquals( "B response to A", second.root.response.full.actual );
 		}
+		assertEquals( Set.of( caller ), threads, "fixture callbacks run on the processing thread" );
 	}
 
 	/**
@@ -452,6 +455,7 @@ class AbstractFlocessorTest {
 	@EnumSource(value = Reporting.class, names = { "NEVER", "QUIETLY" })
 	void synchronousPublicationPreservesFailureMode( Reporting reporting ) {
 		Thread caller = Thread.currentThread();
+		Set<Thread> threads = ConcurrentHashMap.newKeySet();
 		List<String> publications = new ArrayList<>();
 		List<String> bodies = new ArrayList<>();
 		List<String> completed = new ArrayList<>();
@@ -465,13 +469,13 @@ class AbstractFlocessorTest {
 						.request( new Text( "request" ) ).response( new Text( "response" ) ) )
 				.dependency( producer, d -> d.from( i -> i.responder() == B, REQUEST, ".+" )
 						.mutate( value -> {
-							onThread( caller );
+							threads.add( Thread.currentThread() );
 							publications.add( "request " + value );
 							return value;
 						} ).to( i -> i.responder() == B, REQUEST, ".+" ) )
 				.dependency( producer, d -> d.from( i -> i.responder() == B, RESPONSE, ".+" )
 						.mutate( value -> {
-							onThread( caller );
+							threads.add( Thread.currentThread() );
 							publications.add( "response " + value );
 							return value;
 						} ).to( i -> i.responder() == B, RESPONSE, ".+" ) ) );
@@ -484,12 +488,12 @@ class AbstractFlocessorTest {
 				.listening( new Listener() {
 					@Override
 					public void flowComplete( Flow flow ) {
-						onThread( caller );
+						threads.add( Thread.currentThread() );
 						completed.add( flow.meta().description() );
 					}
 				} )
 				.behaviour( a -> {
-					onThread( caller );
+					threads.add( Thread.currentThread() );
 					bodies.add( a.flow().meta().description() );
 					if( a.flow() == producer ) {
 						a.actual().request( "actual-request".getBytes( UTF_8 ) )
@@ -526,6 +530,7 @@ class AbstractFlocessorTest {
 				assertEquals( Set.of( "PASS" ), report.detail( index.entries.get( 1 ) ).tags );
 			}
 		}
+		assertEquals( Set.of( caller ), threads, "fixture callbacks run on the processing thread" );
 	}
 
 	/**
@@ -543,6 +548,7 @@ class AbstractFlocessorTest {
 	void publicationErrorRetainsEarlierWritesAndAccumulatesOnlyWhenConfigured( Reporting reporting,
 			String fault ) {
 		Thread caller = Thread.currentThread();
+		Set<Thread> threads = ConcurrentHashMap.newKeySet();
 		RuntimeException original = new IllegalStateException( "publication " + fault );
 		List<String> operations = new ArrayList<>();
 		List<String> cleanup = new ArrayList<>();
@@ -558,14 +564,14 @@ class AbstractFlocessorTest {
 
 			@Override
 			public Text peer( byte[] bytes ) {
-				onThread( caller );
+				threads.add( Thread.currentThread() );
 				operations.add( "peer" );
 				if( fault.equals( "peer" ) )
 					throw original;
 				return new Text( bytes ) {
 					@Override
 					protected Object access( String field ) {
-						onThread( caller );
+						threads.add( Thread.currentThread() );
 						int call = gets.incrementAndGet();
 						operations.add( "get" + call );
 						return "write" + call;
@@ -583,7 +589,7 @@ class AbstractFlocessorTest {
 			public Text set( String field, Object value ) {
 				if( !armed.get() )
 					return super.set( field, value );
-				onThread( caller );
+				threads.add( Thread.currentThread() );
 				int call = sets.incrementAndGet();
 				operations.add( "set" + call );
 				super.set( field, value );
@@ -600,13 +606,13 @@ class AbstractFlocessorTest {
 					.request( destination ).response( new Text( "pending" ) ) );
 			for( int binding = 1; binding <= 3; binding++ ) {
 				f.dependency( producer, d -> d.from( i -> true, REQUEST, ".+" ).mutate( value -> {
-					onThread( caller );
+					threads.add( Thread.currentThread() );
 					operations.add( "mutation" + mutations.incrementAndGet() );
 					return value;
 				} ).to( i -> true, REQUEST, ".+" ) );
 			}
 			f.dependency( producer, d -> d.from( i -> true, RESPONSE, ".+" ).mutate( value -> {
-				onThread( caller );
+				threads.add( Thread.currentThread() );
 				operations.add( "response" );
 				return "later write";
 			} ).to( i -> true, RESPONSE, ".+" ) );
@@ -621,18 +627,18 @@ class AbstractFlocessorTest {
 							@Override
 							public void start( Flow flow ) {
 								assertSame( producer, flow );
-								onThread( caller );
+								threads.add( Thread.currentThread() );
 								cleanup.add( "start" );
 							}
 
 							@Override
 							public Stream<com.mastercard.test.flow.report.data.LogEvent> end( Flow flow ) {
 								assertSame( producer, flow );
-								onThread( caller );
+								threads.add( Thread.currentThread() );
 								cleanup.add( "end" );
 								return Stream.<com.mastercard.test.flow.report.data.LogEvent>empty()
 										.onClose( () -> {
-											onThread( caller );
+											threads.add( Thread.currentThread() );
 											cleanup.add( "close" );
 										} );
 							}
@@ -640,12 +646,12 @@ class AbstractFlocessorTest {
 							@Override
 							public void flowComplete( Flow flow ) {
 								assertSame( producer, flow );
-								onThread( caller );
+								threads.add( Thread.currentThread() );
 								cleanup.add( "complete" );
 							}
 						} )
 						.behaviour( a -> {
-							onThread( caller );
+							threads.add( Thread.currentThread() );
 							operations.add( "body" );
 							a.actual().request( "request".getBytes( UTF_8 ) )
 									.response( "unexpected response".getBytes( UTF_8 ) );
@@ -687,6 +693,7 @@ class AbstractFlocessorTest {
 			assertThrows( IllegalStateException.class, () -> runner.process( producer ) );
 			assertEquals( expected, operations, "completion does not rerun publication" );
 		}
+		assertEquals( Set.of( caller ), threads, "fixture callbacks run on the processing thread" );
 	}
 
 	/** Binding reads the unmasked peer before comparing a masked request. */
@@ -694,6 +701,7 @@ class AbstractFlocessorTest {
 	void intraFlowBindingPublishesUnmaskedActualBeforeResponseComparison() {
 		com.mastercard.test.flow.Unpredictable token = () -> "token";
 		Thread caller = Thread.currentThread();
+		Set<Thread> threads = ConcurrentHashMap.newKeySet();
 		List<Object> values = new ArrayList<>();
 		Flow flow = Creator.build( f -> f.meta( m -> m.description( "self" ) )
 				.call( i -> i.from( A ).to( B )
@@ -701,7 +709,7 @@ class AbstractFlocessorTest {
 								new Text( "expected-token" ).masking( token, m -> m.replace( ".+", "masked" ) ) )
 						.response( new Text( "pending" ) ) )
 				.dependency( null, d -> d.from( i -> true, REQUEST, ".+" ).mutate( value -> {
-					onThread( caller );
+					threads.add( Thread.currentThread() );
 					values.add( value );
 					return value;
 				} ).to( i -> true, RESPONSE, ".+" ) ) );
@@ -716,6 +724,7 @@ class AbstractFlocessorTest {
 			assertEquals( "raw-token", flow.root().response().assertable() );
 			assertEquals( 2, runner.events().lines().filter( l -> l.startsWith( "COMPARE" ) ).count() );
 		}
+		assertEquals( Set.of( caller ), threads, "fixture callbacks run on the processing thread" );
 	}
 
 	/**
@@ -971,11 +980,6 @@ class AbstractFlocessorTest {
 				"com.mastercard.test.flow.assrt.TestModel.abc(TestModel.java:_) A->B [] response",
 				" | B response to A | B response to A |" ),
 				copypasta( tf.events() ) );
-	}
-
-	/** Fixture callbacks must run synchronously on the processing thread */
-	private static void onThread( Thread expected ) {
-		assertSame( expected, Thread.currentThread() );
 	}
 
 	/**
