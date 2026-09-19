@@ -12,7 +12,10 @@ import com.mastercard.test.flow.validation.Validation;
 import com.mastercard.test.flow.validation.Violation;
 
 /**
- * Convenience superclass for validation checks that compare pairs of flows
+ * Convenience superclass for validation checks that compare pairs of flows.
+ * Every pair yields a {@link Check}, so the count is quadratic in the number of
+ * flows; where the property is that a per-flow value is unique, prefer
+ * {@link FlowKeyCheck}.
  */
 public abstract class FlowPairCheck implements Validation {
 
