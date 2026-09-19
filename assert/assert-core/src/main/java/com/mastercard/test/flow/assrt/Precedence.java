@@ -19,18 +19,16 @@ import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.util.Flows;
-import com.mastercard.test.flow.util.Tags;
 
 /**
  * Direct precedence between selected flows, built once from what the model
- * already declares and consumed as a ready-set. This is pure ordering: no
- * threads, monitors, grants or native identities.
+ * already declares and consumed as a ready-set.
  * <p>
- * Edge sources, in this order: dependency bindings between flows; nearest
- * selected basis ancestor before descendant; flows that publish into or read
- * the same destination message, in canonical order; chain contraction (edges
- * into or out of a chain member are lifted to the chain's first/last member and
- * consecutive members are linked); and all flows that apply a
+ * Edge sources, in this order: dependency bindings between flows; selected
+ * basis ancestors and descendants, in canonical order; flows that publish into
+ * or read the same destination message, in canonical order; chain contraction
+ * (edges into or out of a chain member are lifted to the chain's first/last
+ * member and consecutive members are linked); and all flows that apply a
  * {@link com.mastercard.test.flow.Context}, in canonical order.
  */
 public final class Precedence {
@@ -40,20 +38,15 @@ public final class Precedence {
 	private final List<Integer> roots;
 
 	/**
-	 * Builds direct precedence from validated canonical order. Comparable selected
-	 * basis ancestors/descendants keep that order, even across absent ancestors or
-	 * inverted ranks. This neither selects more flows nor changes History
-	 * eligibility.
-	 * <p>
+	 * Builds direct precedence from the canonical order produced by {@link Order}.
 	 * This is the one place a hard prerequisite cycle is detected: {@link Order}
 	 * breaks such cycles to produce a sequence, and prepared adapters reject the
 	 * result here.
 	 *
-	 * @param flows Selected flows in validated serial order
-	 * @throws IllegalArgumentException On duplicate references, absent or
-	 *                                  noncanonical prerequisites, cyclic bases and
-	 *                                  hard cycles, including those created by
-	 *                                  chain contraction
+	 * @param flows Selected flows in canonical order
+	 * @throws IllegalArgumentException On duplicate references, absent
+	 *                                  prerequisites, cyclic bases and hard cycles,
+	 *                                  including those created by chain contraction
 	 */
 	public Precedence( List<Flow> flows ) {
 		List<Set<Integer>> edges = new ArrayList<>();
@@ -64,7 +57,7 @@ public final class Precedence {
 			}
 			edges.add( new HashSet<>() );
 		}
-		boolean noncanonical = dependencyPrecedence( flows, indices, edges );
+		dependencyPrecedence( flows, indices, edges );
 		basisPrecedence( flows, indices, edges );
 		publicationPrecedence( flows, indices, edges );
 		chainPrecedence( flows, edges );
@@ -77,8 +70,6 @@ public final class Precedence {
 		if( !cyclic.isEmpty() )
 			throw new IllegalArgumentException( "Hard prerequisite cycle (including contracted chains): "
 					+ cyclic.stream().map( i -> flows.get( i ).meta().id() ).sorted().toList() );
-		if( noncanonical )
-			throw new IllegalArgumentException( "Absent or noncanonical Flow prerequisite" );
 		successors = edges.stream().map( Collections::unmodifiableSet ).toList();
 		List<Integer> initial = new ArrayList<>();
 		for( int i = 0; i < predecessors.length; i++ )
@@ -88,27 +79,23 @@ public final class Precedence {
 	}
 
 	/**
-	 * @return <code>true</code> if a prerequisite is ordered after its dependent,
-	 *         which is either caller error or a cycle that {@link Order} had to
-	 *         break; the cycle check decides which
+	 * A prerequisite ordered after its dependent is a cycle that {@link Order} had
+	 * to break; the cycle check reports it.
 	 */
-	private static boolean dependencyPrecedence( List<Flow> flows, Map<Flow, Integer> indices,
+	private static void dependencyPrecedence( List<Flow> flows, Map<Flow, Integer> indices,
 			List<Set<Integer>> edges ) {
-		boolean noncanonical = false;
 		for( int i = 0; i < flows.size(); i++ ) {
 			Flow flow = flows.get( i );
 			try( Stream<Flow> sources = flow.dependencies().map( d -> d.source().flow() ) ) {
 				for( Flow source : sources.filter( f -> f != null && f != flow ).toList() ) {
 					Integer before = indices.get( source );
 					if( before == null ) {
-						throw new IllegalArgumentException( "Absent or noncanonical Flow prerequisite" );
+						throw new IllegalArgumentException( "Absent Flow prerequisite" );
 					}
-					noncanonical |= before >= i;
 					edges.get( before ).add( i );
 				}
 			}
 		}
-		return noncanonical;
 	}
 
 	/**
@@ -191,12 +178,9 @@ public final class Precedence {
 		int[] last = new int[flows.size()];
 		int[] next = new int[flows.size()];
 		Arrays.fill( next, -1 );
-		// Unchained flows have distinct units even if their IDs equal a chain name
 		Map<Object, List<Integer>> chains = new LinkedHashMap<>();
 		for( int i = 0; i < flows.size(); i++ ) {
-			Object chain = Tags.suffix( flows.get( i ).meta().tags(), Order.CHAIN_TAG_PREFIX )
-					.<Object>map( name -> name ).orElseGet( Object::new );
-			chains.computeIfAbsent( chain, key -> new ArrayList<>() ).add( i );
+			chains.computeIfAbsent( Order.chainKey( flows.get( i ) ), key -> new ArrayList<>() ).add( i );
 		}
 		for( List<Integer> members : chains.values() ) {
 			for( int i = 0; i < members.size(); i++ ) {
@@ -257,7 +241,10 @@ public final class Precedence {
 		orderGroups( participants.values(), edges );
 	}
 
-	private static void orderGroups( Iterable<NavigableSet<Integer>> groups,
+	/**
+	 * Links the members of each group consecutively, in canonical order
+	 */
+	private static void orderGroups( Iterable<? extends NavigableSet<Integer>> groups,
 			List<Set<Integer>> edges ) {
 		for( NavigableSet<Integer> ranks : groups ) {
 			Integer previous = null;
@@ -269,24 +256,25 @@ public final class Precedence {
 		}
 	}
 
+	/**
+	 * Flows related by basis ancestry keep their canonical order: each flow's path
+	 * of selected ancestors is linked in rank order, whichever end the basis is at.
+	 */
 	private static void basisPrecedence( List<Flow> flows, Map<Flow, Integer> indices,
 			List<Set<Integer>> edges ) {
-		List<List<Integer>> children = new ArrayList<>();
-		List<Integer> roots = new ArrayList<>();
-		for( int i = 0; i < flows.size(); i++ )
-			children.add( new ArrayList<>() );
 		// Cache the nearest selected ancestor across shared unselected paths. Selected
 		// identities are stopping points, but each one's own basis is still read once.
 		Map<Flow, Integer> nearest = new IdentityHashMap<>( indices );
+		int[] parent = new int[flows.size()];
+		for( int i = 0; i < flows.size(); i++ )
+			parent[i] = nearestSelectedAncestor( flows.get( i ), nearest );
 		for( int i = 0; i < flows.size(); i++ ) {
-			int parent = nearestSelectedAncestor( flows.get( i ), nearest );
-			if( parent < 0 )
-				roots.add( i );
-			else
-				children.get( parent ).add( i );
+			NavigableSet<Integer> path = new TreeSet<>();
+			for( int rank = i; rank >= 0; rank = parent[rank] )
+				if( !path.add( rank ) )
+					throw new IllegalArgumentException( "Cyclic Flow basis" );
+			orderGroups( List.of( path ), edges );
 		}
-		if( orderAncestry( roots, children, edges ) != flows.size() )
-			throw new IllegalArgumentException( "Cyclic Flow basis" );
 	}
 
 	/**
@@ -310,38 +298,5 @@ public final class Precedence {
 		for( Flow absent : path )
 			nearest.put( absent, parent );
 		return parent;
-	}
-
-	/**
-	 * Orders each flow after its basis ancestors, without a basis descendant of one
-	 * flow ever being ordered before a sibling's descendants.
-	 *
-	 * @return The number of flows reached from the roots
-	 */
-	private static int orderAncestry( List<Integer> roots, List<List<Integer>> children,
-			List<Set<Integer>> edges ) {
-		NavigableSet<Integer> ancestry = new TreeSet<>();
-		Deque<Integer> traversal = new ArrayDeque<>( roots );
-		int visited = 0;
-		while( !traversal.isEmpty() ) {
-			int index = traversal.removeLast();
-			if( index < 0 ) {
-				ancestry.remove( ~index );
-				continue;
-			}
-			visited++;
-			Integer before = ancestry.lower( index );
-			Integer after = ancestry.higher( index );
-			// Inserting a canonical rank into the ordered ancestral path needs at most
-			// two forward edges. Older redundant edges may stay: still at most 2V.
-			if( before != null )
-				edges.get( before ).add( index );
-			if( after != null )
-				edges.get( index ).add( after );
-			ancestry.add( index );
-			traversal.addLast( ~index ); // Exit marker removes the rank before a sibling.
-			traversal.addAll( children.get( index ) );
-		}
-		return visited;
 	}
 }

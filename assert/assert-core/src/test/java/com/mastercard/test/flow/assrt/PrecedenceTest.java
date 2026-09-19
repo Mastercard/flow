@@ -140,13 +140,13 @@ class PrecedenceTest {
 		Flow source = flow( "source" );
 		Flow dependent = flow( "dependent", source );
 		List<Flow> absent = List.of( dependent );
-		assertEquals( "Absent or noncanonical Flow prerequisite",
+		assertEquals( "Absent Flow prerequisite",
 				assertThrows( IllegalArgumentException.class,
 						() -> new Precedence( absent ) ).getMessage() );
-		List<Flow> noncanonical = List.of( dependent, source );
-		assertEquals( "Absent or noncanonical Flow prerequisite",
-				assertThrows( IllegalArgumentException.class,
-						() -> new Precedence( noncanonical ) ).getMessage() );
+		// a prerequisite after its dependent is honoured as declared, not as listed
+		Precedence inverted = new Precedence( List.of( dependent, source ) );
+		assertEquals( List.of( 1 ), inverted.roots() );
+		assertEquals( Set.of( 0 ), inverted.successors( 1 ) );
 
 		List<Flow> duplicate = List.of( source, source );
 		assertEquals( "Duplicate selected Flow reference", assertThrows( IllegalArgumentException.class,
