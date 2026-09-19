@@ -56,7 +56,9 @@ class MyTest {
 
 The `Flocessor` is `AutoCloseable`, but the factory returns before its dynamic
 tests run, so do not close it in the factory or with try-with-resources: close it
-from `@AfterAll`, which is what publishes the report. `close()` fails if a flow is
+from `@AfterAll`. The report is written as flows are processed; `close()` waits for
+in-flight detail writes, closes the log source and surfaces any reporting failure.
+`close()` fails if a flow is
 still being processed; afterwards no further flows can be processed. Closing a
 second time does nothing, unless the report failed to close, in which case the
 failure is thrown again.
@@ -69,6 +71,7 @@ stream: each flow is emitted only once every flow it must follow has finished.
 
 ```java
 @FlowTest
+@Execution(CONCURRENT)
 class MyTest {
   @TestFactory
   Stream<DynamicNode> flows( FlowExecution execution ) {
@@ -81,11 +84,14 @@ class MyTest {
 }
 ```
 
-Enable standard Jupiter parallel execution (for example
-`junit.jupiter.execution.parallel.enabled=true` and
-`junit.jupiter.execution.parallel.mode.default=concurrent`) and independent flows
-run at the same time. Nothing Flow-specific is configured; with parallel execution
-disabled the same class runs serially with identical results.
+Enable standard Jupiter parallel execution
+(`junit.jupiter.execution.parallel.enabled=true`) and mark the class
+`@Execution(CONCURRENT)`, and independent flows run at the same time. Nothing
+Flow-specific is configured; with parallel execution disabled the same class runs
+serially with identical results. Prefer the class annotation to
+`junit.jupiter.execution.parallel.mode.default=concurrent`: the global default
+also applies to plain `Flocessor.tests()` classes, whose flows are not ordered for
+concurrent execution.
 
 Flows are kept apart only by what the model already declares:
 
@@ -111,7 +117,15 @@ aborted or skipped. Interval-based `LogCapture` and replay are rejected for
 concurrent runs; configure `logs( CorrelatedCapture )` to attribute log events by
 correlation identifier. `progressTimeout( Duration )` bounds how long the factory
 waits for a running flow before failing the run with a diagnostic naming the flows
-still running; the default is ten minutes.
+still running; the default is one minute, so raise it if one flow can run longer
+than that while nothing else completes. Cooperative cancellation (JUnit 6
+`CancellationToken`, e.g. `--fail-fast`) skips emitted leaves without running them,
+so a cancelled run ends only when this timeout elapses; killing the JVM, as IDEs
+and build tools do, is immediate.
+
+Under `@FlowTest` the `behaviour` callback, `Listener`, `Checker`, `Applicator`
+and `MotivationCustomizer` are invoked from several threads at once and must be
+thread-safe.
 
 How many flows actually run at once is Jupiter's decision. Its `ForkJoinPool`
 executor may run an emitted flow on the factory thread itself — when the queue is

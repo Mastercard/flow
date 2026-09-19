@@ -243,9 +243,15 @@ class FlowProcessor {
 		private final List<Assertion> actualMessages = new ArrayList<>();
 		private final Capture capture = new Capture();
 		private final Correlation correlation;
+		/**
+		 * Customised outside the report writer: a customizer fault must not latch the
+		 * writer, which would silently discard a final-only report
+		 */
+		private String motivation;
 
 		private Invocation( Flow flow ) {
 			this.flow = flow;
+			motivation = flow.meta().motivation();
 			String extracted = config.correlation == null ? null : config.correlation.apply( flow );
 			String id = extracted != null ? extracted
 					: "flow-" + runId + "-" + executions.incrementAndGet();
@@ -373,8 +379,8 @@ class FlowProcessor {
 					reportUpdates.add( d -> d.logs.addAll( logs ) );
 					reportUpdates
 							.add( d -> d.logs.add( error( "Encountered error: " + LogEvent.stackTrace( e ) ) ) );
-					reportUpdates
-							.add( d -> d.motivation = config.motivationCustomizer.apply( d.motivation, assrt ) );
+					customiseMotivation( assrt );
+					reportUpdates.add( d -> d.motivation = motivation );
 					report( w -> w.with( flow, reportUpdates.stream().reduce( d -> {
 						// no-op
 					}, Consumer::andThen ) ), true );
@@ -435,19 +441,36 @@ class FlowProcessor {
 					executionFailures.add( e );
 				}
 				finally {
-					reportUpdates
-							.add( d -> d.motivation = config.motivationCustomizer.apply( d.motivation,
-									assertion ) );
+					customiseMotivation( assertion );
 				}
 				return 1;
 			}
 			return 0;
 		}
 
+		/**
+		 * Applies the {@link MotivationCustomizer}. An ordinary fault in it costs only
+		 * this flow's decoration when the report is final-only; anything else is the
+		 * caller's failure to see.
+		 */
+		private void customiseMotivation( Assertion assertion ) {
+			try {
+				motivation = config.motivationCustomizer.apply( motivation, assertion );
+			}
+			catch( RuntimeException e ) {
+				if( !config.finalOnlyReporting || !ordinaryPeripheralFailure( e ) ) {
+					throw e;
+				}
+				diagnostic( "Motivation customisation failed for " + flow.meta().id() + ": "
+						+ e.getClass().getName() );
+			}
+		}
+
 		private void finaliseReport( int assertionCount ) {
 			List<LogEvent> logs = capture.snapshot();
 			String resultTag = resultTag( assertionCount, comparisonFailures, executionFailures );
 			reportUpdates.add( d -> d.tags.add( resultTag ) );
+			reportUpdates.add( d -> d.motivation = motivation );
 			if( assertionCount == 0 ) {
 				reportWarning( "No assertions made" );
 			}

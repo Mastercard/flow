@@ -8,7 +8,9 @@ import com.mastercard.test.flow.Residue;
 
 /**
  * Extend this class to provide a mechanism by which {@link Residue} data can be
- * checked against the system under test
+ * checked against the system under test. Under concurrent execution one
+ * instance serves several flows at once, so implementations must be
+ * thread-safe.
  *
  * @param <T> The {@link Residue} type
  */

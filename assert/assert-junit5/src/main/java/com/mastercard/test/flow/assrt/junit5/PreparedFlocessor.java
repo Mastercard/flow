@@ -36,7 +36,7 @@ import com.mastercard.test.flow.assrt.Precedence;
 public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor> {
 	private final FlowExecution owner;
 	private boolean prepared;
-	private Duration progressTimeout = Duration.ofMinutes( 10 );
+	private Duration progressTimeout = Duration.ofMinutes( 1 );
 
 	/**
 	 * @param owner The factory-local handle
@@ -52,7 +52,10 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 
 	/**
 	 * Bounds how long the factory waits for any running flow to finish before
-	 * failing the run. Default ten minutes.
+	 * failing the run. Default one minute. Raise it if a single flow can
+	 * legitimately run longer than this while nothing else completes. A cooperative
+	 * cancellation (JUnit 6 {@code CancellationToken}) skips emitted leaves without
+	 * running them, so the factory only gives up once this timeout elapses.
 	 *
 	 * @param timeout Positive duration
 	 * @return this adapter
