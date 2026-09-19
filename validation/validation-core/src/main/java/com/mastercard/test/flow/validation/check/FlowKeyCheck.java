@@ -15,8 +15,8 @@ import com.mastercard.test.flow.validation.Violation;
 /**
  * Convenience superclass for validation checks that require a per-flow key to
  * be unique across the model. Flows are grouped by key in a single pass, so the
- * number of {@link Check}s is bounded by the number of flows rather than the
- * number of flow pairs.
+ * number of {@link Check}s is linear in the number of flows. Flows that share a
+ * key are reported together as the offenders of a single {@link Violation}.
  */
 public abstract class FlowKeyCheck implements Validation {
 
