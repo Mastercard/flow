@@ -235,7 +235,19 @@ public class CorrelatedTail implements CorrelatedCapture {
 			lead--;
 		}
 		int b = bytes[lead] & 0xFF;
-		int width = b < 0x80 ? 1 : b >= 0xF0 ? 4 : b >= 0xE0 ? 3 : 2;
+		int width;
+		if( b < 0x80 ) {
+			width = 1;
+		}
+		else if( b >= 0xF0 ) {
+			width = 4;
+		}
+		else if( b >= 0xE0 ) {
+			width = 3;
+		}
+		else {
+			width = 2;
+		}
 		return bytes.length - lead >= width ? bytes.length : lead;
 	}
 
