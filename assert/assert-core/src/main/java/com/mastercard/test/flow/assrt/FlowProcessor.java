@@ -1,10 +1,5 @@
 package com.mastercard.test.flow.assrt;
 
-import static com.mastercard.test.flow.assrt.History.Result.NOT_OBSERVED;
-import static java.time.Instant.now;
-import static java.time.ZoneId.systemDefault;
-import static java.util.stream.Collectors.toCollection;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.channels.ClosedByInterruptException;
@@ -13,6 +8,8 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import static java.time.Instant.now;
+import static java.time.ZoneId.systemDefault;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -34,7 +31,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import static java.util.stream.Collectors.toCollection;
 import java.util.stream.Stream;
 
 import com.mastercard.test.flow.Actor;
@@ -43,6 +42,7 @@ import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.Residue;
+import static com.mastercard.test.flow.assrt.History.Result.NOT_OBSERVED;
 import com.mastercard.test.flow.assrt.filter.Filter;
 import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.AssertedData;
@@ -62,6 +62,13 @@ import com.mastercard.test.flow.util.Flows;
  * invocation. Enumerating flows neither completes a run nor closes a report.
  */
 class FlowProcessor {
+
+	/**
+	 * Report and capture faults that did not fail the test are reported here rather
+	 * than to the report, so that they cannot feed back into a captured log
+	 * backend.
+	 */
+	private static final Logger DIAGNOSTICS = Logger.getLogger( FlowProcessor.class.getName() );
 
 	/**
 	 * The adapter that owns this processor. It supplies the live statefulness
@@ -301,8 +308,8 @@ class FlowProcessor {
 				// or to apply contexts
 			}
 			else {
-				checkPreconditions( flow );
-				applyContexts( flow, executionFailures );
+				checkPreconditions();
+				applyContexts();
 			}
 
 			Map<Residue, Message> expectedResidue = expectedResidue();
@@ -349,10 +356,10 @@ class FlowProcessor {
 
 			try {
 				if( config.replay.hasData() ) {
-					warn( reportUpdates, "Replaying data from " + config.replaySource );
+					reportWarning( "Replaying data from " + config.replaySource );
 					String sr = config.replay.populate( assrt );
 					if( sr != null ) {
-						warn( reportUpdates, sr );
+						reportWarning( sr );
 						skipReasons.add( sr );
 					}
 				}
@@ -446,7 +453,7 @@ class FlowProcessor {
 			String resultTag = resultTag( assertionCount, comparisonFailures, executionFailures );
 			reportUpdates.add( d -> d.tags.add( resultTag ) );
 			if( assertionCount == 0 ) {
-				warn( reportUpdates, "No assertions made" );
+				reportWarning( "No assertions made" );
 			}
 			reportUpdates.add( d -> d.logs.addAll( logs ) );
 			reportUpdates.add( d -> executionFailures.stream()
@@ -463,8 +470,43 @@ class FlowProcessor {
 					!comparisonFailures.isEmpty() );
 		}
 
-		private void checkPreconditions( Flow checked ) {
-			FlowProcessor.this.checkPreconditions( checked, reason -> reportAndSkip( checked, reason ) );
+		/** Adds a warning to this flow's report entry */
+		private void reportWarning( String msg ) {
+			reportUpdates.add( d -> d.logs.add( warn( msg ) ) );
+		}
+
+		private void checkPreconditions() {
+			if( !AssertionOptions.SUPPRESS_SYSTEM_CHECK.isTrue() ) {
+				// If there are implied system dependencies that the system cannot satisfy...
+				flow.implicit()
+						.filter( a -> !config.systemUnderTest.contains( a ) )
+						.findFirst()
+						.ifPresent( a -> reportAndSkip( flow,
+								"Implicitly depends on " + a + ", which is not part of the system under test" ) );
+			}
+
+			// If the history suggests we're going to fail...
+			// (this could be missing flow dependencies or a failing basis)
+			history.skipReason( flow, owner.statefulness, config.systemUnderTest )
+					.ifPresent( reason -> reportAndSkip( flow, reason ) );
+		}
+
+		private void applyContexts() {
+			try {
+				// work out the context updates
+				Set<Context> contextUpdates = new TreeSet<>(
+						Comparator.comparing( ctx -> ctx.getClass().getName() ) );
+				flow.context()
+						.filter( ctx -> ctx.domain().stream().anyMatch( config.systemUnderTest::contains ) )
+						.forEach( contextUpdates::add );
+				if( concurrentContexts && contextUpdates.isEmpty() ) {
+					return;
+				}
+				transition( contextUpdates );
+			}
+			catch( RuntimeException e ) {
+				deferExecutionFailure( e );
+			}
 		}
 
 		private void reportAndSkip( Flow skipped, String reason ) {
@@ -620,6 +662,11 @@ class FlowProcessor {
 					} );
 		}
 
+		@SuppressWarnings("unchecked")
+		private <R extends Residue> Checker<R> checker( R rsd ) {
+			return (Checker<R>) config.checkers.get( rsd.getClass() );
+		}
+
 		private Map<Residue, Message> expectedResidue() {
 			Map<Residue, Message> expected = new HashMap<>();
 			flow.residue()
@@ -722,59 +769,21 @@ class FlowProcessor {
 	 * @param message What went wrong, without stack trace or source message text
 	 */
 	private static void diagnostic( String message ) {
-		System.err.println( "Flow: " + message );
+		DIAGNOSTICS.warning( message );
 	}
 
-	private void checkPreconditions( Flow flow, Consumer<String> reportAndSkip ) {
-		if( !AssertionOptions.SUPPRESS_SYSTEM_CHECK.isTrue() ) {
-			// If there are implied system dependencies that the system cannot satisfy...
-			flow.implicit()
-					.filter( a -> !config.systemUnderTest.contains( a ) )
-					.findFirst()
-					.ifPresent( a -> reportAndSkip.accept(
-							"Implicitly depends on " + a + ", which is not part of the system under test" ) );
-		}
-
-		// If the history suggests we're going to fail...
-		// (this could be missing flow dependencies or a failing basis)
-		history.skipReason( flow, owner.statefulness, config.systemUnderTest )
-				.ifPresent( reportAndSkip );
-	}
-
-	private void applyContexts( Flow flow, List<RuntimeException> executionFailures ) {
-		try {
-			// work out the context updates
-			Set<Context> contextUpdates = new TreeSet<>(
-					Comparator.comparing( ctx -> ctx.getClass().getName() ) );
-			flow.context()
-					.filter( ctx -> ctx.domain().stream().anyMatch( config.systemUnderTest::contains ) )
-					.forEach( contextUpdates::add );
-			if( concurrentContexts && contextUpdates.isEmpty() ) {
-				return;
-			}
-			synchronized( currentContext ) {
-				Set<Class<? extends Context>> unupdated = new HashSet<>( currentContext.keySet() );
-				contextUpdates.forEach( ctx -> unupdated.remove( ctx.getClass() ) );
-
-				// deactivate the orphaned context types - those that existed on the previous
-				// flow but not on the current one. We're doing this *before* the normal context
-				// changes as there can be dependencies between contexts - the ones on the new
-				// flow might not cope with the ones on the old flow that they know nothing
-				// about
-				unupdated.forEach( this::removeContext );
-
-				// apply the context for the new flow
-				contextUpdates.forEach( this::updateContext );
-			}
-		}
-		catch( RuntimeException e ) {
-			if( !config.reporting.writing() ) {
-				// we're not generating a report, so fail immediately
-				throw e;
-			}
-			// otherwise just store these up - we want to compare all the messages we can
-			// (which populates the report) before failing
-			executionFailures.add( e );
+	/**
+	 * Deactivates the context types that the previous flow applied but this one
+	 * does not, then applies this flow's contexts. Removal comes first as there can
+	 * be dependencies between contexts: the ones on the new flow might not cope
+	 * with the ones on the old flow that they know nothing about.
+	 */
+	private void transition( Set<Context> contextUpdates ) {
+		synchronized( currentContext ) {
+			Set<Class<? extends Context>> unupdated = new HashSet<>( currentContext.keySet() );
+			contextUpdates.forEach( ctx -> unupdated.remove( ctx.getClass() ) );
+			unupdated.forEach( this::removeContext );
+			contextUpdates.forEach( this::updateContext );
 		}
 	}
 
@@ -805,11 +814,6 @@ class FlowProcessor {
 		return apl;
 	}
 
-	@SuppressWarnings("unchecked")
-	private <R extends Residue> Checker<R> checker( R rsd ) {
-		return (Checker<R>) config.checkers.get( rsd.getClass() );
-	}
-
 	private static String resultTag( int assertionCount,
 			List<AssertionError> compareFailures, List<RuntimeException> parseFailures ) {
 		if( !parseFailures.isEmpty() ) {
@@ -825,10 +829,6 @@ class FlowProcessor {
 			return Writer.SKIP_TAG;
 		}
 		return Writer.PASS_TAG;
-	}
-
-	private void warn( List<Consumer<FlowData>> reportUpdates, String msg ) {
-		reportUpdates.add( d -> d.logs.add( warn( msg ) ) );
 	}
 
 	private LogEvent warn( String msg ) {

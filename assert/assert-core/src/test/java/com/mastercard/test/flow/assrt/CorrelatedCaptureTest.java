@@ -80,7 +80,7 @@ class CorrelatedCaptureTest {
 		}
 	}
 
-	private static TestFlocessor runner( String title, Source source, Path directory,
+	private static TestFlocessor runner( String title, Source source,
 			Consumer<Assertion> behaviour ) {
 		TestFlocessor runner = new TestFlocessor( title, TestModel.triple() )
 				.system( State.LESS, B ).reporting( Reporting.QUIETLY ).logs( source )
@@ -118,7 +118,7 @@ class CorrelatedCaptureTest {
 				"first", new CountDownLatch( 1 ), "second", new CountDownLatch( 1 ) );
 		List<Throwable> failures = new ArrayList<>();
 		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
-				TestFlocessor runner = runner( "concurrent capture", source, directory, a -> {
+				TestFlocessor runner = runner( "concurrent capture", source, a -> {
 					entered.countDown();
 					try {
 						await( release.get( a.correlation().id() ) );
@@ -177,7 +177,7 @@ class CorrelatedCaptureTest {
 		Source source = new Source();
 		List<String> ids = new ArrayList<>();
 		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
-				TestFlocessor runner = runner( "generated ids", source, directory, a -> {
+				TestFlocessor runner = runner( "generated ids", source, a -> {
 					ids.add( a.correlation().id() );
 					// the same execution presents the same identity to every assertion
 					a.assertChildren( i -> true ).forEach( c -> ids.add( c.correlation().id() ) );
@@ -231,7 +231,7 @@ class CorrelatedCaptureTest {
 	void aliasesAttributeAndReusedIdentifiersAreAmbiguous( @TempDir Path directory ) {
 		Source source = new Source();
 		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
-				TestFlocessor runner = runner( "aliases", source, directory, a -> {
+				TestFlocessor runner = runner( "aliases", source, a -> {
 					a.correlation().alias( "txn" );
 					assertEquals( ACCEPTED, source.emit( "txn", "by alias " + a.correlation().id() ) );
 					assertEquals( ACCEPTED, source.emit( "same", "by shared " + a.correlation().id() ) );
@@ -255,11 +255,11 @@ class CorrelatedCaptureTest {
 	}
 
 	@Test
-	void ordinarySourceFaultIsVisibleAndNonFatal( @TempDir Path directory ) throws Exception {
+	void ordinarySourceFaultIsVisibleAndNonFatal( @TempDir Path directory ) {
 		Source source = new Source();
 		source.flushFailure = new UncheckedIOException( new IOException( "disk" ) );
 		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
-				TestFlocessor runner = runner( "source fault", source, directory, a -> {
+				TestFlocessor runner = runner( "source fault", source, a -> {
 					assertEquals( ACCEPTED, source.emit( a.correlation().id(), "before" ) );
 					a.actual().response( a.expected().response().content() );
 				} ) ) {
@@ -322,7 +322,7 @@ class CorrelatedCaptureTest {
 		source.flushFailure = new IllegalStateException( failure );
 		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() ) ) {
 			// not auto-closed: completion is expected to keep failing
-			TestFlocessor runner = runner( "fatal source", source, directory,
+			TestFlocessor runner = runner( "fatal source", source,
 					a -> a.actual().response( a.expected().response().content() ) );
 			Flow flow = flow( runner, "first" );
 			assertSame( source.flushFailure,

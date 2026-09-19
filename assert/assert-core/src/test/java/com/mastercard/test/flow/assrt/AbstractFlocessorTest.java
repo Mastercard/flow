@@ -272,11 +272,11 @@ class AbstractFlocessorTest {
 		};
 		List<Runnable> mutations = List.of(
 				() -> tf.reporting( Reporting.NEVER ),
-				() -> tf.masking(),
+				tf::masking,
 				() -> tf.system( State.LESS, B ),
-				() -> tf.autonomous(),
-				() -> tf.applicators(),
-				() -> tf.checkers(),
+				tf::autonomous,
+				tf::applicators,
+				tf::checkers,
 				() -> tf.logs( LogCapture.NO_OP ),
 				() -> tf.logs( new CorrelatedCaptureTest.Source() ),
 				() -> tf.correlation( f -> null ),
@@ -398,13 +398,13 @@ class AbstractFlocessorTest {
 				.checkers( new Checker<TestResidue>( TestResidue.class ) {
 					@Override
 					public Message expected( TestResidue residue ) {
-						assertSame( caller, Thread.currentThread() );
+						onThread( caller );
 						return new Text( "residue" );
 					}
 
 					@Override
 					public byte[] actual( TestResidue residue, List<Assertion> actual ) {
-						assertSame( caller, Thread.currentThread() );
+						onThread( caller );
 						evidence.add( List.copyOf( actual ) );
 						if( evidence.size() == 1 ) {
 							throw new IllegalStateException( "checker failed" );
@@ -413,7 +413,7 @@ class AbstractFlocessorTest {
 					}
 				} )
 				.behaviour( a -> {
-					assertSame( caller, Thread.currentThread() );
+					onThread( caller );
 					a.actual().response( a.flow().meta().description().equals( "abc" )
 							? "unexpected".getBytes( UTF_8 )
 							: a.expected().response().content() );
@@ -465,13 +465,13 @@ class AbstractFlocessorTest {
 						.request( new Text( "request" ) ).response( new Text( "response" ) ) )
 				.dependency( producer, d -> d.from( i -> i.responder() == B, REQUEST, ".+" )
 						.mutate( value -> {
-							assertSame( caller, Thread.currentThread() );
+							onThread( caller );
 							publications.add( "request " + value );
 							return value;
 						} ).to( i -> i.responder() == B, REQUEST, ".+" ) )
 				.dependency( producer, d -> d.from( i -> i.responder() == B, RESPONSE, ".+" )
 						.mutate( value -> {
-							assertSame( caller, Thread.currentThread() );
+							onThread( caller );
 							publications.add( "response " + value );
 							return value;
 						} ).to( i -> i.responder() == B, RESPONSE, ".+" ) ) );
@@ -484,12 +484,12 @@ class AbstractFlocessorTest {
 				.listening( new Listener() {
 					@Override
 					public void flowComplete( Flow flow ) {
-						assertSame( caller, Thread.currentThread() );
+						onThread( caller );
 						completed.add( flow.meta().description() );
 					}
 				} )
 				.behaviour( a -> {
-					assertSame( caller, Thread.currentThread() );
+					onThread( caller );
 					bodies.add( a.flow().meta().description() );
 					if( a.flow() == producer ) {
 						a.actual().request( "actual-request".getBytes( UTF_8 ) )
@@ -558,14 +558,14 @@ class AbstractFlocessorTest {
 
 			@Override
 			public Text peer( byte[] bytes ) {
-				assertSame( caller, Thread.currentThread() );
+				onThread( caller );
 				operations.add( "peer" );
 				if( fault.equals( "peer" ) )
 					throw original;
 				return new Text( bytes ) {
 					@Override
 					protected Object access( String field ) {
-						assertSame( caller, Thread.currentThread() );
+						onThread( caller );
 						int call = gets.incrementAndGet();
 						operations.add( "get" + call );
 						return "write" + call;
@@ -583,7 +583,7 @@ class AbstractFlocessorTest {
 			public Text set( String field, Object value ) {
 				if( !armed.get() )
 					return super.set( field, value );
-				assertSame( caller, Thread.currentThread() );
+				onThread( caller );
 				int call = sets.incrementAndGet();
 				operations.add( "set" + call );
 				super.set( field, value );
@@ -600,13 +600,13 @@ class AbstractFlocessorTest {
 					.request( destination ).response( new Text( "pending" ) ) );
 			for( int binding = 1; binding <= 3; binding++ ) {
 				f.dependency( producer, d -> d.from( i -> true, REQUEST, ".+" ).mutate( value -> {
-					assertSame( caller, Thread.currentThread() );
+					onThread( caller );
 					operations.add( "mutation" + mutations.incrementAndGet() );
 					return value;
 				} ).to( i -> true, REQUEST, ".+" ) );
 			}
 			f.dependency( producer, d -> d.from( i -> true, RESPONSE, ".+" ).mutate( value -> {
-				assertSame( caller, Thread.currentThread() );
+				onThread( caller );
 				operations.add( "response" );
 				return "later write";
 			} ).to( i -> true, RESPONSE, ".+" ) );
@@ -621,18 +621,18 @@ class AbstractFlocessorTest {
 							@Override
 							public void start( Flow flow ) {
 								assertSame( producer, flow );
-								assertSame( caller, Thread.currentThread() );
+								onThread( caller );
 								cleanup.add( "start" );
 							}
 
 							@Override
 							public Stream<com.mastercard.test.flow.report.data.LogEvent> end( Flow flow ) {
 								assertSame( producer, flow );
-								assertSame( caller, Thread.currentThread() );
+								onThread( caller );
 								cleanup.add( "end" );
 								return Stream.<com.mastercard.test.flow.report.data.LogEvent>empty()
 										.onClose( () -> {
-											assertSame( caller, Thread.currentThread() );
+											onThread( caller );
 											cleanup.add( "close" );
 										} );
 							}
@@ -640,12 +640,12 @@ class AbstractFlocessorTest {
 							@Override
 							public void flowComplete( Flow flow ) {
 								assertSame( producer, flow );
-								assertSame( caller, Thread.currentThread() );
+								onThread( caller );
 								cleanup.add( "complete" );
 							}
 						} )
 						.behaviour( a -> {
-							assertSame( caller, Thread.currentThread() );
+							onThread( caller );
 							operations.add( "body" );
 							a.actual().request( "request".getBytes( UTF_8 ) )
 									.response( "unexpected response".getBytes( UTF_8 ) );
@@ -701,7 +701,7 @@ class AbstractFlocessorTest {
 								new Text( "expected-token" ).masking( token, m -> m.replace( ".+", "masked" ) ) )
 						.response( new Text( "pending" ) ) )
 				.dependency( null, d -> d.from( i -> true, REQUEST, ".+" ).mutate( value -> {
-					assertSame( caller, Thread.currentThread() );
+					onThread( caller );
 					values.add( value );
 					return value;
 				} ).to( i -> true, RESPONSE, ".+" ) ) );
@@ -971,6 +971,11 @@ class AbstractFlocessorTest {
 				"com.mastercard.test.flow.assrt.TestModel.abc(TestModel.java:_) A->B [] response",
 				" | B response to A | B response to A |" ),
 				copypasta( tf.events() ) );
+	}
+
+	/** Fixture callbacks must run synchronously on the processing thread */
+	private static void onThread( Thread expected ) {
+		assertSame( expected, Thread.currentThread() );
 	}
 
 	/**

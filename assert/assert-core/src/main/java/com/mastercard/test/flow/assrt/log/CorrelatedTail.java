@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,8 +31,9 @@ public class CorrelatedTail implements CorrelatedCapture {
 	private static final String SOURCE_GROUP = "source";
 	private static final String LEVEL_GROUP = "level";
 	private static final String TIME_GROUP = "time";
-	/** Source problems reported to stderr before further ones are dropped */
+	/** Source problems reported before further ones are dropped */
 	private static final int REPORTED_PROBLEMS = 20;
+	private static final Logger LOG = Logger.getLogger( CorrelatedTail.class.getName() );
 
 	private final Path file;
 	private final Pattern pattern;
@@ -205,11 +207,11 @@ public class CorrelatedTail implements CorrelatedCapture {
 
 	/**
 	 * Problems with the source file cannot be attributed to a flow, so they are
-	 * reported on stderr like the runner's own diagnostics, up to a limit.
+	 * reported like the runner's own diagnostics, up to a limit.
 	 */
 	private void problem( String description ) {
 		if( reportedProblems++ < REPORTED_PROBLEMS ) {
-			System.err.println( "Log capture source " + file + ": " + description );
+			LOG.warning( () -> "Log capture source " + file + ": " + description );
 		}
 	}
 

@@ -87,40 +87,42 @@ final class FlowConfiguration {
 		replay = new Replay( replaySource );
 	}
 
+	/**
+	 * Copies configuration ownership, not domain/callback identities.
+	 *
+	 * @param source The configuration to copy
+	 */
 	private FlowConfiguration( FlowConfiguration source ) {
 		title = source.title;
 		model = source.model;
+		reporting = source.reporting;
+		finalOnlyReporting = source.finalOnlyReporting;
+		reportPath = source.reportPath.clone();
+		systemUnderTest.addAll( source.systemUnderTest );
+		autonomous.addAll( source.autonomous );
+		applicators.putAll( source.applicators );
+		checkers.putAll( source.checkers );
 		replaySource = source.replaySource;
 		replay = source.replay;
+		test = source.test;
+		masks = source.masks.clone();
+		logCapture = source.logCapture;
+		correlatedCapture = source.correlatedCapture;
+		correlation = source.correlation;
+		progress = source.progress;
+		filterCfg = source.filterCfg;
+		flowFilter = source.flowFilter;
+		filterRejectionLog = source.filterRejectionLog;
+		motivationCustomizer = source.motivationCustomizer;
 	}
 
 	/**
-	 * Copies configuration ownership, not domain/callback identities. Used only by
-	 * explicitly prepared adapters; legacy enumeration remains mutable.
+	 * Used only by explicitly prepared adapters; legacy enumeration remains
+	 * mutable.
 	 *
 	 * @return A detached configuration snapshot
 	 */
 	FlowConfiguration snapshot() {
-		FlowConfiguration copy = new FlowConfiguration( this );
-		copy.reporting = reporting;
-		copy.finalOnlyReporting = finalOnlyReporting;
-		copy.reportPath = reportPath.clone();
-		copy.systemUnderTest.addAll( systemUnderTest );
-		copy.autonomous.addAll( autonomous );
-		copy.applicators.putAll( applicators );
-		copy.checkers.putAll( checkers );
-		copy.replaySource = replaySource;
-		copy.replay = replay;
-		copy.test = test;
-		copy.masks = masks.clone();
-		copy.logCapture = logCapture;
-		copy.correlatedCapture = correlatedCapture;
-		copy.correlation = correlation;
-		copy.progress = progress;
-		copy.filterCfg = filterCfg;
-		copy.flowFilter = flowFilter;
-		copy.filterRejectionLog = filterRejectionLog;
-		copy.motivationCustomizer = motivationCustomizer;
-		return copy;
+		return new FlowConfiguration( this );
 	}
 }

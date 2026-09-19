@@ -9,8 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -26,6 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assumptions;
@@ -195,7 +196,7 @@ class FlowExecutionTest {
 	 * which does compensate the pool.
 	 */
 	@Test
-	void independentFlowsOverlap() throws Exception {
+	void independentFlowsOverlap() {
 		Set<Thread> threads = new HashSet<>();
 		for( int attempt = 0; attempt < 5 && threads.size() < 2; attempt++ ) {
 			Gated gated = Gated.model( flow( "a" ), flow( "b" ), flow( "c" ), flow( "d" ) );
@@ -461,10 +462,10 @@ class FlowExecutionTest {
 						assertThrows( IllegalArgumentException.class, () -> runner.progressTimeout( invalid ) )
 								.getMessage() );
 			}
-			assertEquals( runner, runner.progressTimeout( Duration.ofMinutes( 1 ) ) );
+			Duration valid = Duration.ofMinutes( 1 );
+			assertEquals( runner, runner.progressTimeout( valid ) );
 			runner.tests().toList();
-			assertThrows( IllegalStateException.class,
-					() -> runner.progressTimeout( Duration.ofMinutes( 1 ) ) );
+			assertThrows( IllegalStateException.class, () -> runner.progressTimeout( valid ) );
 		}
 	}
 
@@ -592,11 +593,27 @@ class FlowExecutionTest {
 			case "assertion" -> new AssertionError( "decoration assertion" );
 			default -> new TestAbortedException( "decoration abort" );
 		};
-		PrintStream original = System.err;
-		ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+		List<String> diagnostics = new ArrayList<>();
+		Logger runner = Logger.getLogger( "com.mastercard.test.flow.assrt.FlowProcessor" );
+		Handler handler = new Handler() {
+			@Override
+			public void publish( LogRecord record ) {
+				diagnostics.add( record.getMessage() );
+			}
+
+			@Override
+			public void flush() {
+				// nothing buffered
+			}
+
+			@Override
+			public void close() {
+				// nothing held
+			}
+		};
+		runner.addHandler( handler );
 		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
 				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "decorated" ) ) {
-			System.setErr( new PrintStream( stderr, true, UTF_8 ) );
 			Gated gated = Gated.model( flow( "a" ) );
 			gated.configure = r -> r.reporting( Reporting.QUIETLY ).motivation( ( text, asrt ) -> {
 				if( fault instanceof Error error ) {
@@ -613,18 +630,17 @@ class FlowExecutionTest {
 			assertEquals( List.of( "a []:" + expected ), run.results );
 			if( "ordinary".equals( kind ) ) {
 				assertEquals( List.of(), run.failures, run.failures::toString );
-				assertEquals( List.of( "Flow: Report failed: java.lang.IllegalStateException" ),
-						stderr.toString( UTF_8 ).lines().toList() );
+				assertEquals( List.of( "Report failed: java.lang.IllegalStateException" ), diagnostics );
 			}
 			else {
 				// The fault propagates to the flow; the writer it latched then fails the
 				// class-level close as well
 				assertEquals( fault, run.failures.get( 0 ), run.failures::toString );
-				assertEquals( "", stderr.toString( UTF_8 ) );
+				assertEquals( List.of(), diagnostics );
 			}
 		}
 		finally {
-			System.setErr( original );
+			runner.removeHandler( handler );
 		}
 	}
 
@@ -765,7 +781,7 @@ class FlowExecutionTest {
 		assertEquals( List.of(), run.failures, run.failures::toString );
 		assertEquals( List.of( "A [chain:scenario]:SUCCESSFUL",
 				"B [chain:scenario, pick]:SUCCESSFUL" ), run.results );
-		assertEquals( List.of( "A", "B" ), SelectionFactory.bodies );
+		assertEquals( List.of( "A", "B" ), List.copyOf( SelectionFactory.bodies ) );
 		assertEquals( Set.of( "B", "rejected" ), Set.copyOf( SelectionFactory.exercised ) );
 		assertEquals( 2, SelectionFactory.exercised.size() );
 		assertEquals( List.of( "left", "right" ), List.copyOf( SelectionFactory.mutations ) );
@@ -900,7 +916,7 @@ class FlowExecutionTest {
 				: IntervalCaptureFactory.class, parallel );
 		if( parallel && !sameThread ) {
 			assertEquals( List.of(), run.results );
-			assertEquals( List.of(), IntervalCaptureFactory.events );
+			assertEquals( List.of(), List.copyOf( IntervalCaptureFactory.events ) );
 			assertTrue( run.failures.stream().anyMatch( f -> f instanceof IllegalStateException
 					&& f.getMessage().contains( "Interval-based LogCapture" ) ), run.failures::toString );
 		}
