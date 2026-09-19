@@ -597,8 +597,8 @@ class FlowExecutionTest {
 		Logger runner = Logger.getLogger( "com.mastercard.test.flow.assrt.FlowProcessor" );
 		Handler handler = new Handler() {
 			@Override
-			public void publish( LogRecord record ) {
-				diagnostics.add( record.getMessage() );
+			public void publish( LogRecord logged ) {
+				diagnostics.add( logged.getMessage() );
 			}
 
 			@Override

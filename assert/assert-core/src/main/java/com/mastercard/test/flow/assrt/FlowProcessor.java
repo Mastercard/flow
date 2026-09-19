@@ -122,10 +122,6 @@ class FlowProcessor {
 		concurrentContexts = true;
 	}
 
-	private String logSource() {
-		return owner.getClass().getName();
-	}
-
 	/**
 	 * Comparison on behalf of an {@link Assertion}, which has no reference to the
 	 * adapter.
@@ -682,6 +678,56 @@ class FlowProcessor {
 			return new LogEvent( Instant.now(), "ERROR", logSource(), msg );
 		}
 
+		private LogEvent warn( String msg ) {
+			return new LogEvent( Instant.now(), "WARN", logSource(), msg );
+		}
+
+		private String logSource() {
+			return owner.getClass().getName();
+		}
+
+		/**
+		 * Deactivates the context types that the previous flow applied but this one
+		 * does not, then applies this flow's contexts. Removal comes first as there can
+		 * be dependencies between contexts: the ones on the new flow might not cope
+		 * with the ones on the old flow that they know nothing about.
+		 */
+		private void transition( Set<Context> contextUpdates ) {
+			synchronized( currentContext ) {
+				Set<Class<? extends Context>> unupdated = new HashSet<>( currentContext.keySet() );
+				contextUpdates.forEach( ctx -> unupdated.remove( ctx.getClass() ) );
+				unupdated.forEach( this::removeContext );
+				contextUpdates.forEach( this::updateContext );
+			}
+		}
+
+		@SuppressWarnings("unchecked")
+		private <C extends Context> void updateContext( C ctx ) {
+			config.progress.context( ctx );
+			Class<? extends Context> ctxt = ctx.getClass();
+			Applicator<C> apl = (Applicator<C>) applicator( ctxt );
+			C current = (C) currentContext.get( ctxt );
+			apl.transition( current, ctx );
+			currentContext.put( ctxt, ctx );
+		}
+
+		@SuppressWarnings("unchecked")
+		private <C extends Context> void removeContext( Class<C> ctxt ) {
+			Applicator<C> apl = applicator( ctxt );
+			C current = (C) currentContext.get( ctxt );
+			apl.transition( current, null );
+			currentContext.remove( ctxt );
+		}
+
+		private <C extends Context> Applicator<C> applicator( Class<C> ctxt ) {
+			@SuppressWarnings("unchecked")
+			Applicator<C> apl = (Applicator<C>) config.applicators.get( ctxt );
+			if( apl == null ) {
+				throw new IllegalStateException( "No applicator for context type " + ctxt );
+			}
+			return apl;
+		}
+
 		private void checkResult( Interaction interaction, String type,
 				Message expected, byte[] actual, Consumer<CheckMessages> reportUpdate ) {
 			try {
@@ -772,48 +818,6 @@ class FlowProcessor {
 		DIAGNOSTICS.warning( message );
 	}
 
-	/**
-	 * Deactivates the context types that the previous flow applied but this one
-	 * does not, then applies this flow's contexts. Removal comes first as there can
-	 * be dependencies between contexts: the ones on the new flow might not cope
-	 * with the ones on the old flow that they know nothing about.
-	 */
-	private void transition( Set<Context> contextUpdates ) {
-		synchronized( currentContext ) {
-			Set<Class<? extends Context>> unupdated = new HashSet<>( currentContext.keySet() );
-			contextUpdates.forEach( ctx -> unupdated.remove( ctx.getClass() ) );
-			unupdated.forEach( this::removeContext );
-			contextUpdates.forEach( this::updateContext );
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private <C extends Context> void updateContext( C ctx ) {
-		config.progress.context( ctx );
-		Class<? extends Context> ctxt = ctx.getClass();
-		Applicator<C> apl = (Applicator<C>) applicator( ctxt );
-		C current = (C) currentContext.get( ctxt );
-		apl.transition( current, ctx );
-		currentContext.put( ctxt, ctx );
-	}
-
-	@SuppressWarnings("unchecked")
-	private <C extends Context> void removeContext( Class<C> ctxt ) {
-		Applicator<C> apl = applicator( ctxt );
-		C current = (C) currentContext.get( ctxt );
-		apl.transition( current, null );
-		currentContext.remove( ctxt );
-	}
-
-	private <C extends Context> Applicator<C> applicator( Class<C> ctxt ) {
-		@SuppressWarnings("unchecked")
-		Applicator<C> apl = (Applicator<C>) config.applicators.get( ctxt );
-		if( apl == null ) {
-			throw new IllegalStateException( "No applicator for context type " + ctxt );
-		}
-		return apl;
-	}
-
 	private static String resultTag( int assertionCount,
 			List<AssertionError> compareFailures, List<RuntimeException> parseFailures ) {
 		if( !parseFailures.isEmpty() ) {
@@ -829,10 +833,6 @@ class FlowProcessor {
 			return Writer.SKIP_TAG;
 		}
 		return Writer.PASS_TAG;
-	}
-
-	private LogEvent warn( String msg ) {
-		return new LogEvent( Instant.now(), "WARN", logSource(), msg );
 	}
 
 	private enum MessageAssertion {
