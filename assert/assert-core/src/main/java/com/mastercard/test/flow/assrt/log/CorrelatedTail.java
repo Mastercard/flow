@@ -134,6 +134,7 @@ public class CorrelatedTail implements CorrelatedCapture {
 						offset ) );
 				offset = 0;
 				carry = new byte[0];
+				lastHeader = null;
 			}
 			int length = (int) Math.min( size - offset, readLimit );
 			if( length <= 0 ) {
@@ -156,6 +157,14 @@ public class CorrelatedTail implements CorrelatedCapture {
 			if( end > 0 ) {
 				String text = new String( data, 0, end - 1, UTF_8 );
 				deliver( Arrays.asList( text.split( "\n", -1 ) ) );
+			}
+			if( carry.length > readLimit ) {
+				// A single line longer than a whole read: deliver what we have as a fragment
+				// so that memory stays bounded and the collector's budgets engage. The rest
+				// arrives as a continuation on a later read.
+				int cut = characterBoundary( carry );
+				deliver( List.of( new String( carry, 0, cut, UTF_8 ) ) );
+				carry = Arrays.copyOfRange( carry, cut, carry.length );
 			}
 			return drain && size - offset > 0;
 		}
@@ -215,19 +224,40 @@ public class CorrelatedTail implements CorrelatedCapture {
 		}
 	}
 
+	/**
+	 * @param bytes UTF-8 content
+	 * @return The largest index at or before the end that does not split a
+	 *         multi-byte sequence
+	 */
+	private static int characterBoundary( byte[] bytes ) {
+		int lead = bytes.length - 1;
+		while( lead > 0 && (bytes[lead] & 0xC0) == 0x80 ) {
+			lead--;
+		}
+		int b = bytes[lead] & 0xFF;
+		int width = b < 0x80 ? 1 : b >= 0xF0 ? 4 : b >= 0xE0 ? 3 : 2;
+		return bytes.length - lead >= width ? bytes.length : lead;
+	}
+
 	private static String uncapturedContent( String line, Matcher m ) {
 		String[] groups = { CORRELATION_GROUP, TIME_GROUP, LEVEL_GROUP, SOURCE_GROUP };
 		int[] ranges = new int[groups.length * 2];
-		for( int i = 0; i < groups.length; i++ ) {
-			ranges[i * 2] = m.start( groups[i] );
-			ranges[i * 2 + 1] = m.end( groups[i] );
+		int captured = 0;
+		for( String group : groups ) {
+			// a group that did not participate in the match (start -1) captures nothing
+			if( m.start( group ) >= 0 ) {
+				ranges[captured++] = m.start( group );
+				ranges[captured++] = m.end( group );
+			}
 		}
-		Arrays.sort( ranges );
-		StringBuilder unmatched = new StringBuilder( line.substring( 0, ranges[0] ) );
-		for( int i = 1; i < ranges.length - 1; i += 2 ) {
-			unmatched.append( line.substring( ranges[i], ranges[i + 1] ) );
+		Arrays.sort( ranges, 0, captured );
+		StringBuilder unmatched = new StringBuilder();
+		int from = 0;
+		for( int i = 0; i < captured; i += 2 ) {
+			unmatched.append( line, from, ranges[i] );
+			from = ranges[i + 1];
 		}
-		unmatched.append( line.substring( ranges[ranges.length - 1] ) );
+		unmatched.append( line, from, line.length() );
 		return unmatched.toString().trim();
 	}
 }

@@ -174,6 +174,30 @@ class CorrelatedTailTest {
 	}
 
 	/**
+	 * Content at the start of a rewritten file belongs to no event that was read
+	 * from the old one.
+	 */
+	@Test
+	void truncationForgetsTheLastHeader( @TempDir Path dir ) throws IOException {
+		Path file = dir.resolve( "app.log" );
+		Files.createFile( file );
+		CorrelatedTail tail = new CorrelatedTail( file, PATTERN );
+		Sink sink = new Sink();
+		try( Diagnostics ignored = new Diagnostics( CorrelatedTail.class ) ) {
+			tail.open( sink );
+			append( file,
+					"050 [a] INFO src before rotation, with a message long enough to be truncated" );
+			tail.flush();
+			Files.write( file, "orphan line\n051 [b] INFO src after rotation\n".getBytes( UTF_8 ) );
+			tail.close();
+		}
+		assertEquals( List.of(
+				"a|050|INFO|src|[]   before rotation, with a message long enough to be truncated",
+				"null|?|?|?|orphan line",
+				"b|051|INFO|src|[]   after rotation" ), sink.delivered );
+	}
+
+	/**
 	 * Headers are recognised only at the line start, so an unanchored pattern
 	 * cannot match header-like text embedded in a body line, and long body lines
 	 * are scanned once rather than from every offset.
@@ -202,6 +226,29 @@ class CorrelatedTailTest {
 		assertThrows( IllegalArgumentException.class,
 				() -> new CorrelatedTail( file,
 						"^(?<time>\\d+) (?<correlation>\\S+) (?<source>\\S+)" ) );
+	}
+
+	/**
+	 * A group that did not participate in the match yields no identifier and
+	 * contributes nothing to the content calculation.
+	 */
+	@Test
+	void optionalGroupAbsentIsUnattributedNotFatal( @TempDir Path dir ) throws IOException {
+		Path file = dir.resolve( "app.log" );
+		Files.createFile( file );
+		CorrelatedTail tail = new CorrelatedTail( file,
+				"^(?<time>\\d+) (?:\\[(?<correlation>[^\\]]+)\\] )?(?<level>[A-Z]+) (?<source>\\S+)" );
+		Sink sink = new Sink();
+		tail.open( sink );
+		append( file,
+				"030 [a] INFO src with id",
+				"031 WARN src without id",
+				"032 [b] INFO src with id again" );
+		tail.close();
+		assertEquals( List.of(
+				"a|030|INFO|src|[]   with id",
+				"null|031|WARN|src|without id",
+				"b|032|INFO|src|[]   with id again" ), sink.delivered );
 	}
 
 	@Test
@@ -253,6 +300,59 @@ class CorrelatedTailTest {
 		}
 		assertEquals( 20, problems.size(), problems.toString() );
 		assertTrue( problems.stream().allMatch( p -> p.contains( "read: " ) ), problems.toString() );
+	}
+
+	/**
+	 * A line longer than one read is delivered in fragments as it is read rather
+	 * than being held until a terminator arrives, so memory stays bounded.
+	 * Fragments are cut at character boundaries: a three-byte character straddling
+	 * the cut is decoded intact in whichever fragment receives it.
+	 */
+	@Test
+	void oversizedLineIsDeliveredInFragmentsAsContinuations( @TempDir Path dir )
+			throws IOException {
+		Path file = dir.resolve( "app.log" );
+		Files.createFile( file );
+		CorrelatedTail tail = new CorrelatedTail( file, PATTERN ).readLimit( 64 );
+		Sink sink = new Sink();
+		tail.open( sink );
+		// 21-byte header, then 67 three-byte characters with no terminator
+		String line = "€".repeat( 67 );
+		Files.write( file, ("040 [a] INFO src go!\n" + line).getBytes( UTF_8 ),
+				StandardOpenOption.APPEND );
+		tail.flush();
+		tail.flush();
+		tail.flush();
+		// reads 2 and 3 each leave a carry above the limit; the first cut falls
+		// mid-character
+		assertEquals( List.of(
+				"a|040|INFO|src|[]   go!",
+				"a|040|INFO|src|" + "€".repeat( 35 ),
+				"a|040|INFO|src|" + "€".repeat( 22 ) ), sink.delivered );
+		tail.close();
+		assertEquals( 4, sink.delivered.size(), sink.delivered.toString() );
+		assertEquals( "a|040|INFO|src|" + "€".repeat( 10 ), sink.delivered.get( 3 ) );
+	}
+
+	/**
+	 * A wrong file or pattern (no headers, no terminators) still surfaces in the
+	 * report as unattributed content rather than vanishing into a growing buffer.
+	 */
+	@Test
+	void oversizedLineWithoutHeaderIsDeliveredUnattributed( @TempDir Path dir )
+			throws IOException {
+		Path file = dir.resolve( "app.log" );
+		Files.createFile( file );
+		CorrelatedTail tail = new CorrelatedTail( file, PATTERN ).readLimit( 64 );
+		Sink sink = new Sink();
+		tail.open( sink );
+		Files.write( file, "x".repeat( 200 ).getBytes( UTF_8 ), StandardOpenOption.APPEND );
+		tail.flush();
+		tail.flush();
+		assertEquals( List.of( "null|?|?|?|" + "x".repeat( 128 ) ), sink.delivered );
+		tail.close();
+		assertEquals( List.of( "null|?|?|?|" + "x".repeat( 128 ), "null|?|?|?|" + "x".repeat( 72 ) ),
+				sink.delivered );
 	}
 
 	@Test
