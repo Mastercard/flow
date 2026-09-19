@@ -50,9 +50,9 @@ final class LogCollector implements LogCapture, Collector {
 	private final Map<Flow, Buffer> buffers = new IdentityHashMap<>();
 	/** Events that reached no flow, by cause */
 	private int unattributed;
-	private int ambiguous;
+	private int ambiguousCount;
 	private int refused;
-	private final List<String> samples = new ArrayList<>();
+	private final List<String> sampledEvents = new ArrayList<>();
 
 	/**
 	 * Events for one execution. After the execution ends its snapshot is frozen;
@@ -157,7 +157,7 @@ final class LogCollector implements LogCapture, Collector {
 			return Outcome.ACCEPTED;
 		}
 		if( binding == AMBIGUOUS ) {
-			ambiguous++;
+			ambiguousCount++;
 			return unrouted( "ambiguous", correlation, event, Outcome.UNATTRIBUTED );
 		}
 		unattributed++;
@@ -167,12 +167,12 @@ final class LogCollector implements LogCapture, Collector {
 
 	private Outcome unrouted( String cause, String correlation, LogEvent event, Outcome outcome ) {
 		// most unrouted events are neither quoted nor traced, so describe only those
-		if( samples.size() < SAMPLES || UNROUTED.isLoggable( Level.FINE ) ) {
+		if( sampledEvents.size() < SAMPLES || UNROUTED.isLoggable( Level.FINE ) ) {
 			String description = String.format( "%s [%s] %s %s %s %s",
 					cause, correlation, event.time, event.level, event.source,
 					excerpt( String.valueOf( event.message ) ) );
-			if( samples.size() < SAMPLES ) {
-				samples.add( description );
+			if( sampledEvents.size() < SAMPLES ) {
+				sampledEvents.add( description );
 			}
 			UNROUTED.fine( () -> "Unrouted event: " + description );
 		}
@@ -195,21 +195,22 @@ final class LogCollector implements LogCapture, Collector {
 	 *         <code>null</code> if every event was attributed
 	 */
 	synchronized String unrouted() {
-		if( unattributed == 0 && ambiguous == 0 && refused == 0 ) {
+		if( unattributed == 0 && ambiguousCount == 0 && refused == 0 ) {
 			return null;
 		}
 		StringBuilder summary = new StringBuilder( String.format(
 				"Correlated capture attributed no flow to %d events: "
 						+ "%d without a known identifier, %d with an identifier claimed by more than one flow, "
 						+ "%d delivered after the run closed. First %d:",
-				unattributed + ambiguous + refused, unattributed, ambiguous, refused, samples.size() ) );
-		samples.forEach( sample -> summary.append( "\n  " ).append( sample ) );
+				unattributed + ambiguousCount + refused, unattributed, ambiguousCount, refused,
+				sampledEvents.size() ) );
+		sampledEvents.forEach( sample -> summary.append( "\n  " ).append( sample ) );
 		summary.append( "\nEnable FINE logging on " ).append( UNROUTED.getName() )
 				.append( " to see every unrouted event" );
 		unattributed = 0;
-		ambiguous = 0;
+		ambiguousCount = 0;
 		refused = 0;
-		samples.clear();
+		sampledEvents.clear();
 		return summary.toString();
 	}
 

@@ -1077,15 +1077,7 @@ class FlowProcessor {
 		}
 		try {
 			// close the log source first, so that late events can go into the report
-			if( capture != null ) {
-				capture.close( FlowProcessor::ordinaryPeripheralFailure );
-				capture.late().forEach( ( flow, events ) -> report(
-						writer -> writer.with( flow, detail -> detail.logs.addAll( events ) ), false ) );
-				String unrouted = capture.unrouted();
-				if( unrouted != null ) {
-					diagnostic( unrouted );
-				}
-			}
+			completeCapture( capture );
 			// a failed writer is kept so that repeated close rethrows its failure
 			if( closingReport != null ) {
 				try {
@@ -1104,6 +1096,19 @@ class FlowProcessor {
 			synchronized( this ) {
 				closing = false;
 			}
+		}
+	}
+
+	private void completeCapture( LogCollector capture ) {
+		if( capture == null ) {
+			return;
+		}
+		capture.close( FlowProcessor::ordinaryPeripheralFailure );
+		capture.late().forEach( ( flow, events ) -> report(
+				writer -> writer.with( flow, detail -> detail.logs.addAll( events ) ), false ) );
+		String unrouted = capture.unrouted();
+		if( unrouted != null ) {
+			diagnostic( unrouted );
 		}
 	}
 
