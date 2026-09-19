@@ -248,6 +248,11 @@ class FlowProcessor {
 		 * writer, which would silently discard a final-only report
 		 */
 		private String motivation;
+		/**
+		 * Assertions awaiting motivation customisation. Customisation is deferred to
+		 * report finalisation so that the customizer sees a closed, frozen log capture.
+		 */
+		private final List<Assertion> toCustomise = new ArrayList<>();
 
 		private Invocation( Flow flow ) {
 			this.flow = flow;
@@ -441,7 +446,7 @@ class FlowProcessor {
 					executionFailures.add( e );
 				}
 				finally {
-					customiseMotivation( assertion );
+					toCustomise.add( assertion );
 				}
 				return 1;
 			}
@@ -468,6 +473,7 @@ class FlowProcessor {
 
 		private void finaliseReport( int assertionCount ) {
 			List<LogEvent> logs = capture.snapshot();
+			toCustomise.forEach( this::customiseMotivation );
 			String resultTag = resultTag( assertionCount, comparisonFailures, executionFailures );
 			reportUpdates.add( d -> d.tags.add( resultTag ) );
 			reportUpdates.add( d -> d.motivation = motivation );

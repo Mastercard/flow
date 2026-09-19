@@ -1,6 +1,7 @@
 package com.mastercard.test.flow.assrt;
 
 import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -95,12 +96,12 @@ class CaptureScopeTest {
 				assertThrows( IllegalStateException.class, () -> runner.process( flow ) ) );
 		assertEquals( List.of( decoration ), List.of( primary.getSuppressed() ) );
 		assertEquals( List.of( "begin", "end", "read", "close" ), source.events );
-		assertSame( decoration,
-				assertThrows( IllegalStateException.class, runner::completeProcessing ).getCause() );
-		assertSame( decoration,
-				assertThrows( IllegalStateException.class, runner::completeProcessing ).getCause() );
+		// the customizer ran outside the writer, so the decoration fault has not
+		// latched the report
+		assertDoesNotThrow( runner::completeProcessing );
+		assertDoesNotThrow( runner::completeProcessing );
 		runner.reporting( Reporting.NEVER ).behaviour( a -> {
-			throw new AssertionError( "A failed close must still prevent SUT use" );
+			throw new AssertionError( "A completed run must still prevent SUT use" );
 		} );
 		assertThrows( IllegalStateException.class, () -> runner.process( flow ) );
 		assertEquals( List.of( "begin", "end", "read", "close" ), source.events );
