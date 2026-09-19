@@ -33,17 +33,28 @@ import com.mastercard.test.flow.util.Tags;
  * test</a>, e.g.:
  *
  * <pre>
- * &#64;TestFactory
- * Stream&lt;DynamicNode&gt; flows() {
- * 	return new Flocessor( "My test name", MY_SYSTEM_MODEL )
+ * &#64;TestInstance(Lifecycle.PER_CLASS)
+ * class MyTest {
+ * 	private final Flocessor flows = new Flocessor( "My test name", MY_SYSTEM_MODEL )
  * 			.system( State.LESS, MY_ACTORS_UNDER_TEST )
  * 			.behaviour( asrt -&gt; {
  * 				// test behaviour
- * 			} ).tests();
+ * 			} );
+ *
+ * 	&#64;TestFactory
+ * 	Stream&lt;DynamicNode&gt; flows() {
+ * 		return flows.tests();
+ * 	}
+ *
+ * 	// Factory return can precede dynamic children; close only after they finish.
+ * 	&#64;AfterAll
+ * 	void complete() {
+ * 		flows.close();
+ * 	}
  * }
  * </pre>
  */
-public class Flocessor extends AbstractFlocessor<Flocessor> {
+public class Flocessor extends AbstractFlocessor<Flocessor> implements AutoCloseable {
 
 	/**
 	 * @param title A meaningful name for the test
@@ -51,6 +62,20 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 	 */
 	public Flocessor( String title, Model model ) {
 		super( title, model );
+	}
+
+	/**
+	 * Stops processing and closes the report. Call from {@code @AfterAll}, after
+	 * all dynamic tests have finished; returning the stream from the factory does
+	 * not mean the tests have run. Without this call the report is not published.
+	 *
+	 * @throws IllegalStateException if an invocation or completion is still active,
+	 *                               or reporting has failed; a reporting failure
+	 *                               remains observable on repeated close
+	 */
+	@Override
+	public void close() {
+		completeProcessing();
 	}
 
 	/**
@@ -151,7 +176,13 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 	 */
 	private static final Pattern TRACE = Pattern.compile( "(\\S+)\\.[^.]+?\\.java:(\\d+)\\)" );
 
-	private static URI testSource( Flow flow ) {
+	/**
+	 * Resolves existing Flow source metadata for native test navigation.
+	 *
+	 * @param flow The flow whose source is required
+	 * @return A supported source URI, or null when the trace cannot be parsed
+	 */
+	static URI testSource( Flow flow ) {
 		URI uri = null;
 		try {
 			String addendaStripped = flow.meta().trace().replaceAll( " \\[.*?\\]$", "" );

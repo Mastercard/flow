@@ -35,20 +35,21 @@ There is a certain amount of unavoidable boilerplate required to hook the `Floce
 @RunWith(Parameterized.class)
 public class MyTest {
 
-  private static final Flocessor flows = new Flocessor( "my flow test", mySystemModel )
-    .system( /* The actors that are being exercised */ )
-    .behaviour( asrt -> {
-      // implement this to push data from asrt into your system 
-      // and then put the system outputs back into asrt
-    } );
-
-  // Boilerplate from here on
+  private static Flocessor flows;
 
   /** @return The {@link Flow} parameters */
   @Parameters(name = "{0}")
   public static Collection<Object[]> flows() {
+    flows = new Flocessor( "my flow test", mySystemModel )
+      .system( /* The actors that are being exercised */ )
+      .behaviour( asrt -> {
+        // implement this to push data from asrt into your system
+        // and then put the system outputs back into asrt
+      } );
     return flows.parameters();
   }
+
+  // Boilerplate from here on
 
   /** Human-readable name for the current test case */
   @Parameter(0)
@@ -67,5 +68,19 @@ public class MyTest {
   public void test() {
     flows.process( flow );
   }
+
+  /** Closes reporting after all parameterized cases, including failures. */
+  @AfterClass
+  public static void complete() {
+    flows.close();
+  }
 }
 ```
+
+The `Flocessor` is `AutoCloseable`. Close it from `@AfterClass`, after all
+parameterized cases have finished, which is what publishes the report. Create it in
+`@Parameters` rather than `@BeforeClass`: parameter enumeration happens first, and a
+fresh runner is needed for each JUnit run of the class. `close()` fails if a flow is
+still being processed; afterwards no further flows can be processed. Closing a
+second time does nothing, unless the report failed to close, in which case the
+failure is thrown again.

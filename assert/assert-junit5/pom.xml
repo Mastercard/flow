@@ -46,6 +46,11 @@
 				<groupId>org.pitest</groupId>
 				<artifactId>pitest-maven</artifactId>
 				<configuration>
+					<!-- The @FlowTest fixture classes are driven by their controlling *Test
+					     through a nested Launcher; they are not runnable on their own -->
+					<targetTests>
+						<param>com.mastercard.test.flow.assrt.junit5.*Test</param>
+					</targetTests>
 					<!-- I'm not saying these *have* to stay where they are, just that 
 				     we shouldn't let them slip down by accident -->
 					<mutationThreshold>82</mutationThreshold>

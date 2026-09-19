@@ -45,6 +45,26 @@ class SysOutTest {
 		accept( "../report/duct/src/main/java/com/mastercard/test/flow/report/duct/"
 				+ "Duct.java",
 				"System.err.println( \"Failed to browse \" + served );" );
+		// Report and capture faults that did not fail the test are still reported,
+		// through one helper, without feeding back into a captured log backend.
+		accept( "../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/"
+				+ "FlowProcessor.java",
+				"System.err.println( \"Flow: \" + message );" );
+		// Log-file source problems are not flow evidence and cannot be attributed to
+		// a flow, so they are reported the same way as the runner's own diagnostics.
+		accept( "../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/log/"
+				+ "CorrelatedTail.java",
+				"System.err.println( \"Log capture source \" + file + \": \" + description );" );
+		accept( "../assert/assert-core/src/test/java/com/mastercard/test/flow/assrt/log/"
+				+ "CorrelatedTailTest.java",
+				"PrintStream original = System.err;" );
+		// Report-fault tests capture and restore the required diagnostic.
+		accept( "../assert/assert-core/src/test/java/com/mastercard/test/flow/assrt/"
+				+ "ReportingTest.java",
+				"PrintStream original = System.err;" );
+		accept( "../assert/assert-junit5/src/test/java/com/mastercard/test/flow/assrt/junit5/"
+				+ "FlowExecutionTest.java",
+				"PrintStream original = System.err;" );
 	}
 
 	private static void accept( String file, String... line ) {

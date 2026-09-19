@@ -183,6 +183,7 @@ public class Flw implements Flow {
 		}
 	}
 
+	/** An order-only prerequisite: the address names a flow and nothing else */
 	private static class FA implements FieldAddress {
 		private final Flow flow;
 
@@ -197,17 +198,17 @@ public class Flw implements Flow {
 
 		@Override
 		public Function<Flow, Interaction> interaction() {
-			throw new UnsupportedOperationException();
+			return null;
 		}
 
 		@Override
 		public Function<Interaction, Message> message() {
-			throw new UnsupportedOperationException();
+			return null;
 		}
 
 		@Override
 		public String field() {
-			throw new UnsupportedOperationException();
+			return null;
 		}
 	}
 }

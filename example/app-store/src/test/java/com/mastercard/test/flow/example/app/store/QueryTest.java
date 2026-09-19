@@ -32,6 +32,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -62,6 +64,7 @@ import com.mastercard.test.flow.util.Option.Temporary;
  * the queries that the app issues.
  */
 @SuppressWarnings("static-method")
+@TestInstance(Lifecycle.PER_CLASS)
 class QueryTest {
 
 	private static final Logger LOG = LoggerFactory.getLogger( QueryTest.class );
@@ -70,6 +73,7 @@ class QueryTest {
 	private static final Consequests queries = new Consequests();
 	private static final Instance service = new Main( db ).build();
 	private static Temporary reportName;
+	private Flocessor flocessor;
 
 	/**
 	 * Starts the service
@@ -98,7 +102,7 @@ class QueryTest {
 	 */
 	@TestFactory
 	Stream<DynamicNode> flows() {
-		Flocessor flocessor = new Flocessor( "Query test", ExampleSystem.MODEL )
+		flocessor = new Flocessor( "Query test", ExampleSystem.MODEL )
 				.reporting( FAILURES, "query" )
 				.exercising( flow -> Flows.intersects( flow, Actors.STORE ), LOG::info )
 				.system( State.LESS, Actors.STORE )
@@ -131,6 +135,17 @@ class QueryTest {
 				} );
 		return flocessor
 				.tests();
+	}
+
+	/**
+	 * Closes reporting after dynamic children have finished capturing database
+	 * calls.
+	 */
+	@AfterAll
+	void completeFlows() {
+		if( flocessor != null ) {
+			flocessor.close();
+		}
 	}
 
 	/**

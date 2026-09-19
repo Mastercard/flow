@@ -8,6 +8,9 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
@@ -21,7 +24,9 @@ import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
  * {@link MetaTest}.
  */
 @SuppressWarnings("static-method")
+@TestInstance(Lifecycle.PER_CLASS)
 class ExampleTest {
+	private Flocessor flocessor;
 
 	/**
 	 * Set this to true if you want the test to do anything
@@ -41,7 +46,7 @@ class ExampleTest {
 	 */
 	@TestFactory
 	Stream<DynamicNode> flows() {
-		return new Flocessor( "junit 5 example test", new Mdl() )
+		flocessor = new Flocessor( "junit 5 example test", new Mdl() )
 				.system( State.FUL, Actrs.BEN )
 				.behaviour( asrt -> {
 					if( asrt.flow().meta().id().contains( "success" ) ) {
@@ -56,7 +61,19 @@ class ExampleTest {
 					else {
 						asrt.actual().response( "unsupported behaviour".getBytes( UTF_8 ) );
 					}
-				} ).tests();
+				} );
+		return flocessor.tests();
+	}
+
+	/**
+	 * Closes reporting after dynamic children; activation may have skipped the
+	 * factory.
+	 */
+	@AfterAll
+	void completeFlows() {
+		if( flocessor != null ) {
+			flocessor.close();
+		}
 	}
 
 }
