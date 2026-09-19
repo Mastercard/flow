@@ -20,6 +20,7 @@ import org.junit.platform.launcher.core.LauncherFactory;
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anySet;
@@ -102,6 +103,7 @@ class FlocessorTest {
 		 */
 		@TestFactory
 		Stream<DynamicNode> flows() {
+			assertNotNull( test, "The retained test is supplied before the engine runs" );
 			return Stream.of( test );
 		}
 

@@ -1,38 +1,37 @@
 package com.mastercard.test.flow.assrt;
 
-import static com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome.ACCEPTED;
-import static com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome.CLOSED;
-import static com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome.LATE;
-import static com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome.UNATTRIBUTED;
-import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.toList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
-import com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome;
+import static com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome.ACCEPTED;
+import static com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome.CLOSED;
+import static com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome.LATE;
+import static com.mastercard.test.flow.assrt.CorrelatedCapture.Outcome.UNATTRIBUTED;
+import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
 import com.mastercard.test.flow.assrt.log.CorrelatedTail;
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.data.Entry;
@@ -51,6 +50,7 @@ class CorrelatedCaptureTest {
 		final List<String> lifecycle = new ArrayList<>();
 		Collector collector;
 		RuntimeException flushFailure;
+		RuntimeException closeFailure;
 
 		@Override
 		public void open( Collector c ) {
@@ -69,9 +69,12 @@ class CorrelatedCaptureTest {
 		@Override
 		public void close() {
 			lifecycle.add( "close" );
+			if( closeFailure != null ) {
+				throw closeFailure;
+			}
 		}
 
-		Outcome emit( String correlation, String message ) {
+		CorrelatedCapture.Outcome emit( String correlation, String message ) {
 			return collector.accept( correlation,
 					new LogEvent( "time", "INFO", "sut", message ) );
 		}
@@ -97,7 +100,7 @@ class CorrelatedCaptureTest {
 		Map<String, List<String>> logs = new ConcurrentHashMap<>();
 		for( Entry entry : reader.read().entries ) {
 			logs.put( entry.description, reader.detail( entry ).logs.stream()
-					.map( e -> e.level + " " + e.message ).collect( toList() ) );
+					.map( e -> e.level + " " + e.message ).toList() );
 		}
 		return logs;
 	}
@@ -170,7 +173,7 @@ class CorrelatedCaptureTest {
 	}
 
 	@Test
-	void identifiersAreGeneratedWhenNotExtracted( @TempDir Path directory ) throws Exception {
+	void identifiersAreGeneratedWhenNotExtracted( @TempDir Path directory ) {
 		Source source = new Source();
 		List<String> ids = new ArrayList<>();
 		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
@@ -207,7 +210,7 @@ class CorrelatedCaptureTest {
 				} ) ) {
 			runner.execute();
 			assertEquals( 3, ids.stream().distinct().count() );
-			assertEquals( 3, ids.stream().filter( id -> id != null ).count() );
+			assertEquals( 3, ids.stream().filter( Objects::nonNull ).count() );
 			assertNull( runner.report() );
 		}
 	}
@@ -225,8 +228,7 @@ class CorrelatedCaptureTest {
 	}
 
 	@Test
-	void aliasesAttributeAndReusedIdentifiersAreAmbiguous( @TempDir Path directory )
-			throws Exception {
+	void aliasesAttributeAndReusedIdentifiersAreAmbiguous( @TempDir Path directory ) {
 		Source source = new Source();
 		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
 				TestFlocessor runner = runner( "aliases", source, directory, a -> {
@@ -329,5 +331,59 @@ class CorrelatedCaptureTest {
 					assertThrows( IllegalStateException.class, runner::completeProcessing ) );
 			assertEquals( List.of( "open", "flush", "flush", "close" ), source.lifecycle );
 		}
+	}
+
+	/**
+	 * The source is closed even when its final flush fails, and a close failure is
+	 * retained alongside the flush failure rather than replacing it
+	 *
+	 * @param flushFails Whether the final flush fails too
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void closeFailureIsRetained( boolean flushFails ) {
+		Source source = new Source();
+		LogCollector collector = new LogCollector( source );
+		Flow flow = TestModel.abc().flows().findFirst().orElseThrow();
+		collector.start( flow );
+		assertEquals( List.of( "open" ), source.lifecycle );
+		source.closeFailure = new IllegalStateException( new AssertionError( "close" ) );
+		if( flushFails ) {
+			source.flushFailure = new IllegalStateException( new AssertionError( "flush" ) );
+		}
+		IllegalStateException thrown = assertThrows( IllegalStateException.class,
+				() -> collector.close( f -> false ) );
+		assertEquals( List.of( "open", "flush", "close" ), source.lifecycle );
+		if( flushFails ) {
+			assertSame( source.flushFailure, thrown );
+			assertEquals( List.of( source.closeFailure ), List.of( thrown.getSuppressed() ) );
+		}
+		else {
+			assertSame( source.closeFailure, thrown );
+			assertEquals( 0, thrown.getSuppressed().length );
+		}
+		assertEquals( CLOSED, source.emit( "any", "after close" ) );
+		// repeated close does nothing
+		collector.close( f -> false );
+		assertEquals( List.of( "open", "flush", "close" ), source.lifecycle );
+	}
+
+	/** Late events are handed over once, then forgotten */
+	@Test
+	void lateEventsAreDrainedOnce() {
+		Source source = new Source();
+		LogCollector collector = new LogCollector( source );
+		Flow flow = TestModel.abc().flows().findFirst().orElseThrow();
+		collector.start( flow );
+		collector.bind( flow, "id" );
+		assertEquals( ACCEPTED, source.emit( "id", "during" ) );
+		try( var events = collector.end( flow ) ) {
+			assertEquals( List.of( "during" ), events.map( e -> e.message ).toList() );
+		}
+		assertEquals( Map.of(), collector.late() );
+		assertEquals( LATE, source.emit( "id", "after" ) );
+		Map<Flow, List<LogEvent>> late = collector.late();
+		assertEquals( List.of( "after" ), late.get( flow ).stream().map( e -> e.message ).toList() );
+		assertEquals( Map.of(), collector.late() );
 	}
 }

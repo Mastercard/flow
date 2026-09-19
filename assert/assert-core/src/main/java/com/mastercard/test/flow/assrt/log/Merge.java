@@ -47,13 +47,13 @@ public class Merge implements LogCapture {
 				begun.add( source );
 			}
 		}
-		catch( RuntimeException | Error primary ) {
+		catch( RuntimeException | AssertionError primary ) {
 			// The outer owner cannot end a start that threw. Roll back only children
 			// that returned successfully, preserving the original failure.
 			try( Stream<LogEvent> ignored = end( flow ) ) {
 				// end has already materialized and closed the child streams.
 			}
-			catch( RuntimeException | Error cleanup ) {
+			catch( RuntimeException | AssertionError cleanup ) {
 				if( primary != cleanup ) {
 					primary.addSuppressed( cleanup );
 				}
@@ -72,7 +72,7 @@ public class Merge implements LogCapture {
 				try( Stream<LogEvent> events = source.end( flow ) ) {
 					events.forEach( combined::add );
 				}
-				catch( RuntimeException | Error e ) {
+				catch( RuntimeException | AssertionError e ) {
 					if( failure == null ) {
 						failure = e;
 					}
@@ -82,7 +82,7 @@ public class Merge implements LogCapture {
 				}
 			}
 		}
-		if( failure instanceof Error error ) {
+		if( failure instanceof AssertionError error ) {
 			throw error;
 		}
 		if( failure instanceof RuntimeException runtime ) {

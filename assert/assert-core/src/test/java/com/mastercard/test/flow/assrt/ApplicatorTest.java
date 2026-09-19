@@ -12,10 +12,14 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.mastercard.test.flow.Context;
+import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.mock.AltTestContext;
+import com.mastercard.test.flow.assrt.mock.Mdl;
 import com.mastercard.test.flow.assrt.mock.TestContext;
 
 /**
@@ -101,6 +105,39 @@ class ApplicatorTest {
 				"switch from AltTestContext[alt ctx] to null",
 				"switch from TestContext[first ctx] to TestContext[second ctx]" ),
 				copypasta( ctxSwitchLog ) );
+	}
+
+	/**
+	 * Under concurrent context handling a context-free flow leaves the applied
+	 * state alone rather than removing it; serial handling removes it.
+	 *
+	 * @param concurrent Whether context-free flows may run alongside context flows
+	 */
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void contextFreeFlowsUnderConcurrentContexts( boolean concurrent ) {
+		Flow contextual = TestModel.withContext().flows().findFirst().orElseThrow();
+		Flow free = TestModel.abc().flows().findFirst().orElseThrow();
+		TestFlocessor tf = new TestFlocessor( "concurrent contexts",
+				new Mdl().withFlows( contextual, free ) )
+						.system( State.FUL, B )
+						.applicators( APPLICATOR, ALT_APPLICATOR )
+						.behaviour( assrt -> assrt.actual().response( assrt.expected().response().content() ) );
+		if( concurrent ) {
+			tf.concurrentContexts();
+		}
+		assertEquals( 2, tf.flows().count() );
+		tf.process( contextual );
+		tf.process( free );
+		// orphaned context types are removed in hash order, so compare sorted
+		assertEquals( copypasta( concurrent
+				? List.of( "switch from null to AltTestContext[alt ctx]",
+						"switch from null to TestContext[first ctx]" )
+				: List.of( "switch from AltTestContext[alt ctx] to null",
+						"switch from TestContext[first ctx] to null",
+						"switch from null to AltTestContext[alt ctx]",
+						"switch from null to TestContext[first ctx]" ) ),
+				copypasta( ctxSwitchLog.stream().sorted() ) );
 	}
 
 	/**

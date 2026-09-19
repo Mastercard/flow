@@ -12,7 +12,6 @@ import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -81,7 +80,7 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 		}
 		List<Flow> selected;
 		try( Stream<Flow> flows = prepareFlows() ) {
-			selected = flows.collect( Collectors.toList() );
+			selected = flows.toList();
 		}
 		Set<String> identities = new HashSet<>();
 		for( Flow flow : selected ) {
@@ -176,7 +175,7 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 		private String outstanding() {
 			synchronized( history ) {
 				return "running: " + running.stream().sorted().map( i -> flows.get( i ).meta().id() )
-						.collect( Collectors.toList() ) + ", not started: " + (flows.size() - emitted);
+						.toList() + ", not started: " + (flows.size() - emitted);
 			}
 		}
 
@@ -194,12 +193,30 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 			}
 		}
 
+		private void processSelected( Flow flow ) {
+			try {
+				process( flow );
+				history.recordResult( flow, Result.SUCCESS );
+			}
+			catch( IncompleteExecutionException e ) {
+				history.recordResult( flow, Result.SKIP );
+				throw e;
+			}
+			catch( AssertionError e ) {
+				history.recordResult( flow, Result.UNEXPECTED );
+				throw e;
+			}
+			catch( Exception e ) {
+				history.recordResult( flow, Result.ERROR );
+				throw e;
+			}
+		}
+
 		/**
 		 * Waits on the History monitor until a flow is ready or the deadline passes.
 		 */
 		private final class Blocker implements ForkJoinPool.ManagedBlocker {
 			private long deadline;
-			private int observed;
 
 			Blocker( long deadline ) {
 				this.deadline = deadline;
@@ -208,7 +225,7 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 			@Override
 			public boolean block() throws InterruptedException {
 				synchronized( history ) {
-					observed = completed;
+					int observed = completed;
 					while( ready.isEmpty() ) {
 						long remaining = deadline - System.nanoTime();
 						if( remaining <= 0 ) {
@@ -231,25 +248,6 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 					return !ready.isEmpty() || deadline - System.nanoTime() <= 0;
 				}
 			}
-		}
-	}
-
-	private void processSelected( Flow flow ) {
-		try {
-			process( flow );
-			history.recordResult( flow, Result.SUCCESS );
-		}
-		catch( IncompleteExecutionException e ) {
-			history.recordResult( flow, Result.SKIP );
-			throw e;
-		}
-		catch( AssertionError e ) {
-			history.recordResult( flow, Result.UNEXPECTED );
-			throw e;
-		}
-		catch( Exception e ) {
-			history.recordResult( flow, Result.ERROR );
-			throw e;
 		}
 	}
 

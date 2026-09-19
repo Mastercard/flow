@@ -1,13 +1,12 @@
 package com.mastercard.test.flow.assrt;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import com.mastercard.test.flow.Flow;
@@ -31,6 +30,7 @@ class PrecedenceTest {
 		Flow b = flow( "b", a );
 		Flow c = flow( "c", a );
 		Precedence order = new Precedence( List.of( a, b, c ) );
+		assertEquals( 3, order.size() );
 		assertEquals( List.of( 0 ), order.roots() );
 		assertEquals( Set.of( 1, 2 ), order.successors( 0 ) );
 		assertEquals( Set.of(), order.successors( 1 ) );
@@ -138,15 +138,18 @@ class PrecedenceTest {
 
 		Flow source = flow( "source" );
 		Flow dependent = flow( "dependent", source );
+		List<Flow> absent = List.of( dependent );
 		assertEquals( "Absent or noncanonical Flow prerequisite",
 				assertThrows( IllegalArgumentException.class,
-						() -> new Precedence( List.of( dependent ) ) ).getMessage() );
+						() -> new Precedence( absent ) ).getMessage() );
+		List<Flow> noncanonical = List.of( dependent, source );
 		assertEquals( "Absent or noncanonical Flow prerequisite",
 				assertThrows( IllegalArgumentException.class,
-						() -> new Precedence( List.of( dependent, source ) ) ).getMessage() );
+						() -> new Precedence( noncanonical ) ).getMessage() );
 
+		List<Flow> duplicate = List.of( source, source );
 		assertEquals( "Duplicate selected Flow reference", assertThrows( IllegalArgumentException.class,
-				() -> new Precedence( List.of( source, source ) ) ).getMessage() );
+				() -> new Precedence( duplicate ) ).getMessage() );
 
 		// A1 -> B -> A2 cannot coexist with uninterrupted A1/A2 execution
 		Flow a1 = chained( "a1", "A" );

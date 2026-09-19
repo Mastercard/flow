@@ -7,13 +7,13 @@ import static com.mastercard.test.flow.util.Transmission.Type.REQUEST;
 import static com.mastercard.test.flow.util.Transmission.Type.RESPONSE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -50,6 +51,7 @@ import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.data.Entry;
 import com.mastercard.test.flow.report.data.FlowData;
 import com.mastercard.test.flow.report.data.Index;
+import com.mastercard.test.flow.report.data.LogEvent;
 import com.mastercard.test.flow.util.Option.Temporary;
 
 /**
@@ -258,6 +260,86 @@ class AbstractFlocessorTest {
 	}
 
 	/**
+	 * Every configuration method consults the adapter's mutation guard first
+	 */
+	@Test
+	void everyConfigurationMethodIsGuarded() {
+		TestFlocessor tf = new TestFlocessor( "guarded", TestModel.abc() ) {
+			@Override
+			protected void beforeConfiguration() {
+				throw new IllegalStateException( "frozen" );
+			}
+		};
+		List<Runnable> mutations = List.of(
+				() -> tf.reporting( Reporting.NEVER ),
+				() -> tf.masking(),
+				() -> tf.system( State.LESS, B ),
+				() -> tf.autonomous(),
+				() -> tf.applicators(),
+				() -> tf.checkers(),
+				() -> tf.logs( LogCapture.NO_OP ),
+				() -> tf.logs( new CorrelatedCaptureTest.Source() ),
+				() -> tf.correlation( f -> null ),
+				() -> tf.listening( new Listener() {
+				} ),
+				() -> tf.filtering( f -> {
+				} ),
+				() -> tf.exercising( f -> true, r -> {
+				} ),
+				() -> tf.behaviour( a -> {
+				} ),
+				() -> tf.motivation( ( m, a ) -> m ) );
+		for( Runnable mutation : mutations ) {
+			assertEquals( "frozen",
+					assertThrows( IllegalStateException.class, mutation::run ).getMessage() );
+		}
+		assertEquals( 14, mutations.size() );
+	}
+
+	/**
+	 * Concurrent execution accepts correlated capture only, and never replay
+	 */
+	@Test
+	void concurrentConfigurationRequirements( @TempDir Path directory ) {
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "replayed" ) ) {
+			TestFlocessor plain = new TestFlocessor( "plain", TestModel.abc() )
+					.system( State.LESS, B ).reporting( Reporting.QUIETLY, "concurrent" )
+					.behaviour( a -> a.actual().response( a.expected().response().content() ) );
+			plain.requireConcurrentConfiguration();
+			plain.logs( new CorrelatedCaptureTest.Source() );
+			plain.requireConcurrentConfiguration();
+			assertEquals( Set.of( B ), plain.system() );
+			plain.logs( LogCapture.NO_OP );
+			plain.requireConcurrentConfiguration();
+			plain.logs( new LogCapture() {
+				@Override
+				public void start( Flow flow ) {
+					// no-op
+				}
+
+				@Override
+				public Stream<LogEvent> end( Flow flow ) {
+					return Stream.empty();
+				}
+			} );
+			assertTrue( assertThrows( IllegalStateException.class, plain::requireConcurrentConfiguration )
+					.getMessage().startsWith( "Interval-based LogCapture" ) );
+			plain.execute();
+			plain.completeProcessing();
+
+			try( Temporary replay = AssertionOptions.REPLAY.temporarily( plain.report().toString() ) ) {
+				TestFlocessor replayed = new TestFlocessor( "replayed", TestModel.abc() )
+						.system( State.LESS, B ).reporting( Reporting.QUIETLY, "concurrent" )
+						.logs( new CorrelatedCaptureTest.Source() );
+				assertEquals( "Replay is not supported for concurrent flows",
+						assertThrows( IllegalStateException.class, replayed::requireConcurrentConfiguration )
+								.getMessage() );
+			}
+		}
+	}
+
+	/**
 	 * Enumeration is not execution or completion, and legacy configuration remains
 	 * live after enumeration and between invocations.
 	 */
@@ -276,7 +358,7 @@ class AbstractFlocessorTest {
 		try( tf ) {
 			List<Flow> selected;
 			try( Stream<Flow> flows = tf.flows() ) {
-				selected = flows.collect( Collectors.toList() );
+				selected = flows.toList();
 			}
 			assertEquals( 2, selected.size() );
 			assertTrue( events.isEmpty() );
@@ -343,9 +425,9 @@ class AbstractFlocessorTest {
 			assertEquals( 2, evidence.size() );
 			// Legacy checkers receive the harvested assertions once per message type.
 			assertEquals( List.of( "abc", "abc" ), evidence.get( 0 ).stream()
-					.map( a -> a.flow().meta().description() ).collect( Collectors.toList() ) );
+					.map( a -> a.flow().meta().description() ).toList() );
 			assertEquals( List.of( "def", "def" ), evidence.get( 1 ).stream()
-					.map( a -> a.flow().meta().description() ).collect( Collectors.toList() ) );
+					.map( a -> a.flow().meta().description() ).toList() );
 			Reader report = new Reader( tf.report() );
 			Index index = report.read();
 			assertEquals( 2, index.entries.size() );
@@ -827,6 +909,40 @@ class AbstractFlocessorTest {
 			assertEquals( "Skipping flow: "
 					+ "Implicitly depends on D, which is not part of the system under test",
 					msg );
+		}
+	}
+
+	/**
+	 * An adapter whose skip signal returns rather than throws still gets the skip
+	 * recorded to the report, and processing continues to the SUT
+	 */
+	@Test
+	void returningSkipIsReported() {
+		List<String> events = new ArrayList<>();
+		try( TestFlocessor tf = new TestFlocessor( "returningSkip", TestModel.abcWithImplicit() ) {
+			@Override
+			protected void skip( String reason ) {
+				events.add( "SKIP " + reason );
+			}
+		}.system( State.FUL, B )
+				.reporting( Reporting.QUIETLY )
+				.behaviour( assrt -> {
+					events.add( "SUT" );
+					assrt.actual().response( assrt.expected().response().content() );
+				} ) ) {
+			tf.execute();
+
+			assertEquals( List.of(
+					"SKIP Implicitly depends on D, which is not part of the system under test",
+					"SUT" ), events );
+			Reader r = new Reader( tf.report() );
+			Entry ie = r.read().entries.get( 0 );
+			FlowData fd = r.detail( ie );
+			assertTrue( ie.tags.contains( "SKIP" ), ie.tags.toString() );
+			assertTrue( fd.tags.contains( "PASS" ), fd.tags.toString() );
+			assertEquals( "Skipping flow: "
+					+ "Implicitly depends on D, which is not part of the system under test",
+					fd.logs.get( 0 ).message );
 		}
 	}
 
