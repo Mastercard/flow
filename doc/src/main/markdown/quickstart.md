@@ -54,7 +54,7 @@ public static String getGreetingResponse( String input ) {
 	return output;
 }
 ```
-[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/BenSys.java#L15-L23,15-23)
+[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/BenSys.java#L17-L25,17-25)
 
 <!-- snippet end -->
 

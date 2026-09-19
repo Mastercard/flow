@@ -137,6 +137,66 @@ Two kinds of source are supported:
  * For a system in the same JVM, implement `CorrelatedCapture` directly and push events from your logging backend. For example, a logback `AppenderBase<ILoggingEvent>` whose `append` method calls `collector.accept( event.getMDCPropertyMap().get( "correlationId" ), new LogEvent( ... ) )`, registered in `open` and removed in `close`. The library has no logging-backend dependency.
 
 Capture problems (an unreadable or rotated log file, a source that fails to flush) are logged as warnings and recorded in the affected flow's report entry; they never fail an otherwise-passing test.
+
+### Parallel execution
+
+Putting the above together, the [quickstart example](quickstart.md#assertion) becomes a parallel test under JUnit 5 by adding `@FlowTest` and `@Execution(CONCURRENT)`, taking the `FlowExecution` handle as a factory parameter, passing `asrt.correlation().id()` to the system under test and supplying a `CorrelatedCapture`. Here the system is in the same JVM, so the capture pushes events straight from the system's log hook:
+
+<!-- snippet start -->
+
+<!-- ParallelAssertionTest:parallel -->
+
+```java
+@FlowTest
+@Execution(ExecutionMode.CONCURRENT)
+class ParallelAssertionTest {
+
+	/**
+	 * @param execution Supplied by {@link FlowTest}; owns the run and closes the
+	 *                  report when the class finishes
+	 * @return Test instances, each emitted once the flows it must follow have
+	 *         finished
+	 */
+	@TestFactory
+	Stream<DynamicNode> tests( FlowExecution execution ) {
+		return execution.flocessor( "Ben behaviour", new Greetings() )
+				.system( State.LESS, BEN )
+				.reporting( Reporting.QUIETLY )
+				.logs( new BenLogs() )
+				.behaviour( asrt -> {
+					String input = new String( asrt.expected().request().content(), UTF_8 );
+					// the system under test is told which flow is calling it...
+					String output = BenSys.getGreetingResponse( input, asrt.correlation().id() );
+					asrt.actual()
+							.request( input.getBytes( UTF_8 ) )
+							.response( output.getBytes( UTF_8 ) );
+				} )
+				.tests();
+	}
+
+	/**
+	 * ... and it puts that identifier on every log event, so they can be routed to
+	 * the right flow's report entry however the flows interleave
+	 */
+	private static class BenLogs implements CorrelatedCapture {
+		@Override
+		public void open( Collector collector ) {
+			BenSys.listen( ( correlation, message ) -> collector.accept( correlation,
+					new LogEvent( Instant.now().toString(), "INFO", BenSys.class.getName(), message ) ) );
+		}
+
+		@Override
+		public void close() {
+			BenSys.listen( null );
+		}
+	}
+}
+```
+[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/ParallelAssertionTest.java#L30-L73,30-73)
+
+<!-- snippet end -->
+
+Enable [Jupiter's parallel execution](https://junit.org/junit5/docs/current/user-guide/#writing-tests-parallel-execution) with `junit.jupiter.execution.parallel.enabled=true` and independent flows run at the same time. See the [assert-junit5 documentation](../../../../assert/assert-junit5/README.md#concurrent-flows) for which flows are kept apart, and what remains the test author's responsibility.
  
 <!-- code_link_start -->
 
@@ -287,7 +347,7 @@ Consider the following worked example:
 [Rolling?d\+]: ../../test/java/com/mastercard/test/flow/doc/mask/Rolling.java#L30,30
 [msg.Mask]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java
 [msg.Mask.andThen(Consumer)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java#L290-L292,290-292
-[BenDiceTest?masking]: ../../test/java/com/mastercard/test/flow/doc/mask/BenDiceTest.java#L36,36
+[BenDiceTest?masking]: ../../test/java/com/mastercard/test/flow/doc/mask/BenDiceTest.java#L31,31
 [BenTest]: ../../test/java/com/mastercard/test/flow/doc/mask/BenTest.java
 [AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L115-L122,115-122
 
