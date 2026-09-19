@@ -105,6 +105,11 @@ Flows are kept apart only by what the model already declares:
  * flows that apply a `Context` to the system run one after another, while flows
    without contexts may overlap them and leave the applied state untouched.
 
+That last rule holds whether or not parallel execution is enabled: under `@FlowTest`
+a context-free flow never removes the previous flow's context, where `Flocessor`
+would have. A flow that depends on *no* context being applied should declare the
+context it needs instead.
+
 Everything else may overlap, including unrelated flows running alongside a chain.
 A chain is not a lock on the system under test. System state that flows share
 without a model link — no dependency binding, basis, shared destination message

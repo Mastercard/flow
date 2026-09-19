@@ -80,8 +80,8 @@ Note that only the tag/index-based filtering can be used to avoid flow construct
 
 <!-- code_link_start -->
 
-[AbstractFlocessor.filtering(Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L257-L265,257-265
-[AbstractFlocessor.exercising(Predicate,Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L271-L296,271-296
+[AbstractFlocessor.filtering(Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L262-L270,262-270
+[AbstractFlocessor.exercising(Predicate,Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L276-L301,276-301
 
 <!-- code_link_end -->
 
@@ -147,7 +147,7 @@ Capture problems (an unreadable or rotated log file, a source that fails to flus
 [CorrelatedCapture]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/CorrelatedCapture.java
 [CorrelatedTail]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/log/CorrelatedTail.java
 [Assertion!.correlation()]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Assertion.java#L61-L67,61-67
-[AbstractFlocessor.correlation(Function)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L221-L230,221-230
+[AbstractFlocessor.correlation(Function)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L221-L235,221-235
 
 <!-- code_link_end -->
 
@@ -157,7 +157,7 @@ The motivation text in the report can be enhanced with additional information su
 <!-- code_link_start -->
 
 [MotivationCustomizer]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/MotivationCustomizer.java
-[AbstractFlocessor.motivation(MotivationCustomizer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L317-L326,317-326
+[AbstractFlocessor.motivation(MotivationCustomizer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L322-L331,322-331
 
 <!--code_link_end-->
 ## Interaction structure

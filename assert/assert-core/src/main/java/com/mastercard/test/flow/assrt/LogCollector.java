@@ -36,6 +36,10 @@ final class LogCollector implements LogCapture, Collector {
 	/** Routing by identifier: a {@link Buffer}, or ambiguous */
 	private final Map<String, Object> bindings = new LinkedHashMap<>();
 	private final Map<Flow, Buffer> buffers = new IdentityHashMap<>();
+	/** Events that reached no flow, by cause */
+	private int unattributed;
+	private int ambiguous;
+	private int refused;
 
 	/**
 	 * Events for one execution. After the execution ends its snapshot is frozen;
@@ -127,6 +131,7 @@ final class LogCollector implements LogCapture, Collector {
 	@Override
 	public synchronized Outcome accept( String correlation, LogEvent event ) {
 		if( closed ) {
+			refused++;
 			return Outcome.CLOSED;
 		}
 		Object binding = correlation == null ? null : bindings.get( correlation );
@@ -138,7 +143,27 @@ final class LogCollector implements LogCapture, Collector {
 			buffer.events.add( event );
 			return Outcome.ACCEPTED;
 		}
+		if( binding == AMBIGUOUS ) {
+			ambiguous++;
+		}
+		else {
+			unattributed++;
+		}
 		return Outcome.UNATTRIBUTED;
+	}
+
+	/**
+	 * @return A description of the events that reached no flow, or
+	 *         <code>null</code> if every event was attributed
+	 */
+	synchronized String unrouted() {
+		if( unattributed == 0 && ambiguous == 0 && refused == 0 ) {
+			return null;
+		}
+		return String.format( "Correlated capture attributed no flow to %d events: "
+				+ "%d without a known identifier, %d with an identifier claimed by more than one flow, "
+				+ "%d delivered after the run closed",
+				unattributed + ambiguous + refused, unattributed, ambiguous, refused );
 	}
 
 	/**

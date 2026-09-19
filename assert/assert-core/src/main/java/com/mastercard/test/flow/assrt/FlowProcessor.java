@@ -356,6 +356,9 @@ class FlowProcessor {
 			}
 		}
 
+		// Catching Throwable is deliberate: whatever the behaviour callback fails
+		// with, the report must record it, and it is rethrown immediately.
+		@SuppressWarnings("java:S1181")
 		private int processInteraction( Interaction ntr ) throws AssertionError {
 			config.progress.interaction( ntr );
 			// provoke the system with input data and capture the outputs
@@ -375,9 +378,8 @@ class FlowProcessor {
 				}
 			}
 			// We're not trying to *recover* from the failure (it gets rethrown below),
-			// we're just trying to make sure it gets recorded to the report. Assertion
-			// failures are the only Errors that test code is expected to raise.
-			catch( RuntimeException | AssertionError e ) {
+			// we're just trying to make sure it gets recorded to the report
+			catch( Throwable e ) {
 				preserving( e, () -> {
 					reportUpdates.add( d -> d.tags.add( Writer.ERROR_TAG ) );
 					List<LogEvent> logs = capture.snapshot();
@@ -454,11 +456,15 @@ class FlowProcessor {
 		}
 
 		/**
-		 * Applies the {@link MotivationCustomizer}. An ordinary fault in it costs only
-		 * this flow's decoration when the report is final-only; anything else is the
-		 * caller's failure to see.
+		 * Applies the {@link MotivationCustomizer} to the report text. Nothing is
+		 * customised when no report is written. An ordinary fault in the customizer
+		 * costs only this flow's decoration when the report is final-only; anything
+		 * else is the caller's failure to see.
 		 */
 		private void customiseMotivation( Assertion assertion ) {
+			if( !config.reporting.writing() ) {
+				return;
+			}
 			try {
 				motivation = config.motivationCustomizer.apply( motivation, assertion );
 			}
@@ -1075,6 +1081,10 @@ class FlowProcessor {
 				capture.close( FlowProcessor::ordinaryPeripheralFailure );
 				capture.late().forEach( ( flow, events ) -> report(
 						writer -> writer.with( flow, detail -> detail.logs.addAll( events ) ), false ) );
+				String unrouted = capture.unrouted();
+				if( unrouted != null ) {
+					diagnostic( unrouted );
+				}
 			}
 			// a failed writer is kept so that repeated close rethrows its failure
 			if( closingReport != null ) {

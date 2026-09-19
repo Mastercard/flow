@@ -81,6 +81,24 @@ class MotivationCustomizerTest {
 	}
 
 	/**
+	 * The customizer decorates the report, so it is not invoked when no report is
+	 * written
+	 */
+	@Test
+	void customizerRequiresReport() {
+		try( TestFlocessor tf = new TestFlocessor( "customizer without report", TestModel.abc() )
+				.motivation( ( motivation, assertion ) -> {
+					throw new IllegalStateException( "customised without a report" );
+				} )
+				.behaviour( assrt -> assrt.actual().response( assrt.expected().response().content() ) )
+				.system( AbstractFlocessor.State.LESS, TestModel.Actors.B ) ) {
+			tf.execute();
+			assertEquals( "abc [] SUCCESS", tf.results() );
+			assertNull( tf.report() );
+		}
+	}
+
+	/**
 	 * A customizer fault is reduced to a diagnostic only when the report is
 	 * final-only and the fault is an ordinary runtime exception. The flow then
 	 * passes and its entry is published with the original motivation. Otherwise the

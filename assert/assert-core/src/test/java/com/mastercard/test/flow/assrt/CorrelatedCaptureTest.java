@@ -227,10 +227,18 @@ class CorrelatedCaptureTest {
 		}
 	}
 
+	/**
+	 * Events that reach no flow are counted by cause and reported once at
+	 * completion, so a misconfigured pattern or reused identifier does not produce
+	 * a silently empty report.
+	 *
+	 * @param directory Isolated artifact directory
+	 */
 	@Test
 	void aliasesAttributeAndReusedIdentifiersAreAmbiguous( @TempDir Path directory ) {
 		Source source = new Source();
-		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
+		try( Diagnostics diagnostics = new Diagnostics( FlowProcessor.class );
+				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
 				TestFlocessor runner = runner( "aliases", source, a -> {
 					a.correlation().alias( "txn" );
 					assertEquals( ACCEPTED, source.emit( "txn", "by alias " + a.correlation().id() ) );
@@ -243,14 +251,35 @@ class CorrelatedCaptureTest {
 				a.correlation().alias( "txn" );
 				assertEquals( UNATTRIBUTED, source.emit( "txn", "by alias" ) );
 				assertEquals( UNATTRIBUTED, source.emit( "same", "by shared" ) );
+				assertEquals( UNATTRIBUTED, source.emit( "unknown", "no such flow" ) );
+				assertEquals( UNATTRIBUTED, source.emit( null, "no identifier" ) );
 				a.actual().response( a.expected().response().content() );
 			} );
 			runner.process( flow( runner, "second" ) );
+			assertEquals( List.of(), diagnostics.messages() );
 			runner.completeProcessing();
+			assertEquals( List.of( "Correlated capture attributed no flow to 4 events: "
+					+ "2 without a known identifier, 2 with an identifier claimed by more than one flow, "
+					+ "0 delivered after the run closed" ), diagnostics.messages() );
 
 			Map<String, List<String>> logs = flowLogs( runner.report() );
 			assertEquals( List.of( "INFO by alias same", "INFO by shared same" ), logs.get( "first" ) );
 			assertEquals( List.of(), logs.get( "second" ) );
+		}
+	}
+
+	@Test
+	void fullyAttributedRunReportsNothing( @TempDir Path directory ) {
+		Source source = new Source();
+		try( Diagnostics diagnostics = new Diagnostics( FlowProcessor.class );
+				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
+				TestFlocessor runner = runner( "attributed", source, a -> {
+					assertEquals( ACCEPTED, source.emit( a.correlation().id(), "hello" ) );
+					a.actual().response( a.expected().response().content() );
+				} ) ) {
+			runner.process( flow( runner, "first" ) );
+			runner.completeProcessing();
+			assertEquals( List.of(), diagnostics.messages() );
 		}
 	}
 

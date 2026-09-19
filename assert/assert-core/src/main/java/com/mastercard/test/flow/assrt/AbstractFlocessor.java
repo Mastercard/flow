@@ -222,6 +222,11 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * Configures how the correlation identifier for a {@link Flow} execution is
 	 * chosen. Use this when the flow's messages already carry a unique identifier
 	 * that the system under test logs. Without it the runner generates one.
+	 * <p>
+	 * The identifier must be unique to one execution within the run: if two
+	 * executions present the same identifier, whether from two flows or from the
+	 * same flow processed twice, events carrying it belong to neither and the
+	 * completion diagnostic counts them as claimed by more than one flow.
 	 *
 	 * @param extractor Returns the identifier for a flow, or <code>null</code> to
 	 *                  fall back to a generated identifier for that flow
