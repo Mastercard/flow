@@ -65,18 +65,22 @@ class LinkTest {
 	@Test
 	void codeExamplesAreNotLinks( @TempDir Path directory ) throws IOException {
 		Path document = directory.resolve( "guide.md" );
-		Files.writeString( document, "Write `[title](example.md)` in prose.\n"
-				+ "```md\n"
-				+ "- [<closed ticket title>](link)\n"
-				+ "```\n"
-				+ "~~~\n"
-				+ "[Ordering](./src/ordering/CONTEXT.md)\n"
-				+ "~~~\n" );
+		Files.writeString( document, """
+				Write `[title](example.md)` in prose.
+				```md
+				- [<closed ticket title>](link)
+				```
+				~~~
+				[Ordering](./src/ordering/CONTEXT.md)
+				~~~
+				""" );
 		Assertions.assertDoesNotThrow( () -> checkLinks( document ) );
 
-		Files.writeString( document, "```md\n"
-				+ "```\n"
-				+ "[missing](missing.md)\n" );
+		Files.writeString( document, """
+				```md
+				```
+				[missing](missing.md)
+				""" );
 		AssertionError failure = Assertions.assertThrows( AssertionError.class,
 				() -> checkLinks( document ) );
 		Assertions.assertTrue( failure.getMessage().contains( "missing.md" ) );
