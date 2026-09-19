@@ -15,7 +15,7 @@ The execution report includes tooling to aid in change review. If the reports ge
 
 <!-- code_link_start -->
 
-[AbstractFlocessor.reporting(Reporting,String...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L197-L206,197-206
+[AbstractFlocessor.reporting(Reporting,String...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L97-L106,97-106
 [Reporting]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Reporting.java
 
 <!-- code_link_end -->
@@ -80,8 +80,8 @@ Note that only the tag/index-based filtering can be used to avoid flow construct
 
 <!-- code_link_start -->
 
-[AbstractFlocessor.filtering(Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L318-L326,318-326
-[AbstractFlocessor.exercising(Predicate,Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L331-L356,331-356
+[AbstractFlocessor.filtering(Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L257-L265,257-265
+[AbstractFlocessor.exercising(Predicate,Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L271-L296,271-296
 
 <!-- code_link_end -->
 
@@ -117,15 +117,37 @@ Diagnosing unexpected system behaviour is made vastly easier if system logs are 
 
 Note that the assertion components will not make any assumptions about the format of the `LogEvent.time` field - it is up to the `LogCapture` implementation to put events in chronological order. It is recommended that the `time` values are compatible with [Date.parse](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse) - the html report is then able to enhance the log view with an elapsed time display.
 
- * The [`Tail`][Tail] class captures events from a single file
+ * The [`Tail`][log.Tail] class captures events from a single file
  * The [`Merge`][Merge] class allows `LogCapture` instances to be multiplexed.
+
+### Correlated capture
+
+`LogCapture` attributes events to a flow by _when_ they were observed: everything between `start` and `end` belongs to that flow. This is exact when flows run one at a time, but when flows execute concurrently the intervals overlap and attribution by time is impossible. The [`CorrelatedCapture`][CorrelatedCapture] interface instead attributes events by a correlation identifier carried in the events themselves, and is the mechanism to use in parallel runs (the parallel runner rejects a `LogCapture`). It works in serial runs too, so it can be adopted before going parallel.
+
+The flow of responsibility is:
+
+ 1. The runner gives each flow execution an identity, available in the test body as [`assertion.correlation().id()`][Assertion!.correlation()]. By default this is generated and unique; if the flow's messages already carry a suitable unique identifier, configure [`correlation()`][AbstractFlocessor.correlation(Function)] to extract it from the `Flow` instead.
+ 2. The test sends the identifier to the system under test, typically as a request header. If the system generates its own identifier and returns it (e.g. a transaction ID), bind it with `assertion.correlation().alias( id )` so that events carrying either value are attributed.
+ 3. The system under test propagates the identifier into its logging context (e.g. an MDC field in its log pattern).
+ 4. A `CorrelatedCapture` source delivers each event to the runner's `Collector` together with the identifier it carried. The runner adds it to the report entry of the flow that identifier belongs to, including events that arrive after the flow has finished. Events whose identifier is unknown, absent, or claimed by more than one execution are not attached to any flow.
+
+Two kinds of source are supported:
+
+ * The [`CorrelatedTail`][CorrelatedTail] class reads a log file incrementally from the point at which the run started. Its pattern must capture a `correlation` group alongside `time`, `level` and `source`.
+ * For a system in the same JVM, implement `CorrelatedCapture` directly and push events from your logging backend. For example, a logback `AppenderBase<ILoggingEvent>` whose `append` method calls `collector.accept( event.getMDCPropertyMap().get( "correlationId" ), new LogEvent( ... ) )`, registered in `open` and removed in `close`. The library has no logging-backend dependency.
+
+Capture problems (an unreadable or rotated log file, a source that fails to flush) are reported on standard error and in the affected flow's report entry; they never fail an otherwise-passing test.
  
 <!-- code_link_start -->
 
 [LogCapture]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/LogCapture.java
-[Tail]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/log/Tail.java
+[log.Tail]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/log/Tail.java
 [Merge]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/log/Merge.java
-[AbstractFlocessor.logs(LogCapture)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L286-L293,286-293
+[AbstractFlocessor.logs(LogCapture)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L192-L199,192-199
+[CorrelatedCapture]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/CorrelatedCapture.java
+[CorrelatedTail]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/log/CorrelatedTail.java
+[Assertion!.correlation()]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Assertion.java#L61-L67,61-67
+[AbstractFlocessor.correlation(Function)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L221-L230,221-230
 
 <!-- code_link_end -->
 
@@ -135,7 +157,7 @@ The motivation text in the report can be enhanced with additional information su
 <!-- code_link_start -->
 
 [MotivationCustomizer]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/MotivationCustomizer.java
-[AbstractFlocessor.motivation(MotivationCustomizer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L373-L382,373-382
+[AbstractFlocessor.motivation(MotivationCustomizer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L315-L324,315-324
 
 <!--code_link_end-->
 ## Interaction structure
@@ -203,7 +225,7 @@ You can see this happening in [`BenTest`][BenTest].
 <!-- code_link_start -->
 
 [Consequests]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Consequests.java
-[Assertion!.assertConsequests(Consequests)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Assertion.java#L107-L113,107-113
+[Assertion!.assertConsequests(Consequests)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Assertion.java#L120-L126,120-126
 
 <!-- code_link_end -->
 
@@ -257,7 +279,7 @@ Consider the following worked example:
 
 [flow.Unpredictable]: ../../../../api/src/main/java/com/mastercard/test/flow/Unpredictable.java
 [AbstractMessage.masking(Unpredictable,UnaryOperator)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/AbstractMessage.java#L50-L57,50-57
-[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L214-L221,214-221
+[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L115-L122,115-122
 [mask.BenSys]: ../../test/java/com/mastercard/test/flow/doc/mask/BenSys.java
 [mask.DieSys]: ../../test/java/com/mastercard/test/flow/doc/mask/DieSys.java
 [mask.Unpredictables]: ../../test/java/com/mastercard/test/flow/doc/mask/Unpredictables.java
@@ -265,9 +287,9 @@ Consider the following worked example:
 [Rolling?d\+]: ../../test/java/com/mastercard/test/flow/doc/mask/Rolling.java#L30,30
 [msg.Mask]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java
 [msg.Mask.andThen(Consumer)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java#L290-L292,290-292
-[BenDiceTest?masking]: ../../test/java/com/mastercard/test/flow/doc/mask/BenDiceTest.java#L31,31
+[BenDiceTest?masking]: ../../test/java/com/mastercard/test/flow/doc/mask/BenDiceTest.java#L36,36
 [BenTest]: ../../test/java/com/mastercard/test/flow/doc/mask/BenTest.java
-[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L214-L221,214-221
+[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L115-L122,115-122
 
 <!-- code_link_end -->
 
@@ -287,7 +309,7 @@ You can see usage of these types in the example system:
 [flow.Context]: ../../../../api/src/main/java/com/mastercard/test/flow/Context.java
 [Builder.context(Context)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#L225-L232,225-232
 [assrt.Applicator]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Applicator.java
-[AbstractFlocessor.applicators(Applicator...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L260-L266,260-266
+[AbstractFlocessor.applicators(Applicator...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L164-L170,164-170
 [model.ctx.QueueProcessing]: ../../../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/ctx/QueueProcessing.java
 [QueueProcessingApplicator]: ../../../../example/app-assert/src/main/java/com/mastercard/test/flow/example/app/assrt/ctx/QueueProcessingApplicator.java
 
@@ -310,7 +332,7 @@ You can see usage of these types in the example system:
 
 [flow.Residue]: ../../../../api/src/main/java/com/mastercard/test/flow/Residue.java
 [assrt.Checker]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Checker.java
-[AbstractFlocessor.checkers(Checker...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L273-L279,273-279
+[AbstractFlocessor.checkers(Checker...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L178-L184,178-184
 [model.rsd.DBItems]: ../../../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/rsd/DBItems.java
 [DBItemsChecker]: ../../../../example/app-assert/src/main/java/com/mastercard/test/flow/example/app/assrt/rsd/DBItemsChecker.java
 
@@ -392,6 +414,8 @@ Empty dependencies can be added to the system model via the [`Builder.prerequisi
 While a dependency on flow `A` from flow `B` will guarantee that `A` will be processed before `B`, it does not give any stronger assurances than that. For example, it is perfectly possible that other flows will be interleaved between `A` and `B`. If this is a problem then you can use flow chaining to gain greater control over the execution order.
 
 If you add a tag with the prefix of `chain:` to a group of flows, they will be scheduled as a unit in the overall execution order - flows that do not bear the same chain tag will not be interleaved into that unit. The order of flows within a chain is still determined by the standard constraints described above. A flow should only belong to a single chain.
+
+When flows run concurrently the chain remains one ordered unit - members run one after another, and the chain's outside edges attach to its first and last members - but unrelated flows may run alongside it. A chain does not lock the system under test against flows that share no model relationship with it.
 
 The [`Chain`][builder.Chain] class offers a convenient way to add the chain tag to flows. An example of its usage can be seen in [`Deferred`][Deferred] in the example system model.
 

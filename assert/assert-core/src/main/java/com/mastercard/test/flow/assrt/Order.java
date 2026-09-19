@@ -2,11 +2,14 @@ package com.mastercard.test.flow.assrt;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -50,10 +53,20 @@ public class Order {
 	 * @return A processing schedule for the supplied {@link Flow}s
 	 */
 	public Stream<Flow> order() {
+		// Read the model once for both member ordering and chain contraction.
+		// This index is order-only: the publisher still retains every binding.
+		Map<Flow, Set<Flow>> prerequisites = new IdentityHashMap<>();
+		flows.forEach( flow -> {
+			Set<Flow> sources = Collections.newSetFromMap( new IdentityHashMap<>() );
+			try( Stream<Flow> dependencies = flow.dependencies().map( d -> d.source().flow() ) ) {
+				dependencies.filter( Objects::nonNull ).forEach( sources::add );
+			}
+			prerequisites.put( flow, sources );
+		} );
 		// A map from chain name to chain members
-		Map<String, List<Flow>> chains = new HashMap<>();
+		Map<Object, List<Flow>> chains = new HashMap<>();
 		// A map from chain member to chain name
-		Map<Flow, String> chainNames = new HashMap<>();
+		Map<Flow, Object> chainNames = new IdentityHashMap<>();
 
 		// This defines the ideal order of flows that minimises expensive context
 		// switches
@@ -67,18 +80,18 @@ public class Order {
 		// Build chains. flows that are not actually in a chain are implicitly in a
 		// chain all on their lonesomes
 		flows.forEach( f -> {
-			String chain = Tags.suffix( f.meta().tags(), CHAIN_TAG_PREFIX )
-					.orElse( f.meta().id() );
+			Object chain = Tags.suffix( f.meta().tags(), CHAIN_TAG_PREFIX )
+					.<Object>map( name -> name ).orElseGet( Object::new );
 			chains.computeIfAbsent( chain, c -> new ArrayList<>() ).add( f );
 			chainNames.put( f, chain );
 		} );
 
 		// Correct the internal order of each chain
-		for( Map.Entry<String, List<Flow>> chain : chains.entrySet() ) {
+		for( Map.Entry<Object, List<Flow>> chain : chains.entrySet() ) {
 			if( chain.getValue().size() > 1 ) {
 				chains.put( chain.getKey(),
 						order( chain.getValue().stream(),
-								flw -> flw.dependencies().map( d -> d.source().flow() ),
+								flw -> prerequisites.get( flw ).stream(),
 								flw -> Stream.of( flw.basis() ).filter( Objects::nonNull ),
 								contextOrder ) );
 			}
@@ -87,9 +100,7 @@ public class Order {
 		// Order the list of chains
 		List<List<Flow>> metaChain = order( chains.values().stream(),
 				chain -> chain.stream()
-						.flatMap( Flow::dependencies )
-						.map( dep -> dep.source().flow() )
-						.filter( Objects::nonNull )
+						.flatMap( flow -> prerequisites.get( flow ).stream() )
 						.map( chainNames::get )
 						.map( chains::get ),
 				chain -> chain.stream()
@@ -121,7 +132,8 @@ public class Order {
 			Comparator<T> preference ) {
 		Graph<T> graph = new Graph<>( preference );
 		items.forEach( graph::with );
-		// dependencies have max weight - they must be honoured
+		// dependencies have max weight - they must be honoured. A hard cycle is
+		// still broken here to yield a sequence; Precedence rejects the result.
 		graph.values().forEach(
 				snk -> prerequisites.apply( snk )
 						.forEach( src -> graph.edge( Integer.MAX_VALUE, snk, src ) ) );

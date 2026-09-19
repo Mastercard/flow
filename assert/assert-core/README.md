@@ -64,6 +64,7 @@ Some aspects of assertion behaviour can be controlled by system properties:
 The framework will default to exercising all flows in the model that are relevant to the system under test. It is possible to run a subset of flows by setting the filter system properties described above.
 
 Note that flows will automatically be brought into the execution order as required to satisfy flow dependencies in the system model.
+A hard prerequisite cycle fails preparation before any system behaviour runs.
 
 ## Failure avoidance
 
@@ -86,6 +87,25 @@ The assert components will work out a flow execution order that:
 
 The results of flow execution can be (depending on how the `Flocessor` is configured) collated into a human-readable report that details observed system behaviour and the results of comparing that against the system model.
 The location of the report can be controlled with the `mctf.dir` and `mctf.report.dir` system properties.
+
+### Log capture
+
+A `LogCapture` configured with `logs( LogCapture )` is started as each flow begins
+and ended when it finishes, and the captured events are attached to that flow's
+report entry. Failures of the capture source itself are reported as diagnostics
+without failing an otherwise passing flow; a test failure is retained if cleanup
+or reporting also fails. Replay uses live capture rather than copying an old
+report's logs.
+
+### Correlated capture
+
+When flows run concurrently, capture by time interval cannot tell their events
+apart. `CorrelatedCapture` attributes events by a correlation identifier carried
+in the event itself: the test sends the flow's identifier to the system, the
+system logs it, and a source such as `CorrelatedTail` delivers each event with
+the identifier it carried. See the
+[further reading](../../doc/src/main/markdown/further.md#correlated-capture) for
+the full explanation.
 
 ## Report replay
 
