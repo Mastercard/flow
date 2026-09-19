@@ -24,7 +24,6 @@ import org.opentest4j.TestAbortedException;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.assrt.AbstractFlocessor;
-import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.Precedence;
 
 /**
@@ -185,7 +184,7 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 
 		private void run( int index ) {
 			try {
-				processSelected( flows.get( index ) );
+				processRecording( flows.get( index ), IncompleteExecutionException.class::isInstance );
 			}
 			finally {
 				synchronized( history ) {
@@ -194,25 +193,6 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 					ready.addAll( readiness.finished( index ) );
 					history.notifyAll();
 				}
-			}
-		}
-
-		private void processSelected( Flow flow ) {
-			try {
-				process( flow );
-				history.recordResult( flow, Result.SUCCESS );
-			}
-			catch( IncompleteExecutionException e ) {
-				history.recordResult( flow, Result.SKIP );
-				throw e;
-			}
-			catch( AssertionError e ) {
-				history.recordResult( flow, Result.UNEXPECTED );
-				throw e;
-			}
-			catch( Exception e ) {
-				history.recordResult( flow, Result.ERROR );
-				throw e;
 			}
 		}
 

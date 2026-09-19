@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.assrt.AbstractFlocessor;
-import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.util.Tags;
 
 /**
@@ -119,28 +118,7 @@ public class Flocessor extends AbstractFlocessor<Flocessor> implements AutoClose
 	}
 
 	private void processFlow( Flow flow ) {
-		try {
-			process( flow );
-			history.recordResult( flow, Result.SUCCESS );
-		}
-		catch( IncompleteExecutionException iee ) {
-			// not strictly required to record the skipped outcome in the history, as it
-			// does not inform the processing of later flows. That may change in the future
-			// though, so for now we're going to live with the mutation testing complaint
-			history.recordResult( flow, Result.SKIP );
-			throw iee;
-		}
-		catch( AssertionError ae ) {
-			history.recordResult( flow, Result.UNEXPECTED );
-			throw ae;
-		}
-		catch( Exception e ) {
-			// not strictly required to record the error outcome in the history, as it
-			// does not inform the processing of later flows. That may change in the future
-			// though, so for now we're going to live with the mutation testing complaint
-			history.recordResult( flow, Result.ERROR );
-			throw e;
-		}
+		processRecording( flow, IncompleteExecutionException.class::isInstance );
 	}
 
 	private DynamicContainer createDynamicContainer( List<Flow> chain ) {

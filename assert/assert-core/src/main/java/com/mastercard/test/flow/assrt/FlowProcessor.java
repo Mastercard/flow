@@ -92,6 +92,11 @@ class FlowProcessor {
 		config = config.snapshot();
 	}
 
+	/** @return The configuration in force, frozen or not */
+	FlowConfiguration configuration() {
+		return config;
+	}
+
 	/**
 	 * Context-applying flows are serialised by the caller's ordering, but flows
 	 * without contexts may run alongside them. Such flows must then leave applied
