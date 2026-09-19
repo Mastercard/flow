@@ -134,6 +134,10 @@ class Util {
 		@Override
 		public FileVisitResult preVisitDirectory( Path dir, BasicFileAttributes attrs )
 				throws IOException {
+			if( dir.endsWith( ".scratch" ) ) {
+				// Disposable research is not an input to routine library validation.
+				return FileVisitResult.SKIP_SUBTREE;
+			}
 			// there are a few large trees where java content is unlikely
 			String path = dir.toString();
 			if( ignore.stream().anyMatch( i -> path.contains( i ) ) ) {
