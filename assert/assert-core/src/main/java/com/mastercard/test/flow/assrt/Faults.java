@@ -15,8 +15,14 @@ import java.util.logging.Logger;
  */
 final class Faults {
 
-	/** Named for the processor, which is where the documentation points users */
-	private static final Logger DIAGNOSTICS = Logger.getLogger( FlowProcessor.class.getName() );
+	private static final Logger DIAGNOSTICS = Logger.getLogger( Faults.class.getName() );
+
+	/**
+	 * Test abort and skip signals are runtime exceptions; both JUnit 4 and Jupiter
+	 * use this neutral vocabulary. The package is matched by name as the framework
+	 * is not a compile-time dependency of this module.
+	 */
+	private static final String TEST_CONTROL_PACKAGE = "org.opentest4j.";
 
 	private Faults() {
 		// no instances
@@ -24,8 +30,8 @@ final class Faults {
 
 	/**
 	 * A fault is ordinary when it is a runtime exception whose cause chain holds no
-	 * {@link Error}, interruption or cancellation. Ordinary faults become
-	 * diagnostics; anything else must fail or abort the test.
+	 * {@link Error}, interruption, cancellation or test-control signal. Ordinary
+	 * faults become diagnostics; anything else must fail or abort the test.
 	 *
 	 * @param failure The fault
 	 * @return <code>true</code> if the fault may be reduced to a diagnostic
@@ -38,11 +44,20 @@ final class Faults {
 		for( Throwable cause = failure; cause != null && seen.add( cause ); cause = cause.getCause() ) {
 			if( cause instanceof Error || cause instanceof InterruptedException
 					|| cause instanceof InterruptedIOException || cause instanceof ClosedByInterruptException
-					|| cause instanceof CancellationException ) {
+					|| cause instanceof CancellationException || testControl( cause ) ) {
 				return false;
 			}
 		}
 		return true;
+	}
+
+	private static boolean testControl( Throwable failure ) {
+		for( Class<?> type = failure.getClass(); type != null; type = type.getSuperclass() ) {
+			if( type.getName().startsWith( TEST_CONTROL_PACKAGE ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

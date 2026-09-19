@@ -58,7 +58,7 @@ class ReportingTest {
 	@ParameterizedTest
 	@ValueSource(booleans = { false, true })
 	void emptyFinalReportIsPublishedOnlyAtCompletion( boolean initialize, @TempDir Path directory ) {
-		try( Diagnostics diagnostic = new Diagnostics( FlowProcessor.class );
+		try( Diagnostics diagnostic = new Diagnostics( Faults.class );
 				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
 				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "empty" );
 				TestFlocessor runner = new TestFlocessor( "empty prepared run", TestModel.abc() )
@@ -98,7 +98,7 @@ class ReportingTest {
 			Files.createFile( root );
 		var primary = new IllegalArgumentException( "original SUT failure" );
 		int[] calls = { 0 };
-		try( Diagnostics diagnostic = new Diagnostics( FlowProcessor.class );
+		try( Diagnostics diagnostic = new Diagnostics( Faults.class );
 				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( root.toString() );
 				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "run" );
 				TestFlocessor runner = new TestFlocessor( "final report fault", TestModel.abc() )

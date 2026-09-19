@@ -23,6 +23,7 @@ import com.mastercard.test.flow.Metadata;
 import com.mastercard.test.flow.Residue;
 import com.mastercard.test.flow.builder.Deriver;
 import com.mastercard.test.flow.report.Writer.Indexing;
+import com.mastercard.test.flow.report.data.DependencyData;
 import com.mastercard.test.flow.report.data.Entry;
 import com.mastercard.test.flow.report.data.FlowData;
 
@@ -85,6 +86,28 @@ class WriterFinalLinksTest {
 		assertEquals( Set.of( entries.get( "dependency" ).detail ),
 				dependent.dependencies.keySet() );
 		assertEquals( "dependency", dependent.dependencies.values().iterator().next().description );
+	}
+
+	/**
+	 * Dependency entries that callbacks removed or added are left as the callbacks
+	 * left them when links are corrected on close
+	 *
+	 * @param dir Isolated report destination
+	 */
+	@Test
+	void callbackEditedDependencies( @TempDir Path dir ) {
+		try( Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY ) ) {
+			writer.with( Mdl.DEPENDENT, detail -> {
+				detail.dependencies.clear();
+				detail.dependencies.put( "custom", new DependencyData( "added by callback", Set.of() ) );
+			} );
+			// renaming the dependency forces link correction on close
+			writer.with( Mdl.DEPENDENCY, detail -> detail.tags.add( "renamed" ) );
+		}
+		Reader reader = new Reader( dir );
+		FlowData dependent = reader.detail( entries( reader ).get( "dependent" ) );
+		assertEquals( Set.of( "custom" ), dependent.dependencies.keySet() );
+		assertEquals( "added by callback", dependent.dependencies.get( "custom" ).description );
 	}
 
 	/**

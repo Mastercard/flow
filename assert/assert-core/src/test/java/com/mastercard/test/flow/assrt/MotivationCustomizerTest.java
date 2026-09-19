@@ -142,7 +142,7 @@ class MotivationCustomizerTest {
 		Throwable fault = ordinary
 				? new IllegalStateException( "decoration failed" )
 				: new AssertionError( "decoration failed" );
-		try( Diagnostics diagnostic = new Diagnostics( FlowProcessor.class );
+		try( Diagnostics diagnostic = new Diagnostics( Faults.class );
 				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
 				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "decorated" );
 				TestFlocessor tf = new TestFlocessor( "customizer fault", TestModel.abc() )

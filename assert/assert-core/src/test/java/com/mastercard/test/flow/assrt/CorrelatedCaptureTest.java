@@ -274,7 +274,7 @@ class CorrelatedCaptureTest {
 	void unroutedEventsAreSummarisedAndTraced( @TempDir Path directory ) {
 		Source source = new Source();
 		String longLine = "x".repeat( 250 );
-		try( Diagnostics diagnostics = new Diagnostics( FlowProcessor.class );
+		try( Diagnostics diagnostics = new Diagnostics( Faults.class );
 				Diagnostics trace = new Diagnostics( LogCollector.class, Level.FINE );
 				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
 				TestFlocessor runner = runner( "unrouted", source,
@@ -343,7 +343,7 @@ class CorrelatedCaptureTest {
 	void eventsDeliveredWhileClosingAreLateEvidence( @TempDir Path directory ) {
 		Source source = new Source();
 		source.onClose = () -> assertEquals( LATE, source.emit( "first", "drained at close" ) );
-		try( Diagnostics diagnostics = new Diagnostics( FlowProcessor.class );
+		try( Diagnostics diagnostics = new Diagnostics( Faults.class );
 				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
 				TestFlocessor runner = runner( "closing", source,
 						a -> a.actual().response( a.expected().response().content() ) ) ) {
@@ -359,7 +359,7 @@ class CorrelatedCaptureTest {
 	@Test
 	void fullyAttributedRunReportsNothing( @TempDir Path directory ) {
 		Source source = new Source();
-		try( Diagnostics diagnostics = new Diagnostics( FlowProcessor.class );
+		try( Diagnostics diagnostics = new Diagnostics( Faults.class );
 				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
 				TestFlocessor runner = runner( "attributed", source, a -> {
 					assertEquals( ACCEPTED, source.emit( a.correlation().id(), "hello" ) );
@@ -405,7 +405,7 @@ class CorrelatedCaptureTest {
 		CorrelatedTail source = new CorrelatedTail( log,
 				"^(?<time>\\d+) \\[(?<correlation>[^\\]]*)\\] (?<level>[A-Z]+) (?<source>\\S+) " );
 		List<String> ids = new ArrayList<>();
-		try( Diagnostics diagnostics = new Diagnostics( FlowProcessor.class );
+		try( Diagnostics diagnostics = new Diagnostics( Faults.class );
 				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
 				TestFlocessor runner = new TestFlocessor( "file source", TestModel.triple() )
 						.system( State.LESS, B ).reporting( Reporting.QUIETLY ).logs( source )

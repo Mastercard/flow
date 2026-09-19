@@ -586,15 +586,16 @@ class FlowExecutionTest {
 	 * @param dir  Isolated artifact directory
 	 */
 	@ParameterizedTest
-	@ValueSource(strings = { "ordinary", "assertion" })
+	@ValueSource(strings = { "ordinary", "assertion", "abort" })
 	void reportDecorationFaultsAreClassified( String kind, @TempDir Path dir ) {
 		RuntimeException ordinary = new IllegalStateException( "decoration failed" );
 		Throwable fault = switch( kind ) {
 			case "ordinary" -> ordinary;
-			default -> new AssertionError( "decoration assertion" );
+			case "assertion" -> new AssertionError( "decoration assertion" );
+			default -> new TestAbortedException( "decoration abort" );
 		};
 		List<String> diagnostics = new ArrayList<>();
-		Logger runner = Logger.getLogger( "com.mastercard.test.flow.assrt.FlowProcessor" );
+		Logger runner = Logger.getLogger( "com.mastercard.test.flow.assrt.Faults" );
 		Handler handler = new Handler() {
 			@Override
 			public void publish( LogRecord logged ) {
@@ -624,7 +625,8 @@ class FlowExecutionTest {
 			Run run = gated.join( gated.launch( true ) );
 			String expected = switch( kind ) {
 				case "ordinary" -> "SUCCESSFUL";
-				default -> "FAILED";
+				case "assertion" -> "FAILED";
+				default -> "ABORTED";
 			};
 			assertEquals( List.of( "a []:" + expected ), run.results );
 			if( "ordinary".equals( kind ) ) {

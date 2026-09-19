@@ -22,6 +22,7 @@ public class MetaTest {
 	 * Runs {@link ExampleTest} and assert on on the results
 	 */
 	@Test
+	@org.junit.jupiter.api.Test // also discover the JUnitCore oracle with the Platform provider
 	public void test() {
 		JUnitCore juc = new JUnitCore();
 		Map<String, String> results = new LinkedHashMap<>();

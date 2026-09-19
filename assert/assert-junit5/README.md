@@ -109,8 +109,8 @@ Configuration is frozen at `tests()`; the report is
 written once and closed when the test class finishes, including when the factory is
 aborted or skipped. Interval-based `LogCapture` and replay are rejected for
 concurrent runs; configure `logs( CorrelatedCapture )` to attribute log events by
-correlation identifier. The factory waits indefinitely for running flows, as the
-build tool or IDE already bounds the run. Cooperative cancellation (JUnit 6
+correlation identifier. The factory waits indefinitely for running flows; IDEs and
+build tools typically enforce their own run timeouts. Cooperative cancellation (JUnit 6
 `CancellationToken`, e.g. `--fail-fast`) skips emitted leaves without running them,
 so a cancelled run does not end until the JVM is stopped; `progressTimeout( Duration )`
 optionally bounds how long the factory waits for a running flow before failing the

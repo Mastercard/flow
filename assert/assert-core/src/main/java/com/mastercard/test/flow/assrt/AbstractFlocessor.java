@@ -448,6 +448,12 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 			history.recordResult( flow, isSkip.test( e ) ? History.Result.SKIP : History.Result.ERROR );
 			throw e;
 		}
+		catch( Exception e ) {
+			// checked exceptions can escape a callback via sneaky throws, e.g. from
+			// Jupiter's assertTimeout; precise rethrow keeps the original
+			history.recordResult( flow, History.Result.ERROR );
+			throw e;
+		}
 	}
 
 	/**

@@ -257,24 +257,62 @@ public final class Precedence {
 	}
 
 	/**
-	 * Flows related by basis ancestry keep their canonical order: each flow's path
-	 * of selected ancestors is linked in rank order, whichever end the basis is at.
+	 * Flows related by basis ancestry keep their canonical order, whichever end the
+	 * basis is at. One depth-first traversal of the selected-ancestor forest adds
+	 * at most two edges per flow, so the work is linear in the number of flows
+	 * however deep the ancestry runs.
 	 */
 	private static void basisPrecedence( List<Flow> flows, Map<Flow, Integer> indices,
 			List<Set<Integer>> edges ) {
+		List<List<Integer>> children = new ArrayList<>();
+		List<Integer> roots = new ArrayList<>();
+		for( int i = 0; i < flows.size(); i++ )
+			children.add( new ArrayList<>() );
 		// Cache the nearest selected ancestor across shared unselected paths. Selected
 		// identities are stopping points, but each one's own basis is still read once.
 		Map<Flow, Integer> nearest = new IdentityHashMap<>( indices );
-		int[] parent = new int[flows.size()];
-		for( int i = 0; i < flows.size(); i++ )
-			parent[i] = nearestSelectedAncestor( flows.get( i ), nearest );
 		for( int i = 0; i < flows.size(); i++ ) {
-			NavigableSet<Integer> path = new TreeSet<>();
-			for( int rank = i; rank >= 0; rank = parent[rank] )
-				if( !path.add( rank ) )
-					throw new IllegalArgumentException( "Cyclic Flow basis" );
-			orderGroups( List.of( path ), edges );
+			int parent = nearestSelectedAncestor( flows.get( i ), nearest );
+			if( parent < 0 )
+				roots.add( i );
+			else
+				children.get( parent ).add( i );
 		}
+		if( orderAncestry( roots, children, edges ) != flows.size() )
+			throw new IllegalArgumentException( "Cyclic Flow basis" );
+	}
+
+	/**
+	 * Orders each flow after its basis ancestors, without a basis descendant of one
+	 * flow ever being ordered before a sibling's descendants.
+	 *
+	 * @return The number of flows reached from the roots
+	 */
+	private static int orderAncestry( List<Integer> roots, List<List<Integer>> children,
+			List<Set<Integer>> edges ) {
+		NavigableSet<Integer> ancestry = new TreeSet<>();
+		Deque<Integer> traversal = new ArrayDeque<>( roots );
+		int visited = 0;
+		while( !traversal.isEmpty() ) {
+			int index = traversal.removeLast();
+			if( index < 0 ) {
+				ancestry.remove( ~index );
+				continue;
+			}
+			visited++;
+			// Inserting a canonical rank into the ordered ancestral path needs at most
+			// two forward edges
+			Integer before = ancestry.lower( index );
+			Integer after = ancestry.higher( index );
+			if( before != null )
+				edges.get( before ).add( index );
+			if( after != null )
+				edges.get( index ).add( after );
+			ancestry.add( index );
+			traversal.addLast( ~index ); // Exit marker removes the rank before a sibling.
+			traversal.addAll( children.get( index ) );
+		}
+		return visited;
 	}
 
 	/**

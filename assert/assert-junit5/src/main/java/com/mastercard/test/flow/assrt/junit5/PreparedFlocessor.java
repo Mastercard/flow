@@ -217,14 +217,15 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 				synchronized( history ) {
 					int observed = completed;
 					while( ready.isEmpty() ) {
-						if( expired() ) {
-							return true;
-						}
 						if( deadline == Long.MAX_VALUE ) {
 							history.wait();
 						}
 						else {
+							// one clock read: the deadline may pass between a check and the wait
 							long remaining = deadline - System.nanoTime();
+							if( remaining <= 0 ) {
+								return true;
+							}
 							history.wait( remaining / 1_000_000, (int) (remaining % 1_000_000) );
 						}
 						if( completed != observed ) {
