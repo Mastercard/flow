@@ -491,7 +491,7 @@ class FlowExecutionTest {
 			waiter.setUncaughtExceptionHandler( ( t, e ) -> failures.add( e ) );
 			waiter.start();
 			long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos( 10 );
-			while( waiter.getState() != Thread.State.TIMED_WAITING ) {
+			while( waiter.getState() != Thread.State.WAITING ) {
 				assertTrue( System.nanoTime() < deadline, "waiter did not park: " + waiter.getState() );
 				Thread.onSpinWait();
 			}
