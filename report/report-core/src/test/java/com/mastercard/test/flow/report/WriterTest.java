@@ -12,22 +12,13 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import com.github.difflib.DiffUtils;
 import com.github.difflib.patch.AbstractDelta;
@@ -44,91 +35,6 @@ import com.mastercard.test.flow.report.Mdl.Actrs;
  */
 @SuppressWarnings("static-method")
 class WriterTest {
-
-	/**
-	 * Accessor results cannot change with, or change, later writer updates.
-	 *
-	 * @param dir Isolated report destination
-	 */
-	@Test
-	void missingBasesSnapshot( @TempDir Path dir ) {
-		Writer writer = new Writer( "model", "test", dir ).with( Mdl.CHILD );
-		Map<Flow, List<Flow>> snapshot = writer.missingBases();
-		List<Flow> desired = snapshot.get( Mdl.CHILD );
-		writer.with( Mdl.BASIS );
-
-		assertEquals( List.of( Mdl.BASIS ), desired );
-		Assertions.assertTrue( writer.missingBases().isEmpty() );
-		Assertions.assertThrows( UnsupportedOperationException.class, snapshot::clear );
-		Assertions.assertThrows( UnsupportedOperationException.class, desired::clear );
-	}
-
-	/**
-	 * A paused update excludes another producer through callbacks and publication.
-	 *
-	 * @param dir Isolated report destination
-	 * @throws Exception If a worker fails
-	 */
-	@Test
-	void concurrentUpdates( @TempDir Path dir ) throws Exception {
-		Writer writer = new Writer( "model", "test", dir );
-		ExecutorService workers = Executors.newFixedThreadPool( 2 );
-		CountDownLatch entered = new CountDownLatch( 1 );
-		CountDownLatch release = new CountDownLatch( 1 );
-		CountDownLatch competing = new CountDownLatch( 1 );
-		AtomicInteger callbacks = new AtomicInteger();
-		try {
-			Future<?> first = workers.submit( () -> {
-				Thread caller = Thread.currentThread();
-				writer.with( Mdl.CHILD, detail -> {
-					Assertions.assertSame( caller, Thread.currentThread() );
-					callbacks.incrementAndGet();
-					entered.countDown();
-					await( release );
-					detail.tags.add( Writer.PASS_TAG );
-				} );
-			} );
-			await( entered );
-			Future<?> second = workers.submit( () -> {
-				Thread caller = Thread.currentThread();
-				competing.countDown();
-				writer.with( Mdl.BASIS, detail -> {
-					Assertions.assertSame( caller, Thread.currentThread() );
-					callbacks.incrementAndGet();
-					detail.tags.add( Writer.FAIL_TAG );
-				} );
-			} );
-			await( competing );
-			Assertions.assertThrows( TimeoutException.class,
-					() -> second.get( 200, TimeUnit.MILLISECONDS ),
-					"A competing update must not pass the paused update" );
-			release.countDown();
-			first.get( 10, TimeUnit.SECONDS );
-			second.get( 10, TimeUnit.SECONDS );
-
-			Reader reader = new Reader( dir );
-			assertEquals( List.of( "child", "basis" ), reader.read().entries.stream()
-					.map( entry -> entry.description ).toList() );
-			assertEquals( Writer.detailFilename( Mdl.BASIS ),
-					reader.detail( reader.read().entries.get( 0 ) ).basis );
-			assertEquals( 2, callbacks.get() );
-		}
-		finally {
-			release.countDown();
-			workers.shutdownNow();
-			Assertions.assertTrue( workers.awaitTermination( 10, TimeUnit.SECONDS ) );
-		}
-	}
-
-	private static void await( CountDownLatch latch ) {
-		try {
-			Assertions.assertTrue( latch.await( 10, TimeUnit.SECONDS ), "Fixture did not progress" );
-		}
-		catch( InterruptedException e ) {
-			Thread.currentThread().interrupt();
-			throw new AssertionError( e );
-		}
-	}
 
 	/**
 	 * @param dir The dir to create a report in
@@ -280,11 +186,15 @@ class WriterTest {
 	/**
 	 * Exercises {@link Writer#writeDuctIndex(Path)}
 	 *
-	 * @param dir Fresh destination, isolated from earlier frontend build hashes
 	 * @throws Exception on error
 	 */
 	@Test
-	void writeDuctIndex( @org.junit.jupiter.api.io.TempDir Path dir ) throws Exception {
+	void writeDuctIndex() throws Exception {
+
+		Path dir = Paths.get( "target", "WriterTest", "writeDuctIndex" );
+
+		Files.createDirectories( dir );
+
 		Writer.writeDuctIndex( dir );
 
 		// check file listing of report

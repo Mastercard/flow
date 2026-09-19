@@ -19,27 +19,7 @@ It is unlikely that you'll need to depend directly on this module, it will be tr
 
 This module provides an object model for the data in an execution report along with facilities for writing and reading that data to and from storage.
 
-### Writing reports
-
-`Writer` may be shared by several threads: each `with()` call renders its flow's
-detail under the writer's lock, then writes the file outside it, so detail IO
-from different threads overlaps and `close()` waits for any writes still in
-flight. By default the index is
-rewritten after every flow; `Writer.Indexing.FINAL_ONLY` writes it once, on close,
-which is cheaper for large reports:
-
-```java
-try (Writer writer = new Writer("model", "test", destination,
-		Writer.Indexing.FINAL_ONLY)) {
-	flows.forEach(writer::with);
-}
-```
-
-The index is written to a temporary file in the report directory and then moved
-atomically into place. Once the writer fails, subsequent calls throw an
-`IllegalStateException` carrying the original failure; once it is closed,
-subsequent updates are rejected. Construction clears whatever exists at the
-destination, and a single writer per destination is assumed.
+## Testing
 
 In addition to the unit tests for the report input/output functionality, this module also contains [selenium-powered](https://www.selenium.dev/) tests to exercise the functionality of the [report webapp](../report-ng).
 

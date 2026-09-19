@@ -6,7 +6,6 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable;
-import static org.openqa.selenium.support.ui.ExpectedConditions.textToBe;
 
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
@@ -368,11 +367,6 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	public IndexSequence hasInteractionSummary( String expected ) {
 		trace( "hasInteractionSummary", expected );
 
-		// Flow details load after the index; the summary need not exist yet.
-		if( !expected.isEmpty() ) {
-			new WebDriverWait( driver, ofSeconds( 2 ) )
-					.until( textToBe( By.id( "interaction_summary" ), expected ) );
-		}
 		assertEquals( expected,
 				driver.findElements( By.id( "interaction_summary" ) ).stream()
 						.map( WebElement::getText )
@@ -479,16 +473,16 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	 */
 	public IndexSequence hasInteractions( String... expected ) {
 		trace( "hasInteractions", (Object[]) expected );
-		// Mermaid first inserts source text, then asynchronously renders and styles
-		// SVG.
-		new WebDriverWait( driver, ofSeconds( 2 ) )
-				.withMessage( "interaction diagram structure: " + Copy.pasta( expected ) )
-				.until( d -> {
-					String svg = d.findElement( By.id( "interactions_diagram" ) )
-							.getAttribute( "innerHTML" );
-					return svg.trim().startsWith( "<svg" )
-							&& Copy.pasta( expected ).equals( Copy.pasta( summariseSVG( svg ) ) );
-				} );
+		String svg = driver
+				.findElement( By.id( "interactions_diagram" ) )
+				.getAttribute( "innerHTML" );
+
+		String svgSummary = summariseSVG( svg );
+
+		assertEquals(
+				Copy.pasta( expected ),
+				Copy.pasta( svgSummary ),
+				"interaction diagram structure" );
 
 		return self();
 	}
