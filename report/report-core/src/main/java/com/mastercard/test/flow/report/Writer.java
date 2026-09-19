@@ -31,8 +31,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mastercard.test.flow.Context;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Interaction;
@@ -231,10 +229,10 @@ public class Writer implements AutoCloseable {
 	}
 
 	/**
-	 * A failed update latches a final-only writer: its close reads the detail files
-	 * back to correct links, so it must not publish an index over a detail that was
-	 * never written. An immediate-mode index already lists every submitted flow, so
-	 * a failure there costs only that flow's detail, as it always has.
+	 * A failed update latches a final-only writer: its index has not been published
+	 * yet, so it must not be published over a detail that was never written. An
+	 * immediate-mode index already lists every submitted flow, so a failure there
+	 * costs only that flow's detail, as it always has.
 	 *
 	 * @param e The update failure
 	 */
@@ -371,9 +369,9 @@ public class Writer implements AutoCloseable {
 		Map<Flow, Flow> resolved = new HashMap<>();
 		data.forEach( ( flow, indexed ) -> {
 			Flow nearest = nearestPresent( bases.get( flow ), resolved );
-			indexed.correctSerializedLinks(
+			indexed.correctLinks(
 					nearest == null ? null : data.get( nearest ).indexEntry().detail,
-					data::get, root, app );
+					data::get, root, app, files );
 		} );
 	}
 
@@ -418,8 +416,8 @@ public class Writer implements AutoCloseable {
 	}
 
 	/**
-	 * Waits for in-flight detail writes to land. Link correction reads the detail
-	 * files back, so it must not run over a half-written file.
+	 * Waits for in-flight detail writes to land, so that close does not return
+	 * while another thread is still writing to the report.
 	 */
 	private synchronized void awaitWrites() {
 		while( writing > 0 ) {
@@ -502,8 +500,7 @@ public class Writer implements AutoCloseable {
 
 	private static class IndexedFlowData {
 		private Entry indexEntry;
-		private String serializedBasis;
-		private Set<String> serializedDependencies;
+		/** Dependency source flows by the detail path first computed for them */
 		private final Map<String, Flow> dependencySources = new HashMap<>();
 		FlowData detail;
 		/**
@@ -591,8 +588,6 @@ public class Writer implements AutoCloseable {
 		Runnable render( Path root, JsApp app, BiConsumer<Path, byte[]> files ) {
 			Path path = detailPath( root, indexEntry().detail );
 			byte[] bytes = app.render( detail, path );
-			serializedBasis = detail.basis;
-			serializedDependencies = new HashSet<>( detail.dependencies.keySet() );
 			int version = ++rendered;
 			return () -> land( version, path, bytes, files );
 		}
@@ -607,41 +602,32 @@ public class Writer implements AutoCloseable {
 		}
 
 		/**
-		 * Rewrites the last serialized detail when the resolved basis differs from what
-		 * was written, or when a serialized dependency's source has since been renamed
-		 * within the report.
+		 * Rewrites the detail when the resolved basis differs from what was written, or
+		 * when a dependency's source has since been renamed within the report.
 		 *
 		 * @param basis   Detail filename of the nearest basis present in the report, or
 		 *                null
 		 * @param present Looks up the current data for a flow in the report
 		 * @param root    The report root directory
 		 * @param app     The application
+		 * @param files   Writes file content to a path
 		 */
-		void correctSerializedLinks( String basis, Function<Flow, IndexedFlowData> present,
-				Path root, JsApp app ) {
-			Map<String, String> renamed = new HashMap<>();
+		void correctLinks( String basis, Function<Flow, IndexedFlowData> present,
+				Path root, JsApp app, BiConsumer<Path, byte[]> files ) {
+			Map<String, DependencyData> dependencies = new HashMap<>();
 			dependencySources.forEach( ( path, source ) -> {
 				IndexedFlowData owner = present.apply( source );
-				if( owner != null && serializedDependencies.contains( path )
-						&& !path.equals( owner.indexEntry().detail ) ) {
-					renamed.put( path, owner.indexEntry().detail );
-				}
+				dependencies.put( owner == null ? path : owner.indexEntry().detail,
+						detail.dependencies.get( path ) );
 			} );
-			if( Objects.equals( serializedBasis, basis ) && renamed.isEmpty() ) {
+			if( Objects.equals( detail.basis, basis )
+					&& detail.dependencies.keySet().equals( dependencies.keySet() ) ) {
 				return;
 			}
-			Path path = detailPath( root, indexEntry().detail );
-			// patch the file that was written rather than re-rendering the detail
-			ObjectNode snapshot = Template.extract(
-					new String( QuietFiles.readAllBytes( path ), UTF_8 ),
-					ObjectNode.class );
-			snapshot.put( "basis", basis );
-			ObjectNode dependencies = (ObjectNode) snapshot.get( "dependencies" );
-			Map<String, JsonNode> moved = new HashMap<>();
-			renamed.forEach(
-					( oldPath, newPath ) -> moved.put( newPath, dependencies.remove( oldPath ) ) );
-			moved.forEach( dependencies::set );
-			app.write( snapshot, path );
+			detail = new FlowData( detail.description, detail.tags, detail.motivation, detail.trace,
+					basis, dependencies, detail.root, detail.context, detail.residue,
+					detail.exercised, detail.logs );
+			render( root, app, files ).run();
 		}
 	}
 

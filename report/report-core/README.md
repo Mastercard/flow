@@ -36,8 +36,9 @@ try (Writer writer = new Writer("model", "test", destination,
 ```
 
 The index is written to a temporary file in the report directory and then moved
-atomically into place. A failed final-only update latches the writer — its close
-would otherwise read the missing detail back — so subsequent calls throw an
+atomically into place. A failed final-only update latches the writer — the index
+has not been published yet, and must not list a detail that was never written — so
+subsequent calls throw an
 `IllegalStateException` carrying the original failure; a failed default-mode
 update costs only that update. Once the writer is closed, subsequent updates are
 rejected. Construction clears whatever exists at the destination, and a single

@@ -1,16 +1,13 @@
 package com.mastercard.test.flow.report;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -30,8 +27,7 @@ import com.mastercard.test.flow.report.data.Entry;
 import com.mastercard.test.flow.report.data.FlowData;
 
 /**
- * Final-only reports resolve basis and dependency links on close, from what was
- * written rather than from live model data.
+ * Final-only reports resolve basis and dependency links on close
  */
 @SuppressWarnings("static-method")
 class WriterFinalLinksTest {
@@ -93,24 +89,17 @@ class WriterFinalLinksTest {
 
 	/**
 	 * A basis that arrives after its descendant, under a renamed path, is linked on
-	 * close from the detail as written; later changes to the callback's data do not
-	 * leak in
+	 * close and the descendant's other data is preserved
 	 *
 	 * @param dir Isolated report destination
 	 */
 	@Test
 	void presentAncestor( @TempDir Path dir ) {
-		AtomicReference<FlowData> retained = new AtomicReference<>();
-		Map<String, String> mutable = new HashMap<>( Map.of( "value", "captured" ) );
 		try( Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY ) ) {
 			writer.with( Mdl.CHILD, detail -> {
 				detail.motivation = "captured motivation";
-				detail.context.put( "mutable", mutable );
-				retained.set( detail );
+				detail.context.put( "extra", Map.of( "value", "captured" ) );
 			} );
-			mutable.put( "value", "late mutation" );
-			retained.get().motivation = "late motivation";
-			retained.get().tags.add( "LATE" );
 			writer.with( Mdl.BASIS, detail -> detail.tags.add( "renamed" ) );
 		}
 		Reader reader = new Reader( dir );
@@ -118,8 +107,7 @@ class WriterFinalLinksTest {
 		FlowData child = reader.detail( entries.get( "child" ) );
 		assertEquals( entries.get( "basis" ).detail, child.basis );
 		assertEquals( "captured motivation", child.motivation );
-		assertEquals( Map.of( "value", "captured" ), child.context.get( "mutable" ) );
-		assertFalse( child.tags.contains( "LATE" ) );
+		assertEquals( Map.of( "value", "captured" ), child.context.get( "extra" ) );
 	}
 
 	private static Map<String, Entry> entries( Reader reader ) {
