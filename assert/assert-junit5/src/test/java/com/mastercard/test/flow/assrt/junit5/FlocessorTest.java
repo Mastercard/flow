@@ -18,6 +18,7 @@ import org.junit.platform.engine.discovery.DiscoverySelectors;
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
 import org.junit.platform.launcher.core.LauncherFactory;
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
+import org.opentest4j.TestAbortedException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -33,6 +34,7 @@ import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.Reporting;
 import com.mastercard.test.flow.assrt.junit5.mock.Actrs;
 import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
+import com.mastercard.test.flow.assrt.junit5.mock.Msg;
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.builder.Chain;
 import com.mastercard.test.flow.builder.Creator;
@@ -201,6 +203,33 @@ class FlocessorTest {
 				"  test : 4 [chain:b]",
 				"container : chain:c",
 				"  test : 5 [chain:c]" );
+	}
+
+	/**
+	 * Chain members are processed when their leaves execute: these flows have no
+	 * interactions with the system under test, so processing skips them.
+	 */
+	@Test
+	void chainMembersAreProcessedWhenExecuted() {
+		Flow[] members = { chained( "0" ), chained( "1" ) };
+		Model model = mock( Model.class );
+		when( model.flows( anySet(), anySet() ) ).thenReturn( Stream.of( members ) );
+		try( Flocessor flocessor = new Flocessor( "", model ).system( State.LESS, Actrs.CHE ) ) {
+			DynamicContainer chain = (DynamicContainer) flocessor.tests().findFirst().orElseThrow();
+			List<DynamicTest> leaves = chain.getChildren().map( DynamicTest.class::cast ).toList();
+			assertEquals( 2, leaves.size() );
+			for( DynamicTest leaf : leaves ) {
+				assertEquals( "No interactions with system [CHE]", assertThrows( TestAbortedException.class,
+						leaf.getExecutable()::execute ).getMessage() );
+			}
+		}
+	}
+
+	private static Flow chained( String name ) {
+		return Creator
+				.build( f -> f.meta( m -> m.description( name ).tags( Tags.add( Chain.PREFIX + "a" ) ) )
+						.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN ).request( new Msg( "req" ) )
+								.response( new Msg( "rsp" ) ) ) );
 	}
 
 	private static Model model( String... chains ) {

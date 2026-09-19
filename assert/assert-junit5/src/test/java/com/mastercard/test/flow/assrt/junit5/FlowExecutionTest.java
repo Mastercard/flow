@@ -3,6 +3,7 @@ package com.mastercard.test.flow.assrt.junit5;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,7 +16,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,8 +30,10 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DynamicNode;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
@@ -56,6 +61,8 @@ import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.Applicator;
 import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.CorrelatedCapture;
+import com.mastercard.test.flow.assrt.History.Result;
+import com.mastercard.test.flow.assrt.History;
 import com.mastercard.test.flow.assrt.Listener;
 import com.mastercard.test.flow.assrt.LogCapture;
 import com.mastercard.test.flow.assrt.Reporting;
@@ -69,6 +76,7 @@ import com.mastercard.test.flow.builder.concrete.ConcreteMetadata;
 import com.mastercard.test.flow.builder.concrete.ConcreteRootInteraction;
 import com.mastercard.test.flow.builder.mutable.MutableDependency;
 import com.mastercard.test.flow.report.Reader;
+import com.mastercard.test.flow.report.data.Index;
 import com.mastercard.test.flow.report.data.LogEvent;
 import com.mastercard.test.flow.util.Option.Temporary;
 import com.mastercard.test.flow.util.Tags;
@@ -292,6 +300,209 @@ class FlowExecutionTest {
 		Run run = gated.join( launcher );
 		assertEquals( List.of(), run.failures, run.failures::toString );
 		gated.assertBefore( "finish:k1", "start:k2" );
+	}
+
+	/**
+	 * The factory may declare parameters other than the {@link FlowExecution}
+	 * handle; the extension resolves only its own.
+	 */
+	@Test
+	void factoryMayTakeOtherParameters() {
+		Run run = execute( OtherParameterFactory.class, false );
+		assertEquals( List.of(), run.failures, run.failures::toString );
+		assertEquals( List.of( "a []:SUCCESSFUL" ), run.results );
+		assertEquals( "flows(FlowExecution, TestInfo)", OtherParameterFactory.factoryName );
+	}
+
+	@FlowTest
+	static class OtherParameterFactory {
+		static String factoryName;
+
+		@TestFactory
+		Stream<DynamicNode> flows( FlowExecution execution, TestInfo info ) {
+			factoryName = info.getDisplayName();
+			return execution.flocessor( "other parameters", modelOf( List.of( flow( "a" ) ) ) )
+					.system( State.LESS, Actrs.BEN )
+					.behaviour( a -> a.actual().response( a.expected().response().content() ) )
+					.tests();
+		}
+	}
+
+	/**
+	 * Independent flows are all ready at once, so the whole stream can be drawn
+	 * without executing anything; each leaf is emitted exactly once.
+	 */
+	@Test
+	void readyStreamEmitsEveryIndependentFlowWithoutExecution() {
+		List<String> calls = new ArrayList<>();
+		try( FlowExecution execution = new FlowExecution( false ) ) {
+			List<DynamicNode> leaves = execution
+					.flocessor( "direct", modelOf( List.of( flow( "a" ), flow( "b" ), flow( "c" ) ) ) )
+					.system( State.LESS, Actrs.BEN )
+					.behaviour( a -> calls.add( a.flow().meta().description() ) )
+					.tests().toList();
+			assertEquals( List.of( "a []", "b []", "c []" ),
+					leaves.stream().map( DynamicNode::getDisplayName ).toList() );
+			assertEquals( List.of(), calls );
+		}
+	}
+
+	/**
+	 * Under prepared execution a flow without contexts may run alongside
+	 * context-applying flows, so it leaves the applied state in place rather than
+	 * removing it.
+	 *
+	 * @throws Throwable on leaf failure
+	 */
+	@Test
+	void contextFreeFlowsLeaveAppliedContextsInPlace() throws Throwable {
+		List<String> events = new ArrayList<>();
+		try( FlowExecution execution = new FlowExecution( false ) ) {
+			List<DynamicNode> leaves = execution
+					.flocessor( "contexts", modelOf( List.of( contextual( "k1" ), flow( "a" ) ) ) )
+					.system( State.FUL, Actrs.BEN )
+					.applicators( new Applicator<>( Setting.class, 1 ) {
+						@Override
+						public Comparator<Setting> order() {
+							return Comparator.comparing( Setting::name );
+						}
+
+						@Override
+						public void transition( Setting from, Setting to ) {
+							events.add( "context:" + (to == null ? "none" : to.name()) );
+						}
+					} )
+					.behaviour( a -> {
+						events.add( "flow:" + a.flow().meta().description() );
+						a.actual().response( a.expected().response().content() );
+					} )
+					.tests().toList();
+			assertEquals( List.of( "a []", "k1 []" ),
+					leaves.stream().map( DynamicNode::getDisplayName ).toList() );
+			// both are ready at once; a context-free flow running after the contextual
+			// one must not remove its context
+			((DynamicTest) leaves.get( 1 )).getExecutable().execute();
+			((DynamicTest) leaves.get( 0 )).getExecutable().execute();
+		}
+		assertEquals( List.of( "context:k1", "flow:k1", "flow:a" ), events );
+	}
+
+	/**
+	 * A run that selects no flows still publishes its (empty) report on completion.
+	 *
+	 * @param dir Isolated artifact directory
+	 */
+	@Test
+	void emptySelectionStillPublishesReport( @TempDir Path dir ) {
+		try( Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( dir.toString() );
+				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "empty" );
+				FlowExecution execution = new FlowExecution( false ) ) {
+			PreparedFlocessor runner = execution
+					.flocessor( "empty", modelOf( List.of( flow( "a" ) ) ) )
+					.system( State.LESS, Actrs.BEN ).reporting( Reporting.QUIETLY )
+					.exercising( f -> false, rejection -> {
+					} );
+			List<DynamicNode> leaves = runner.tests().toList();
+			assertEquals( List.of(), leaves );
+			assertNotNull( runner.report(), "preparation opens the report" );
+			execution.close();
+			Index index = new Reader( dir.resolve( "empty" ) ).read();
+			assertNotNull( index, "report published for an empty run" );
+			assertEquals( List.of(), index.entries );
+		}
+	}
+
+	/** Every leaf outcome is recorded to the shared History. */
+	@Test
+	void leafOutcomesAreRecorded() {
+		Flow success = flow( "success" );
+		Flow unexpected = flow( "unexpected" );
+		Flow error = flow( "error" );
+		Flow skipped = Creator.build( f -> f.meta( m -> m.description( "skipped" ) )
+				.call( i -> i.from( Actrs.AVA ).to( Actrs.CHE ).request( new Msg( "req" ) )
+						.response( new Msg( "rsp" ) ) ) );
+		try( FlowExecution execution = new FlowExecution( false ) ) {
+			Map<String, DynamicTest> leaves = new HashMap<>();
+			execution.flocessor( "outcomes", modelOf( List.of( success, unexpected, error, skipped ) ) )
+					.system( State.LESS, Actrs.BEN )
+					.behaviour( a -> {
+						switch( a.flow().meta().description() ) {
+							case "success" -> a.actual().response( a.expected().response().content() );
+							case "unexpected" -> a.actual().response( "wrong".getBytes( UTF_8 ) );
+							default -> throw new IllegalStateException( "boom" );
+						}
+					} )
+					.tests().forEach( leaf -> leaves.put( leaf.getDisplayName(), (DynamicTest) leaf ) );
+			History history = execution.history();
+			leaves.get( "success []" ).getExecutable().execute();
+			assertEquals( Result.SUCCESS, history.get( success ) );
+			assertThrows( AssertionError.class, leaves.get( "unexpected []" ).getExecutable()::execute );
+			assertEquals( Result.UNEXPECTED, history.get( unexpected ) );
+			assertThrows( IllegalStateException.class,
+					leaves.get( "error []" ).getExecutable()::execute );
+			assertEquals( Result.ERROR, history.get( error ) );
+			assertThrows( TestAbortedException.class,
+					leaves.get( "skipped []" ).getExecutable()::execute );
+			assertEquals( Result.SKIP, history.get( skipped ) );
+		}
+		catch( Throwable e ) {
+			throw new AssertionError( e );
+		}
+	}
+
+	/** The progress timeout must be positive, and is frozen with the rest. */
+	@Test
+	void progressTimeoutIsValidated() {
+		try( FlowExecution execution = new FlowExecution( false ) ) {
+			PreparedFlocessor runner = execution.flocessor( "timeout", modelOf( List.of( flow( "a" ) ) ) )
+					.system( State.LESS, Actrs.BEN );
+			for( Duration invalid : List.of( Duration.ZERO, Duration.ofSeconds( -1 ) ) ) {
+				assertEquals( "Progress timeout must be positive",
+						assertThrows( IllegalArgumentException.class, () -> runner.progressTimeout( invalid ) )
+								.getMessage() );
+			}
+			assertEquals( runner, runner.progressTimeout( Duration.ofMinutes( 1 ) ) );
+			runner.tests().toList();
+			assertThrows( IllegalStateException.class,
+					() -> runner.progressTimeout( Duration.ofMinutes( 1 ) ) );
+		}
+	}
+
+	/**
+	 * Interrupting the factory while it waits for a predecessor fails the run with
+	 * a diagnostic that names the outstanding work.
+	 *
+	 * @throws InterruptedException On test interruption
+	 */
+	@Test
+	void interruptedWaitFailsWithDiagnostic() throws InterruptedException {
+		Flow a = flow( "a" );
+		Flow b = flow( "b", a );
+		try( FlowExecution execution = new FlowExecution( false ) ) {
+			Iterator<
+					DynamicNode> leaves = execution.flocessor( "interrupted", modelOf( List.of( a, b ) ) )
+							.system( State.LESS, Actrs.BEN )
+							.behaviour( x -> x.actual().response( x.expected().response().content() ) )
+							.tests().iterator();
+			assertEquals( "a []", leaves.next().getDisplayName() );
+			List<Throwable> failures = new ArrayList<>();
+			Thread waiter = new Thread( leaves::next, "waiter" );
+			waiter.setUncaughtExceptionHandler( ( t, e ) -> failures.add( e ) );
+			waiter.start();
+			long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos( 10 );
+			while( waiter.getState() != Thread.State.TIMED_WAITING ) {
+				assertTrue( System.nanoTime() < deadline, "waiter did not park: " + waiter.getState() );
+				Thread.onSpinWait();
+			}
+			waiter.interrupt();
+			waiter.join( 10_000 );
+			assertFalse( waiter.isAlive() );
+			assertEquals( 1, failures.size(), failures::toString );
+			assertTrue( failures.get( 0 ) instanceof IllegalStateException
+					&& failures.get( 0 ).getCause() instanceof InterruptedException
+					&& failures.get( 0 ).getMessage().contains( "running: [a []], not started: 1" ),
+					failures::toString );
+		}
 	}
 
 	/** Model errors surface before any flow body runs. */

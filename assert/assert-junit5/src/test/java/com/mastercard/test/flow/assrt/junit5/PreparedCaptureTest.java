@@ -11,8 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -40,9 +38,10 @@ import com.mastercard.test.flow.util.Option.Temporary;
 class PreparedCaptureTest {
 
 	/**
-	 * Concurrent flows log interleaved lines to one file; each report entry gets
-	 * only the lines carrying its identifier, including one written after the flow
-	 * finished.
+	 * Flows log interleaved lines to one file; each report entry gets only the
+	 * lines carrying its identifier, including those written after the flow
+	 * finished. The dependency between {@code first} and {@code second} makes the
+	 * late lines deterministic whether or not the leaves happen to overlap.
 	 *
 	 * @param dir Isolated artifact directory
 	 * @throws Exception On filesystem failure
@@ -56,7 +55,7 @@ class PreparedCaptureTest {
 			TailFactory.log = log;
 			FlowExecutionTest.Run run = FlowExecutionTest.execute( TailFactory.class, true );
 			assertEquals( List.of(), run.failures, run.failures::toString );
-			assertEquals( 2, run.results.size(), run.results::toString );
+			assertEquals( 3, run.results.size(), run.results::toString );
 			Reader reader = new Reader( dir.resolve( "tailed" ) );
 			Map<String, Set<String>> logs = new TreeMap<>();
 			for( Entry entry : reader.read().entries ) {
@@ -65,49 +64,53 @@ class PreparedCaptureTest {
 						.map( e -> e.message.replaceFirst( "^\\[\\]\\s+", "" ) )
 						.collect( Collectors.toSet() ) );
 			}
-			assertEquals( Set.of( "handling first", "more for first", "late for first" ),
+			assertEquals( Set.of( "handling first", "late for first", "later for first" ),
 					logs.get( "first" ) );
-			assertEquals( Set.of( "handling second", "more for second", "late for second" ),
-					logs.get( "second" ) );
+			assertEquals( Set.of( "handling second" ), logs.get( "second" ) );
+			assertEquals( Set.of( "handling third" ), logs.get( "third" ) );
 		}
 	}
 
-	/** Parallel factory whose flows log interleaved lines to one shared file. */
+	/**
+	 * Parallel factory whose flows log to one shared file. {@code second} follows
+	 * {@code first} and keeps writing about it; {@code third} is independent.
+	 */
 	@FlowTest
 	static class TailFactory {
 		static Path log;
 
 		@TestFactory
 		Stream<DynamicNode> flows( FlowExecution execution ) {
-			Flow first = Creator.build( f -> f.meta( m -> m.description( "first" ) )
-					.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
-							.request( new Msg( "req" ) ).response( new Msg( "rsp" ) ) ) );
+			Flow first = flow( "first" );
 			Flow second = Creator.build( f -> f.meta( m -> m.description( "second" ) )
+					.prerequisite( first )
 					.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
 							.request( new Msg( "req" ) ).response( new Msg( "rsp" ) ) ) );
-			CountDownLatch bothLogged = new CountDownLatch( 2 );
-			return execution.flocessor( "tailed", FlowExecutionTest.modelOf( List.of( first, second ) ) )
+			Flow third = flow( "third" );
+			return execution
+					.flocessor( "tailed", FlowExecutionTest.modelOf( List.of( first, second, third ) ) )
 					.system( State.LESS, Actrs.BEN ).reporting( Reporting.QUIETLY )
 					.logs( new CorrelatedTail( log,
 							"^(?<time>\\d+) \\[(?<correlation>[^\\]]*)\\] (?<level>[A-Z]+) (?<source>\\S+) " ) )
 					.correlation( f -> f.meta().description() )
 					.behaviour( a -> {
 						String me = a.correlation().id();
-						String other = me.equals( "first" ) ? "second" : "first";
-						// the "system" interleaves its output for both flows, and keeps writing
-						// about the other flow after this one has returned
-						append( "1 [" + me + "] INFO sut handling " + me,
-								"2 [" + other + "] INFO sut more for " + other );
-						bothLogged.countDown();
-						try {
-							bothLogged.await( 2, TimeUnit.SECONDS );
-						}
-						catch( InterruptedException e ) {
-							throw new IllegalStateException( e );
+						append( "1 [" + me + "] INFO sut handling " + me );
+						if( me.equals( "second" ) ) {
+							// the "system" is still writing about first, which has finished
+							append( "2 [first] INFO sut late for first" );
 						}
 						a.actual().response( a.expected().response().content() );
-						append( "3 [" + other + "] INFO sut late for " + other );
+						if( me.equals( "second" ) ) {
+							append( "3 [first] INFO sut later for first" );
+						}
 					} ).tests();
+		}
+
+		private static Flow flow( String name ) {
+			return Creator.build( f -> f.meta( m -> m.description( name ) )
+					.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN )
+							.request( new Msg( "req" ) ).response( new Msg( "rsp" ) ) ) );
 		}
 
 		private static synchronized void append( String... lines ) {
