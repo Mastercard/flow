@@ -44,6 +44,6 @@ class CoreTest extends AbstractServiceTest {
 
 	/***/
 	public CoreTest() {
-		super( () -> service, Actors.CORE, LOG );
+		super( service, Actors.CORE, LOG );
 	}
 }

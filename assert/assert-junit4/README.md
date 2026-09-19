@@ -35,21 +35,20 @@ There is a certain amount of unavoidable boilerplate required to hook the `Floce
 @RunWith(Parameterized.class)
 public class MyTest {
 
-  private static Flocessor flows;
+  private static final Flocessor flows = new Flocessor( "my flow test", mySystemModel )
+    .system( /* The actors that are being exercised */ )
+    .behaviour( asrt -> {
+      // implement this to push data from asrt into your system 
+      // and then put the system outputs back into asrt
+    } );
+
+  // Boilerplate from here on
 
   /** @return The {@link Flow} parameters */
   @Parameters(name = "{0}")
   public static Collection<Object[]> flows() {
-    flows = new Flocessor( "my flow test", mySystemModel )
-      .system( /* The actors that are being exercised */ )
-      .behaviour( asrt -> {
-        // implement this to push data from asrt into your system
-        // and then put the system outputs back into asrt
-      } );
     return flows.parameters();
   }
-
-  // Boilerplate from here on
 
   /** Human-readable name for the current test case */
   @Parameter(0)
@@ -68,21 +67,12 @@ public class MyTest {
   public void test() {
     flows.process( flow );
   }
-
-  /** Closes reporting after all parameterized cases, including failures. */
-  @AfterClass
-  public static void complete() {
-    flows.close();
-  }
 }
 ```
 
-The `Flocessor` is `AutoCloseable`. Close it from `@AfterClass`, after all
-parameterized cases have finished; the report is written as flows are processed,
-and `close()` waits for in-flight detail writes, closes the log source and surfaces
-any reporting failure. Create it in
-`@Parameters` rather than `@BeforeClass`: parameter enumeration happens first, and a
-fresh runner is needed for each JUnit run of the class. `close()` fails if a flow is
-still being processed; afterwards no further flows can be processed. Closing a
-second time does nothing, unless the report failed to close, in which case the
-failure is thrown again.
+The report is written as each flow is processed, so nothing needs to happen after
+the parameterized cases finish. The one exception is `logs( CorrelatedCapture )`:
+that log source is opened once for the run and must be closed with
+`Flocessor.close()` from `@AfterClass`, after all cases have finished. A closed
+`Flocessor` processes no further flows, so a class that is closed must create a
+fresh `Flocessor` in `@Parameters` rather than in a static field.

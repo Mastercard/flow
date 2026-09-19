@@ -32,36 +32,25 @@ After [importing the `bom`](../../bom):
 The flocessor should be used to provide the output of a [TestFactory](https://junit.org/junit5/docs/current/api/org.junit.jupiter.api/org/junit/jupiter/api/TestFactory.html) method:
 
 ```java
-@TestInstance(Lifecycle.PER_CLASS)
-class MyTest {
-  private final Flocessor flows = new Flocessor( "my test name", mySystemModel )
+@TestFactory
+Stream<DynamicNode> myTest() {
+  return new Flocessor( "my test name", mySystemModel )
     .system( /* The actors that are being exercised */ )
     .behaviour( asrt -> {
       // implement this to push data from asrt into your system 
       // and then put the system outputs back into asrt
-    } );
-
-  @TestFactory
-  Stream<DynamicNode> myTest() {
-    return flows.tests();
-  }
-
-  // Factory return can precede dynamic children; close only after they finish.
-  @AfterAll
-  void complete() {
-    flows.close();
-  }
+    } ).tests();
 }
 ```
 
-The `Flocessor` is `AutoCloseable`, but the factory returns before its dynamic
-tests run, so do not close it in the factory or with try-with-resources: close it
-from `@AfterAll`. The report is written as flows are processed; `close()` waits for
-in-flight detail writes, closes the log source and surfaces any reporting failure.
-`close()` fails if a flow is
-still being processed; afterwards no further flows can be processed. Closing a
-second time does nothing, unless the report failed to close, in which case the
-failure is thrown again.
+The report is written as each flow is processed, so nothing needs to happen after
+the dynamic tests finish. The one exception is `logs( CorrelatedCapture )`: that
+log source is opened once for the run and must be closed with `Flocessor.close()`
+after all dynamic tests have run. The factory returns before its dynamic tests
+execute, so do not close in the factory or with try-with-resources; hold the
+`Flocessor` in a field under `@TestInstance(Lifecycle.PER_CLASS)` and close it from
+`@AfterAll`. `close()` fails if a flow is still being processed; afterwards no
+further flows can be processed.
 
 ## Concurrent flows
 

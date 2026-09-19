@@ -33,24 +33,13 @@ import com.mastercard.test.flow.util.Tags;
  * test</a>, e.g.:
  *
  * <pre>
- * &#64;TestInstance(Lifecycle.PER_CLASS)
- * class MyTest {
- * 	private final Flocessor flows = new Flocessor( "My test name", MY_SYSTEM_MODEL )
+ * &#64;TestFactory
+ * Stream&lt;DynamicNode&gt; flows() {
+ * 	return new Flocessor( "My test name", MY_SYSTEM_MODEL )
  * 			.system( State.LESS, MY_ACTORS_UNDER_TEST )
  * 			.behaviour( asrt -&gt; {
  * 				// test behaviour
- * 			} );
- *
- * 	&#64;TestFactory
- * 	Stream&lt;DynamicNode&gt; flows() {
- * 		return flows.tests();
- * 	}
- *
- * 	// Factory return can precede dynamic children; close only after they finish.
- * 	&#64;AfterAll
- * 	void complete() {
- * 		flows.close();
- * 	}
+ * 			} ).tests();
  * }
  * </pre>
  */
@@ -65,11 +54,11 @@ public class Flocessor extends AbstractFlocessor<Flocessor> implements AutoClose
 	}
 
 	/**
-	 * Stops processing and closes the report. Call from {@code @AfterAll}, after
-	 * all dynamic tests have finished; returning the stream from the factory does
-	 * not mean the tests have run. The report is written as flows are processed;
-	 * this call waits for in-flight detail writes, closes the log source and
-	 * surfaces any reporting failure.
+	 * Closes the log source and the report. Only required when
+	 * {@link #logs(com.mastercard.test.flow.assrt.CorrelatedCapture)} is
+	 * configured; the report is complete after each flow otherwise. Call from
+	 * {@code @AfterAll} after all dynamic tests have finished; returning the stream
+	 * from the factory does not mean the tests have run.
 	 *
 	 * @throws IllegalStateException if an invocation or completion is still active,
 	 *                               or reporting has failed; a reporting failure

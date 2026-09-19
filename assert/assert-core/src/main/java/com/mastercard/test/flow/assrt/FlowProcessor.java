@@ -387,6 +387,8 @@ class FlowProcessor {
 					reportUpdates.add( d -> d.logs.addAll( logs ) );
 					reportUpdates
 							.add( d -> d.logs.add( error( "Encountered error: " + LogEvent.stackTrace( e ) ) ) );
+					// earlier interactions were customised in the normal order, then the failure
+					toCustomise.forEach( this::customiseMotivation );
 					customiseMotivation( assrt );
 					reportUpdates.add( d -> d.motivation = motivation );
 					report( w -> w.with( flow, reportUpdates.stream().reduce( d -> {

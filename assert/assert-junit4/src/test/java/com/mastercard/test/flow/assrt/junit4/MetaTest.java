@@ -1,8 +1,7 @@
 package com.mastercard.test.flow.assrt.junit4;
 
 import static java.util.stream.Collectors.joining;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.Assert.assertEquals;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -12,8 +11,6 @@ import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
-
-import com.mastercard.test.flow.Flow;
 
 /**
  * Runs {@link ExampleTest} and assert on on the results
@@ -25,7 +22,6 @@ public class MetaTest {
 	 * Runs {@link ExampleTest} and assert on on the results
 	 */
 	@Test
-	@org.junit.jupiter.api.Test // also discover the JUnitCore oracle with the Platform provider
 	public void test() {
 		JUnitCore juc = new JUnitCore();
 		Map<String, String> results = new LinkedHashMap<>();
@@ -82,8 +78,5 @@ public class MetaTest {
 										"test\\[(.+)\\]\\(com.mastercard.test.flow.assrt.junit4.ExampleTest\\)", "$1" ),
 								e.getValue() ) )
 						.collect( joining( "\n" ) ) );
-		Flow selected = (Flow) ExampleTest.flows.parameters().iterator().next()[1];
-		assertThrows( IllegalStateException.class, () -> ExampleTest.flows.process( selected ) );
-		ExampleTest.flows.close();
 	}
 }

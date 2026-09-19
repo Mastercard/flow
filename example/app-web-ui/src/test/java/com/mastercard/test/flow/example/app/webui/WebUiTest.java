@@ -55,7 +55,7 @@ class WebUiTest extends AbstractServiceTest {
 
 	/***/
 	public WebUiTest() {
-		super( () -> service, Actors.WEB_UI, LOG );
+		super( service, Actors.WEB_UI, LOG );
 	}
 
 	@Override

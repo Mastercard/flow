@@ -44,6 +44,6 @@ class HistogramTest extends AbstractServiceTest {
 
 	/***/
 	public HistogramTest() {
-		super( () -> service, Actors.HISTOGRAM, LOG );
+		super( service, Actors.HISTOGRAM, LOG );
 	}
 }

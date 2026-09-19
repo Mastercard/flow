@@ -22,16 +22,14 @@ import com.mastercard.test.flow.assrt.AbstractFlocessor;
  * &#64;RunWith(Parameterized.class)
  * public class MyTest {
  *
- * 	private static Flocessor flows;
+ * 	private static final Flocessor flows = new Flocessor( "My test name", MY_SYSTEM_MODEL )
+ * 			.system( State.LESS, MY_ACTORS_UNDER_TEST )
+ * 			.behaviour( asrt -&gt; {
+ * 				// test behaviour
+ * 			} );
  *
  * 	&#64;Parameters(name = "{0}")
  * 	public static Collection&lt;Object[]&gt; flows() {
- * 		// A fresh runner for each JUnit run, before parameter enumeration.
- * 		flows = new Flocessor( "My test name", MY_SYSTEM_MODEL )
- * 				.system( State.LESS, MY_ACTORS_UNDER_TEST )
- * 				.behaviour( asrt -&gt; {
- * 					// test behaviour
- * 				} );
  * 		return flows.parameters();
  * 	}
  *
@@ -48,12 +46,6 @@ import com.mastercard.test.flow.assrt.AbstractFlocessor;
  * 	public void test() {
  * 		flows.process( flow );
  * 	}
- *
- * 	// All parameterized cases must finish before reporting is closed.
- * 	&#64;AfterClass
- * 	public static void complete() {
- * 		flows.close();
- * 	}
  * }
  * </pre>
  */
@@ -68,10 +60,11 @@ public class Flocessor extends AbstractFlocessor<Flocessor> implements AutoClose
 	}
 
 	/**
-	 * Stops processing and closes the report. Call from {@code @AfterClass}, after
-	 * all parameterized cases have finished, not after parameter enumeration. The
-	 * report is written as flows are processed; this call waits for in-flight
-	 * detail writes, closes the log source and surfaces any reporting failure.
+	 * Closes the log source and the report. Only required when
+	 * {@link #logs(com.mastercard.test.flow.assrt.CorrelatedCapture)} is
+	 * configured; the report is complete after each flow otherwise. Call from
+	 * {@code @AfterClass} after all parameterized cases have finished. A closed
+	 * instance processes no further flows.
 	 *
 	 * @throws IllegalStateException if an invocation or completion is still active,
 	 *                               or reporting has failed; a reporting failure
