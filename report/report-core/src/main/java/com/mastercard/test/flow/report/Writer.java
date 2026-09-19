@@ -61,7 +61,7 @@ public class Writer implements AutoCloseable {
 	public enum Indexing {
 		/** Preserve insertion order and publish an index on every update. */
 		IMMEDIATE,
-		/** Publish one index, ordered by stable detail identity, on close. */
+		/** Publish one index, ordered by description and tags, on close. */
 		FINAL_ONLY
 	}
 
@@ -204,7 +204,7 @@ public class Writer implements AutoCloseable {
 			// assertion errors are how test callbacks fail; other errors are not
 			// recoverable, so they propagate without latching
 			catch( RuntimeException | AssertionError e ) {
-				fail( e );
+				failUpdate( e );
 				throw e;
 			}
 			finally {
@@ -217,7 +217,7 @@ public class Writer implements AutoCloseable {
 		}
 		catch( RuntimeException | AssertionError e ) {
 			synchronized( this ) {
-				fail( e );
+				failUpdate( e );
 			}
 			throw e;
 		}
@@ -228,6 +228,20 @@ public class Writer implements AutoCloseable {
 			}
 		}
 		return this;
+	}
+
+	/**
+	 * A failed update latches a final-only writer: its close reads the detail files
+	 * back to correct links, so it must not publish an index over a detail that was
+	 * never written. An immediate-mode index already lists every submitted flow, so
+	 * a failure there costs only that flow's detail, as it always has.
+	 *
+	 * @param e The update failure
+	 */
+	private void failUpdate( Throwable e ) {
+		if( indexing == Indexing.FINAL_ONLY ) {
+			fail( e );
+		}
 	}
 
 	/**
@@ -366,7 +380,9 @@ public class Writer implements AutoCloseable {
 	private void writeIndex( Path destination ) {
 		Stream<Entry> entries = data.values().stream().map( IndexedFlowData::indexEntry );
 		if( indexing == Indexing.FINAL_ONLY ) {
-			entries = entries.sorted( comparing( entry -> entry.detail ) );
+			// completion order is arbitrary, so present the flows as they are identified
+			entries = entries.sorted( comparing( ( Entry entry ) -> entry.description )
+					.thenComparing( entry -> String.valueOf( entry.tags ) ) );
 		}
 		app.write( new Index( new Meta( modelTitle, testTitle, System.currentTimeMillis() ),
 				entries.toList() ), destination );
@@ -376,9 +392,9 @@ public class Writer implements AutoCloseable {
 	 * Completes this report. Close waits for detail writes still in flight on other
 	 * threads, then final-only indexes are written to a same-directory temporary
 	 * file before an atomic move, with no non-atomic fallback. A successful
-	 * repeated close does nothing; further updates are rejected. After an update or
-	 * publication fails, subsequent close/update calls throw an exception whose
-	 * cause is the original failure, without retrying IO.
+	 * repeated close does nothing; further updates are rejected. After a final-only
+	 * update fails, or any publication fails, subsequent close/update calls throw
+	 * an exception whose cause is the original failure, without retrying IO.
 	 */
 	@Override
 	public synchronized void close() {

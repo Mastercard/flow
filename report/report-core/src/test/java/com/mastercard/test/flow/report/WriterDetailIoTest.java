@@ -2,6 +2,7 @@ package com.mastercard.test.flow.report;
 
 import static com.mastercard.test.flow.report.Latches.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -9,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -17,6 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
@@ -130,16 +133,15 @@ class WriterDetailIoTest {
 	}
 
 	/**
-	 * A failed detail write propagates to its caller and latches the writer.
+	 * A failed detail write propagates to its caller and latches a final-only
+	 * writer, whose close would otherwise read the missing file back.
 	 *
-	 * @param indexing Index policy
-	 * @param dir      Isolated report destination
+	 * @param dir Isolated report destination
 	 */
-	@ParameterizedTest
-	@EnumSource(Indexing.class)
-	void writeFailureIsLatched( Indexing indexing, @TempDir Path dir ) {
+	@Test
+	void writeFailureIsLatched( @TempDir Path dir ) {
 		UncheckedIOException failure = new UncheckedIOException( new IOException( "disk full" ) );
-		Writer writer = new Writer( "model", "test", dir, indexing, ( path, bytes ) -> {
+		Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY, ( path, bytes ) -> {
 			throw failure;
 		} );
 		assertSame( failure,
@@ -147,5 +149,32 @@ class WriterDetailIoTest {
 		assertSame( failure, assertThrows( IllegalStateException.class,
 				() -> writer.with( Mdl.DEPENDENCY ) ).getCause() );
 		assertSame( failure, assertThrows( IllegalStateException.class, writer::close ).getCause() );
+	}
+
+	/**
+	 * An immediate-mode write failure is reported to its caller and nothing more:
+	 * the next update is attempted as normal.
+	 *
+	 * @param dir Isolated report destination
+	 */
+	@Test
+	void immediateWriteFailureIsNotLatched( @TempDir Path dir ) {
+		UncheckedIOException failure = new UncheckedIOException( new IOException( "disk full" ) );
+		AtomicBoolean failing = new AtomicBoolean( true );
+		Writer writer = new Writer( "model", "test", dir, Indexing.IMMEDIATE, ( path, bytes ) -> {
+			if( failing.get() ) {
+				throw failure;
+			}
+			QuietFiles.write( path, bytes );
+		} );
+		assertSame( failure,
+				assertThrows( UncheckedIOException.class, () -> writer.with( Mdl.BASIS ) ) );
+		failing.set( false );
+		writer.with( Mdl.DEPENDENCY );
+		writer.close();
+		Reader reader = new Reader( dir );
+		assertEquals( List.of( "basis", "dependency" ), reader.read().entries.stream()
+				.map( e -> e.description ).toList() );
+		assertNotNull( reader.detail( reader.read().entries.get( 1 ) ) );
 	}
 }

@@ -36,10 +36,12 @@ try (Writer writer = new Writer("model", "test", destination,
 ```
 
 The index is written to a temporary file in the report directory and then moved
-atomically into place. Once the writer fails, subsequent calls throw an
-`IllegalStateException` carrying the original failure; once it is closed,
-subsequent updates are rejected. Construction clears whatever exists at the
-destination, and a single writer per destination is assumed.
+atomically into place. A failed final-only update latches the writer — its close
+would otherwise read the missing detail back — so subsequent calls throw an
+`IllegalStateException` carrying the original failure; a failed default-mode
+update costs only that update. Once the writer is closed, subsequent updates are
+rejected. Construction clears whatever exists at the destination, and a single
+writer per destination is assumed.
 
 In addition to the unit tests for the report input/output functionality, this module also contains [selenium-powered](https://www.selenium.dev/) tests to exercise the functionality of the [report webapp](../report-ng).
 
