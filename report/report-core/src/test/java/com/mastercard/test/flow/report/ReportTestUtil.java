@@ -109,14 +109,15 @@ public class ReportTestUtil {
 			throws Exception {
 		Path reportDir = REPORT_ROOT.resolve( dir );
 
-		Writer w = new Writer( modelTitle, "Test title", reportDir );
-		data.accept( w );
+		try( Writer w = new Writer( modelTitle, "Test title", reportDir ) ) {
+			data.accept( w );
 
-		// fiddle with the index so it's more testable
-		Path indexPath = reportDir.resolve( "index.html" );
-		String content = new String( Files.readAllBytes( indexPath ), UTF_8 );
-		content = content.replaceAll( "(\"timestamp\" :) \\d+", "$1 1234567890123" );
-		Files.write( indexPath, content.getBytes( UTF_8 ) );
+			// fiddle with the index so it's more testable
+			Path indexPath = reportDir.resolve( "index.html" );
+			String content = new String( Files.readAllBytes( indexPath ), UTF_8 );
+			content = content.replaceAll( "(\"timestamp\" :) \\d+", "$1 1234567890123" );
+			Files.write( indexPath, content.getBytes( UTF_8 ) );
+		}
 
 		Service server = Service.ignite()
 				.port( 0 )

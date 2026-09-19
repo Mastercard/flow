@@ -1,26 +1,38 @@
 package com.mastercard.test.flow.report;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.mastercard.test.flow.Context;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Interaction;
@@ -36,8 +48,22 @@ import com.mastercard.test.flow.util.Bytes;
 
 /**
  * For writing a new report
+ * <p>
+ * Callers must use a single active writer per output destination; updates from
+ * multiple threads on the same writer are supported.
+ * </p>
  */
-public class Writer {
+public class Writer implements AutoCloseable {
+
+	/**
+	 * When the report's index becomes available.
+	 */
+	public enum Indexing {
+		/** Preserve insertion order and publish an index on every update. */
+		IMMEDIATE,
+		/** Publish one index, ordered by stable detail identity, on close. */
+		FINAL_ONLY
+	}
 
 	/**
 	 * The file name under which the report index is saved
@@ -78,9 +104,22 @@ public class Writer {
 	private final String testTitle;
 	private final Path root;
 	private final Map<Flow, IndexedFlowData> data = new LinkedHashMap<>();
+	private final Map<String, IndexedFlowData> detailOwners = new HashMap<>();
 	private final JsApp app;
+	private final Indexing indexing;
+	private final BiConsumer<Path, byte[]> files;
+	private State state = State.OPEN;
+	private Throwable failure;
+	private boolean updating;
+	/** Detail writes that have left the monitor but not yet landed on disk */
+	private int writing;
+
+	private enum State {
+		OPEN, FINALIZING, CLOSED, FAILED
+	}
 
 	private final Map<Flow, List<Flow>> missingBases = new HashMap<>();
+	private final Map<Flow, Flow> bases = new HashMap<>();
 
 	/**
 	 * @param modelTitle A human-readable title for the model that supplied the test
@@ -89,9 +128,37 @@ public class Writer {
 	 * @param root       Where to write the report to
 	 */
 	public Writer( String modelTitle, String testTitle, Path root ) {
+		this( modelTitle, testTitle, root, Indexing.IMMEDIATE );
+	}
+
+	/**
+	 * @param modelTitle A human-readable title for the model
+	 * @param testTitle  A human-readable title for the test
+	 * @param root       Where to write the report
+	 * @param indexing   When to publish the index; final-only callers must close
+	 *                   the writer after submitting all updates
+	 */
+	public Writer( String modelTitle, String testTitle, Path root, Indexing indexing ) {
+		this( modelTitle, testTitle, root, indexing, QuietFiles::write );
+	}
+
+	/**
+	 * Test seam: detail file writes go through the supplied consumer
+	 *
+	 * @param modelTitle A human-readable title for the model
+	 * @param testTitle  A human-readable title for the test
+	 * @param root       Where to write the report
+	 * @param indexing   When to publish the index
+	 * @param files      Writes detail file content to a path
+	 */
+	Writer( String modelTitle, String testTitle, Path root, Indexing indexing,
+			BiConsumer<Path, byte[]> files ) {
 		this.modelTitle = modelTitle;
 		this.testTitle = testTitle;
 		this.root = root;
+		this.indexing = Objects.requireNonNull( indexing, "indexing" );
+		this.files = files;
+
 		// delete whatever might be there already
 		QuietFiles.recursiveDelete( root );
 		// write static content
@@ -112,6 +179,14 @@ public class Writer {
 
 	/**
 	 * Adds or updates a {@link Flow} in the report
+	 * <p>
+	 * Callbacks, detail rendering and index publication are serialized on this
+	 * writer; the detail file write then happens on the calling thread outside the
+	 * monitor, so concurrent updates overlap their disk IO. Callbacks execute
+	 * synchronously on the calling thread. Callers remain responsible for the
+	 * semantic order of updates to the same flow and must not wait for another
+	 * thread to update this writer from a callback.
+	 * </p>
 	 *
 	 * @param flow  The {@link Flow}
 	 * @param extra Extra data, above and beyond what the flow holds
@@ -119,29 +194,113 @@ public class Writer {
 	 */
 	@SafeVarargs
 	public final Writer with( Flow flow, Consumer<FlowData>... extra ) {
+		Runnable write;
+		synchronized( this ) {
+			requireOpen();
+			updating = true;
+			try {
+				write = update( flow, extra );
+			}
+			// assertion errors are how test callbacks fail; other errors are not
+			// recoverable, so they propagate without latching
+			catch( RuntimeException | AssertionError e ) {
+				fail( e );
+				throw e;
+			}
+			finally {
+				updating = false;
+			}
+			writing++;
+		}
+		try {
+			write.run();
+		}
+		catch( RuntimeException | AssertionError e ) {
+			synchronized( this ) {
+				fail( e );
+			}
+			throw e;
+		}
+		finally {
+			synchronized( this ) {
+				writing--;
+				notifyAll();
+			}
+		}
+		return this;
+	}
+
+	/**
+	 * Latches the first failure; later calls report it as their cause
+	 *
+	 * @param e The failure
+	 */
+	private void fail( Throwable e ) {
+		if( state != State.FAILED ) {
+			state = State.FAILED;
+			failure = e;
+		}
+	}
+
+	private void requireOpen() {
+		if( state == State.FAILED ) {
+			// wrapped so that try-with-resources does not suppress the original
+			// exception with itself
+			throw new IllegalStateException( "Writer previously failed: " + root, failure );
+		}
+		if( state != State.OPEN || updating ) {
+			throw new IllegalStateException( "Writer is " + (updating ? "updating" : state) );
+		}
+	}
+
+	/**
+	 * Applies an update under the monitor
+	 *
+	 * @param flow  The {@link Flow}
+	 * @param extra Extra data, above and beyond what the flow holds
+	 * @return The detail file write, to be run outside the monitor
+	 */
+	private Runnable update( Flow flow, Consumer<FlowData>[] extra ) {
 		IndexedFlowData idf = data.computeIfAbsent( flow,
-				f -> new IndexedFlowData( flow, data.keySet(), missingBases ) );
+				f -> {
+					if( indexing == Indexing.FINAL_ONLY ) {
+						captureBases( flow );
+					}
+					return new IndexedFlowData( flow, data.keySet(), missingBases,
+							indexing == Indexing.FINAL_ONLY );
+				} );
 		String oldname = idf.indexEntry().detail;
 		idf.update( extra );
-
-		if( !idf.indexEntry().detail.equals( oldname ) ) {
-			QuietFiles.recursiveDelete( root.resolve( "detail/" + oldname + ".html" ) );
+		String newname = idf.indexEntry().detail;
+		IndexedFlowData owner = detailOwners.get( newname );
+		if( owner != null && owner != idf ) {
+			throw new IllegalStateException( "Report detail " + newname
+					+ " is already owned by another flow" );
 		}
 
-		// write the new detail
-		idf.writeTo( root, app );
+		// delete the detail under the old name, if this flow owned it
+		if( !newname.equals( oldname ) && detailOwners.remove( oldname, idf ) ) {
+			QuietFiles.recursiveDelete( detailPath( root, oldname ) );
+		}
 
-		// refresh the index
-		app.write( new Index(
-				new Meta( modelTitle, testTitle,
-						System.currentTimeMillis() ),
-				data.values().stream()
-						.map( IndexedFlowData::indexEntry )
-						.collect( toList() ) ),
-				root.resolve( INDEX_FILE_NAME ) );
+		// render the new detail
+		Runnable write = idf.render( root, app, files );
+		detailOwners.put( newname, idf );
 
-		// refresh the details of those who were waiting for that flow as a better basis
-		// candidate
+		if( indexing == Indexing.IMMEDIATE ) {
+			writeIndex( root.resolve( INDEX_FILE_NAME ) );
+			refreshWaitingBases( flow );
+		}
+		return write;
+	}
+
+	/**
+	 * Immediate mode: rewrites the details of flows that were waiting for the
+	 * supplied flow as a better basis candidate
+	 *
+	 * @param flow A flow that has just been added to the report
+	 */
+	private void refreshWaitingBases( Flow flow ) {
 		missingBases.forEach( ( unhappy, preferred ) -> {
 			Iterator<Flow> pi = preferred.iterator();
 			boolean found = false;
@@ -155,7 +314,7 @@ public class Writer {
 					pi.remove();
 					IndexedFlowData toUpdate = data.get( unhappy );
 					toUpdate.detail = toUpdate.detail.withBasis( detailFilename( flow ) );
-					toUpdate.writeTo( root, app );
+					toUpdate.render( root, app, files ).run();
 				}
 			}
 		} );
@@ -165,8 +324,132 @@ public class Writer {
 				missingBases.entrySet().stream()
 						.filter( e -> e.getValue().isEmpty() )
 						.collect( toSet() ) );
+	}
 
-		return this;
+	private void captureBases( Flow flow ) {
+		Set<Flow> visiting = new HashSet<>();
+		Flow current = flow;
+		while( current != null && !bases.containsKey( current ) ) {
+			visiting.add( current );
+			Flow basis = current.basis();
+			bases.put( current, basis );
+			current = basis;
+		}
+		if( current != null && visiting.contains( current ) ) {
+			throw new IllegalStateException( "Cyclic report basis ancestry for " + flow.meta().id() );
+		}
+	}
+
+	private Flow nearestPresent( Flow basis, Map<Flow, Flow> resolved ) {
+		List<Flow> visited = new ArrayList<>();
+		Flow current = basis;
+		while( current != null && !data.containsKey( current ) && !resolved.containsKey( current ) ) {
+			visited.add( current );
+			current = bases.get( current );
+		}
+		Flow nearest = current == null || data.containsKey( current ) ? current
+				: resolved.get( current );
+		visited.forEach( absent -> resolved.put( absent, nearest ) );
+		return nearest;
+	}
+
+	private void correctFinalLinks() {
+		Map<Flow, Flow> resolved = new HashMap<>();
+		data.forEach( ( flow, indexed ) -> {
+			Flow nearest = nearestPresent( bases.get( flow ), resolved );
+			indexed.correctSerializedLinks(
+					nearest == null ? null : data.get( nearest ).indexEntry().detail,
+					data::get, root, app );
+		} );
+	}
+
+	private void writeIndex( Path destination ) {
+		Stream<Entry> entries = data.values().stream().map( IndexedFlowData::indexEntry );
+		if( indexing == Indexing.FINAL_ONLY ) {
+			entries = entries.sorted( comparing( entry -> entry.detail ) );
+		}
+		app.write( new Index( new Meta( modelTitle, testTitle, System.currentTimeMillis() ),
+				entries.toList() ), destination );
+	}
+
+	/**
+	 * Completes this report. Close waits for detail writes still in flight on other
+	 * threads, then final-only indexes are written to a same-directory temporary
+	 * file before an atomic move, with no non-atomic fallback. A successful
+	 * repeated close does nothing; further updates are rejected. After an update or
+	 * publication fails, subsequent close/update calls throw an exception whose
+	 * cause is the original failure, without retrying IO.
+	 */
+	@Override
+	public synchronized void close() {
+		if( state == State.CLOSED ) {
+			return;
+		}
+		requireOpen();
+		state = State.FINALIZING;
+		try {
+			awaitWrites();
+			if( indexing == Indexing.FINAL_ONLY ) {
+				correctFinalLinks();
+				publishIndex();
+			}
+			state = State.CLOSED;
+		}
+		catch( RuntimeException e ) {
+			fail( e );
+			throw e;
+		}
+	}
+
+	/**
+	 * Waits for in-flight detail writes to land. Link correction reads the detail
+	 * files back, so it must not run over a half-written file.
+	 */
+	private synchronized void awaitWrites() {
+		while( writing > 0 ) {
+			try {
+				wait();
+			}
+			catch( InterruptedException e ) {
+				Thread.currentThread().interrupt();
+				throw new IllegalStateException( "Interrupted awaiting detail writes for " + root, e );
+			}
+		}
+		if( state == State.FAILED ) {
+			// a write failed while we waited
+			requireOpen();
+		}
+	}
+
+	private void publishIndex() {
+		Path temporary = null;
+		try {
+			Files.createDirectories( root.resolve( DETAIL_DIR_NAME ) );
+			temporary = Files.createTempFile( root, ".index-", ".tmp" );
+			writeIndex( temporary );
+			Files.move( temporary, root.resolve( INDEX_FILE_NAME ), ATOMIC_MOVE, REPLACE_EXISTING );
+		}
+		catch( IOException e ) {
+			UncheckedIOException problem = new UncheckedIOException(
+					"Failed to publish final report " + root, e );
+			removeTemporary( temporary, problem );
+			throw problem;
+		}
+		catch( RuntimeException e ) {
+			removeTemporary( temporary, e );
+			throw e;
+		}
+	}
+
+	private static void removeTemporary( Path temporary, Throwable problem ) {
+		if( temporary != null ) {
+			try {
+				Files.deleteIfExists( temporary );
+			}
+			catch( IOException | RuntimeException e ) {
+				problem.addSuppressed( e );
+			}
+		}
 	}
 
 	/**
@@ -186,25 +469,46 @@ public class Writer {
 	}
 
 	/**
-	 * @return A map from {@link Flow}s that are missing their ideal bases to list
-	 *         of those bases in preference order
+	 * Missing-basis tracking is an immediate-mode feature: those reports link each
+	 * flow to its nearest basis present at the time of writing and correct the link
+	 * as better bases arrive. Final-only reports resolve every link on close, so
+	 * this snapshot is always empty for them.
+	 *
+	 * @return An immutable, detached snapshot from {@link Flow}s that are missing
+	 *         their ideal bases to lists of those bases in preference order. Flow
+	 *         references retain their existing identities.
 	 */
-	public Map<Flow, List<Flow>> missingBases() {
-		return missingBases;
+	public synchronized Map<Flow, List<Flow>> missingBases() {
+		Map<Flow, List<Flow>> snapshot = new HashMap<>();
+		missingBases.forEach( ( flow, desired ) -> snapshot.put( flow, List.copyOf( desired ) ) );
+		return Collections.unmodifiableMap( snapshot );
 	}
 
 	private static class IndexedFlowData {
 		private Entry indexEntry;
+		private String serializedBasis;
+		private Set<String> serializedDependencies;
+		private final Map<String, Flow> dependencySources = new HashMap<>();
 		FlowData detail;
+		/**
+		 * Render and landing counters. Writes land outside the writer monitor, so a
+		 * corrective rewrite can overtake an earlier in-flight write of the same
+		 * detail; the stale write is skipped when it arrives.
+		 */
+		private int rendered;
+		private int landed;
 
 		public IndexedFlowData( Flow flow,
 				Set<Flow> flowsInReport,
-				Map<Flow, List<Flow>> missingBases ) {
+				Map<Flow, List<Flow>> missingBases, boolean finalOnly ) {
 
 			// walk up the basis chain until we find one that exists in the report
 			Flow closesBasis = flow.basis();
 			List<Flow> desiredBases = new ArrayList<>();
-			while( closesBasis != null
+			if( finalOnly && !flowsInReport.contains( closesBasis ) ) {
+				closesBasis = null;
+			}
+			while( !finalOnly && closesBasis != null
 					&& !flowsInReport.contains( closesBasis ) ) {
 				desiredBases.add( closesBasis );
 				closesBasis = closesBasis.basis();
@@ -216,6 +520,11 @@ public class Writer {
 				missingBases.put( flow, desiredBases );
 			}
 
+			flow.dependencies()
+					.map( d -> d.source().flow() )
+					.filter( d -> d != flow )
+					.forEach( source -> dependencySources.put( detailFilename( source ), source ) );
+
 			detail = new FlowData(
 					flow.meta().description(),
 					new TreeSet<>( flow.meta().tags() ),
@@ -224,15 +533,12 @@ public class Writer {
 					Optional.ofNullable( closesBasis )
 							.map( Writer::detailFilename )
 							.orElse( null ),
-					flow.dependencies()
-							.map( d -> d.source().flow() )
-							.filter( d -> d != flow )
+					dependencySources.entrySet().stream()
 							.collect( toMap(
-									Writer::detailFilename,
+									Map.Entry::getKey,
 									v -> new DependencyData(
-											v.meta().description(),
-											v.meta().tags() ),
-									( a, b ) -> b ) ),
+											v.getValue().meta().description(),
+											v.getValue().meta().tags() ) ) ),
 					new InteractionData( flow.root() ),
 					flow.context()
 							.collect( toMap( Context::name, v -> v ) ),
@@ -258,16 +564,78 @@ public class Writer {
 		}
 
 		/**
-		 * Writes the detail data
+		 * Renders the detail data. Called under the writer monitor, so the detail
+		 * cannot change under the render.
 		 *
-		 * @param root The report root directory
-		 * @param app  The application
+		 * @param root  The report root directory
+		 * @param app   The application
+		 * @param files Writes file content to a path
+		 * @return The file write, which may run outside the writer monitor
 		 */
-		void writeTo( Path root, JsApp app ) {
-			app.write( detail, root
-					.resolve( DETAIL_DIR_NAME )
-					.resolve( indexEntry().detail + ".html" ) );
+		Runnable render( Path root, JsApp app, BiConsumer<Path, byte[]> files ) {
+			Path path = detailPath( root, indexEntry().detail );
+			byte[] bytes = app.render( detail, path );
+			serializedBasis = detail.basis;
+			serializedDependencies = new HashSet<>( detail.dependencies.keySet() );
+			int version = ++rendered;
+			return () -> land( version, path, bytes, files );
 		}
+
+		private synchronized void land( int version, Path path, byte[] bytes,
+				BiConsumer<Path, byte[]> files ) {
+			if( version > landed ) {
+				QuietFiles.createDirectories( path.getParent() );
+				files.accept( path, bytes );
+				landed = version;
+			}
+		}
+
+		/**
+		 * Rewrites the last serialized detail when the resolved basis differs from what
+		 * was written, or when a serialized dependency's source has since been renamed
+		 * within the report.
+		 *
+		 * @param basis   Detail filename of the nearest basis present in the report, or
+		 *                null
+		 * @param present Looks up the current data for a flow in the report
+		 * @param root    The report root directory
+		 * @param app     The application
+		 */
+		void correctSerializedLinks( String basis, Function<Flow, IndexedFlowData> present,
+				Path root, JsApp app ) {
+			Map<String, String> renamed = new HashMap<>();
+			dependencySources.forEach( ( path, source ) -> {
+				IndexedFlowData owner = present.apply( source );
+				if( owner != null && serializedDependencies.contains( path )
+						&& !path.equals( owner.indexEntry().detail ) ) {
+					renamed.put( path, owner.indexEntry().detail );
+				}
+			} );
+			if( Objects.equals( serializedBasis, basis ) && renamed.isEmpty() ) {
+				return;
+			}
+			Path path = detailPath( root, indexEntry().detail );
+			// patch the file that was written rather than re-rendering the detail
+			ObjectNode snapshot = Template.extract(
+					new String( QuietFiles.readAllBytes( path ), UTF_8 ),
+					ObjectNode.class );
+			snapshot.put( "basis", basis );
+			ObjectNode dependencies = (ObjectNode) snapshot.get( "dependencies" );
+			Map<String, JsonNode> moved = new HashMap<>();
+			renamed.forEach(
+					( oldPath, newPath ) -> moved.put( newPath, dependencies.remove( oldPath ) ) );
+			moved.forEach( dependencies::set );
+			app.write( snapshot, path );
+		}
+	}
+
+	/**
+	 * @param root The report root directory
+	 * @param name A detail file name, as computed by {@link #detailFilename(Flow)}
+	 * @return The path of that detail file
+	 */
+	private static Path detailPath( Path root, String name ) {
+		return root.resolve( DETAIL_DIR_NAME ).resolve( name + ".html" );
 	}
 
 	/**
