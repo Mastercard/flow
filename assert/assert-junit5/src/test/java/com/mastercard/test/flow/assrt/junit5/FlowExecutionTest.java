@@ -1,14 +1,6 @@
 package com.mastercard.test.flow.assrt.junit5;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
-
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -29,6 +21,11 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.DynamicTest;
@@ -42,6 +39,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.engine.TestExecutionResult;
+import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import org.junit.platform.engine.support.descriptor.ClassSource;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
@@ -62,8 +60,8 @@ import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.Applicator;
 import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.CorrelatedCapture;
-import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.History;
+import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.Listener;
 import com.mastercard.test.flow.assrt.LogCapture;
 import com.mastercard.test.flow.assrt.Reporting;
@@ -491,7 +489,7 @@ class FlowExecutionTest {
 			waiter.setUncaughtExceptionHandler( ( t, e ) -> failures.add( e ) );
 			waiter.start();
 			long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos( 10 );
-			while( waiter.getState() != Thread.State.WAITING ) {
+			while( waiter.getState() != Thread.State.TIMED_WAITING ) {
 				assertTrue( System.nanoTime() < deadline, "waiter did not park: " + waiter.getState() );
 				Thread.onSpinWait();
 			}
@@ -520,6 +518,41 @@ class FlowExecutionTest {
 		assertEquals( List.of(), run.results );
 		assertTrue( run.failures.stream().anyMatch( f -> f instanceof IllegalArgumentException
 				&& f.getMessage().contains( "Cyclic Flow basis" ) ), run.failures::toString );
+	}
+
+	/**
+	 * The progress timeout bounds the wait for <i>any</i> flow to finish, not the
+	 * wait for a particular one: each completion renews it, so a slow flow does not
+	 * fail the run while its siblings keep finishing.
+	 */
+	@Test
+	void progressRenewsTheTimeout() throws Exception {
+		Flow h = flow( "h" );
+		Gated gated = Gated.model( h, flow( "x", h ), flow( "p1" ), flow( "p2" ), flow( "p3" ) );
+		gated.configure = r -> r.progressTimeout( Duration.ofMillis( 400 ) )
+				.reporting( Reporting.NEVER );
+		for( String name : List.of( "h", "p1", "p2", "p3" ) ) {
+			gated.hold( name );
+		}
+		Thread launcher = gated.launch( true );
+		try {
+			gated.awaitStart( "h" );
+			// each sibling finishing resets the clock; the total exceeds the timeout
+			for( String name : List.of( "p1", "p2", "p3" ) ) {
+				gated.awaitStart( name );
+				Thread.sleep( 250 );
+				gated.release( name );
+			}
+			Thread.sleep( 250 );
+			assertFalse( gated.started( "x" ) );
+		}
+		finally {
+			gated.release( "h" );
+		}
+		Run run = gated.join( launcher );
+		assertEquals( List.of(), run.failures, run.failures::toString );
+		assertTrue( gated.started( "x" ) );
+		gated.assertBefore( "finish:h", "start:x" );
 	}
 
 	/**

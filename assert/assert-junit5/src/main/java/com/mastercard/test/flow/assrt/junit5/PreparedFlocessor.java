@@ -208,8 +208,15 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 						: System.nanoTime() + progressTimeout.toNanos();
 			}
 
-			private boolean expired() {
-				return deadline != Long.MAX_VALUE && deadline - System.nanoTime() <= 0;
+			/**
+			 * @return Milliseconds left before the deadline, or zero if it has passed.
+			 *         Unbounded waits report the largest value wait() accepts.
+			 */
+			private long remainingMillis() {
+				if( deadline == Long.MAX_VALUE ) {
+					return Long.MAX_VALUE;
+				}
+				return Math.max( 0, (deadline - System.nanoTime()) / 1_000_000 );
 			}
 
 			@Override
@@ -217,17 +224,12 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 				synchronized( history ) {
 					int observed = completed;
 					while( ready.isEmpty() ) {
-						if( deadline == Long.MAX_VALUE ) {
-							history.wait();
+						// one clock read: the deadline may pass between a check and the wait
+						long remaining = remainingMillis();
+						if( remaining == 0 ) {
+							return true;
 						}
-						else {
-							// one clock read: the deadline may pass between a check and the wait
-							long remaining = deadline - System.nanoTime();
-							if( remaining <= 0 ) {
-								return true;
-							}
-							history.wait( remaining / 1_000_000, (int) (remaining % 1_000_000) );
-						}
+						history.wait( remaining );
 						if( completed != observed ) {
 							// Progress without readiness: another flow finished, so keep waiting.
 							observed = completed;
@@ -241,7 +243,7 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 			@Override
 			public boolean isReleasable() {
 				synchronized( history ) {
-					return !ready.isEmpty() || expired();
+					return !ready.isEmpty() || remainingMillis() == 0;
 				}
 			}
 		}

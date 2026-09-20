@@ -30,13 +30,13 @@ public final class FlowExtension implements ParameterResolver {
 			throw new IllegalStateException(
 					"Exactly one FlowExecution parameter is required on the Flow factory" );
 		}
+		// The class store closes the handle after the factory's whole subtree,
+		// including concurrent leaves, has finished. A method context always has a
+		// class context above it.
 		ExtensionContext classContext = context;
 		while( classContext.getTestMethod().isPresent() ) {
-			classContext = classContext.getParent()
-					.orElseThrow( () -> new IllegalStateException( "Missing Flow class owner" ) );
+			classContext = classContext.getParent().get();
 		}
-		// The class store closes the handle after the factory's whole subtree,
-		// including concurrent leaves, has finished.
 		FlowExecution handle = new FlowExecution( concurrent( context ) );
 		classContext.getStore( OWNERS ).put( context.getUniqueId(), handle );
 		return handle;
