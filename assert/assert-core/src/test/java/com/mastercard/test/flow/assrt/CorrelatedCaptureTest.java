@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.logging.Level;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -264,18 +263,16 @@ class CorrelatedCaptureTest {
 	 * Events that reach no flow are counted by cause and reported at completion
 	 * with the first few quoted, so a misconfigured pattern or reused identifier
 	 * does not produce a silently empty report. Quoted messages are cut to a single
-	 * bounded line. Every event is traced at FINE for when the samples are not
-	 * enough. A repeated completion describes only the events that arrived since
-	 * the previous one.
+	 * bounded line. A repeated completion describes only the events that arrived
+	 * since the previous one.
 	 *
 	 * @param directory Isolated artifact directory
 	 */
 	@Test
-	void unroutedEventsAreSummarisedAndTraced( @TempDir Path directory ) {
+	void unroutedEventsAreSummarised( @TempDir Path directory ) {
 		Source source = new Source();
 		String longLine = "x".repeat( 250 );
 		try( Diagnostics diagnostics = new Diagnostics( Faults.class );
-				Diagnostics trace = new Diagnostics( LogCollector.class, Level.FINE );
 				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
 				TestFlocessor runner = runner( "unrouted", source,
 						a -> a.actual().response( a.expected().response().content() ) )
@@ -304,17 +301,8 @@ class CorrelatedCaptureTest {
 					"  unknown identifier [unknown] time INFO sut no such flow",
 					"  no identifier [null] time INFO sut no identifier",
 					"  unknown identifier [unknown] time INFO sut first line...",
-					"  " + excerpt,
-					"Enable FINE logging on com.mastercard.test.flow.assrt.LogCollector to see every unrouted event" ) ),
+					"  " + excerpt ) ),
 					diagnostics.messages() );
-			assertEquals( List.of(
-					"Unrouted event: ambiguous [same] time INFO sut by shared",
-					"Unrouted event: unknown identifier [unknown] time INFO sut no such flow",
-					"Unrouted event: no identifier [null] time INFO sut no identifier",
-					"Unrouted event: unknown identifier [unknown] time INFO sut first line...",
-					"Unrouted event: " + excerpt,
-					"Unrouted event: unknown identifier [unknown] time INFO sut sixth, beyond the samples" ),
-					trace.messages() );
 
 			// the record was drained: a repeated completion reports only what arrived since
 			assertEquals( CLOSED, source.emit( "same", "too late" ) );
@@ -324,11 +312,8 @@ class CorrelatedCaptureTest {
 					"""
 							Correlated capture attributed no flow to 1 events: 0 without a known identifier, \
 							0 with an identifier claimed by more than one flow, 1 delivered after the run closed. First 1:
-							  after close [same] time INFO sut too late
-							Enable FINE logging on com.mastercard.test.flow.assrt.LogCollector to see every unrouted event""",
+							  after close [same] time INFO sut too late""",
 					diagnostics.messages().get( 1 ) );
-			assertEquals( "Unrouted event: after close [same] time INFO sut too late",
-					trace.messages().get( 6 ) );
 		}
 	}
 

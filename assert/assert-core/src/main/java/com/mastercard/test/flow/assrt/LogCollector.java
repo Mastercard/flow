@@ -7,8 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import com.mastercard.test.flow.Flow;
@@ -26,9 +24,7 @@ import com.mastercard.test.flow.report.data.LogEvent;
  * {@link #accept} while one of its flushes is in progress.
  * <p>
  * Events that reach no flow are counted and the first few retained for the
- * completion diagnostic; every one is also traced at {@link Level#FINE} on this
- * class's logger, for when the summary is not enough to diagnose a pattern or
- * identifier mismatch.
+ * completion diagnostic.
  */
 final class LogCollector implements LogCapture, Collector {
 
@@ -38,7 +34,6 @@ final class LogCollector implements LogCapture, Collector {
 	private static final int SAMPLES = 5;
 	/** Longest quoted message excerpt: messages may be multi-line stack traces */
 	private static final int EXCERPT = 200;
-	private static final Logger UNROUTED = Logger.getLogger( LogCollector.class.getName() );
 
 	private final CorrelatedCapture source;
 	private final Object sourceLock = new Object();
@@ -166,15 +161,10 @@ final class LogCollector implements LogCapture, Collector {
 	}
 
 	private Outcome unrouted( String cause, String correlation, LogEvent event, Outcome outcome ) {
-		// most unrouted events are neither quoted nor traced, so describe only those
-		if( sampledEvents.size() < SAMPLES || UNROUTED.isLoggable( Level.FINE ) ) {
-			String description = String.format( "%s [%s] %s %s %s %s",
+		if( sampledEvents.size() < SAMPLES ) {
+			sampledEvents.add( String.format( "%s [%s] %s %s %s %s",
 					cause, correlation, event.time, event.level, event.source,
-					excerpt( String.valueOf( event.message ) ) );
-			if( sampledEvents.size() < SAMPLES ) {
-				sampledEvents.add( description );
-			}
-			UNROUTED.fine( () -> "Unrouted event: " + description );
+					excerpt( String.valueOf( event.message ) ) ) );
 		}
 		return outcome;
 	}
@@ -205,8 +195,6 @@ final class LogCollector implements LogCapture, Collector {
 				unattributed + ambiguousCount + refused, unattributed, ambiguousCount, refused,
 				sampledEvents.size() ) );
 		sampledEvents.forEach( sample -> summary.append( "\n  " ).append( sample ) );
-		summary.append( "\nEnable FINE logging on " ).append( UNROUTED.getName() )
-				.append( " to see every unrouted event" );
 		unattributed = 0;
 		ambiguousCount = 0;
 		refused = 0;

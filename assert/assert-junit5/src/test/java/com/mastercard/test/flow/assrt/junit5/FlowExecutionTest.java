@@ -537,14 +537,16 @@ class FlowExecutionTest {
 		Thread launcher = gated.launch( true );
 		try {
 			gated.awaitStart( "h" );
-			// each sibling finishing resets the clock; the total exceeds the timeout
+			// each sibling finishing resets the clock; the total exceeds the timeout.
+			// x cannot start while h is held, so waiting on its start latch both passes
+			// the time and checks that the factory has not given up
+			CountDownLatch blocked = gated.start( "x" );
 			for( String name : List.of( "p1", "p2", "p3" ) ) {
 				gated.awaitStart( name );
-				Thread.sleep( 250 );
+				assertFalse( blocked.await( 250, TimeUnit.MILLISECONDS ) );
 				gated.release( name );
 			}
-			Thread.sleep( 250 );
-			assertFalse( gated.started( "x" ) );
+			assertFalse( blocked.await( 250, TimeUnit.MILLISECONDS ) );
 		}
 		finally {
 			gated.release( "h" );
