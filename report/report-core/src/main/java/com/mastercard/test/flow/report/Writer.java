@@ -617,10 +617,10 @@ public class Writer implements AutoCloseable {
 			// re-key the retained entries whose source has been renamed; entries that
 			// callbacks added or removed are kept as they left them
 			Map<String, DependencyData> dependencies = new HashMap<>();
-			detail.dependencies.forEach( ( path, data ) -> {
+			detail.dependencies.forEach( ( path, dependency ) -> {
 				Flow source = dependencySources.get( path );
 				IndexedFlowData owner = source == null ? null : present.apply( source );
-				dependencies.put( owner == null ? path : owner.indexEntry().detail, data );
+				dependencies.put( owner == null ? path : owner.indexEntry().detail, dependency );
 			} );
 			if( Objects.equals( detail.basis, basis )
 					&& detail.dependencies.keySet().equals( dependencies.keySet() ) ) {
