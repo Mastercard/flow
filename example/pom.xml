@@ -153,5 +153,15 @@
 			</plugins>
 		</pluginManagement>
 
+		<plugins>
+			<plugin>
+				<!-- These are not distributable artifacts, so we never want to publish them -->
+				<groupId>org.sonatype.central</groupId>
+				<artifactId>central-publishing-maven-plugin</artifactId>
+				<configuration>
+					<skipPublishing>true</skipPublishing>
+				</configuration>
+			</plugin>
+		</plugins>
 	</build>
 </project>
