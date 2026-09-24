@@ -7,6 +7,7 @@
 		<version>1.1.9-SNAPSHOT</version>
 	</parent>
 	<artifactId>report</artifactId>
+	<name>report</name>
 	<packaging>pom</packaging>
 	<description>Visualising assertion results</description>
 	<modules>

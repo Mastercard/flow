@@ -7,6 +7,7 @@
 		<version>1.1.9-SNAPSHOT</version>
 	</parent>
 	<artifactId>assert</artifactId>
+	<name>assert</name>
 	<packaging>pom</packaging>
 	<description>Comparing models against systems</description>
 	<modules>

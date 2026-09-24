@@ -7,6 +7,7 @@
 		<version>1.1.9-SNAPSHOT</version>
 	</parent>
 	<artifactId>message-core</artifactId>
+	<name>message-core</name>
 	<packaging>jar</packaging>
 	<description>Message implementation utilities</description>
 

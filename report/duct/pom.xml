@@ -7,6 +7,7 @@
 		<version>1.1.9-SNAPSHOT</version>
 	</parent>
 	<artifactId>duct</artifactId>
+	<name>duct</name>
 	<packaging>jar</packaging>
 	<description>Report server</description>
 
