@@ -144,6 +144,15 @@
 		<plugins>
 
 			<plugin>
+				<!-- This is not a distributable artifact, so we never want to publish it -->
+				<groupId>org.sonatype.central</groupId>
+				<artifactId>central-publishing-maven-plugin</artifactId>
+				<configuration>
+					<skipPublishing>true</skipPublishing>
+				</configuration>
+			</plugin>
+
+			<plugin>
 				<!-- This is not a distributable artifact, so we never want to deploy it -->
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-deploy-plugin</artifactId>
