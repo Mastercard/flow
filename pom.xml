@@ -49,7 +49,7 @@
 		<central.skipPublishing>false</central.skipPublishing>
 		<maven.compiler.release>17</maven.compiler.release>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<jline.version>3.30.13</jline.version>
+		<jline.version>3.30.15</jline.version>
 		<sonar.organization>mastercard</sonar.organization>
 		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 		<!-- The health of the example project is not terribly interesting, and
