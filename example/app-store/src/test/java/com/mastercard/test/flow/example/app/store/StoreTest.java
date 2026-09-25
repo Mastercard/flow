@@ -48,7 +48,7 @@ class StoreTest extends AbstractServiceTest {
 
 	/***/
 	public StoreTest() {
-		super( () -> service, Actors.STORE, LOG );
+		super( service, Actors.STORE, LOG );
 	}
 
 	@Override

@@ -54,7 +54,7 @@ public static String getGreetingResponse( String input ) {
 	return output;
 }
 ```
-[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/BenSys.java#L15-L23,15-23)
+[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/BenSys.java#L17-L25,17-25)
 
 <!-- snippet end -->
 
@@ -310,38 +310,21 @@ This allows us to write a test like so:
 <!-- quick.AssertionTest:assertion -->
 
 ```java
-@TestInstance(Lifecycle.PER_CLASS)
-class AssertionTest {
-
-	private Flocessor flocessor;
-
-	/**
-	 * @return Test instances
-	 */
-	@TestFactory
-	Stream<DynamicNode> tests() {
-		flocessor = new Flocessor( "Ben behaviour", new Greetings() )
-				.system( State.LESS, BEN )
-				.behaviour( asrt -> {
-					String input = new String( asrt.expected().request().content(), UTF_8 );
-					String output = BenSys.getGreetingResponse( input );
-					asrt.actual()
-							.request( input.getBytes( UTF_8 ) )
-							.response( output.getBytes( UTF_8 ) );
-				} );
-		return flocessor.tests();
-	}
-
-	/** Closes reporting after dynamic children, not when their factory returns. */
-	@AfterAll
-	void completeFlows() {
-		if( flocessor != null ) {
-			flocessor.close();
-		}
-	}
+@TestFactory
+Stream<DynamicNode> tests() {
+	return new Flocessor( "Ben behaviour", new Greetings() )
+			.system( State.LESS, BEN )
+			.behaviour( asrt -> {
+				String input = new String( asrt.expected().request().content(), UTF_8 );
+				String output = BenSys.getGreetingResponse( input );
+				asrt.actual()
+						.request( input.getBytes( UTF_8 ) )
+						.response( output.getBytes( UTF_8 ) );
+			} )
+			.tests();
 }
 ```
-[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/AssertionTest.java#L22-L51,22-51)
+[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/AssertionTest.java#L24-L36,24-36)
 
 <!-- snippet end -->
 

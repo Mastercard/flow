@@ -24,7 +24,6 @@ import org.opentest4j.TestAbortedException;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.assrt.AbstractFlocessor;
-import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.Precedence;
 
 /**
@@ -36,7 +35,8 @@ import com.mastercard.test.flow.assrt.Precedence;
 public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor> {
 	private final FlowExecution owner;
 	private boolean prepared;
-	private Duration progressTimeout = Duration.ofMinutes( 1 );
+	/** Bound on the wait for a running flow, or null to wait indefinitely */
+	private Duration progressTimeout;
 
 	/**
 	 * @param owner The factory-local handle
@@ -52,10 +52,11 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 
 	/**
 	 * Bounds how long the factory waits for any running flow to finish before
-	 * failing the run. Default one minute. Raise it if a single flow can
-	 * legitimately run longer than this while nothing else completes. A cooperative
-	 * cancellation (JUnit 6 {@code CancellationToken}) skips emitted leaves without
-	 * running them, so the factory only gives up once this timeout elapses.
+	 * failing the run. By default it waits indefinitely, as the test framework or
+	 * build tool already bounds the run. The factory relies on every emitted flow
+	 * running to completion; a cooperative cancellation (JUnit 6
+	 * {@code CancellationToken}) skips emitted leaves without running them, so a
+	 * cancelled run only ends when the JVM is stopped or this timeout elapses.
 	 *
 	 * @param timeout Positive duration
 	 * @return this adapter
@@ -147,8 +148,7 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 		 * @return The index of the next ready flow, now counted as emitted and running
 		 */
 		private int awaitReady() {
-			long timeout = progressTimeout.toNanos();
-			Blocker blocker = new Blocker( System.nanoTime() + timeout );
+			Blocker blocker = new Blocker();
 			try {
 				if( Thread.currentThread() instanceof ForkJoinWorkerThread ) {
 					// Let the pool compensate for this parked worker so emitted leaves
@@ -184,7 +184,7 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 
 		private void run( int index ) {
 			try {
-				processSelected( flows.get( index ) );
+				processRecording( flows.get( index ), IncompleteExecutionException.class::isInstance );
 			}
 			finally {
 				synchronized( history ) {
@@ -196,33 +196,27 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 			}
 		}
 
-		private void processSelected( Flow flow ) {
-			try {
-				process( flow );
-				history.recordResult( flow, Result.SUCCESS );
-			}
-			catch( IncompleteExecutionException e ) {
-				history.recordResult( flow, Result.SKIP );
-				throw e;
-			}
-			catch( AssertionError e ) {
-				history.recordResult( flow, Result.UNEXPECTED );
-				throw e;
-			}
-			catch( Exception e ) {
-				history.recordResult( flow, Result.ERROR );
-				throw e;
-			}
-		}
-
 		/**
-		 * Waits on the History monitor until a flow is ready or the deadline passes.
+		 * Waits on the History monitor until a flow is ready or, if a progress timeout
+		 * is set, until it passes without another flow finishing.
 		 */
 		private final class Blocker implements ForkJoinPool.ManagedBlocker {
-			private long deadline;
+			private long deadline = deadline();
 
-			Blocker( long deadline ) {
-				this.deadline = deadline;
+			private long deadline() {
+				return progressTimeout == null ? Long.MAX_VALUE
+						: System.nanoTime() + progressTimeout.toNanos();
+			}
+
+			/**
+			 * @return Milliseconds left before the deadline, or zero if it has passed.
+			 *         Unbounded waits report the largest value wait() accepts.
+			 */
+			private long remainingMillis() {
+				if( deadline == Long.MAX_VALUE ) {
+					return Long.MAX_VALUE;
+				}
+				return Math.max( 0, (deadline - System.nanoTime()) / 1_000_000 );
 			}
 
 			@Override
@@ -230,15 +224,16 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 				synchronized( history ) {
 					int observed = completed;
 					while( ready.isEmpty() ) {
-						long remaining = deadline - System.nanoTime();
-						if( remaining <= 0 ) {
+						// one clock read: the deadline may pass between a check and the wait
+						long remaining = remainingMillis();
+						if( remaining == 0 ) {
 							return true;
 						}
-						history.wait( remaining / 1_000_000, (int) (remaining % 1_000_000) );
+						history.wait( remaining );
 						if( completed != observed ) {
 							// Progress without readiness: another flow finished, so keep waiting.
 							observed = completed;
-							deadline = System.nanoTime() + progressTimeout.toNanos();
+							deadline = deadline();
 						}
 					}
 					return true;
@@ -248,7 +243,7 @@ public final class PreparedFlocessor extends AbstractFlocessor<PreparedFlocessor
 			@Override
 			public boolean isReleasable() {
 				synchronized( history ) {
-					return !ready.isEmpty() || deadline - System.nanoTime() <= 0;
+					return !ready.isEmpty() || remainingMillis() == 0;
 				}
 			}
 		}

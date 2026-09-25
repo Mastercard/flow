@@ -8,9 +8,6 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.Consequests;
@@ -19,9 +16,7 @@ import com.mastercard.test.flow.assrt.junit5.Flocessor;
 /**
  * Exercises BEN in isolation
  */
-@TestInstance(Lifecycle.PER_CLASS)
 class BenTest {
-	private Flocessor flocessor;
 
 	// a mock dice implementation where the results are controlled by the test
 	private final Consequests capturedDice = new Consequests();
@@ -36,7 +31,7 @@ class BenTest {
 	 */
 	@TestFactory
 	Stream<DynamicNode> tests() {
-		flocessor = new Flocessor( "Ben behaviour", new Rolling() )
+		return new Flocessor( "Ben behaviour", new Rolling() )
 				.system( State.LESS, BEN )
 				.behaviour( asrt -> {
 					// set up our mock dice implementation using model data
@@ -52,15 +47,7 @@ class BenTest {
 							.request( input.getBytes( UTF_8 ) )
 							.response( output.getBytes( UTF_8 ) );
 					asrt.assertConsequests( capturedDice );
-				} );
-		return flocessor.tests();
-	}
-
-	/** Closes reporting after dynamic children have finished using the runner. */
-	@AfterAll
-	void completeFlows() {
-		if( flocessor != null ) {
-			flocessor.close();
-		}
+				} )
+				.tests();
 	}
 }

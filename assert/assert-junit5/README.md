@@ -32,36 +32,25 @@ After [importing the `bom`](../../bom):
 The flocessor should be used to provide the output of a [TestFactory](https://junit.org/junit5/docs/current/api/org.junit.jupiter.api/org/junit/jupiter/api/TestFactory.html) method:
 
 ```java
-@TestInstance(Lifecycle.PER_CLASS)
-class MyTest {
-  private final Flocessor flows = new Flocessor( "my test name", mySystemModel )
+@TestFactory
+Stream<DynamicNode> myTest() {
+  return new Flocessor( "my test name", mySystemModel )
     .system( /* The actors that are being exercised */ )
     .behaviour( asrt -> {
       // implement this to push data from asrt into your system 
       // and then put the system outputs back into asrt
-    } );
-
-  @TestFactory
-  Stream<DynamicNode> myTest() {
-    return flows.tests();
-  }
-
-  // Factory return can precede dynamic children; close only after they finish.
-  @AfterAll
-  void complete() {
-    flows.close();
-  }
+    } ).tests();
 }
 ```
 
-The `Flocessor` is `AutoCloseable`, but the factory returns before its dynamic
-tests run, so do not close it in the factory or with try-with-resources: close it
-from `@AfterAll`. The report is written as flows are processed; `close()` waits for
-in-flight detail writes, closes the log source and surfaces any reporting failure.
-`close()` fails if a flow is
-still being processed; afterwards no further flows can be processed. Closing a
-second time does nothing, unless the report failed to close, in which case the
-failure is thrown again.
+The report is written as each flow is processed, so nothing needs to happen after
+the dynamic tests finish. The one exception is `logs( CorrelatedCapture )`: that
+log source is opened once for the run and must be closed with `Flocessor.close()`
+after all dynamic tests have run. The factory returns before its dynamic tests
+execute, so do not close in the factory or with try-with-resources; hold the
+`Flocessor` in a field under `@TestInstance(Lifecycle.PER_CLASS)` and close it from
+`@AfterAll`. `close()` fails if a flow is still being processed; afterwards no
+further flows can be processed.
 
 ## Concurrent flows
 
@@ -105,6 +94,11 @@ Flows are kept apart only by what the model already declares:
  * flows that apply a `Context` to the system run one after another, while flows
    without contexts may overlap them and leave the applied state untouched.
 
+That last rule holds whether or not parallel execution is enabled: under `@FlowTest`
+a context-free flow never removes the previous flow's context, where `Flocessor`
+would have. A flow that depends on *no* context being applied should declare the
+context it needs instead.
+
 Everything else may overlap, including unrelated flows running alongside a chain.
 A chain is not a lock on the system under test. System state that flows share
 without a model link — no dependency binding, basis, shared destination message
@@ -115,13 +109,12 @@ Configuration is frozen at `tests()`; the report is
 written once and closed when the test class finishes, including when the factory is
 aborted or skipped. Interval-based `LogCapture` and replay are rejected for
 concurrent runs; configure `logs( CorrelatedCapture )` to attribute log events by
-correlation identifier. `progressTimeout( Duration )` bounds how long the factory
-waits for a running flow before failing the run with a diagnostic naming the flows
-still running; the default is one minute, so raise it if one flow can run longer
-than that while nothing else completes. Cooperative cancellation (JUnit 6
+correlation identifier. The factory waits indefinitely for running flows; IDEs and
+build tools typically enforce their own run timeouts. Cooperative cancellation (JUnit 6
 `CancellationToken`, e.g. `--fail-fast`) skips emitted leaves without running them,
-so a cancelled run ends only when this timeout elapses; killing the JVM, as IDEs
-and build tools do, is immediate.
+so a cancelled run does not end until the JVM is stopped; `progressTimeout( Duration )`
+optionally bounds how long the factory waits for a running flow before failing the
+run with a diagnostic naming the flows still running.
 
 Under `@FlowTest` the `behaviour` callback, `Listener`, `Checker`, `Applicator`
 and `MotivationCustomizer` are invoked from several threads at once and must be

@@ -80,8 +80,8 @@ Note that only the tag/index-based filtering can be used to avoid flow construct
 
 <!-- code_link_start -->
 
-[AbstractFlocessor.filtering(Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L257-L265,257-265
-[AbstractFlocessor.exercising(Predicate,Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L271-L296,271-296
+[AbstractFlocessor.filtering(Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L262-L270,262-270
+[AbstractFlocessor.exercising(Predicate,Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L276-L301,276-301
 
 <!-- code_link_end -->
 
@@ -129,14 +129,74 @@ The flow of responsibility is:
  1. The runner gives each flow execution an identity, available in the test body as [`assertion.correlation().id()`][Assertion!.correlation()]. By default this is generated and unique; if the flow's messages already carry a suitable unique identifier, configure [`correlation()`][AbstractFlocessor.correlation(Function)] to extract it from the `Flow` instead.
  2. The test sends the identifier to the system under test, typically as a request header. If the system generates its own identifier and returns it (e.g. a transaction ID), bind it with `assertion.correlation().alias( id )` so that events carrying either value are attributed.
  3. The system under test propagates the identifier into its logging context (e.g. an MDC field in its log pattern).
- 4. A `CorrelatedCapture` source delivers each event to the runner's `Collector` together with the identifier it carried. The runner adds it to the report entry of the flow that identifier belongs to, including events that arrive after the flow has finished. Events whose identifier is unknown, absent, or claimed by more than one execution are not attached to any flow.
+ 4. A `CorrelatedCapture` source delivers each event to the runner's `Collector` together with the identifier it carried. The runner adds it to the report entry of the flow that identifier belongs to, including events that arrive after the flow has finished. Events whose identifier is unknown, absent, or claimed by more than one execution are not attached to any flow. At completion the runner logs one warning (on the `com.mastercard.test.flow.assrt.Faults` logger) counting those events by cause and quoting the first few, which is usually enough to recognise a wrong log pattern or a reused identifier.
 
 Two kinds of source are supported:
 
  * The [`CorrelatedTail`][CorrelatedTail] class reads a log file incrementally from the point at which the run started. Its pattern must capture a `correlation` group alongside `time`, `level` and `source`.
  * For a system in the same JVM, implement `CorrelatedCapture` directly and push events from your logging backend. For example, a logback `AppenderBase<ILoggingEvent>` whose `append` method calls `collector.accept( event.getMDCPropertyMap().get( "correlationId" ), new LogEvent( ... ) )`, registered in `open` and removed in `close`. The library has no logging-backend dependency.
 
-Capture problems (an unreadable or rotated log file, a source that fails to flush) are reported on standard error and in the affected flow's report entry; they never fail an otherwise-passing test.
+Capture problems (an unreadable or rotated log file, a source that fails to flush) are logged as warnings and recorded in the affected flow's report entry; they never fail an otherwise-passing test.
+
+### Parallel execution
+
+Putting the above together, the [quickstart example](quickstart.md#assertion) becomes a parallel test under JUnit 5 by adding `@FlowTest` and `@Execution(CONCURRENT)`, taking the `FlowExecution` handle as a factory parameter, passing `asrt.correlation().id()` to the system under test and supplying a `CorrelatedCapture`. Here the system is in the same JVM, so the capture pushes events straight from the system's log hook:
+
+<!-- snippet start -->
+
+<!-- ParallelAssertionTest:parallel -->
+
+```java
+@FlowTest
+@Execution(ExecutionMode.CONCURRENT)
+class ParallelAssertionTest {
+
+	/**
+	 * @param execution Supplied by {@link FlowTest}; owns the run and closes the
+	 *                  report when the class finishes
+	 * @return Test instances, each emitted once the flows it must follow have
+	 *         finished
+	 */
+	@TestFactory
+	Stream<DynamicNode> tests( FlowExecution execution ) {
+		return execution.flocessor( "Ben behaviour", new Greetings() )
+				.system( State.LESS, BEN )
+				.reporting( Reporting.QUIETLY )
+				.logs( new BenLogs() )
+				.behaviour( asrt -> {
+					String input = new String( asrt.expected().request().content(), UTF_8 );
+					// the system under test is told which flow is calling it...
+					String output = BenSys.getGreetingResponse( input, asrt.correlation().id() );
+					asrt.actual()
+							.request( input.getBytes( UTF_8 ) )
+							.response( output.getBytes( UTF_8 ) );
+				} )
+				.tests();
+	}
+
+	/**
+	 * ... and it puts that identifier on every log event, so they can be routed to
+	 * the right flow's report entry however the flows interleave
+	 */
+	private static class BenLogs implements CorrelatedCapture {
+		@Override
+		public void open( Collector collector ) {
+			BenSys.listen( ( correlation, message ) -> collector.accept( correlation,
+					new LogEvent( Instant.now().toString(), "INFO", BenSys.class.getName(), message ) ) );
+		}
+
+		@Override
+		public void close() {
+			BenSys.listen( null );
+		}
+	}
+}
+```
+[Snippet context](../../test/java/com/mastercard/test/flow/doc/quick/ParallelAssertionTest.java#L30-L73,30-73)
+
+<!-- snippet end -->
+
+Enable [Jupiter's parallel execution](https://junit.org/junit5/docs/current/user-guide/#writing-tests-parallel-execution) with `junit.jupiter.execution.parallel.enabled=true` and independent flows run at the same time. See the [assert-junit5 documentation](../../../../assert/assert-junit5/README.md#concurrent-flows) for which flows are kept apart, and what remains the test author's responsibility.
  
 <!-- code_link_start -->
 
@@ -147,7 +207,7 @@ Capture problems (an unreadable or rotated log file, a source that fails to flus
 [CorrelatedCapture]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/CorrelatedCapture.java
 [CorrelatedTail]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/log/CorrelatedTail.java
 [Assertion!.correlation()]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Assertion.java#L61-L67,61-67
-[AbstractFlocessor.correlation(Function)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L221-L230,221-230
+[AbstractFlocessor.correlation(Function)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L221-L235,221-235
 
 <!-- code_link_end -->
 
@@ -157,7 +217,7 @@ The motivation text in the report can be enhanced with additional information su
 <!-- code_link_start -->
 
 [MotivationCustomizer]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/MotivationCustomizer.java
-[AbstractFlocessor.motivation(MotivationCustomizer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L317-L326,317-326
+[AbstractFlocessor.motivation(MotivationCustomizer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L322-L331,322-331
 
 <!--code_link_end-->
 ## Interaction structure
@@ -287,7 +347,7 @@ Consider the following worked example:
 [Rolling?d\+]: ../../test/java/com/mastercard/test/flow/doc/mask/Rolling.java#L30,30
 [msg.Mask]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java
 [msg.Mask.andThen(Consumer)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java#L290-L292,290-292
-[BenDiceTest?masking]: ../../test/java/com/mastercard/test/flow/doc/mask/BenDiceTest.java#L36,36
+[BenDiceTest?masking]: ../../test/java/com/mastercard/test/flow/doc/mask/BenDiceTest.java#L31,31
 [BenTest]: ../../test/java/com/mastercard/test/flow/doc/mask/BenTest.java
 [AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L115-L122,115-122
 

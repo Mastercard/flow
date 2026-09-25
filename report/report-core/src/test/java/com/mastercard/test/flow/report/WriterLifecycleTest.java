@@ -1,6 +1,7 @@
 package com.mastercard.test.flow.report;
 
 import static com.mastercard.test.flow.report.Latches.await;
+import static com.mastercard.test.flow.util.Tags.set;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -20,9 +21,10 @@ import java.util.concurrent.TimeoutException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 
+import com.mastercard.test.flow.Flow;
+import com.mastercard.test.flow.builder.Creator;
+import com.mastercard.test.flow.msg.txt.Text;
 import com.mastercard.test.flow.report.Writer.Indexing;
 import com.mastercard.test.flow.report.data.Entry;
 
@@ -110,15 +112,14 @@ class WriterLifecycleTest {
 	}
 
 	/**
-	 * A callback failure remains observable without replaying it or publishing.
+	 * A final-only callback failure remains observable without replaying it or
+	 * publishing.
 	 *
-	 * @param indexing Index policy
-	 * @param dir      Isolated report destination
+	 * @param dir Isolated report destination
 	 */
-	@ParameterizedTest
-	@EnumSource(Indexing.class)
-	void callbackFailureIsLatched( Indexing indexing, @TempDir Path dir ) {
-		Writer writer = new Writer( "model", "test", dir, indexing );
+	@Test
+	void callbackFailureIsLatched( @TempDir Path dir ) {
+		Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY );
 		AssertionError failure = new AssertionError( "original failure" );
 		assertSame( failure, assertThrows( AssertionError.class,
 				() -> writer.with( Mdl.BASIS, detail -> {
@@ -130,6 +131,27 @@ class WriterLifecycleTest {
 					throw new AssertionError( "Must not replay callbacks" );
 				} ) ).getCause() );
 		assertNull( new Reader( dir ).read() );
+	}
+
+	/**
+	 * An immediate-mode callback failure costs only that update: the report stays
+	 * usable for later flows and close succeeds, as before final-only indexing
+	 * existed.
+	 *
+	 * @param dir Isolated report destination
+	 */
+	@Test
+	void immediateCallbackFailureIsNotLatched( @TempDir Path dir ) {
+		Writer writer = new Writer( "model", "test", dir );
+		AssertionError failure = new AssertionError( "original failure" );
+		assertSame( failure, assertThrows( AssertionError.class,
+				() -> writer.with( Mdl.BASIS, detail -> {
+					throw failure;
+				} ) ) );
+		writer.with( Mdl.CHILD );
+		writer.close();
+		assertEquals( List.of( "basis", "child" ), new Reader( dir ).read().entries.stream()
+				.map( e -> e.description ).toList() );
 	}
 
 	/**
@@ -147,7 +169,7 @@ class WriterLifecycleTest {
 		assertNotNull( reader.detail( new Entry( "basis", Mdl.BASIS.meta().tags(),
 				Writer.detailFilename( Mdl.BASIS ) ) ) );
 		writer.close();
-		assertEquals( List.of( "dependency", "basis" ), reader.read().entries.stream()
+		assertEquals( List.of( "basis", "dependency" ), reader.read().entries.stream()
 				.map( e -> e.description ).toList() );
 		reader.read().entries.forEach( e -> assertNotNull( reader.detail( e ) ) );
 		byte[] index = Files.readAllBytes( dir.resolve( Writer.INDEX_FILE_NAME ) );
@@ -157,5 +179,29 @@ class WriterLifecycleTest {
 		try( var files = Files.list( dir ) ) {
 			assertFalse( files.anyMatch( p -> p.getFileName().toString().endsWith( ".tmp" ) ) );
 		}
+	}
+
+	/**
+	 * A final-only index is ordered by description, then by tags, whatever the
+	 * order of completion.
+	 *
+	 * @param dir Isolated report destination
+	 */
+	@Test
+	void finalOnlyIndexOrder( @TempDir Path dir ) {
+		Flow twin = Creator.build( flow -> flow
+				.meta( data -> data
+						.description( Mdl.BASIS.meta().description() )
+						.tags( set( "zzz" ) ) )
+				.call( a -> a
+						.from( Mdl.Actrs.AVA ).to( Mdl.Actrs.BEN )
+						.request( new Text( "Hello!" ) ).response( new Text( "!olleH" ) ) ) );
+		try( Writer writer = new Writer( "model", "test", dir, Indexing.FINAL_ONLY ) ) {
+			writer.with( Mdl.DEPENDENCY ).with( twin ).with( Mdl.BASIS );
+		}
+		assertEquals(
+				List.of( "basis [abc, def]", "basis [zzz]", "dependency [abc, ghi, jkl, mno]" ),
+				new Reader( dir ).read().entries.stream()
+						.map( e -> e.description + " " + e.tags ).toList() );
 	}
 }

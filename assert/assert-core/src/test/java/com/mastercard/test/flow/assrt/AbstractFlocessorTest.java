@@ -243,6 +243,31 @@ class AbstractFlocessorTest {
 	}
 
 	/**
+	 * Any failure of the behaviour callback, not only exceptions, is recorded to
+	 * the report before it propagates
+	 */
+	@Test
+	void behaviourErrorIsRecorded() {
+		LinkageError failure = new LinkageError( "missing class" );
+		try( TestFlocessor tf = new TestFlocessor( "behaviourError", TestModel.abc() )
+				.reporting( Reporting.QUIETLY )
+				.system( State.LESS, Actors.B )
+				.behaviour( a -> {
+					throw failure;
+				} ) ) {
+			Flow flow = tf.flows().findFirst().orElseThrow();
+			assertSame( failure, assertThrows( LinkageError.class, () -> tf.process( flow ) ) );
+
+			Reader r = new Reader( tf.report() );
+			Entry ie = r.read().entries.get( 0 );
+			FlowData fd = r.detail( ie );
+			assertTrue( ie.tags.contains( "ERROR" ), ie.tags.toString() );
+			assertEquals( "Encountered error: java.lang.LinkageError: missing class",
+					fd.logs.get( 0 ).message.replaceAll( "\tat .*", "" ).trim() );
+		}
+	}
+
+	/**
 	 * Construction methods are fluent
 	 */
 	@Test

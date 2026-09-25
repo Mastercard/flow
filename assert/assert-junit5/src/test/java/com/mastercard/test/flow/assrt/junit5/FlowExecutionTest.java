@@ -1,14 +1,6 @@
 package com.mastercard.test.flow.assrt.junit5;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
-
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -29,6 +21,11 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.DynamicTest;
@@ -42,6 +39,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.engine.TestExecutionResult;
+import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
 import org.junit.platform.engine.support.descriptor.ClassSource;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
@@ -62,8 +60,8 @@ import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.Applicator;
 import com.mastercard.test.flow.assrt.AssertionOptions;
 import com.mastercard.test.flow.assrt.CorrelatedCapture;
-import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.History;
+import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.assrt.Listener;
 import com.mastercard.test.flow.assrt.LogCapture;
 import com.mastercard.test.flow.assrt.Reporting;
@@ -523,6 +521,43 @@ class FlowExecutionTest {
 	}
 
 	/**
+	 * The progress timeout bounds the wait for <i>any</i> flow to finish, not the
+	 * wait for a particular one: each completion renews it, so a slow flow does not
+	 * fail the run while its siblings keep finishing.
+	 */
+	@Test
+	void progressRenewsTheTimeout() throws Exception {
+		Flow h = flow( "h" );
+		Gated gated = Gated.model( h, flow( "x", h ), flow( "p1" ), flow( "p2" ), flow( "p3" ) );
+		gated.configure = r -> r.progressTimeout( Duration.ofMillis( 400 ) )
+				.reporting( Reporting.NEVER );
+		for( String name : List.of( "h", "p1", "p2", "p3" ) ) {
+			gated.hold( name );
+		}
+		Thread launcher = gated.launch( true );
+		try {
+			gated.awaitStart( "h" );
+			// each sibling finishing resets the clock; the total exceeds the timeout.
+			// x cannot start while h is held, so waiting on its start latch both passes
+			// the time and checks that the factory has not given up
+			CountDownLatch blocked = gated.start( "x" );
+			for( String name : List.of( "p1", "p2", "p3" ) ) {
+				gated.awaitStart( name );
+				assertFalse( blocked.await( 250, TimeUnit.MILLISECONDS ) );
+				gated.release( name );
+			}
+			assertFalse( blocked.await( 250, TimeUnit.MILLISECONDS ) );
+		}
+		finally {
+			gated.release( "h" );
+		}
+		Run run = gated.join( launcher );
+		assertEquals( List.of(), run.failures, run.failures::toString );
+		assertTrue( gated.started( "x" ) );
+		gated.assertBefore( "finish:h", "start:x" );
+	}
+
+	/**
 	 * A flow that never completes fails the run with a diagnostic naming it,
 	 * instead of hanging the build.
 	 */
@@ -579,8 +614,8 @@ class FlowExecutionTest {
 	/**
 	 * A fault while customising the motivation is classified by one rule: an
 	 * ordinary runtime exception becomes a diagnostic and the flow still passes,
-	 * with the report published; an assertion failure or a test abort propagates to
-	 * the flow's result. In neither case is the report writer latched.
+	 * with the report published; an error propagates to the flow's result. In
+	 * neither case is the report writer latched.
 	 *
 	 * @param kind The kind of decoration fault
 	 * @param dir  Isolated artifact directory
@@ -595,7 +630,7 @@ class FlowExecutionTest {
 			default -> new TestAbortedException( "decoration abort" );
 		};
 		List<String> diagnostics = new ArrayList<>();
-		Logger runner = Logger.getLogger( "com.mastercard.test.flow.assrt.FlowProcessor" );
+		Logger runner = Logger.getLogger( "com.mastercard.test.flow.assrt.Faults" );
 		Handler handler = new Handler() {
 			@Override
 			public void publish( LogRecord logged ) {

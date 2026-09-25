@@ -1,16 +1,7 @@
 package com.mastercard.test.flow.assrt;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.nio.channels.ClosedByInterruptException;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
-import static java.time.Instant.now;
-import static java.time.ZoneId.systemDefault;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,16 +16,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import static java.util.stream.Collectors.toCollection;
 import java.util.stream.Stream;
+
+import static com.mastercard.test.flow.assrt.History.Result.NOT_OBSERVED;
+import static java.util.stream.Collectors.toCollection;
 
 import com.mastercard.test.flow.Actor;
 import com.mastercard.test.flow.Context;
@@ -42,7 +32,6 @@ import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.Residue;
-import static com.mastercard.test.flow.assrt.History.Result.NOT_OBSERVED;
 import com.mastercard.test.flow.assrt.filter.Filter;
 import com.mastercard.test.flow.report.Writer;
 import com.mastercard.test.flow.report.data.AssertedData;
@@ -51,7 +40,6 @@ import com.mastercard.test.flow.report.data.InteractionData;
 import com.mastercard.test.flow.report.data.LogEvent;
 import com.mastercard.test.flow.report.data.ResidueData;
 import com.mastercard.test.flow.report.data.TransmissionData;
-import com.mastercard.test.flow.report.duct.Duct;
 import com.mastercard.test.flow.util.Dependencies;
 import com.mastercard.test.flow.util.Flows;
 
@@ -64,13 +52,6 @@ import com.mastercard.test.flow.util.Flows;
 class FlowProcessor {
 
 	/**
-	 * Report and capture faults that did not fail the test are reported here rather
-	 * than to the report, so that they cannot feed back into a captured log
-	 * backend.
-	 */
-	private static final Logger DIAGNOSTICS = Logger.getLogger( FlowProcessor.class.getName() );
-
-	/**
 	 * The adapter that owns this processor. It supplies the live statefulness
 	 * setting, the log source name and the framework-specific skip and comparison
 	 * behaviour.
@@ -81,9 +62,7 @@ class FlowProcessor {
 	private Dependencies dependencies;
 	private final Map<Class<? extends Context>, Context> currentContext = new HashMap<>();
 	private boolean concurrentContexts;
-	private Writer report;
-	private RuntimeException reportFailure;
-	private boolean reportError;
+	private final ReportLifecycle report = new ReportLifecycle( () -> config );
 	private int active;
 	private boolean closed;
 	private boolean closing;
@@ -111,6 +90,11 @@ class FlowProcessor {
 	 */
 	void freezeConfiguration() {
 		config = config.snapshot();
+	}
+
+	/** @return The configuration in force, frozen or not */
+	FlowConfiguration configuration() {
+		return config;
 	}
 
 	/**
@@ -356,6 +340,9 @@ class FlowProcessor {
 			}
 		}
 
+		// Catching Throwable is deliberate: whatever the behaviour callback fails
+		// with, the report must record it, and it is rethrown immediately.
+		@SuppressWarnings("java:S1181")
 		private int processInteraction( Interaction ntr ) throws AssertionError {
 			config.progress.interaction( ntr );
 			// provoke the system with input data and capture the outputs
@@ -375,15 +362,16 @@ class FlowProcessor {
 				}
 			}
 			// We're not trying to *recover* from the failure (it gets rethrown below),
-			// we're just trying to make sure it gets recorded to the report. Assertion
-			// failures are the only Errors that test code is expected to raise.
-			catch( RuntimeException | AssertionError e ) {
+			// we're just trying to make sure it gets recorded to the report
+			catch( Throwable e ) {
 				preserving( e, () -> {
 					reportUpdates.add( d -> d.tags.add( Writer.ERROR_TAG ) );
 					List<LogEvent> logs = capture.snapshot();
 					reportUpdates.add( d -> d.logs.addAll( logs ) );
 					reportUpdates
 							.add( d -> d.logs.add( error( "Encountered error: " + LogEvent.stackTrace( e ) ) ) );
+					// earlier interactions were customised in the normal order, then the failure
+					toCustomise.forEach( this::customiseMotivation );
 					customiseMotivation( assrt );
 					reportUpdates.add( d -> d.motivation = motivation );
 					report( w -> w.with( flow, reportUpdates.stream().reduce( d -> {
@@ -454,19 +442,23 @@ class FlowProcessor {
 		}
 
 		/**
-		 * Applies the {@link MotivationCustomizer}. An ordinary fault in it costs only
-		 * this flow's decoration when the report is final-only; anything else is the
-		 * caller's failure to see.
+		 * Applies the {@link MotivationCustomizer} to the report text. Nothing is
+		 * customised when no report is written. An ordinary fault in the customizer
+		 * costs only this flow's decoration when the report is final-only; anything
+		 * else is the caller's failure to see.
 		 */
 		private void customiseMotivation( Assertion assertion ) {
+			if( !config.reporting.writing() ) {
+				return;
+			}
 			try {
 				motivation = config.motivationCustomizer.apply( motivation, assertion );
 			}
 			catch( RuntimeException e ) {
-				if( !config.finalOnlyReporting || !ordinaryPeripheralFailure( e ) ) {
+				if( !config.finalOnlyReporting || !Faults.ordinary( e ) ) {
 					throw e;
 				}
-				diagnostic( "Motivation customisation failed for " + flow.meta().id() + ": "
+				Faults.diagnostic( "Motivation customisation failed for " + flow.meta().id() + ": "
 						+ e.getClass().getName() );
 			}
 		}
@@ -602,11 +594,11 @@ class FlowProcessor {
 			}
 
 			private void diagnose( String operation, RuntimeException failure ) {
-				if( !ordinaryPeripheralFailure( failure ) ) {
+				if( !Faults.ordinary( failure ) ) {
 					throw failure;
 				}
 				String message = "Log capture " + operation + " failed: " + failure.getClass().getName();
-				diagnostic( message );
+				Faults.diagnostic( message );
 				List<LogEvent> diagnosed = new ArrayList<>( logs );
 				diagnosed.add( warn( message ) );
 				logs = Collections.unmodifiableList( diagnosed );
@@ -799,54 +791,6 @@ class FlowProcessor {
 		}
 	}
 
-	/**
-	 * A capture or reporting fault is ordinary when it is a runtime or I/O
-	 * exception that is not an interruption or cancellation and whose cause chain
-	 * holds no {@link Error} and no test-control exception. Ordinary faults become
-	 * diagnostics; anything else must fail or abort the test.
-	 *
-	 * @param failure The fault
-	 * @return <code>true</code> if the fault may be reduced to a diagnostic
-	 */
-	private static boolean ordinaryPeripheralFailure( Throwable failure ) {
-		if( !(failure instanceof RuntimeException || failure instanceof IOException) ) {
-			return false;
-		}
-		Set<Throwable> seen = Collections.newSetFromMap( new IdentityHashMap<>() );
-		for( Throwable cause = failure; cause != null && seen.add( cause ); cause = cause.getCause() ) {
-			if( cause instanceof Error || cause instanceof InterruptedException
-					|| cause instanceof InterruptedIOException || cause instanceof ClosedByInterruptException
-					|| cause instanceof CancellationException || testControl( cause ) ) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	/**
-	 * Test abort and skip signals are runtime exceptions from the test framework.
-	 * The frameworks are not compile-time dependencies of this module, so they are
-	 * recognised by package.
-	 */
-	private static boolean testControl( Throwable failure ) {
-		for( Class<?> type = failure.getClass(); type != null; type = type.getSuperclass() ) {
-			String name = type.getName();
-			if( name.startsWith( "org.opentest4j." ) || name.startsWith( "org.junit." ) ) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * Runner diagnostics for report and capture faults that did not fail the test
-	 *
-	 * @param message What went wrong, without stack trace or source message text
-	 */
-	private static void diagnostic( String message ) {
-		DIAGNOSTICS.warning( message );
-	}
-
 	private static String resultTag( int assertionCount,
 			List<AssertionError> compareFailures, List<RuntimeException> parseFailures ) {
 		if( !parseFailures.isEmpty() ) {
@@ -913,141 +857,18 @@ class FlowProcessor {
 		}
 	}
 
-	private static final Supplier<String> RUN_DATETIME = () -> DateTimeFormatter
-			.ofPattern( "yyMMdd-HHmmss" )
-			.format( now().atZone( systemDefault() ) );
-
 	private void report( Consumer<Writer> data, boolean error ) {
-		if( !config.reporting.writing() || reportFailed() )
-			return;
-		try {
-			updateReport( data, error );
-		}
-		catch( RuntimeException failure ) {
-			if( !config.finalOnlyReporting || !ordinaryPeripheralFailure( failure ) )
-				throw failure;
-			reportFailed( failure );
-		}
-	}
-
-	private void updateReport( Consumer<Writer> data, boolean error ) {
-		Path reportDir;
-		Writer target;
-		synchronized( this ) {
-			reportError |= error;
-			reportDir = null;
-			if( report == null ) {
-
-				String testTitle = config.title;
-
-				Path testDir = Paths.get( AssertionOptions.ARTIFACT_DIR.value(), config.reportPath );
-
-				// work out what the report directory should be called
-				String name = AssertionOptions.REPORT_NAME.value();
-				if( name == null ) {
-					name = RUN_DATETIME.get();
-				}
-				if( config.replay.hasData() ) {
-					// reports that have been generated from replaying historic data don't really
-					// imply anything about the behaviour of the system under test, so we want them
-					// to be really obvious. Hence we're giving them a directory name suffix and an
-					// addendum to the test report title
-					name += Replay.REPLAYED_SUFFIX;
-					testTitle += " (replay)";
-					// The dir name suffix also stops us overwriting the data source when
-					// the REPORT_NAME property is the same as the REPLAY property
-				}
-
-				reportDir = testDir.resolve( name );
-
-				report = new Writer( config.model.title(), testTitle, reportDir,
-						config.finalOnlyReporting ? Writer.Indexing.FINAL_ONLY
-								: Writer.Indexing.IMMEDIATE );
-				if( !"latest".equals( reportDir.getFileName().toString() ) ) {
-					linkLatest( testDir.resolve( "latest" ), reportDir );
-				}
-			}
-			target = report;
-		}
-
-		data.accept( target );
-
-		if( reportDir != null && !config.finalOnlyReporting ) {
-			// We've just created a new report: if appropriate, open a browser to it.
-			present( target, error );
-		}
-	}
-
-	private void present( Writer target, boolean error ) {
-		if( !config.reporting.shouldOpen( error ) )
-			return;
-		try {
-			if( AssertionOptions.DUCT.isTrue() ) {
-				// if you've traced a ClassNotFoundException or NoClassDefFoundError to here,
-				// then you've forgotten to add the duct module to your dependencies.
-				Duct.serve( target.path() );
-			}
-			else {
-				target.browse();
-			}
-		}
-		catch( RuntimeException failure ) {
-			if( !config.finalOnlyReporting || !ordinaryPeripheralFailure( failure ) )
-				throw failure;
-			diagnostic( "Report presentation failed: " + failure.getClass().getName() );
-		}
-	}
-
-	private synchronized boolean reportFailed() {
-		return reportFailure != null;
-	}
-
-	private synchronized void reportFailed( RuntimeException failure ) {
-		if( reportFailure == null ) {
-			reportFailure = failure;
-			diagnostic( "Report failed: " + failure.getClass().getName() );
-		}
+		report.update( data, error );
 	}
 
 	/** Creates the final-only report so that an empty run still publishes one */
 	void initializeReport() {
-		if( config.finalOnlyReporting )
-			report( ignored -> {
-				// no flow data to add
-			}, false );
-	}
-
-	private static void linkLatest( Path linkPath, Path reportDir ) {
-		try {
-			boolean shouldLink;
-			// Ordinary files and directories at latest may be user-owned.
-			if( Files.exists( linkPath, LinkOption.NOFOLLOW_LINKS ) ) {
-				if( Files.isSymbolicLink( linkPath ) ) {
-					Files.delete( linkPath );
-					shouldLink = true;
-				}
-				else {
-					shouldLink = false;
-				}
-			}
-			else {
-				shouldLink = true;
-			}
-
-			if( shouldLink ) {
-				Files.createSymbolicLink( linkPath, linkPath.getParent().relativize( reportDir ) );
-			}
-		}
-		catch( @SuppressWarnings("unused") IOException ioe ) {
-			// The symlink to the latest report is a nice-to-have. Some platforms (e.g.:
-			// windows) restrict the ability to create symlinks so we can't count on it
-			// working.
-		}
+		report.initialize();
 	}
 
 	/** @return The report path, or null while disabled or after creation failure */
-	synchronized Path report() {
-		return report == null ? null : report.path();
+	Path report() {
+		return report.path();
 	}
 
 	/**
@@ -1056,44 +877,37 @@ class FlowProcessor {
 	 */
 	void complete() {
 		initializeReport();
-		Writer closingReport;
-		boolean finalPublication;
 		LogCollector capture;
 		synchronized( this ) {
 			if( active != 0 || closing ) {
 				throw new IllegalStateException( "Flow processing is still active or completing" );
 			}
-			finalPublication = config.finalOnlyReporting && !closed;
 			closed = true;
 			closing = true;
-			closingReport = reportFailure == null ? report : null;
 			capture = collector;
 		}
 		try {
 			// close the log source first, so that late events can go into the report
-			if( capture != null ) {
-				capture.close( FlowProcessor::ordinaryPeripheralFailure );
-				capture.late().forEach( ( flow, events ) -> report(
-						writer -> writer.with( flow, detail -> detail.logs.addAll( events ) ), false ) );
-			}
-			// a failed writer is kept so that repeated close rethrows its failure
-			if( closingReport != null ) {
-				try {
-					closingReport.close();
-					if( finalPublication )
-						present( closingReport, reportError );
-				}
-				catch( RuntimeException failure ) {
-					if( !config.finalOnlyReporting || !ordinaryPeripheralFailure( failure ) )
-						throw failure;
-					reportFailed( failure );
-				}
-			}
+			completeCapture( capture );
+			report.close();
 		}
 		finally {
 			synchronized( this ) {
 				closing = false;
 			}
+		}
+	}
+
+	private void completeCapture( LogCollector capture ) {
+		if( capture == null ) {
+			return;
+		}
+		capture.close( Faults::ordinary );
+		capture.late().forEach( ( flow, events ) -> report(
+				writer -> writer.with( flow, detail -> detail.logs.addAll( events ) ), false ) );
+		String unrouted = capture.unrouted();
+		if( unrouted != null ) {
+			Faults.diagnostic( unrouted );
 		}
 	}
 

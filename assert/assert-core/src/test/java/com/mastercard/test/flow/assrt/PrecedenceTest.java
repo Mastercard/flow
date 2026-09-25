@@ -68,6 +68,32 @@ class PrecedenceTest {
 	}
 
 	/**
+	 * A deep basis chain yields one edge per link, not one per ancestor pair: the
+	 * traversal is linear in the number of flows however deep the ancestry runs.
+	 */
+	@Test
+	void deepAncestryIsLinear() {
+		int depth = 20_000;
+		List<Flow> chain = new java.util.ArrayList<>();
+		Flw previous = null;
+		for( int i = 0; i < depth; i++ ) {
+			Flw flw = flw( "f" + i + " []" );
+			if( previous != null ) {
+				flw.basis( previous );
+			}
+			chain.add( flw );
+			previous = flw;
+		}
+		Precedence order = new Precedence( chain );
+		int edges = 0;
+		for( int i = 0; i < depth; i++ ) {
+			edges += order.successors( i ).size();
+		}
+		assertEquals( depth - 1, edges );
+		assertEquals( List.of( 0 ), order.roots() );
+	}
+
+	/**
 	 * Flows that publish into the same destination are serialised in canonical
 	 * order; an unrelated publisher is not.
 	 */
@@ -140,13 +166,13 @@ class PrecedenceTest {
 		Flow source = flow( "source" );
 		Flow dependent = flow( "dependent", source );
 		List<Flow> absent = List.of( dependent );
-		assertEquals( "Absent or noncanonical Flow prerequisite",
+		assertEquals( "Absent Flow prerequisite",
 				assertThrows( IllegalArgumentException.class,
 						() -> new Precedence( absent ) ).getMessage() );
-		List<Flow> noncanonical = List.of( dependent, source );
-		assertEquals( "Absent or noncanonical Flow prerequisite",
-				assertThrows( IllegalArgumentException.class,
-						() -> new Precedence( noncanonical ) ).getMessage() );
+		// a prerequisite after its dependent is honoured as declared, not as listed
+		Precedence inverted = new Precedence( List.of( dependent, source ) );
+		assertEquals( List.of( 1 ), inverted.roots() );
+		assertEquals( Set.of( 0 ), inverted.successors( 1 ) );
 
 		List<Flow> duplicate = List.of( source, source );
 		assertEquals( "Duplicate selected Flow reference", assertThrows( IllegalArgumentException.class,

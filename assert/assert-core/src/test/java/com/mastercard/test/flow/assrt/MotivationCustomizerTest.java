@@ -81,6 +81,51 @@ class MotivationCustomizerTest {
 	}
 
 	/**
+	 * When a later interaction's behaviour throws, the assertions that were already
+	 * compared are still customised, in order, before the failing one
+	 */
+	@Test
+	void earlierAssertionsAreCustomisedOnError() {
+		try( TestFlocessor tf = new TestFlocessor( "customise on error", TestModel.abcde() )
+				.motivation( ( motivation, assertion ) -> motivation + " "
+						+ assertion.expected().responder().name() )
+				.behaviour( assrt -> {
+					if( assrt.expected().responder() == TestModel.Actors.D ) {
+						throw new IllegalStateException( "D is down" );
+					}
+					assrt.actual().response( assrt.expected().response().content() );
+				} )
+				.reporting( Reporting.QUIETLY )
+				.system( AbstractFlocessor.State.LESS, TestModel.Actors.B, TestModel.Actors.D ) ) {
+
+			tf.execute();
+
+			assertEquals( "abcde [] ERROR", tf.results() );
+			Reader r = new Reader( tf.report() );
+			FlowData fd = r.detail( r.read().entries.get( 0 ) );
+			assertEquals( " B D", fd.motivation );
+		}
+	}
+
+	/**
+	 * The customizer decorates the report, so it is not invoked when no report is
+	 * written
+	 */
+	@Test
+	void customizerRequiresReport() {
+		try( TestFlocessor tf = new TestFlocessor( "customizer without report", TestModel.abc() )
+				.motivation( ( motivation, assertion ) -> {
+					throw new IllegalStateException( "customised without a report" );
+				} )
+				.behaviour( assrt -> assrt.actual().response( assrt.expected().response().content() ) )
+				.system( AbstractFlocessor.State.LESS, TestModel.Actors.B ) ) {
+			tf.execute();
+			assertEquals( "abc [] SUCCESS", tf.results() );
+			assertNull( tf.report() );
+		}
+	}
+
+	/**
 	 * A customizer fault is reduced to a diagnostic only when the report is
 	 * final-only and the fault is an ordinary runtime exception. The flow then
 	 * passes and its entry is published with the original motivation. Otherwise the
@@ -97,7 +142,7 @@ class MotivationCustomizerTest {
 		Throwable fault = ordinary
 				? new IllegalStateException( "decoration failed" )
 				: new AssertionError( "decoration failed" );
-		try( Diagnostics diagnostic = new Diagnostics( FlowProcessor.class );
+		try( Diagnostics diagnostic = new Diagnostics( Faults.class );
 				Temporary artifact = AssertionOptions.ARTIFACT_DIR.temporarily( directory.toString() );
 				Temporary name = AssertionOptions.REPORT_NAME.temporarily( "decorated" );
 				TestFlocessor tf = new TestFlocessor( "customizer fault", TestModel.abc() )

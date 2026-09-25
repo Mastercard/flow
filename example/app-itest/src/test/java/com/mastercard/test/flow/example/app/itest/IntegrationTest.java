@@ -54,7 +54,6 @@ class IntegrationTest {
 	private static final Logger LOG = LoggerFactory.getLogger( IntegrationTest.class );
 
 	private static final ClusterManager clusterManager = new ClusterManager();
-	private static Flocessor flocessor;
 
 	static {
 		if( AssertionOptions.REPORT_NAME.value() == null ) {
@@ -77,16 +76,12 @@ class IntegrationTest {
 	}
 
 	/**
-	 * Closes reporting after all dynamic interactions, including browser work, then
-	 * stops the instance
+	 * Stops the instance
 	 *
 	 * @throws Exception if something goes wrong
 	 */
 	@AfterAll
 	public static void stopApp() throws Exception {
-		if( flocessor != null ) {
-			flocessor.close();
-		}
 		clusterManager.stopCluster();
 	}
 
@@ -95,7 +90,7 @@ class IntegrationTest {
 	 */
 	@TestFactory
 	Stream<DynamicNode> flows() {
-		flocessor = new Flocessor( "Integration test", ExampleSystem.MODEL )
+		Flocessor f = new Flocessor( "Integration test", ExampleSystem.MODEL )
 				.reporting( AssertionOptions.DUCT.isTrue() ? ALWAYS : FAILURES )
 				.system( State.FUL, WEB_UI, UI, CORE, QUEUE, HISTOGRAM, STORE, DB )
 				.masking( BORING, CLOCK, HOST, RNG )
@@ -144,7 +139,7 @@ class IntegrationTest {
 					LOG.warn( "Complete" );
 				} );
 
-		return flocessor.tests();
+		return f.tests();
 	}
 
 	private int port( Actor rx ) {

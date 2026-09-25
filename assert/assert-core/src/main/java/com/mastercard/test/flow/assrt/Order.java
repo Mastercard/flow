@@ -39,6 +39,16 @@ public class Order {
 	public static final String CHAIN_TAG_PREFIX = "chain:";
 
 	/**
+	 * @param flow A flow
+	 * @return The chain the flow belongs to. Unchained flows are distinct units,
+	 *         even if their IDs equal a chain name
+	 */
+	static Object chainKey( Flow flow ) {
+		return Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX )
+				.<Object>map( name -> name ).orElseGet( Object::new );
+	}
+
+	/**
 	 * @param flows       The {@link Flow}s that we want to process
 	 * @param applicators Applicators that are relevant for the execution
 	 */
@@ -80,8 +90,7 @@ public class Order {
 		// Build chains. flows that are not actually in a chain are implicitly in a
 		// chain all on their lonesomes
 		flows.forEach( f -> {
-			Object chain = Tags.suffix( f.meta().tags(), CHAIN_TAG_PREFIX )
-					.<Object>map( name -> name ).orElseGet( Object::new );
+			Object chain = chainKey( f );
 			chains.computeIfAbsent( chain, c -> new ArrayList<>() ).add( f );
 			chainNames.put( f, chain );
 		} );

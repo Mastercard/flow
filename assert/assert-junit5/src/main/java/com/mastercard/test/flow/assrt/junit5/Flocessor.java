@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.assrt.AbstractFlocessor;
-import com.mastercard.test.flow.assrt.History.Result;
 import com.mastercard.test.flow.util.Tags;
 
 /**
@@ -33,24 +32,13 @@ import com.mastercard.test.flow.util.Tags;
  * test</a>, e.g.:
  *
  * <pre>
- * &#64;TestInstance(Lifecycle.PER_CLASS)
- * class MyTest {
- * 	private final Flocessor flows = new Flocessor( "My test name", MY_SYSTEM_MODEL )
+ * &#64;TestFactory
+ * Stream&lt;DynamicNode&gt; flows() {
+ * 	return new Flocessor( "My test name", MY_SYSTEM_MODEL )
  * 			.system( State.LESS, MY_ACTORS_UNDER_TEST )
  * 			.behaviour( asrt -&gt; {
  * 				// test behaviour
- * 			} );
- *
- * 	&#64;TestFactory
- * 	Stream&lt;DynamicNode&gt; flows() {
- * 		return flows.tests();
- * 	}
- *
- * 	// Factory return can precede dynamic children; close only after they finish.
- * 	&#64;AfterAll
- * 	void complete() {
- * 		flows.close();
- * 	}
+ * 			} ).tests();
  * }
  * </pre>
  */
@@ -65,11 +53,11 @@ public class Flocessor extends AbstractFlocessor<Flocessor> implements AutoClose
 	}
 
 	/**
-	 * Stops processing and closes the report. Call from {@code @AfterAll}, after
-	 * all dynamic tests have finished; returning the stream from the factory does
-	 * not mean the tests have run. The report is written as flows are processed;
-	 * this call waits for in-flight detail writes, closes the log source and
-	 * surfaces any reporting failure.
+	 * Closes the log source and the report. Only required when
+	 * {@link #logs(com.mastercard.test.flow.assrt.CorrelatedCapture)} is
+	 * configured; the report is complete after each flow otherwise. Call from
+	 * {@code @AfterAll} after all dynamic tests have finished; returning the stream
+	 * from the factory does not mean the tests have run.
 	 *
 	 * @throws IllegalStateException if an invocation or completion is still active,
 	 *                               or reporting has failed; a reporting failure
@@ -130,28 +118,7 @@ public class Flocessor extends AbstractFlocessor<Flocessor> implements AutoClose
 	}
 
 	private void processFlow( Flow flow ) {
-		try {
-			process( flow );
-			history.recordResult( flow, Result.SUCCESS );
-		}
-		catch( IncompleteExecutionException iee ) {
-			// not strictly required to record the skipped outcome in the history, as it
-			// does not inform the processing of later flows. That may change in the future
-			// though, so for now we're going to live with the mutation testing complaint
-			history.recordResult( flow, Result.SKIP );
-			throw iee;
-		}
-		catch( AssertionError ae ) {
-			history.recordResult( flow, Result.UNEXPECTED );
-			throw ae;
-		}
-		catch( Exception e ) {
-			// not strictly required to record the error outcome in the history, as it
-			// does not inform the processing of later flows. That may change in the future
-			// though, so for now we're going to live with the mutation testing complaint
-			history.recordResult( flow, Result.ERROR );
-			throw e;
-		}
+		processRecording( flow, IncompleteExecutionException.class::isInstance );
 	}
 
 	private DynamicContainer createDynamicContainer( List<Flow> chain ) {

@@ -18,10 +18,10 @@ import com.mastercard.test.flow.assrt.filter.FilterConfiguration;
 
 /**
  * Configuration shared by selection and invocation processing. The fluent
- * adapters own and mutate this object; it is not copied on enumeration, so
- * registered callbacks and domain objects keep their identities. Runtime state
- * (dependencies, History, applied contexts and the report) belongs to the
- * processor.
+ * adapters own and mutate this object. Prepared adapters freeze it by taking a
+ * {@link #snapshot()}; registered callbacks and domain objects keep their
+ * identities in the copy. Runtime state (dependencies, History, applied
+ * contexts and the report) belongs to the processor.
  */
 final class FlowConfiguration {
 

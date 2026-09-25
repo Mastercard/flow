@@ -222,6 +222,11 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * Configures how the correlation identifier for a {@link Flow} execution is
 	 * chosen. Use this when the flow's messages already carry a unique identifier
 	 * that the system under test logs. Without it the runner generates one.
+	 * <p>
+	 * The identifier must be unique to one execution within the run: if two
+	 * executions present the same identifier, whether from two flows or from the
+	 * same flow processed twice, events carrying it belong to neither and the
+	 * completion diagnostic counts them as claimed by more than one flow.
 	 *
 	 * @param extractor Returns the identifier for a flow, or <code>null</code> to
 	 *                  fall back to a generated identifier for that flow
@@ -251,7 +256,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return The set of actors being exercised
 	 */
 	Set<Actor> system() {
-		return config.systemUnderTest;
+		return processor.system();
 	}
 
 	/**
@@ -363,6 +368,8 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return Selected flows in canonical serial order
 	 */
 	protected final Stream<Flow> prepareFlows( Consumer<Flow> prepare ) {
+		// the adapter's config stays mutable but detached: later configuration does
+		// not reach the frozen snapshot that the processor now works from
 		processor.freezeConfiguration();
 		return processor.flows( prepare );
 	}
@@ -373,12 +380,13 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * is supported.
 	 */
 	protected final void requireConcurrentConfiguration() {
-		if( config.logCapture != LogCapture.NO_OP ) {
+		FlowConfiguration current = processor.configuration();
+		if( current.logCapture != LogCapture.NO_OP ) {
 			throw new IllegalStateException(
 					"Interval-based LogCapture cannot attribute events to concurrent flows; "
 							+ "configure logs( CorrelatedCapture ) instead" );
 		}
-		if( config.replay.hasData() ) {
+		if( current.replay.hasData() ) {
 			throw new IllegalStateException( "Replay is not supported for concurrent flows" );
 		}
 	}
@@ -386,6 +394,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	/** Publishes the report once, on completion, rather than after every flow */
 	protected final void finalOnlyReporting() {
 		config.finalOnlyReporting = true;
+		processor.configuration().finalOnlyReporting = true;
 	}
 
 	/**
@@ -417,6 +426,34 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 */
 	protected void process( Flow flow ) {
 		processor.process( flow );
+	}
+
+	/**
+	 * Processes a flow and records its outcome in the {@link #history}, so that
+	 * later flows can be skipped when they depend on this one
+	 *
+	 * @param flow   The {@link Flow} to process
+	 * @param isSkip Whether a thrown exception is the framework's skip signal
+	 */
+	protected final void processRecording( Flow flow, Predicate<RuntimeException> isSkip ) {
+		try {
+			process( flow );
+			history.recordResult( flow, History.Result.SUCCESS );
+		}
+		catch( AssertionError e ) {
+			history.recordResult( flow, History.Result.UNEXPECTED );
+			throw e;
+		}
+		catch( RuntimeException e ) {
+			history.recordResult( flow, isSkip.test( e ) ? History.Result.SKIP : History.Result.ERROR );
+			throw e;
+		}
+		catch( Exception e ) {
+			// checked exceptions can escape a callback via sneaky throws, e.g. from
+			// Jupiter's assertTimeout; precise rethrow keeps the original
+			history.recordResult( flow, History.Result.ERROR );
+			throw e;
+		}
 	}
 
 	/**
