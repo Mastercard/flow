@@ -4,9 +4,10 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>assert</artifactId>
-		<version>1.1.8-SNAPSHOT</version>
+		<version>1.1.10-SNAPSHOT</version>
 	</parent>
 	<artifactId>assert-filter</artifactId>
+	<name>assert-filter</name>
 	<packaging>jar</packaging>
 	<description>Flow selection components</description>
 

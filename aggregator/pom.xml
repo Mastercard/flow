@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>parent</artifactId>
-		<version>1.1.8-SNAPSHOT</version>
+		<version>1.1.10-SNAPSHOT</version>
 	</parent>
 	<artifactId>aggregator</artifactId>
 	<packaging>jar</packaging>
@@ -142,6 +142,15 @@
 
 	<build>
 		<plugins>
+
+			<plugin>
+				<!-- This is not a distributable artifact, so we never want to publish it -->
+				<groupId>org.sonatype.central</groupId>
+				<artifactId>central-publishing-maven-plugin</artifactId>
+				<configuration>
+					<skipPublishing>true</skipPublishing>
+				</configuration>
+			</plugin>
 
 			<plugin>
 				<!-- This is not a distributable artifact, so we never want to deploy it -->

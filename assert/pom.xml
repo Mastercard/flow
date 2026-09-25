@@ -4,9 +4,10 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>parent</artifactId>
-		<version>1.1.8-SNAPSHOT</version>
+		<version>1.1.10-SNAPSHOT</version>
 	</parent>
 	<artifactId>assert</artifactId>
+	<name>assert</name>
 	<packaging>pom</packaging>
 	<description>Comparing models against systems</description>
 	<modules>

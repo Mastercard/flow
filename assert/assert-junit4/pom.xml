@@ -4,9 +4,10 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>assert</artifactId>
-		<version>1.1.8-SNAPSHOT</version>
+		<version>1.1.10-SNAPSHOT</version>
 	</parent>
 	<artifactId>assert-junit4</artifactId>
+	<name>assert-junit4</name>
 	<packaging>jar</packaging>
 	<description>JUnit4 comparison components</description>
 

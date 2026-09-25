@@ -4,9 +4,10 @@
 	<parent>
 		<groupId>com.mastercard.test.flow</groupId>
 		<artifactId>message</artifactId>
-		<version>1.1.8-SNAPSHOT</version>
+		<version>1.1.10-SNAPSHOT</version>
 	</parent>
 	<artifactId>message-core</artifactId>
+	<name>message-core</name>
 	<packaging>jar</packaging>
 	<description>Message implementation utilities</description>
 
