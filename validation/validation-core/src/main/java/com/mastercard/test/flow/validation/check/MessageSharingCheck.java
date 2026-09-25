@@ -1,13 +1,14 @@
 package com.mastercard.test.flow.validation.check;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Interaction;
+import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.util.Flows;
 import com.mastercard.test.flow.util.Transmission;
@@ -37,7 +38,8 @@ public class MessageSharingCheck implements Validation {
 		List<Check> checks = new ArrayList<>();
 		Flow[] flows = model.flows().toArray( Flow[]::new );
 
-		Map<Integer, MessageOwner> messageIdentities = new HashMap<>();
+		// identity hash codes are not unique, so key on the instances themselves
+		Map<Message, MessageOwner> messageOwners = new IdentityHashMap<>();
 
 		for( int i = 0; i < flows.length; i++ ) {
 			Flow flow = flows[i];
@@ -46,15 +48,15 @@ public class MessageSharingCheck implements Validation {
 					flow.meta().id(),
 					() -> {
 						for( Transmission tx : Flows.transmissions( flow ) ) {
-							int objectId = System.identityHashCode( tx.message() );
+							Message message = tx.message();
 							MessageOwner current = new MessageOwner( flow, tx.source() );
-							MessageOwner previous = messageIdentities.get( objectId );
+							MessageOwner previous = messageOwners.get( message );
 							if( previous != null ) {
-								return new Violation( this, "Shared message:\n" + tx.message().assertable() )
+								return new Violation( this, "Shared message:\n" + message.assertable() )
 										.offender( previous.flow, previous.interaction )
 										.offender( current.flow, current.interaction );
 							}
-							messageIdentities.put( objectId, current );
+							messageOwners.put( message, current );
 						}
 						return null;
 					} ) );
