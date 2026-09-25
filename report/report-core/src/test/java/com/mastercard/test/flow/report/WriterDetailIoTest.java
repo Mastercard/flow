@@ -1,5 +1,6 @@
 package com.mastercard.test.flow.report;
 
+import static com.mastercard.test.flow.report.Latches.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -63,16 +64,6 @@ class WriterDetailIoTest {
 				await( release );
 			}
 			QuietFiles.write( path, bytes );
-		}
-	}
-
-	private static void await( CountDownLatch latch ) {
-		try {
-			assertTrue( latch.await( 10, TimeUnit.SECONDS ), "latch timed out" );
-		}
-		catch( InterruptedException e ) {
-			Thread.currentThread().interrupt();
-			throw new AssertionError( e );
 		}
 	}
 

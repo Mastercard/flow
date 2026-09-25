@@ -49,7 +49,7 @@ class QueueTest extends AbstractServiceTest {
 
 	/***/
 	public QueueTest() {
-		super( service, Actors.QUEUE, LOG );
+		super( () -> service, Actors.QUEUE, LOG );
 	}
 
 	@Override

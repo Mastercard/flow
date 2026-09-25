@@ -1,6 +1,6 @@
 package com.mastercard.test.flow.assrt;
 
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -57,7 +57,9 @@ public class History {
 		}
 	}
 
-	private final Map<Flow, Result> results = new HashMap<>();
+	// A model's equals/hashCode may execute user code. Identity lookup keeps the
+	// shared admission/History monitor free of model calls.
+	private final Map<Flow, Result> results = new IdentityHashMap<>();
 
 	/**
 	 * Records the outcome of {@link Flow} processing. This data will be used to
@@ -66,7 +68,7 @@ public class History {
 	 * @param flow   The {@link Flow}
 	 * @param result The outcome of processing that {@link Flow}
 	 */
-	public void recordResult( Flow flow, Result result ) {
+	public synchronized void recordResult( Flow flow, Result result ) {
 		results.putIfAbsent( flow, result );
 	}
 
@@ -76,14 +78,14 @@ public class History {
 	 * @param flow The {@link Flow} to query for
 	 * @return The result of that {@link Flow}
 	 */
-	public Result get( Flow flow ) {
+	public synchronized Result get( Flow flow ) {
 		return results.getOrDefault( flow, Result.PENDING );
 	}
 
 	/**
 	 * Clears the saved {@link Flow} outcomes
 	 */
-	public void clear() {
+	public synchronized void clear() {
 		results.clear();
 	}
 
@@ -118,6 +120,8 @@ public class History {
 			// the system is stateful and the check has not been suppressed...
 			Optional<String> depFailure = flow.dependencies()
 					.map( d -> d.source().flow() )
+					// within-flow bindings are not prerequisites
+					.filter( f -> f != flow )
 					// ... and the flow has a dependency that intersects with the system ...
 					.filter( f -> Flows.intersects( f, system ) )
 					.map( this::get )

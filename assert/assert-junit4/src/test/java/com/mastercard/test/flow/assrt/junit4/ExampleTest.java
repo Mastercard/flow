@@ -5,6 +5,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.Collection;
 
 import org.junit.Assume;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -40,29 +41,35 @@ public class ExampleTest {
 		Assume.assumeTrue( "Test activation", active );
 	}
 
-	private static final Flocessor flows = new Flocessor( "junit4 example test", new Mdl() )
-			.system( State.FUL, Actrs.BEN )
-			.behaviour( asrt -> {
-				if( asrt.flow().meta().id().contains( "success" ) ) {
-					asrt.actual().response( asrt.expected().response().content() );
-				}
-				else if( asrt.flow().meta().id().contains( "failure" ) ) {
-					asrt.actual().response( "unexpected content!".getBytes( UTF_8 ) );
-				}
-				else if( asrt.flow().meta().id().contains( "error" ) ) {
-					throw new IllegalArgumentException( "no thanks!" );
-				}
-				else {
-					asrt.actual().response( "unsupported behaviour".getBytes( UTF_8 ) );
-				}
-			} );
+	static Flocessor flows;
 
-	/**
-	 * @return The {@link Flow} parameters
-	 */
+	/** @return The {@link Flow} parameters */
 	@Parameters(name = "{0}")
 	public static Collection<Object[]> flows() {
+		flows = new Flocessor( "junit4 example test", new Mdl() )
+				.system( State.FUL, Actrs.BEN )
+				.behaviour( asrt -> {
+					if( asrt.flow().meta().id().contains( "success" ) ) {
+						asrt.actual().response( asrt.expected().response().content() );
+					}
+					else if( asrt.flow().meta().id().contains( "failure" ) ) {
+						asrt.actual().response( "unexpected content!".getBytes( UTF_8 ) );
+					}
+					else if( asrt.flow().meta().id().contains( "error" ) ) {
+						throw new IllegalArgumentException( "no thanks!" );
+					}
+					else {
+						asrt.actual().response( "unsupported behaviour".getBytes( UTF_8 ) );
+					}
+				} );
+
 		return flows.parameters();
+	}
+
+	/** Completes the runner after all parameterized cases, including failures. */
+	@AfterClass
+	public static void complete() {
+		flows.close();
 	}
 
 	/**

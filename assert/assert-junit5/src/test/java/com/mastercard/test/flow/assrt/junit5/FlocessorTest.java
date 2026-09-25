@@ -10,14 +10,32 @@ import org.junit.jupiter.api.DynamicContainer;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.platform.engine.discovery.DiscoverySelectors;
+import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
+import org.junit.platform.launcher.core.LauncherFactory;
+import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
+import org.opentest4j.TestAbortedException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
+import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
+import com.mastercard.test.flow.assrt.Reporting;
+import com.mastercard.test.flow.assrt.junit5.mock.Actrs;
+import com.mastercard.test.flow.assrt.junit5.mock.Mdl;
+import com.mastercard.test.flow.assrt.junit5.mock.Msg;
+import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.builder.Chain;
 import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.util.Tags;
@@ -28,6 +46,77 @@ import com.mastercard.test.flow.util.Tags;
  */
 @SuppressWarnings("static-method")
 class FlocessorTest {
+
+	/**
+	 * Native teardown, rather than enumeration, owns completion of retained tests.
+	 */
+	@ParameterizedTest
+	@EnumSource(value = Reporting.class, names = { "NEVER", "QUIETLY" })
+	void nativeCompletionClosesLegacyRunner( Reporting reporting ) throws Throwable {
+		for( boolean early : new boolean[] { false, true } ) {
+			List<String> calls = new ArrayList<>();
+			CompletionFixture.runner = new Flocessor( "legacy completion", new Mdl() )
+					.system( State.LESS, Actrs.BEN ).reporting( reporting, "legacy-completion" )
+					.exercising( f -> "success".equals( f.meta().description() ), message -> {
+					} );
+			// Enumeration and stream closure do not freeze configuration or complete work.
+			try( Stream<DynamicNode> nodes = CompletionFixture.runner.tests() ) {
+				CompletionFixture.test = (DynamicTest) nodes.findFirst().orElseThrow();
+			}
+			assertNull( CompletionFixture.runner.report() );
+			CompletionFixture.runner.behaviour( a -> {
+				calls.add( "SUT" );
+				assertThrows( IllegalStateException.class, CompletionFixture.runner::close );
+				a.actual().response( a.expected().response().content() );
+			} );
+			if( early ) {
+				CompletionFixture.runner.close();
+			}
+			SummaryGeneratingListener result = new SummaryGeneratingListener();
+			LauncherFactory.create().execute( LauncherDiscoveryRequestBuilder.request()
+					.selectors( DiscoverySelectors.selectClass( CompletionFixture.class ) )
+					.configurationParameter( "junit.jupiter.execution.parallel.enabled", "false" )
+					.build(), result );
+			assertEquals( early ? 0 : 1, result.getSummary().getTestsSucceededCount() );
+			assertEquals( early ? 1 : 0, result.getSummary().getTestsFailedCount() );
+			assertEquals( 0, result.getSummary().getContainersFailedCount() );
+			assertEquals( early ? List.of() : List.of( "SUT" ), calls );
+			assertThrows( IllegalStateException.class, CompletionFixture.test.getExecutable()::execute );
+			try( AutoCloseable runner = CompletionFixture.runner ) {
+				if( !early && reporting == Reporting.QUIETLY ) {
+					assertEquals( 1, new Reader( CompletionFixture.runner.report() ).read().entries.size() );
+				}
+				else {
+					assertNull( CompletionFixture.runner.report() );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Lets the real engine order a retained dynamic test before runner completion.
+	 */
+	static class CompletionFixture {
+		static Flocessor runner;
+		static DynamicTest test;
+
+		/**
+		 * @return The retained test, so an early close is observed at actual execution
+		 */
+		@TestFactory
+		Stream<DynamicNode> flows() {
+			assertNotNull( test, "The retained test is supplied before the engine runs" );
+			return Stream.of( test );
+		}
+
+		/**
+		 * Closes only after Jupiter has finished the dynamic child, even on failure.
+		 */
+		@AfterAll
+		static void complete() {
+			runner.close();
+		}
+	}
 
 	/**
 	 * A simple sequence of flows with no chains
@@ -116,6 +205,33 @@ class FlocessorTest {
 				"  test : 5 [chain:c]" );
 	}
 
+	/**
+	 * Chain members are processed when their leaves execute: these flows have no
+	 * interactions with the system under test, so processing skips them.
+	 */
+	@Test
+	void chainMembersAreProcessedWhenExecuted() {
+		Flow[] members = { chained( "0" ), chained( "1" ) };
+		Model model = mock( Model.class );
+		when( model.flows( anySet(), anySet() ) ).thenReturn( Stream.of( members ) );
+		try( Flocessor flocessor = new Flocessor( "", model ).system( State.LESS, Actrs.CHE ) ) {
+			DynamicContainer chain = (DynamicContainer) flocessor.tests().findFirst().orElseThrow();
+			List<DynamicTest> leaves = chain.getChildren().map( DynamicTest.class::cast ).toList();
+			assertEquals( 2, leaves.size() );
+			for( DynamicTest leaf : leaves ) {
+				assertEquals( "No interactions with system [CHE]", assertThrows( TestAbortedException.class,
+						leaf.getExecutable()::execute ).getMessage() );
+			}
+		}
+	}
+
+	private static Flow chained( String name ) {
+		return Creator
+				.build( f -> f.meta( m -> m.description( name ).tags( Tags.add( Chain.PREFIX + "a" ) ) )
+						.call( i -> i.from( Actrs.AVA ).to( Actrs.BEN ).request( new Msg( "req" ) )
+								.response( new Msg( "rsp" ) ) ) );
+	}
+
 	private static Model model( String... chains ) {
 		List<Flow> flows = new ArrayList<>();
 		for( int i = 0; i < chains.length; i++ ) {
@@ -136,10 +252,11 @@ class FlocessorTest {
 	}
 
 	private static void expectNodes( Model model, String... expected ) {
-		Flocessor flocessor = new Flocessor( "", model );
 		List<String> actual = new ArrayList<>();
-		flocessor.tests()
-				.forEach( node -> stringify( node, "", actual ) );
+		try( Flocessor flocessor = new Flocessor( "", model ) ) {
+			flocessor.tests()
+					.forEach( node -> stringify( node, "", actual ) );
+		}
 		assertEquals(
 				copypasta( Stream.of( expected ) ),
 				copypasta( actual.stream() ) );

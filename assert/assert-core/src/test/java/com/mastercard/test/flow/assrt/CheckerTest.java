@@ -118,72 +118,73 @@ class CheckerTest {
 	 */
 	@Test
 	void fullyMasked() {
-		TestFlocessor tf = new TestFlocessor( "", TestModel.withResidue() )
+		try( TestFlocessor tf = new TestFlocessor( "", TestModel.withResidue() )
 				.system( State.FUL, B )
 				.checkers( new TestChecker() )
 				.masking( Nprdct.DIGITS_AND_SUFFIX )
 				.reporting( Reporting.QUIETLY )
 				.behaviour( assrt -> {
 					// no message assertions
-				} );
+				} ) ) {
 
-		tf.execute();
+			tf.execute();
 
-		assertEquals( copypasta(
-				"COMPARE Residue 'TestResidue'",
-				" | ?__ residue | ?__ residue |",
-				"",
-				"COMPARE Residue 'TestResidue'",
-				" | ?__ residue | ?__ residue |" ),
-				copypasta( tf.events() ) );
-		assertEquals( copypasta(
-				"abc [] SUCCESS",
-				"def [] SUCCESS" ),
-				copypasta( tf.results() ) );
+			assertEquals( copypasta(
+					"COMPARE Residue 'TestResidue'",
+					" | ?__ residue | ?__ residue |",
+					"",
+					"COMPARE Residue 'TestResidue'",
+					" | ?__ residue | ?__ residue |" ),
+					copypasta( tf.events() ) );
+			assertEquals( copypasta(
+					"abc [] SUCCESS",
+					"def [] SUCCESS" ),
+					copypasta( tf.results() ) );
 
-		ObjectMapper JSON = new ObjectMapper().enable( SerializationFeature.INDENT_OUTPUT );
-		Reader rd = new Reader( tf.report() );
+			ObjectMapper JSON = new ObjectMapper().enable( SerializationFeature.INDENT_OUTPUT );
+			Reader rd = new Reader( tf.report() );
 
-		assertEquals( copypasta(
-				"[ {",
-				"  'name' : 'TestResidue',",
-				"  'raw' : {",
-				"    'value' : '1st residue'",
-				"  },",
-				"  'full' : {",
-				"    'expect' : '1st residue',",
-				"    'actual' : '5st residue'",
-				"  },",
-				"  'masked' : {",
-				"    'expect' : '?__ residue',",
-				"    'actual' : '?__ residue'",
-				"  }",
-				"} ]",
-				"[ {",
-				"  'name' : 'TestResidue',",
-				"  'raw' : {",
-				"    'value' : '2nd residue'",
-				"  },",
-				"  'full' : {",
-				"    'expect' : '2nd residue',",
-				"    'actual' : '5st residue'",
-				"  },",
-				"  'masked' : {",
-				"    'expect' : '?__ residue',",
-				"    'actual' : '?__ residue'",
-				"  }",
-				"} ]" ),
-				copypasta(
-						rd.read().entries.stream()
-								.map( rd::detail )
-								.map( d -> {
-									try {
-										return JSON.writeValueAsString( d.residue );
-									}
-									catch( IOException e ) {
-										throw new UncheckedIOException( e );
-									}
-								} ) ) );
+			assertEquals( copypasta(
+					"[ {",
+					"  'name' : 'TestResidue',",
+					"  'raw' : {",
+					"    'value' : '1st residue'",
+					"  },",
+					"  'full' : {",
+					"    'expect' : '1st residue',",
+					"    'actual' : '5st residue'",
+					"  },",
+					"  'masked' : {",
+					"    'expect' : '?__ residue',",
+					"    'actual' : '?__ residue'",
+					"  }",
+					"} ]",
+					"[ {",
+					"  'name' : 'TestResidue',",
+					"  'raw' : {",
+					"    'value' : '2nd residue'",
+					"  },",
+					"  'full' : {",
+					"    'expect' : '2nd residue',",
+					"    'actual' : '5st residue'",
+					"  },",
+					"  'masked' : {",
+					"    'expect' : '?__ residue',",
+					"    'actual' : '?__ residue'",
+					"  }",
+					"} ]" ),
+					copypasta(
+							rd.read().entries.stream()
+									.map( rd::detail )
+									.map( d -> {
+										try {
+											return JSON.writeValueAsString( d.residue );
+										}
+										catch( IOException e ) {
+											throw new UncheckedIOException( e );
+										}
+									} ) ) );
+		}
 	}
 
 	/**

@@ -1,5 +1,6 @@
 package com.mastercard.test.flow.report;
 
+import static com.mastercard.test.flow.report.Latches.await;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;
@@ -117,16 +118,6 @@ class WriterTest {
 			release.countDown();
 			workers.shutdownNow();
 			Assertions.assertTrue( workers.awaitTermination( 10, TimeUnit.SECONDS ) );
-		}
-	}
-
-	private static void await( CountDownLatch latch ) {
-		try {
-			Assertions.assertTrue( latch.await( 10, TimeUnit.SECONDS ), "Fixture did not progress" );
-		}
-		catch( InterruptedException e ) {
-			Thread.currentThread().interrupt();
-			throw new AssertionError( e );
 		}
 	}
 
@@ -284,7 +275,7 @@ class WriterTest {
 	 * @throws Exception on error
 	 */
 	@Test
-	void writeDuctIndex( @org.junit.jupiter.api.io.TempDir Path dir ) throws Exception {
+	void writeDuctIndex( @TempDir Path dir ) throws Exception {
 		Writer.writeDuctIndex( dir );
 
 		// check file listing of report

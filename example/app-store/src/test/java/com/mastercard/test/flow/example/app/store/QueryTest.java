@@ -70,6 +70,7 @@ class QueryTest {
 	private static final Consequests queries = new Consequests();
 	private static final Instance service = new Main( db ).build();
 	private static Temporary reportName;
+	private static Flocessor flocessor;
 
 	/**
 	 * Starts the service
@@ -83,10 +84,14 @@ class QueryTest {
 	}
 
 	/**
-	 * Stops the service
+	 * Closes reporting after dynamic children have finished capturing database
+	 * calls, then stops the service
 	 */
 	@AfterAll
 	public static void stopService() {
+		if( flocessor != null ) {
+			flocessor.close();
+		}
 		if( !Replay.isActive() ) {
 			service.stop();
 		}
@@ -98,7 +103,7 @@ class QueryTest {
 	 */
 	@TestFactory
 	Stream<DynamicNode> flows() {
-		Flocessor flocessor = new Flocessor( "Query test", ExampleSystem.MODEL )
+		flocessor = new Flocessor( "Query test", ExampleSystem.MODEL )
 				.reporting( FAILURES, "query" )
 				.exercising( flow -> Flows.intersects( flow, Actors.STORE ), LOG::info )
 				.system( State.LESS, Actors.STORE )

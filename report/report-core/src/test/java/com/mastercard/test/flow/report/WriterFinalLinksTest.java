@@ -5,13 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -85,7 +86,7 @@ class WriterFinalLinksTest {
 		Reader reader = new Reader( dir );
 		Map<String, Entry> entries = entries( reader );
 		FlowData dependent = reader.detail( entries.get( "dependent" ) );
-		assertEquals( java.util.Set.of( entries.get( "dependency" ).detail ),
+		assertEquals( Set.of( entries.get( "dependency" ).detail ),
 				dependent.dependencies.keySet() );
 		assertEquals( "dependency", dependent.dependencies.values().iterator().next().description );
 	}

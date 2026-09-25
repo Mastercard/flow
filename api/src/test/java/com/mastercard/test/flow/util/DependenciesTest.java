@@ -7,12 +7,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -43,30 +50,30 @@ class DependenciesTest {
 
 		Mocks() {
 
-			Mockito.when( snk.dependencies() ).thenReturn( Stream.of( dep ) );
+			when( snk.dependencies() ).thenReturn( Stream.of( dep ) );
 
-			Mockito.when( dep.source() ).thenReturn( srcAdr );
-			Mockito.when( dep.sink() ).thenReturn( snkAdr );
-			Mockito.when( dep.mutation() ).thenReturn( o -> String.valueOf( o ).toUpperCase() );
+			when( dep.source() ).thenReturn( srcAdr );
+			when( dep.sink() ).thenReturn( snkAdr );
+			when( dep.mutation() ).thenReturn( o -> String.valueOf( o ).toUpperCase() );
 
-			Mockito.when( srcNtr.requester() ).thenReturn( () -> "AVA" );
-			Mockito.when( srcNtr.responder() ).thenReturn( () -> "BEN" );
-			Mockito.when( srcNtr.tags() ).thenReturn(
+			when( srcNtr.requester() ).thenReturn( () -> "AVA" );
+			when( srcNtr.responder() ).thenReturn( () -> "BEN" );
+			when( srcNtr.tags() ).thenReturn(
 					Stream.of( "a", "b", "c" ).collect( toSet() ) );
 
-			Mockito.when( srcAdr.isComplete() ).thenReturn( true );
-			Mockito.when( srcAdr.flow() ).thenReturn( src );
-			Mockito.when( srcAdr.getInteraction() ).thenReturn( Optional.of( srcNtr ) );
-			Mockito.when( srcAdr.getMessage() ).thenReturn( Optional.of( srcMsg ) );
-			Mockito.when( srcAdr.field() ).thenReturn( "source field" );
+			when( srcAdr.isComplete() ).thenReturn( true );
+			when( srcAdr.flow() ).thenReturn( src );
+			when( srcAdr.getInteraction() ).thenReturn( Optional.of( srcNtr ) );
+			when( srcAdr.getMessage() ).thenReturn( Optional.of( srcMsg ) );
+			when( srcAdr.field() ).thenReturn( "source field" );
 
-			Mockito.when( snkAdr.isComplete() ).thenReturn( true );
-			Mockito.when( snkAdr.getMessage() ).thenReturn( Optional.of( snkMsg ) );
-			Mockito.when( snkAdr.field() ).thenReturn( "sink field" );
+			when( snkAdr.isComplete() ).thenReturn( true );
+			when( snkAdr.getMessage() ).thenReturn( Optional.of( snkMsg ) );
+			when( snkAdr.field() ).thenReturn( "sink field" );
 
-			Mockito.when( srcMsg.peer( actual ) ).thenReturn( peer );
+			when( srcMsg.peer( actual ) ).thenReturn( peer );
 
-			Mockito.when( peer.get( "source field" ) ).thenReturn( "source value" );
+			when( peer.get( "source field" ) ).thenReturn( "source value" );
 		}
 
 		Stream<Flow> flows() {
@@ -101,7 +108,7 @@ class DependenciesTest {
 	void parseFailure() {
 		Mocks mocks = new Mocks();
 		NullPointerException npe = new NullPointerException( "oh no!" );
-		Mockito.when( mocks.srcMsg.peer( ArgumentMatchers.any() ) )
+		when( mocks.srcMsg.peer( ArgumentMatchers.any() ) )
 				.thenThrow( npe );
 
 		Dependencies d = new Dependencies( mocks.flows() );
@@ -119,20 +126,87 @@ class DependenciesTest {
 	}
 
 	/**
+	 * Synchronous failure retains earlier writes and even a setter's own partial
+	 * change. Repeated scheduling pairs must not erase any binding operation.
+	 * Parsing failure before any binding is covered by {@link #parseFailure()}.
+	 *
+	 * @param fault The operation that throws
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = { "get", "mutation", "set", "set-after" })
+	void publicationFaultsPreservePartialWritesAndOriginalCaller( String fault ) {
+		Mocks mocks = new Mocks();
+		Thread caller = Thread.currentThread();
+		RuntimeException original = new IllegalStateException( fault );
+		List<String> operations = new ArrayList<>();
+		AtomicInteger gets = new AtomicInteger();
+		AtomicInteger mutations = new AtomicInteger();
+		AtomicInteger sets = new AtomicInteger();
+		AtomicReference<Object> sink = new AtomicReference<>( "initial" );
+		when( mocks.snk.dependencies() )
+				.thenReturn( Stream.of( mocks.dep, mocks.dep, mocks.dep ) );
+		when( mocks.srcMsg.peer( mocks.actual ) ).thenAnswer( invocation -> {
+			assertSame( caller, Thread.currentThread() );
+			operations.add( "peer" );
+			return mocks.peer;
+		} );
+		when( mocks.peer.get( "source field" ) ).thenAnswer( invocation -> {
+			assertSame( caller, Thread.currentThread() );
+			int call = gets.incrementAndGet();
+			operations.add( "get" + call );
+			if( call == 2 && fault.equals( "get" ) )
+				throw original;
+			return "value" + call;
+		} );
+		when( mocks.dep.mutation() ).thenReturn( value -> {
+			assertSame( caller, Thread.currentThread() );
+			int call = mutations.incrementAndGet();
+			operations.add( "mutation" + call );
+			if( call == 2 && fault.equals( "mutation" ) )
+				throw original;
+			return value;
+		} );
+		when( mocks.snkMsg.set( Mockito.eq( "sink field" ), Mockito.any() ) )
+				.thenAnswer( invocation -> {
+					assertSame( caller, Thread.currentThread() );
+					int call = sets.incrementAndGet();
+					operations.add( "set" + call );
+					if( call == 2 && fault.equals( "set" ) )
+						throw original;
+					sink.set( invocation.getArgument( 1 ) );
+					if( call == 2 && fault.equals( "set-after" ) )
+						throw original;
+					return mocks.snkMsg;
+				} );
+		Dependencies publisher = new Dependencies( mocks.flows() );
+		var failure = assertThrows( IllegalArgumentException.class,
+				() -> publisher.publish( mocks.src, mocks.srcNtr, mocks.srcMsg, mocks.actual ) );
+		assertSame( original, failure.getCause() );
+		assertEquals( fault.equals( "set-after" ) ? "value2" : "value1", sink.get() );
+		List<String> expected = switch( fault ) {
+			case "get" -> List.of( "peer", "get1", "mutation1", "set1", "get2" );
+			case "mutation" -> List.of( "peer", "get1", "mutation1", "set1", "get2", "mutation2" );
+			default -> List.of( "peer", "get1", "mutation1", "set1", "get2", "mutation2", "set2" );
+		};
+		assertEquals( expected, operations,
+				"no retry, rollback, replay or third binding after failure" );
+	}
+
+	/**
 	 * Nothing should happen unless source and sink addresses are complete
 	 */
 	@Test
 	void incompleteAddress() {
 		{
 			Mocks mocks = new Mocks();
-			Mockito.when( mocks.srcAdr.isComplete() ).thenReturn( false );
+			when( mocks.srcAdr.isComplete() ).thenReturn( false );
 			new Dependencies( mocks.flows() )
 					.publish( mocks.src, mocks.srcNtr, mocks.srcMsg, mocks.actual );
 			Mockito.verifyNoInteractions( mocks.snkMsg );
 		}
 		{
 			Mocks mocks = new Mocks();
-			Mockito.when( mocks.snkAdr.isComplete() ).thenReturn( false );
+			when( mocks.snkAdr.isComplete() ).thenReturn( false );
 			new Dependencies( mocks.flows() )
 					.publish( mocks.src, mocks.srcNtr, mocks.srcMsg, mocks.actual );
 			Mockito.verifyNoInteractions( mocks.snkMsg );
@@ -174,7 +248,7 @@ class DependenciesTest {
 	@Test
 	void propagateStaticData() {
 		Mocks mocks = new Mocks();
-		Mockito.when( mocks.srcMsg.content() ).thenReturn( mocks.actual );
+		when( mocks.srcMsg.content() ).thenReturn( mocks.actual );
 
 		Dependencies.propagateStaticData( mocks.flows() );
 

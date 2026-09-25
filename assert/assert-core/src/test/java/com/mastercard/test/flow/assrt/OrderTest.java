@@ -1,7 +1,5 @@
 package com.mastercard.test.flow.assrt;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -9,6 +7,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 import com.mastercard.test.flow.Flow;
@@ -88,6 +87,18 @@ class OrderTest {
 				"[b [], c [chain:foo], a [chain:foo]]" );
 		// also note that b comes before the chain, as it compares favourably with the
 		// new head of the chain
+	}
+
+	/**
+	 * Ordering ignores absent references and never turns a self binding into a
+	 * wait.
+	 */
+	@Test
+	void absentAndSelfReferencesKeepExistingOrderSemantics() {
+		Flw a = new Flw( "a []" );
+		Flw b = new Flw( "b []" ).depedency( a ).depedency( a );
+		a.depedency( a ).depedency( null ).depedency( new Flw( "outside []" ) );
+		assertOrder( new Order( Stream.of( b, a ), EMPTY ), "[a [], b []]" );
 	}
 
 	private static void assertOrder( Order order, String expect ) {

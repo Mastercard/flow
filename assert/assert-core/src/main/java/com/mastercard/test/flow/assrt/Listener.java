@@ -7,7 +7,9 @@ import com.mastercard.test.flow.Interaction;
 import com.mastercard.test.flow.Residue;
 
 /**
- * Implementations will be informed as {@link Flow} are processed
+ * Implementations will be informed as {@link Flow} are processed. Under
+ * concurrent execution these calls arrive from several threads at once, so
+ * implementations must be thread-safe.
  */
 public interface Listener {
 

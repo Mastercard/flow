@@ -1,5 +1,7 @@
 package com.mastercard.test.flow.report;
 
+import static com.mastercard.test.flow.report.Latches.await;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -47,21 +49,15 @@ class WriterLifecycleTest {
 		try {
 			var update = workers.submit( () -> writer.with( Mdl.BASIS, detail -> {
 				entered.countDown();
-				try {
-					assertTrue( release.await( 10, TimeUnit.SECONDS ) );
-				}
-				catch( InterruptedException e ) {
-					Thread.currentThread().interrupt();
-					throw new AssertionError( e );
-				}
+				await( release );
 				detail.motivation = "completed callback";
 			} ) );
-			assertTrue( entered.await( 10, TimeUnit.SECONDS ) );
+			await( entered );
 			var close = workers.submit( () -> {
 				closing.countDown();
 				writer.close();
 			} );
-			assertTrue( closing.await( 10, TimeUnit.SECONDS ) );
+			await( closing );
 			assertThrows( TimeoutException.class, () -> close.get( 200, TimeUnit.MILLISECONDS ) );
 			release.countDown();
 			update.get( 10, TimeUnit.SECONDS );
@@ -156,8 +152,7 @@ class WriterLifecycleTest {
 		reader.read().entries.forEach( e -> assertNotNull( reader.detail( e ) ) );
 		byte[] index = Files.readAllBytes( dir.resolve( Writer.INDEX_FILE_NAME ) );
 		writer.close();
-		org.junit.jupiter.api.Assertions.assertArrayEquals( index,
-				Files.readAllBytes( dir.resolve( Writer.INDEX_FILE_NAME ) ) );
+		assertArrayEquals( index, Files.readAllBytes( dir.resolve( Writer.INDEX_FILE_NAME ) ) );
 		assertThrows( IllegalStateException.class, () -> writer.with( Mdl.CHILD ) );
 		try( var files = Files.list( dir ) ) {
 			assertFalse( files.anyMatch( p -> p.getFileName().toString().endsWith( ".tmp" ) ) );

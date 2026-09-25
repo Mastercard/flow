@@ -11,6 +11,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
@@ -18,6 +19,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.slf4j.Logger;
 
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
@@ -37,22 +40,25 @@ import com.mastercard.test.flow.util.Option.Temporary;
  * implemented it here rather than repeating ourselves in every service's test
  * suite.
  */
+@TestInstance(Lifecycle.PER_CLASS)
 public abstract class AbstractServiceTest {
 
 	private static MockInstance dependencyInstance = new MockInstance();
 	private static MockService dependencies = new MockService();
 	private static Temporary reportName;
 
-	private final Instance service;
+	private final Supplier<Instance> service;
 	private final Actors actor;
 	private final Logger logger;
+	private Flocessor flocessor;
 
 	/**
-	 * @param service The {@link Instance} to exercise
+	 * @param service Resolves the service after subclass {@code @BeforeAll} setup;
+	 *                {@code PER_CLASS} construction happens before that setup
 	 * @param actor   The actor in the system model that represents the service
 	 * @param logger  Where to log test progress to
 	 */
-	protected AbstractServiceTest( Instance service, Actors actor, Logger logger ) {
+	protected AbstractServiceTest( Supplier<Instance> service, Actors actor, Logger logger ) {
 		this.service = service;
 		this.actor = actor;
 		this.logger = logger;
@@ -64,6 +70,9 @@ public abstract class AbstractServiceTest {
 	@BeforeAll
 	public static void startDependencies() {
 		if( !Replay.isActive() ) {
+			// MockInstance.stop() is terminal; each class execution owns a fresh fixture.
+			dependencyInstance = new MockInstance();
+			dependencies = new MockService();
 			dependencyInstance.start( dependencies );
 		}
 		reportName = AssertionOptions.REPORT_NAME.temporarily( "latest" );
@@ -95,10 +104,10 @@ public abstract class AbstractServiceTest {
 	 */
 	@TestFactory
 	Stream<DynamicNode> flows() {
-		Flocessor flocessor = new Flocessor( actor + " test", ExampleSystem.MODEL )
+		flocessor = new Flocessor( actor + " test", ExampleSystem.MODEL )
 				.reporting( FAILURES )
 				.system( State.LESS, actor )
-				.applicators( new UpnessApplicator().with( actor, service ) )
+				.applicators( new UpnessApplicator().with( actor, service.get() ) )
 				.masking( BORING, HOST, CLOCK, RNG )
 				.logs( Util.LOG_CAPTURE )
 				.behaviour( assrt -> {
@@ -132,12 +141,22 @@ public abstract class AbstractServiceTest {
 	}
 
 	/**
+	 * Closes reporting after the dynamic children, not when their factory returns.
+	 */
+	@AfterAll
+	void completeFlows() {
+		if( flocessor != null ) {
+			flocessor.close();
+		}
+	}
+
+	/**
 	 * @param assrt The request to hit the system under test with
 	 * @return The bytes of the response from the system under test
 	 */
 	protected byte[] getResponse( Assertion assrt ) {
 		return HttpClient.send(
-				"http", "localhost", service.port(),
+				"http", "localhost", service.get().port(),
 				(HttpReq) assrt.expected().request() );
 	}
 
