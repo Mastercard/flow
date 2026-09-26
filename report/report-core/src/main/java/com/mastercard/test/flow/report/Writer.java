@@ -118,7 +118,7 @@ public class Writer {
 	 * @return <code>this</code>
 	 */
 	@SafeVarargs
-	public final Writer with( Flow flow, Consumer<FlowData>... extra ) {
+	public final synchronized Writer with( Flow flow, Consumer<FlowData>... extra ) {
 		IndexedFlowData idf = data.computeIfAbsent( flow,
 				f -> new IndexedFlowData( flow, data.keySet(), missingBases ) );
 		String oldname = idf.indexEntry().detail;
