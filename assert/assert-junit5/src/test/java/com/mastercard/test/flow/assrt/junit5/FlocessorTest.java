@@ -12,8 +12,11 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.mastercard.test.flow.Flow;
@@ -28,6 +31,24 @@ import com.mastercard.test.flow.util.Tags;
  */
 @SuppressWarnings("static-method")
 class FlocessorTest {
+
+	/**
+	 * A flocessor represents one prepared run, so preparation freezes its
+	 * configuration and cannot be repeated.
+	 */
+	@Test
+	void oneShotPreparation() {
+		Model model = model( (String) null );
+		Flocessor flocessor = new Flocessor( "", model );
+
+		flocessor.tests();
+
+		assertThrows( IllegalStateException.class, flocessor::tests );
+		assertThrows( IllegalStateException.class, () -> flocessor.behaviour( a -> {
+			// no-op
+		} ) );
+		verify( model, times( 1 ) ).flows( anySet(), anySet() );
+	}
 
 	/**
 	 * A simple sequence of flows with no chains
