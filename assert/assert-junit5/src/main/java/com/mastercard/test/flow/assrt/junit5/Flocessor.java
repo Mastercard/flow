@@ -65,7 +65,7 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 		String currentChainId = null;
 
 		// Iterate over flows once and separate them into chained and non-chained
-		for( Flow flow : flows().collect( Collectors.toList() ) ) {
+		for( Flow flow : prepareFlows() ) {
 			Optional<String> chainSuffix = Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX );
 			if( chainSuffix.isPresent() ) {
 				String chainId = chainSuffix.get();

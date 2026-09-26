@@ -95,6 +95,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 
 	private final Model model;
 	private final String title;
+	private boolean prepared;
 	private Dependencies dependencies;
 	private Reporting reporting = Reporting.NEVER;
 	private String[] reportPath = {};
@@ -204,6 +205,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T reporting( Reporting r, String... path ) {
+		checkConfigurable();
 		reporting = r;
 		reportPath = path;
 		replaySource = Replay.source( path );
@@ -219,6 +221,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T masking( Unpredictable... sources ) {
+		checkConfigurable();
 		masks = sources.clone();
 		return self();
 	}
@@ -232,6 +235,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T system( State state, Actor... actors ) {
+		checkConfigurable();
 		statefulness = state;
 		systemUnderTest.clear();
 		Collections.addAll( systemUnderTest, actors );
@@ -246,6 +250,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T autonomous( Actor... actors ) {
+		checkConfigurable();
 		autonomous.clear();
 		Collections.addAll( autonomous, actors );
 		if( !systemUnderTest.containsAll( autonomous ) ) {
@@ -264,6 +269,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T applicators( Applicator<?>... applctrs ) {
+		checkConfigurable();
 		for( Applicator<?> applicator : applctrs ) {
 			applicators.put( applicator.contextType(), applicator );
 		}
@@ -277,6 +283,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T checkers( Checker<?>... chckrs ) {
+		checkConfigurable();
 		for( Checker<?> checker : chckrs ) {
 			checkers.put( checker.residueType(), checker );
 		}
@@ -291,6 +298,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T logs( LogCapture lc ) {
+		checkConfigurable();
 		logCapture = lc;
 		return self();
 	}
@@ -302,6 +310,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T listening( Listener prg ) {
+		checkConfigurable();
 		progress = prg;
 		return self();
 	}
@@ -324,6 +333,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T filtering( Consumer<FilterConfiguration> cfg ) {
+		checkConfigurable();
 		filterCfg = cfg;
 		return self();
 	}
@@ -354,6 +364,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @see AssertionOptions#SUPPRESS_FILTER
 	 */
 	public T exercising( Predicate<Flow> filter, Consumer<String> rejectionLog ) {
+		checkConfigurable();
 		flowFilter = filter;
 		filterRejectionLog = rejectionLog;
 		return self();
@@ -366,6 +377,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T behaviour( Consumer<Assertion> t ) {
+		checkConfigurable();
 		test = t;
 		return self();
 	}
@@ -380,8 +392,26 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code> for method chaining.
 	 */
 	public T motivation( MotivationCustomizer customizer ) {
+		checkConfigurable();
 		motivationCustomizer = customizer;
 		return self();
+	}
+
+	/**
+	 * Freezes configuration and computes the canonical flow list for one run.
+	 *
+	 * @return The flows to process, in canonical order
+	 */
+	protected final synchronized List<Flow> prepareFlows() {
+		checkConfigurable();
+		prepared = true;
+		return flows().collect( toList() );
+	}
+
+	private void checkConfigurable() {
+		if( prepared ) {
+			throw new IllegalStateException( "Flow processing has already been prepared" );
+		}
 	}
 
 	/**
