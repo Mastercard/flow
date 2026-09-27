@@ -90,6 +90,7 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 		}
 	}
 
+	@SuppressWarnings({ "java:S112", "java:S1181" }) // Jupiter bodies may fail with any Throwable
 	private void run( Flow flow, int index, FlowAdmission admission ) throws Throwable {
 		Throwable bodyFailure = null;
 		try {
@@ -97,25 +98,28 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 		}
 		catch( Throwable failure ) {
 			bodyFailure = failure;
-			throw failure;
 		}
-		finally {
-			boolean last = admission.finished( index );
-			if( last ) {
-				try {
-					publishReportIndex();
+
+		boolean last = admission.finished( index );
+		if( last ) {
+			try {
+				publishReportIndex();
+			}
+			catch( Throwable publicationFailure ) {
+				if( bodyFailure == null ) {
+					bodyFailure = publicationFailure;
 				}
-				catch( Throwable publicationFailure ) {
-					if( bodyFailure == null ) {
-						throw publicationFailure;
-					}
-					// The body failure is already pending from the outer catch. Keep it primary,
-					// and avoid adding the same failure (or its direct wrapper) a second time.
-					if( publicationFailure != bodyFailure && publicationFailure.getCause() != bodyFailure ) {
-						bodyFailure.addSuppressed( publicationFailure );
-					}
+				// Keep the body failure primary, and avoid adding the same failure (or its
+				// direct wrapper) a second time.
+				else if( publicationFailure != bodyFailure
+						&& publicationFailure.getCause() != bodyFailure ) {
+					bodyFailure.addSuppressed( publicationFailure );
 				}
 			}
+		}
+
+		if( bodyFailure != null ) {
+			throw bodyFailure;
 		}
 	}
 

@@ -112,10 +112,16 @@ class ParallelFlocessorTest {
 		FailureScenario successfulBody = executeFailureScenario( null, onlyPublication );
 		assertTrue( successfulBody.failures.contains( onlyPublication ),
 				successfulBody.failures::toString );
+
+		AssertionError fatalBody = new AssertionError( "fatal body" );
+		AssertionError fatalPublication = new AssertionError( "fatal publication" );
+		FailureScenario fatal = executeFailureScenario( fatalBody, fatalPublication );
+		assertTrue( fatal.failures.contains( fatalBody ), fatal.failures::toString );
+		assertEquals( List.of( fatalPublication ), List.of( fatalBody.getSuppressed() ) );
 	}
 
-	private static FailureScenario executeFailureScenario( RuntimeException body,
-			RuntimeException publication ) {
+	private static FailureScenario executeFailureScenario( Throwable body,
+			Throwable publication ) {
 		FailureScenario scenario = new FailureScenario( body, publication );
 		FailureFactory.current = scenario;
 		try {
@@ -205,7 +211,7 @@ class ParallelFlocessorTest {
 					.behaviour( assertion -> {
 						assertion.actual().response( assertion.expected().response().content() );
 						if( scenario.bodyFailure != null ) {
-							throw scenario.bodyFailure;
+							throwUnchecked( scenario.bodyFailure );
 						}
 					} )
 					.tests();
@@ -264,12 +270,12 @@ class ParallelFlocessorTest {
 	}
 
 	private static final class FailureScenario implements TestExecutionListener {
-		private final RuntimeException bodyFailure;
-		private final RuntimeException publicationFailure;
+		private final Throwable bodyFailure;
+		private final Throwable publicationFailure;
 		private final List<Throwable> failures = Collections.synchronizedList( new ArrayList<>() );
 		private final Model model = model( flow( "failure" ) );
 
-		private FailureScenario( RuntimeException bodyFailure, RuntimeException publicationFailure ) {
+		private FailureScenario( Throwable bodyFailure, Throwable publicationFailure ) {
 			this.bodyFailure = bodyFailure;
 			this.publicationFailure = publicationFailure;
 		}
@@ -290,8 +296,15 @@ class ParallelFlocessorTest {
 
 		@Override
 		protected void publishReportIndex() {
-			throw scenario.publicationFailure;
+			throwUnchecked( scenario.publicationFailure );
 		}
+	}
+
+	private static void throwUnchecked( Throwable failure ) {
+		if( failure instanceof RuntimeException runtime ) {
+			throw runtime;
+		}
+		throw (Error) failure;
 	}
 
 	private static void await( CountDownLatch latch ) {

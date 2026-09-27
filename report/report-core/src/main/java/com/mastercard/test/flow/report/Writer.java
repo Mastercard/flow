@@ -43,6 +43,7 @@ import com.mastercard.test.flow.util.Bytes;
  * For writing a new report
  */
 public class Writer {
+	private static final String HTML_FILE_SUFFIX = ".html";
 
 	/** Controls when the complete report index is published. */
 	public enum Indexing {
@@ -57,7 +58,7 @@ public class Writer {
 	/**
 	 * The file name under which the report index is saved
 	 */
-	public static final String INDEX_FILE_NAME = "index.html";
+	public static final String INDEX_FILE_NAME = "index" + HTML_FILE_SUFFIX;
 	/**
 	 * The directory in which {@link Flow} detail data is stored
 	 */
@@ -165,8 +166,11 @@ public class Writer {
 	 * @param flow  The {@link Flow}
 	 * @param extra Extra data, above and beyond what the flow holds
 	 * @return <code>this</code>
+	 * @implNote Callback and I/O {@link Error}s invalidate deferred publication
+	 *           just like runtime failures, then propagate unchanged.
 	 */
 	@SafeVarargs
+	@SuppressWarnings("java:S1181")
 	public final synchronized Writer with( Flow flow, Consumer<FlowData>... extra ) {
 		try {
 			IndexedFlowData idf = data.computeIfAbsent( flow,
@@ -175,7 +179,7 @@ public class Writer {
 			idf.update( extra );
 
 			if( indexing == Indexing.IMMEDIATE && !idf.indexEntry().detail.equals( oldname ) ) {
-				QuietFiles.recursiveDelete( root.resolve( "detail/" + oldname + ".html" ) );
+				QuietFiles.recursiveDelete( root.resolve( "detail/" + oldname + HTML_FILE_SUFFIX ) );
 			}
 
 			// write the new detail
@@ -233,7 +237,9 @@ public class Writer {
 	 * this is a no-op. A deferred update or publication failure permanently makes
 	 * the accumulated state unpublishable; subsequent calls expose that original
 	 * failure as their cause rather than presenting a misleading complete index.
+	 * Fatal publication errors are also preserved and invalidate the snapshot.
 	 */
+	@SuppressWarnings("java:S1181")
 	public synchronized void publishIndex() {
 		if( invalidatingFailure != null ) {
 			throw new IllegalStateException( "Report index publication was invalidated",
@@ -259,14 +265,18 @@ public class Writer {
 				new Meta( modelTitle, testTitle, System.currentTimeMillis() ),
 				data.values().stream()
 						.map( IndexedFlowData::indexEntry )
-						.collect( toList() ) );
+						.toList() );
 	}
 
+	/**
+	 * Deferred cleanup preserves runtime and fatal publication-failure identity.
+	 */
+	@SuppressWarnings("java:S1181")
 	private void publishDeferredIndex() {
 		Path temporary = null;
 		try {
 			QuietFiles.createDirectories( root );
-			temporary = Files.createTempFile( root, ".index-", ".html" );
+			temporary = Files.createTempFile( root, ".index-", HTML_FILE_SUFFIX );
 			app.write( index(), temporary );
 			Files.move( temporary, root.resolve( INDEX_FILE_NAME ), ATOMIC_MOVE, REPLACE_EXISTING );
 		}
@@ -396,7 +406,7 @@ public class Writer {
 		void writeTo( Path root, JsApp app ) {
 			app.write( detail, root
 					.resolve( DETAIL_DIR_NAME )
-					.resolve( indexEntry().detail + ".html" ) );
+					.resolve( indexEntry().detail + HTML_FILE_SUFFIX ) );
 		}
 	}
 
