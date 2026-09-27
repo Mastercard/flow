@@ -3,6 +3,7 @@ package com.mastercard.test.flow.report;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
@@ -118,9 +119,11 @@ public class Writer {
 	 * @param testTitle  A human-readable title for the test that exercised the data
 	 * @param root       Where to write the report to
 	 * @param indexing   When to publish the complete report index
+	 * @throws NullPointerException If {@code indexing} is {@code null}
 	 */
 	public Writer( String modelTitle, String testTitle, Path root, Indexing indexing ) {
-		this( modelTitle, testTitle, root, indexing, initialise( root ) );
+		this( modelTitle, testTitle, root, requireNonNull( indexing, "indexing" ),
+				initialise( root ) );
 	}
 
 	/**
@@ -132,12 +135,13 @@ public class Writer {
 	 * @param root       Where to write the report to
 	 * @param indexing   When to publish the complete report index
 	 * @param app        The report application writer
+	 * @throws NullPointerException If {@code indexing} is {@code null}
 	 */
 	Writer( String modelTitle, String testTitle, Path root, Indexing indexing, JsApp app ) {
 		this.modelTitle = modelTitle;
 		this.testTitle = testTitle;
 		this.root = root;
-		this.indexing = indexing;
+		this.indexing = requireNonNull( indexing, "indexing" );
 		this.app = app;
 	}
 
