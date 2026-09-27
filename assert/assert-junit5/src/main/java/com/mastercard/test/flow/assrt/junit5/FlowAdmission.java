@@ -11,6 +11,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import com.mastercard.test.flow.Flow;
@@ -27,6 +28,7 @@ final class FlowAdmission extends Spliterators.AbstractSpliterator<Integer> {
 	private final NavigableSet<Integer> ready = new TreeSet<>();
 	private final Set<Integer> running = new HashSet<>();
 	private final BlockingQueue<Integer> completions = new LinkedBlockingQueue<>();
+	private final AtomicInteger bodyCompletions = new AtomicInteger();
 	private int emitted;
 
 	/**
@@ -80,9 +82,11 @@ final class FlowAdmission extends Spliterators.AbstractSpliterator<Integer> {
 	 * state.
 	 *
 	 * @param index A previously emitted canonical flow index
+	 * @return Whether this is the final selected body to complete
 	 */
-	void finished( int index ) {
+	boolean finished( int index ) {
 		completions.add( index );
+		return bodyCompletions.incrementAndGet() == flowIds.size();
 	}
 
 	private void drainCompletions() {

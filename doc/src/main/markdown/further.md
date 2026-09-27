@@ -15,7 +15,7 @@ The execution report includes tooling to aid in change review. If the reports ge
 
 <!-- code_link_start -->
 
-[AbstractFlocessor.reporting(Reporting,String...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L198-L207,198-207
+[AbstractFlocessor.reporting(Reporting,String...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L209-L218,209-218
 [Reporting]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Reporting.java
 
 <!-- code_link_end -->
@@ -80,8 +80,8 @@ Note that only the tag/index-based filtering can be used to avoid flow construct
 
 <!-- code_link_start -->
 
-[AbstractFlocessor.filtering(Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L327-L335,327-335
-[AbstractFlocessor.exercising(Predicate,Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L341-L366,341-366
+[AbstractFlocessor.filtering(Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L338-L346,338-346
+[AbstractFlocessor.exercising(Predicate,Consumer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L352-L377,352-377
 
 <!-- code_link_end -->
 
@@ -125,7 +125,7 @@ Note that the assertion components will not make any assumptions about the forma
 [LogCapture]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/LogCapture.java
 [Tail]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/log/Tail.java
 [Merge]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/log/Merge.java
-[AbstractFlocessor.logs(LogCapture)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L293-L300,293-300
+[AbstractFlocessor.logs(LogCapture)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L304-L311,304-311
 
 <!-- code_link_end -->
 
@@ -135,7 +135,7 @@ The motivation text in the report can be enhanced with additional information su
 <!-- code_link_start -->
 
 [MotivationCustomizer]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/MotivationCustomizer.java
-[AbstractFlocessor.motivation(MotivationCustomizer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L385-L394,385-394
+[AbstractFlocessor.motivation(MotivationCustomizer)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L396-L405,396-405
 
 <!--code_link_end-->
 ## Interaction structure
@@ -257,7 +257,7 @@ Consider the following worked example:
 
 [flow.Unpredictable]: ../../../../api/src/main/java/com/mastercard/test/flow/Unpredictable.java
 [AbstractMessage.masking(Unpredictable,UnaryOperator)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/AbstractMessage.java#L50-L57,50-57
-[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L216-L223,216-223
+[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L227-L234,227-234
 [mask.BenSys]: ../../test/java/com/mastercard/test/flow/doc/mask/BenSys.java
 [mask.DieSys]: ../../test/java/com/mastercard/test/flow/doc/mask/DieSys.java
 [mask.Unpredictables]: ../../test/java/com/mastercard/test/flow/doc/mask/Unpredictables.java
@@ -267,7 +267,7 @@ Consider the following worked example:
 [msg.Mask.andThen(Consumer)]: ../../../../message/message-core/src/main/java/com/mastercard/test/flow/msg/Mask.java#L290-L292,290-292
 [BenDiceTest?masking]: ../../test/java/com/mastercard/test/flow/doc/mask/BenDiceTest.java#L31,31
 [BenTest]: ../../test/java/com/mastercard/test/flow/doc/mask/BenTest.java
-[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L216-L223,216-223
+[AbstractFlocessor.masking(Unpredictable...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L227-L234,227-234
 
 <!-- code_link_end -->
 
@@ -287,7 +287,7 @@ You can see usage of these types in the example system:
 [flow.Context]: ../../../../api/src/main/java/com/mastercard/test/flow/Context.java
 [Builder.context(Context)]: ../../../../builder/src/main/java/com/mastercard/test/flow/builder/Builder.java#L225-L232,225-232
 [assrt.Applicator]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Applicator.java
-[AbstractFlocessor.applicators(Applicator...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L265-L271,265-271
+[AbstractFlocessor.applicators(Applicator...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L276-L282,276-282
 [model.ctx.QueueProcessing]: ../../../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/ctx/QueueProcessing.java
 [QueueProcessingApplicator]: ../../../../example/app-assert/src/main/java/com/mastercard/test/flow/example/app/assrt/ctx/QueueProcessingApplicator.java
 
@@ -310,7 +310,7 @@ You can see usage of these types in the example system:
 
 [flow.Residue]: ../../../../api/src/main/java/com/mastercard/test/flow/Residue.java
 [assrt.Checker]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/Checker.java
-[AbstractFlocessor.checkers(Checker...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L279-L285,279-285
+[AbstractFlocessor.checkers(Checker...)]: ../../../../assert/assert-core/src/main/java/com/mastercard/test/flow/assrt/AbstractFlocessor.java#L290-L296,290-296
 [model.rsd.DBItems]: ../../../../example/app-model/src/main/java/com/mastercard/test/flow/example/app/model/rsd/DBItems.java
 [DBItemsChecker]: ../../../../example/app-assert/src/main/java/com/mastercard/test/flow/example/app/assrt/rsd/DBItemsChecker.java
 
