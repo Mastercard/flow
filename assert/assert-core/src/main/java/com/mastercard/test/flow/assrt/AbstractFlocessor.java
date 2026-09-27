@@ -408,6 +408,13 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 		return flows().collect( toList() );
 	}
 
+	/**
+	 * @return Whether this run reads actual data from an execution report
+	 */
+	protected final boolean replaying() {
+		return replay.hasData();
+	}
+
 	private void checkConfigurable() {
 		if( prepared ) {
 			throw new IllegalStateException( "Flow processing has already been prepared" );
@@ -724,6 +731,12 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 *                          generated
 	 */
 	private void applyContexts( Flow flow, List<RuntimeException> executionFailures ) {
+		synchronized( currentContext ) {
+			applyContextsLocked( flow, executionFailures );
+		}
+	}
+
+	private void applyContextsLocked( Flow flow, List<RuntimeException> executionFailures ) {
 		try {
 			// work out the context updates
 			Set<Class<? extends Context>> unupdated = new HashSet<>( currentContext.keySet() );

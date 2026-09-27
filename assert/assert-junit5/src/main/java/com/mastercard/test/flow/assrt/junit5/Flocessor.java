@@ -1,30 +1,24 @@
 package com.mastercard.test.flow.assrt.junit5;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.DynamicContainer;
 import org.junit.jupiter.api.DynamicNode;
-import org.junit.jupiter.api.DynamicTest;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import org.opentest4j.IncompleteExecutionException;
 import org.opentest4j.TestAbortedException;
-
-import static com.mastercard.test.flow.assrt.Order.CHAIN_TAG_PREFIX;
-import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.assrt.AbstractFlocessor;
 import com.mastercard.test.flow.assrt.History.Result;
-import com.mastercard.test.flow.util.Tags;
 
 /**
  * Integrates {@link Flow} processing into junit 5. This should be used as the
@@ -60,46 +54,14 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 	 * @return A stream of test cases
 	 */
 	public Stream<DynamicNode> tests() {
-		List<DynamicNode> nodes = new ArrayList<>();
-		List<Flow> currentChain = new ArrayList<>();
-		String currentChainId = null;
-
-		// Iterate over flows once and separate them into chained and non-chained
-		for( Flow flow : prepareFlows() ) {
-			Optional<String> chainSuffix = Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX );
-			if( chainSuffix.isPresent() ) {
-				String chainId = chainSuffix.get();
-				if( currentChainId == null || currentChainId.equals( chainId ) ) {
-					currentChainId = chainId;
-					currentChain.add( flow );
-				}
-				else {
-					// End of the previous chain, add the current chain to nodes
-					nodes.add( createDynamicContainer( currentChain ) );
-					currentChain.clear();
-					currentChainId = chainId;
-					currentChain.add( flow );
-				}
-			}
-			else {
-				if( currentChainId != null ) {
-					// End of the current chain, add the current chain to nodes
-					nodes.add( createDynamicContainer( currentChain ) );
-					currentChain.clear();
-					currentChainId = null;
-				}
-				nodes.add( dynamicTest(
-						flow.meta().id(),
-						testSource( flow ),
-						() -> processFlow( flow ) ) );
-			}
-		}
-
-		// If the last flows were part of a chain, add them as well
-		if( !currentChain.isEmpty() ) {
-			nodes.add( createDynamicContainer( currentChain ) );
-		}
-		return nodes.stream();
+		List<Flow> flows = prepareFlows();
+		FlowAdmission admission = new FlowAdmission( flows, replaying() );
+		return StreamSupport.stream( admission, false )
+				.<DynamicNode>map( index -> {
+					Flow flow = flows.get( index );
+					return dynamicTest( flow.meta().id(), testSource( flow ),
+							() -> run( flow, index, admission ) );
+				} );
 	}
 
 	private void processFlow( Flow flow ) {
@@ -127,21 +89,13 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 		}
 	}
 
-	private DynamicContainer createDynamicContainer( List<Flow> chain ) {
-		List<DynamicTest> tests = chain.stream()
-				.map( flow -> dynamicTest(
-						flow.meta().id(),
-						testSource( flow ),
-						() -> processFlow( flow ) ) )
-				.collect( Collectors.toList() );
-
-		// Use the chain tag for the display name
-		String chainTag = chain.stream()
-				.findFirst()
-				.flatMap( flow -> Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX ) )
-				.orElse( chain.get( 0 ).meta().id() );
-
-		return DynamicContainer.dynamicContainer( "chain:" + chainTag, tests );
+	private void run( Flow flow, int index, FlowAdmission admission ) {
+		try {
+			processFlow( flow );
+		}
+		finally {
+			admission.finished( index );
+		}
 	}
 
 	/**
