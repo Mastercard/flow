@@ -1,19 +1,14 @@
 
 package com.mastercard.test.flow.assrt;
 
-import static com.mastercard.test.flow.assrt.History.Result.NOT_OBSERVED;
-import static java.time.Instant.now;
-import static java.time.ZoneId.systemDefault;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toCollection;
-import static java.util.stream.Collectors.toList;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import static java.time.Instant.now;
+import static java.time.ZoneId.systemDefault;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,6 +27,9 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toCollection;
+import static java.util.stream.Collectors.toList;
 import java.util.stream.Stream;
 
 import com.mastercard.test.flow.Actor;
@@ -42,6 +40,7 @@ import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.Residue;
 import com.mastercard.test.flow.Unpredictable;
+import static com.mastercard.test.flow.assrt.History.Result.NOT_OBSERVED;
 import com.mastercard.test.flow.assrt.filter.Filter;
 import com.mastercard.test.flow.assrt.filter.FilterConfiguration;
 import com.mastercard.test.flow.assrt.filter.FilterOptions;
