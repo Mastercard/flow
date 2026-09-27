@@ -6,7 +6,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.DynamicContainer;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
@@ -26,8 +25,7 @@ import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.util.Tags;
 
 /**
- * Validates the {@link Flocessor} class for DynamicContainer creation of
- * chained flows
+ * Validates {@link Flocessor} dynamic-leaf presentation.
  */
 @SuppressWarnings("static-method")
 class FlocessorTest {
@@ -70,8 +68,7 @@ class FlocessorTest {
 	void link() {
 		expectNodes( model( null, "a", null ),
 				"test : 0 []",
-				"container : chain:a",
-				"  test : 1 [chain:a]",
+				"test : 1 [chain:a]",
 				"test : 2 []" );
 	}
 
@@ -81,12 +78,9 @@ class FlocessorTest {
 	@Test
 	void links() {
 		expectNodes( model( "a", "b", "c" ),
-				"container : chain:a",
-				"  test : 0 [chain:a]",
-				"container : chain:b",
-				"  test : 1 [chain:b]",
-				"container : chain:c",
-				"  test : 2 [chain:c]" );
+				"test : 0 [chain:a]",
+				"test : 1 [chain:b]",
+				"test : 2 [chain:c]" );
 	}
 
 	/**
@@ -97,27 +91,24 @@ class FlocessorTest {
 		// in the middle
 		expectNodes( model( null, "a", "a", "a", null ),
 				"test : 0 []",
-				"container : chain:a",
-				"  test : 1 [chain:a]",
-				"  test : 2 [chain:a]",
-				"  test : 3 [chain:a]",
+				"test : 1 [chain:a]",
+				"test : 2 [chain:a]",
+				"test : 3 [chain:a]",
 				"test : 4 []" );
 
 		// at the start
 		expectNodes( model( "a", "a", "a", null ),
-				"container : chain:a",
-				"  test : 0 [chain:a]",
-				"  test : 1 [chain:a]",
-				"  test : 2 [chain:a]",
+				"test : 0 [chain:a]",
+				"test : 1 [chain:a]",
+				"test : 2 [chain:a]",
 				"test : 3 []" );
 
 		// at the end
 		expectNodes( model( null, "a", "a", "a" ),
 				"test : 0 []",
-				"container : chain:a",
-				"  test : 1 [chain:a]",
-				"  test : 2 [chain:a]",
-				"  test : 3 [chain:a]" );
+				"test : 1 [chain:a]",
+				"test : 2 [chain:a]",
+				"test : 3 [chain:a]" );
 	}
 
 	/**
@@ -126,15 +117,12 @@ class FlocessorTest {
 	@Test
 	void chains() {
 		expectNodes( model( "a", "a", null, "b", "b", "c" ),
-				"container : chain:a",
-				"  test : 0 [chain:a]",
-				"  test : 1 [chain:a]",
+				"test : 0 [chain:a]",
+				"test : 1 [chain:a]",
 				"test : 2 []",
-				"container : chain:b",
-				"  test : 3 [chain:b]",
-				"  test : 4 [chain:b]",
-				"container : chain:c",
-				"  test : 5 [chain:c]" );
+				"test : 3 [chain:b]",
+				"test : 4 [chain:b]",
+				"test : 5 [chain:c]" );
 	}
 
 	private static Model model( String... chains ) {
@@ -159,8 +147,15 @@ class FlocessorTest {
 	private static void expectNodes( Model model, String... expected ) {
 		Flocessor flocessor = new Flocessor( "", model );
 		List<String> actual = new ArrayList<>();
-		flocessor.tests()
-				.forEach( node -> stringify( node, "", actual ) );
+		flocessor.tests().forEach( node -> {
+			stringify( node, "", actual );
+			try {
+				((DynamicTest) node).getExecutable().execute();
+			}
+			catch( Throwable ignored ) {
+				// The fixture has no executable interactions; only presentation matters here.
+			}
+		} );
 		assertEquals(
 				copypasta( Stream.of( expected ) ),
 				copypasta( actual.stream() ) );
@@ -170,12 +165,6 @@ class FlocessorTest {
 		if( node instanceof DynamicTest ) {
 			DynamicTest test = (DynamicTest) node;
 			lines.add( prefix + "test : " + test.getDisplayName() );
-		}
-		else if( node instanceof DynamicContainer ) {
-			DynamicContainer container = (DynamicContainer) node;
-			lines.add( prefix + "container : " + container.getDisplayName() );
-			container.getChildren()
-					.forEach( child -> stringify( child, prefix + "  ", lines ) );
 		}
 		else {
 			throw new IllegalStateException( "unexpected node " + node.getClass() );
