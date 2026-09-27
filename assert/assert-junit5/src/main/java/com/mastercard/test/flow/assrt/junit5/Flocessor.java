@@ -10,10 +10,11 @@ import java.util.stream.StreamSupport;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicNode;
-import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import org.opentest4j.IncompleteExecutionException;
 import org.opentest4j.TestAbortedException;
+
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
