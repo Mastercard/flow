@@ -22,6 +22,21 @@ import com.mastercard.test.flow.report.data.Index;
 class WriterIndexingTest {
 
 	/**
+	 * A null policy is rejected before report initialization changes the
+	 * destination.
+	 */
+	@Test
+	void nullPolicyIsRejectedBeforeInitialization( @TempDir Path root ) throws Exception {
+		Path existing = Files.writeString( root.resolve( "existing.txt" ), "keep" );
+
+		NullPointerException failure = assertThrows( NullPointerException.class,
+				() -> new Writer( "model", "test", root, null ) );
+
+		assertEquals( "indexing", failure.getMessage() );
+		assertTrue( Files.isRegularFile( existing ), "destination remains untouched" );
+	}
+
+	/**
 	 * Immediate compatibility and deferred publication checkpoints remain distinct.
 	 */
 	@Test
