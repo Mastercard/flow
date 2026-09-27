@@ -19,6 +19,14 @@ It is unlikely that you'll need to depend directly on this module, it will be tr
 
 This module provides an object model for the data in an execution report along with facilities for writing and reading that data to and from storage.
 
+### Index publication
+
+The three-argument `Writer` constructor uses `Writer.Indexing.IMMEDIATE`, preserving the compatibility behavior of publishing a complete index after every successful update.
+
+Lifecycle-aware callers can select `Writer.Indexing.FIRST_THEN_EXPLICIT`. The first completely successful update publishes a readable snapshot; later updates write their details but leave that snapshot stale until the caller invokes `Writer.publishIndex()`. Calling `publishIndex()` before an update, or again without another update, is a no-op. JUnit 5 selects this policy internally and publishes from its final completing dynamic-test body, so ordinary `Flocessor.tests()` users do not need to call it.
+
+Deferred snapshots are replaced atomically. If a deferred detail update or publication fails, the original operation fails and later publication remains invalidated rather than advertising a misleading complete report. Any earlier snapshot and the details it references remain readable.
+
 ## Testing
 
 In addition to the unit tests for the report input/output functionality, this module also contains [selenium-powered](https://www.selenium.dev/) tests to exercise the functionality of the [report webapp](../report-ng).

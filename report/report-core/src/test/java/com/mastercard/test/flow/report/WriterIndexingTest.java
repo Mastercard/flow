@@ -104,6 +104,29 @@ class WriterIndexingTest {
 				QuietFiles.readAllBytes( root.resolve( Writer.INDEX_FILE_NAME ) ) );
 	}
 
+	/** A failed automatic first publication is attempted once and never retried. */
+	@Test
+	void failedFirstPublicationIsNotRetried( @TempDir Path root ) {
+		RuntimeException failure = new RuntimeException( "first publication failure" );
+		TrackingApp app = new TrackingApp( root );
+		app.failIndexWrite = 1;
+		app.failure = failure;
+		Writer writer = new Writer( "model", "test", root,
+				Writer.Indexing.FIRST_THEN_EXPLICIT, app );
+
+		assertSame( failure, assertThrows( RuntimeException.class,
+				() -> writer.with( Mdl.BASIS ) ) );
+		assertTrue( Files.notExists( root.resolve( Writer.INDEX_FILE_NAME ) ) );
+
+		writer.with( Mdl.CHILD );
+		IllegalStateException invalid = assertThrows( IllegalStateException.class,
+				writer::publishIndex );
+		assertSame( failure, invalid.getCause() );
+		assertEquals( List.of( 1 ), app.indexEntryCounts, "automatic and explicit retry count" );
+		assertTrue( Files.isRegularFile( root.resolve( "detail/" + Writer.detailFilename( Mdl.CHILD )
+				+ ".html" ) ), "later detail update" );
+	}
+
 	/**
 	 * Failed deferred publication preserves the prior snapshot and is never
 	 * retried.
