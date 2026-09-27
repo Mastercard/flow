@@ -12,8 +12,15 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Assertions;
@@ -29,6 +36,7 @@ import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.builder.Deriver;
 import com.mastercard.test.flow.msg.txt.Text;
 import com.mastercard.test.flow.report.Mdl.Actrs;
+import com.mastercard.test.flow.report.data.FlowData;
 
 /**
  * Exercises {@link Writer}
@@ -164,6 +172,79 @@ class WriterTest {
 						detail.indexOf( "// START_JSON_DATA" ),
 						detail.indexOf( "// END_JSON_DATA" ) + "// END_JSON_DATA".length() )
 						.replaceAll( ":\\d+", ":##" ) );
+	}
+
+	/**
+	 * Concurrent updates are isolated for their complete callback and publication
+	 * sequence.
+	 *
+	 * @throws Exception on failure
+	 */
+	@Test
+	void concurrentUpdates() throws Exception {
+		Path dir = Paths.get( "target", "WriterTest", "concurrentUpdates" );
+		Writer writer = new Writer( "model", "test", dir );
+		CountDownLatch firstEntered = new CountDownLatch( 1 );
+		CountDownLatch secondSubmitted = new CountDownLatch( 1 );
+		CountDownLatch releaseFirst = new CountDownLatch( 1 );
+		List<String> callbackEvents = new CopyOnWriteArrayList<>();
+		ExecutorService updates = Executors.newFixedThreadPool( 2 );
+
+		try {
+			Future<?> first = updates.submit( () -> writer.with( Mdl.CHILD, data -> {
+				callbackEvents.add( "child entered" );
+				firstEntered.countDown();
+				await( secondSubmitted );
+				assertEquals( List.of( "child entered" ), callbackEvents,
+						"the competing callback must not enter during the first update" );
+				await( releaseFirst );
+				data.tags.add( Writer.FAIL_TAG );
+				callbackEvents.add( "child completed" );
+			} ) );
+
+			await( firstEntered );
+			Future<?> second = updates.submit( () -> {
+				secondSubmitted.countDown();
+				writer.with( Mdl.BASIS, data -> {
+					data.tags.add( Writer.PASS_TAG );
+					callbackEvents.add( "basis entered" );
+				} );
+			} );
+
+			releaseFirst.countDown();
+			first.get( 10, TimeUnit.SECONDS );
+			second.get( 10, TimeUnit.SECONDS );
+		}
+		finally {
+			updates.shutdownNow();
+		}
+
+		assertEquals( List.of( "child entered", "child completed", "basis entered" ),
+				callbackEvents, "callback order" );
+
+		Reader reader = new Reader( dir );
+		Map<String, com.mastercard.test.flow.report.data.Entry> entries = reader.read().entries.stream()
+				.collect( Collectors.toMap( e -> e.description, e -> e ) );
+		assertEquals( 2, entries.size(), "each flow appears exactly once" );
+		assertEquals( 2, reader.read().entries.size(), "index entry count" );
+
+		FlowData child = reader.detail( entries.get( "child" ) );
+		FlowData basis = reader.detail( entries.get( "basis" ) );
+		Assertions.assertNotNull( child, "child detail" );
+		Assertions.assertNotNull( basis, "basis detail" );
+		Assertions.assertTrue( child.tags.contains( Writer.FAIL_TAG ), "child update data" );
+		Assertions.assertTrue( basis.tags.contains( Writer.PASS_TAG ), "basis update data" );
+		assertEquals( entries.get( "basis" ).detail, child.basis, "corrected basis link" );
+	}
+
+	private static void await( CountDownLatch event ) {
+		try {
+			Assertions.assertTrue( event.await( 10, TimeUnit.SECONDS ), "event deadline" );
+		}
+		catch( InterruptedException e ) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException( "Interrupted while awaiting test event", e );
+		}
 	}
 
 	private String summariseReportFiles( Path dir ) throws IOException {
