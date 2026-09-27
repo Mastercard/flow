@@ -1,24 +1,25 @@
 package com.mastercard.test.flow.assrt;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.Collection;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+
+import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
+import static com.mastercard.test.flow.assrt.TestModel.Actors.D;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import com.mastercard.test.flow.Actor;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
 import com.mastercard.test.flow.assrt.TestModel.Actors;
-import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
-import static com.mastercard.test.flow.assrt.TestModel.Actors.D;
 import com.mastercard.test.flow.report.Reader;
 import com.mastercard.test.flow.report.data.Entry;
 import com.mastercard.test.flow.report.data.FlowData;
