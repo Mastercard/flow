@@ -9,6 +9,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
 
+import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.assrt.History.Result;
 
@@ -51,6 +52,20 @@ public class TestFlocessor extends AbstractFlocessor<TestFlocessor> {
 				eventLog.add( f.meta().id() + " error " + e.getMessage() );
 			}
 		} );
+	}
+
+	/**
+	 * @return The single prepared canonical run
+	 */
+	public List<Flow> prepare() {
+		return prepareFlows();
+	}
+
+	/**
+	 * @return Whether replay data is active
+	 */
+	public boolean isReplaying() {
+		return replaying();
 	}
 
 	/**

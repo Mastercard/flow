@@ -66,7 +66,7 @@ public class History {
 	 * @param flow   The {@link Flow}
 	 * @param result The outcome of processing that {@link Flow}
 	 */
-	public void recordResult( Flow flow, Result result ) {
+	public synchronized void recordResult( Flow flow, Result result ) {
 		results.putIfAbsent( flow, result );
 	}
 
@@ -76,14 +76,14 @@ public class History {
 	 * @param flow The {@link Flow} to query for
 	 * @return The result of that {@link Flow}
 	 */
-	public Result get( Flow flow ) {
+	public synchronized Result get( Flow flow ) {
 		return results.getOrDefault( flow, Result.PENDING );
 	}
 
 	/**
 	 * Clears the saved {@link Flow} outcomes
 	 */
-	public void clear() {
+	public synchronized void clear() {
 		results.clear();
 	}
 
