@@ -82,7 +82,7 @@ final class FlowAdmission extends Spliterators.AbstractSpliterator<Integer> {
 	 * @param index A previously emitted canonical flow index
 	 */
 	void finished( int index ) {
-		completions.offer( index );
+		completions.add( index );
 	}
 
 	private void drainCompletions() {

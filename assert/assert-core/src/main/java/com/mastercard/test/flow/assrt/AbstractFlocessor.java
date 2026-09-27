@@ -405,7 +405,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	protected final synchronized List<Flow> prepareFlows() {
 		checkConfigurable();
 		prepared = true;
-		return flows().collect( toList() );
+		return flows().toList();
 	}
 
 	/**

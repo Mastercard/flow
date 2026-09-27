@@ -88,10 +88,12 @@ class PrecedenceTest {
 		assertEquals( List.of( 0 ), replay.roots() );
 		assertEquals( Set.of( 1 ), replay.successors( 0 ) );
 		assertEquals( Set.of( 2 ), replay.successors( 1 ) );
+		List<Flow> duplicate = List.of( earlier, earlier );
 		assertEquals( "Duplicate selected Flow reference", assertThrows( IllegalArgumentException.class,
-				() -> new Precedence( List.of( earlier, earlier ) ) ).getMessage() );
+				() -> new Precedence( duplicate ) ).getMessage() );
+		List<Flow> absent = List.of( flow( "absent", earlier ) );
 		assertEquals( "Absent Flow prerequisite", assertThrows( IllegalArgumentException.class,
-				() -> new Precedence( List.of( flow( "absent", earlier ) ) ) ).getMessage() );
+				() -> new Precedence( absent ) ).getMessage() );
 
 		Flow cyclicChild = mock( Flow.class );
 		Flow absentA = mock( Flow.class );
@@ -99,14 +101,16 @@ class PrecedenceTest {
 		when( cyclicChild.basis() ).thenReturn( absentA );
 		when( absentA.basis() ).thenReturn( absentB );
 		when( absentB.basis() ).thenReturn( absentA );
+		List<Flow> cyclic = List.of( cyclicChild );
 		assertEquals( "Cyclic Flow basis", assertThrows( IllegalArgumentException.class,
-				() -> new Precedence( List.of( cyclicChild ) ) ).getMessage() );
+				() -> new Precedence( cyclic ) ).getMessage() );
 
 		Flow cycleFirst = chained( "cycleFirst", "cycle" );
 		Flow outside = flow( "outside", cycleFirst );
 		Flow cycleLast = chained( "cycleLast", "cycle", outside );
+		List<Flow> hardCycle = List.of( cycleFirst, cycleLast, outside );
 		assertThrows( IllegalArgumentException.class,
-				() -> new Precedence( List.of( cycleFirst, cycleLast, outside ) ) );
+				() -> new Precedence( hardCycle ) );
 	}
 
 	private static Flow flow( String name, Flow... prerequisites ) {

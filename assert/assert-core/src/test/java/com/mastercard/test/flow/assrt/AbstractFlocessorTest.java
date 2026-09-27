@@ -83,11 +83,11 @@ class AbstractFlocessorTest {
 
 		Collection<Executable> mutations = java.util.List.of(
 				() -> tf.reporting( Reporting.NEVER ),
-				() -> tf.masking(),
+				tf::masking,
 				() -> tf.system( State.LESS ),
-				() -> tf.autonomous(),
-				() -> tf.applicators(),
-				() -> tf.checkers(),
+				tf::autonomous,
+				tf::applicators,
+				tf::checkers,
 				() -> tf.logs( LogCapture.NO_OP ),
 				() -> tf.listening( new Listener() {
 				} ),
