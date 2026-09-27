@@ -57,6 +57,10 @@ changing its configuration, throws `IllegalStateException`.
 Independent flows can invoke behavior callbacks, per-flow `Listener` callbacks,
 `Checker` instances, `MotivationCustomizer`, and other shared user callbacks
 concurrently. Implementations of those callbacks must therefore be thread-safe.
+Flows that apply a `Context` run alone because they may change shared system
+state. `Flocessor` waits for every earlier flow to finish before starting a
+context-bearing flow, and waits for that flow to finish before starting later
+flows. Context-free flows between these barriers may still run in parallel.
 Context `Applicator` transitions are serialized, but an applicator must not rely
 on different flows using the same Jupiter thread.
 
