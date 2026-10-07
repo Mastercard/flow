@@ -80,7 +80,7 @@ final class FlowAdmission extends Spliterators.AbstractSpliterator<Integer> {
 	 */
 	@Override
 	public long estimateSize() {
-		return flowIds.size() - emitted;
+		return (long) flowIds.size() - emitted;
 	}
 
 	/**
