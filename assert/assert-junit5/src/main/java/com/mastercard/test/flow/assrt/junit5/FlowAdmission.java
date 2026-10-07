@@ -76,6 +76,14 @@ final class FlowAdmission extends Spliterators.AbstractSpliterator<Integer> {
 	}
 
 	/**
+	 * @return The exact number of flows that remain to be emitted
+	 */
+	@Override
+	public long estimateSize() {
+		return flowIds.size() - emitted;
+	}
+
+	/**
 	 * Publishes one worker completion without mutating producer-owned scheduler
 	 * state.
 	 *
