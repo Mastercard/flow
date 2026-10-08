@@ -32,31 +32,33 @@ class FlowIdentityCheckTest extends AbstractValidationTest {
 	}
 
 	/**
-	 * The validation compares flows, so no checks when there is only a single flow
+	 * A single flow is checked against itself only
 	 */
 	@Test
 	void single() {
-		test( mdl( "single" ) );
+		test( mdl( "single" ),
+				"single : pass" );
 	}
 
 	/**
-	 * A pair of flows means 1 check
+	 * One check per distinct identity
 	 */
 	@Test
 	void pair() {
 		test( mdl( "left", "right" ),
-				"left x right : pass" );
+				"left : pass",
+				"right : pass" );
 	}
 
 	/**
-	 * A triple of flows means 3 checks
+	 * Checks are linear in the number of flows
 	 */
 	@Test
 	void triple() {
 		test( mdl( "left", "middle", "right" ),
-				"left x middle : pass",
-				"left x right : pass",
-				"middle x right : pass" );
+				"left : pass",
+				"middle : pass",
+				"right : pass" );
 	}
 
 	/**
@@ -73,21 +75,18 @@ class FlowIdentityCheckTest extends AbstractValidationTest {
 	}
 
 	/**
-	 * A quad of flows means 6 checks
+	 * Shared identities are reported once, in the check for their first flow
 	 */
 	@Test
 	void quad() {
 		test( mdl( "left", "middle", "right", "middle" ),
-				"left x middle : pass",
-				"left x right : pass",
-				"left x middle : pass",
-				"middle x right : pass",
+				"left : pass",
 				"  details: Shared ID\n"
 						+ " expected: null\n"
 						+ "   actual: null\n"
 						+ "offenders: middle\n"
 						+ "trace for middle",
-				"right x middle : pass" );
+				"right : pass" );
 	}
 
 	private static Model mdl( String... ids ) {
