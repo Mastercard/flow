@@ -966,7 +966,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 			.ofPattern( "yyMMdd-HHmmss" )
 			.format( now().atZone( systemDefault() ) );
 
-	private void report( Consumer<Writer> data, boolean error ) {
+	private synchronized void report( Consumer<Writer> data, boolean error ) {
 		if( reporting.writing() ) {
 			Path testDir = null;
 			Path reportDir = null;
