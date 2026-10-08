@@ -1,18 +1,21 @@
 package com.mastercard.test.flow.assrt;
 
-import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
-import static com.mastercard.test.flow.assrt.TestModel.Actors.D;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.util.Collection;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+
+import static com.mastercard.test.flow.assrt.TestModel.Actors.B;
+import static com.mastercard.test.flow.assrt.TestModel.Actors.D;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.mastercard.test.flow.Actor;
 import com.mastercard.test.flow.assrt.AbstractFlocessor.State;
@@ -69,6 +72,34 @@ class AbstractFlocessorTest {
 		assertSame( tf, tf.logs( null ) );
 		assertSame( tf, tf.autonomous() );
 		assertSame( tf, tf.motivation( null ) );
+	}
+
+	/** Preparation freezes every fluent configuration entry point. */
+	@Test
+	void preparationIsOneShot() {
+		TestFlocessor tf = new TestFlocessor( "prepared", TestModel.abc() );
+		assertEquals( 1, tf.prepare().size() );
+		assertFalse( tf.isReplaying() );
+
+		Collection<Executable> mutations = java.util.List.of(
+				() -> tf.reporting( Reporting.NEVER ),
+				tf::masking,
+				() -> tf.system( State.LESS ),
+				tf::autonomous,
+				tf::applicators,
+				tf::checkers,
+				() -> tf.logs( LogCapture.NO_OP ),
+				() -> tf.listening( new Listener() {
+				} ),
+				() -> tf.filtering( filter -> {
+				} ),
+				() -> tf.exercising( flow -> true, rejection -> {
+				} ),
+				() -> tf.behaviour( assertion -> {
+				} ),
+				() -> tf.motivation( ( motivation, assertion ) -> motivation ),
+				tf::prepare );
+		mutations.forEach( mutation -> assertThrows( IllegalStateException.class, mutation ) );
 	}
 
 	/**
