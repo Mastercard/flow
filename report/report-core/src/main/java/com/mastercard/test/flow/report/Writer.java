@@ -1,10 +1,16 @@
 package com.mastercard.test.flow.report;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -38,11 +44,22 @@ import com.mastercard.test.flow.util.Bytes;
  * For writing a new report
  */
 public class Writer {
+	private static final String HTML_FILE_SUFFIX = ".html";
+
+	/** Controls when the complete report index is published. */
+	public enum Indexing {
+		/** Publish the complete index after every successful detail update. */
+		IMMEDIATE,
+		/**
+		 * Publish the first complete update automatically and later updates explicitly.
+		 */
+		FIRST_THEN_EXPLICIT
+	}
 
 	/**
 	 * The file name under which the report index is saved
 	 */
-	public static final String INDEX_FILE_NAME = "index.html";
+	public static final String INDEX_FILE_NAME = "index" + HTML_FILE_SUFFIX;
 	/**
 	 * The directory in which {@link Flow} detail data is stored
 	 */
@@ -79,6 +96,10 @@ public class Writer {
 	private final Path root;
 	private final Map<Flow, IndexedFlowData> data = new LinkedHashMap<>();
 	private final JsApp app;
+	private final Indexing indexing;
+	private boolean indexDirty;
+	private boolean indexPublished;
+	private Throwable invalidatingFailure;
 
 	private final Map<Flow, List<Flow>> missingBases = new HashMap<>();
 
@@ -89,13 +110,46 @@ public class Writer {
 	 * @param root       Where to write the report to
 	 */
 	public Writer( String modelTitle, String testTitle, Path root ) {
+		this( modelTitle, testTitle, root, Indexing.IMMEDIATE );
+	}
+
+	/**
+	 * @param modelTitle A human-readable title for the model that supplied the test
+	 *                   data
+	 * @param testTitle  A human-readable title for the test that exercised the data
+	 * @param root       Where to write the report to
+	 * @param indexing   When to publish the complete report index
+	 * @throws NullPointerException If {@code indexing} is {@code null}
+	 */
+	public Writer( String modelTitle, String testTitle, Path root, Indexing indexing ) {
+		this( modelTitle, testTitle, root, requireNonNull( indexing, "indexing" ),
+				initialise( root ) );
+	}
+
+	/**
+	 * Test seam for observing application writes without exposing Writer state.
+	 *
+	 * @param modelTitle A human-readable title for the model that supplied the test
+	 *                   data
+	 * @param testTitle  A human-readable title for the test that exercised the data
+	 * @param root       Where to write the report to
+	 * @param indexing   When to publish the complete report index
+	 * @param app        The report application writer
+	 * @throws NullPointerException If {@code indexing} is {@code null}
+	 */
+	Writer( String modelTitle, String testTitle, Path root, Indexing indexing, JsApp app ) {
 		this.modelTitle = modelTitle;
 		this.testTitle = testTitle;
 		this.root = root;
+		this.indexing = requireNonNull( indexing, "indexing" );
+		this.app = app;
+	}
+
+	private static JsApp initialise( Path root ) {
 		// delete whatever might be there already
 		QuietFiles.recursiveDelete( root );
 		// write static content
-		app = new JsApp( "/com/mastercard/test/flow/report", root.resolve( "res" ) );
+		return new JsApp( "/com/mastercard/test/flow/report", root.resolve( "res" ) );
 	}
 
 	/**
@@ -116,57 +170,147 @@ public class Writer {
 	 * @param flow  The {@link Flow}
 	 * @param extra Extra data, above and beyond what the flow holds
 	 * @return <code>this</code>
+	 * @implNote Callback and I/O {@link Error}s invalidate deferred publication
+	 *           just like runtime failures, then propagate unchanged.
 	 */
 	@SafeVarargs
+	@SuppressWarnings("java:S1181")
 	public final synchronized Writer with( Flow flow, Consumer<FlowData>... extra ) {
-		IndexedFlowData idf = data.computeIfAbsent( flow,
-				f -> new IndexedFlowData( flow, data.keySet(), missingBases ) );
-		String oldname = idf.indexEntry().detail;
-		idf.update( extra );
+		try {
+			IndexedFlowData idf = data.computeIfAbsent( flow,
+					f -> new IndexedFlowData( flow, data.keySet(), missingBases ) );
+			String oldname = idf.indexEntry().detail;
+			idf.update( extra );
 
-		if( !idf.indexEntry().detail.equals( oldname ) ) {
-			QuietFiles.recursiveDelete( root.resolve( "detail/" + oldname + ".html" ) );
-		}
+			if( indexing == Indexing.IMMEDIATE && !idf.indexEntry().detail.equals( oldname ) ) {
+				QuietFiles.recursiveDelete( root.resolve( "detail/" + oldname + HTML_FILE_SUFFIX ) );
+			}
 
-		// write the new detail
-		idf.writeTo( root, app );
+			// write the new detail
+			idf.writeTo( root, app );
 
-		// refresh the index
-		app.write( new Index(
-				new Meta( modelTitle, testTitle,
-						System.currentTimeMillis() ),
-				data.values().stream()
-						.map( IndexedFlowData::indexEntry )
-						.collect( toList() ) ),
-				root.resolve( INDEX_FILE_NAME ) );
+			if( indexing == Indexing.IMMEDIATE ) {
+				// preserve the established index-before-basis-repair ordering
+				app.write( index(), root.resolve( INDEX_FILE_NAME ) );
+			}
 
-		// refresh the details of those who were waiting for that flow as a better basis
-		// candidate
-		missingBases.forEach( ( unhappy, preferred ) -> {
-			Iterator<Flow> pi = preferred.iterator();
-			boolean found = false;
-			while( pi.hasNext() ) {
-				Flow betterBase = pi.next();
-				if( found ) {
-					pi.remove();
+			// refresh the details of those who were waiting for that flow as a better basis
+			// candidate
+			missingBases.forEach( ( unhappy, preferred ) -> {
+				Iterator<Flow> pi = preferred.iterator();
+				boolean found = false;
+				while( pi.hasNext() ) {
+					Flow betterBase = pi.next();
+					if( found ) {
+						pi.remove();
+					}
+					else if( betterBase == flow ) {
+						found = true;
+						pi.remove();
+						IndexedFlowData toUpdate = data.get( unhappy );
+						toUpdate.detail = toUpdate.detail.withBasis( detailFilename( flow ) );
+						toUpdate.writeTo( root, app );
+					}
 				}
-				else if( betterBase == flow ) {
-					found = true;
-					pi.remove();
-					IndexedFlowData toUpdate = data.get( unhappy );
-					toUpdate.detail = toUpdate.detail.withBasis( detailFilename( flow ) );
-					toUpdate.writeTo( root, app );
+			} );
+
+			// prune satisfied flows
+			missingBases.entrySet().removeAll(
+					missingBases.entrySet().stream()
+							.filter( e -> e.getValue().isEmpty() )
+							.collect( toSet() ) );
+
+			if( indexing == Indexing.FIRST_THEN_EXPLICIT ) {
+				indexDirty = true;
+				if( !indexPublished && invalidatingFailure == null ) {
+					publishIndex();
 				}
 			}
-		} );
 
-		// prune satisfied flows
-		missingBases.entrySet().removeAll(
-				missingBases.entrySet().stream()
-						.filter( e -> e.getValue().isEmpty() )
-						.collect( toSet() ) );
+			return this;
+		}
+		catch( RuntimeException | Error failure ) {
+			invalidate( failure );
+			throw failure;
+		}
+	}
 
-		return this;
+	/**
+	 * Publishes accumulated index state when it differs from the visible snapshot.
+	 * Before the first successful update, or when the visible snapshot is current,
+	 * this is a no-op. A deferred update or publication failure permanently makes
+	 * the accumulated state unpublishable; subsequent calls expose that original
+	 * failure as their cause rather than presenting a misleading complete index.
+	 * Fatal publication errors are also preserved and invalidate the snapshot.
+	 */
+	@SuppressWarnings("java:S1181")
+	public synchronized void publishIndex() {
+		if( invalidatingFailure != null ) {
+			throw new IllegalStateException( "Report index publication was invalidated",
+					invalidatingFailure );
+		}
+		if( !indexDirty ) {
+			return;
+		}
+
+		try {
+			publishDeferredIndex();
+			indexDirty = false;
+			indexPublished = true;
+		}
+		catch( RuntimeException | Error failure ) {
+			invalidate( failure );
+			throw failure;
+		}
+	}
+
+	private Index index() {
+		return new Index(
+				new Meta( modelTitle, testTitle, System.currentTimeMillis() ),
+				data.values().stream()
+						.map( IndexedFlowData::indexEntry )
+						.toList() );
+	}
+
+	/**
+	 * Deferred cleanup preserves runtime and fatal publication-failure identity.
+	 */
+	@SuppressWarnings("java:S1181")
+	private void publishDeferredIndex() {
+		Path temporary = null;
+		try {
+			QuietFiles.createDirectories( root );
+			temporary = Files.createTempFile( root, ".index-", HTML_FILE_SUFFIX );
+			app.write( index(), temporary );
+			Files.move( temporary, root.resolve( INDEX_FILE_NAME ), ATOMIC_MOVE, REPLACE_EXISTING );
+		}
+		catch( IOException ioe ) {
+			UncheckedIOException failure = new UncheckedIOException( "Failed to publish report index",
+					ioe );
+			cleanTemporary( temporary, failure );
+			throw failure;
+		}
+		catch( RuntimeException | Error failure ) {
+			cleanTemporary( temporary, failure );
+			throw failure;
+		}
+	}
+
+	private static void cleanTemporary( Path temporary, Throwable publicationFailure ) {
+		if( temporary != null ) {
+			try {
+				Files.deleteIfExists( temporary );
+			}
+			catch( IOException cleanupFailure ) {
+				publicationFailure.addSuppressed( cleanupFailure );
+			}
+		}
+	}
+
+	private void invalidate( Throwable failure ) {
+		if( indexing == Indexing.FIRST_THEN_EXPLICIT && invalidatingFailure == null ) {
+			invalidatingFailure = failure;
+		}
 	}
 
 	/**
@@ -266,7 +410,7 @@ public class Writer {
 		void writeTo( Path root, JsApp app ) {
 			app.write( detail, root
 					.resolve( DETAIL_DIR_NAME )
-					.resolve( indexEntry().detail + ".html" ) );
+					.resolve( indexEntry().detail + HTML_FILE_SUFFIX ) );
 		}
 	}
 

@@ -10,16 +10,16 @@ import java.util.stream.StreamSupport;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicNode;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import org.opentest4j.IncompleteExecutionException;
 import org.opentest4j.TestAbortedException;
-
-import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.assrt.AbstractFlocessor;
 import com.mastercard.test.flow.assrt.History.Result;
+import com.mastercard.test.flow.report.Writer.Indexing;
 
 /**
  * Integrates {@link Flow} processing into junit 5. This should be used as the
@@ -45,7 +45,7 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 	 * @param model The system model to exercise
 	 */
 	public Flocessor( String title, Model model ) {
-		super( title, model );
+		super( title, model, Indexing.FIRST_THEN_EXPLICIT );
 	}
 
 	/**
@@ -90,12 +90,36 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 		}
 	}
 
-	private void run( Flow flow, int index, FlowAdmission admission ) {
+	@SuppressWarnings({ "java:S112", "java:S1181" }) // Jupiter bodies may fail with any Throwable
+	private void run( Flow flow, int index, FlowAdmission admission ) throws Throwable {
+		Throwable bodyFailure = null;
 		try {
 			processFlow( flow );
 		}
-		finally {
-			admission.finished( index );
+		catch( Throwable failure ) {
+			bodyFailure = failure;
+		}
+
+		boolean last = admission.finished( index );
+		if( last ) {
+			try {
+				publishReportIndex();
+			}
+			catch( Throwable publicationFailure ) {
+				if( bodyFailure == null ) {
+					bodyFailure = publicationFailure;
+				}
+				// Keep the body failure primary, and avoid adding the same failure (or its
+				// direct wrapper) a second time.
+				else if( publicationFailure != bodyFailure
+						&& publicationFailure.getCause() != bodyFailure ) {
+					bodyFailure.addSuppressed( publicationFailure );
+				}
+			}
+		}
+
+		if( bodyFailure != null ) {
+			throw bodyFailure;
 		}
 	}
 
