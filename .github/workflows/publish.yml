@@ -42,6 +42,12 @@ jobs:
         gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
         gpg-passphrase: GPG_PASSPHRASE
 
+    # Maven 3.10 produces invalid Central bundles: https://github.com/apache/maven/issues/13388
+    - name: Set up Maven
+      uses: stCarolas/setup-maven@12eb41b233df95d49b0c11fc1b5bc8312e5d4ce0 # v5.1
+      with:
+        maven-version: 3.9.16
+
     - name: Set up Node
       uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
       with:
