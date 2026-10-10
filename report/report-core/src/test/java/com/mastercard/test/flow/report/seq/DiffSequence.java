@@ -288,7 +288,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 				+ "const start = from.getBoundingClientRect();"
 				+ "const end = to.getBoundingClientRect();"
 				+ "const event = (type, x, y, buttons) => new MouseEvent(type, {"
-				+ "  bubbles: true, cancelable: true, view: window, button: 0, buttons,"
+				+ "  bubbles: true, cancelable: true, view: window, button: 0, buttons, detail: 1,"
 				+ "  clientX: x, clientY: y"
 				+ "});"
 				+ "const startX = start.left + start.width / 2;"
@@ -571,13 +571,14 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	public DiffSequence analysisDiffs( String... expected ) {
 		trace( "changeAnalysis", (Object[]) expected );
 		WebElement changed = visibleElement( By.id( "changed" ) );
-		clickElement( changed.findElement( By.tagName( "mat-expansion-panel-header" ) ) );
+		WebElement header = changed.findElement( By.tagName( "mat-expansion-panel-header" ) );
+		clickElement( header );
 
 		// wait for expansion to finish
 		new WebDriverWait( driver, ofSeconds( 2 ) )
-				.until( dr -> "visibility: visible;"
-						.equals( changed.findElement( By.className( "mat-expansion-panel-content" ) )
-								.getAttribute( "style" ) ) );
+				.until( dr -> "true".equals( header.getAttribute( "aria-expanded" ) )
+						&& changed.findElement( By.className( "mat-expansion-panel-content" ) )
+								.isDisplayed() );
 
 		WebElement changes = changed.findElement( By.id( "changes" ) );
 
@@ -585,9 +586,19 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 				Copy.pasta( expected ),
 				Copy.pasta( changes.findElements( By.tagName(
 						"mat-expansion-panel-header" ) ).stream()
-						.map( e -> e.getText().replace( "\n", " " ) ) ) );
+						.map( this::analysisHeaderText ) ) );
 
 		return this;
+	}
+
+	private String analysisHeaderText( WebElement header ) {
+		return (String) ((JavascriptExecutor) driver).executeScript( ""
+				+ "const header = arguments[0];"
+				+ "const title = header.querySelector('mat-panel-title').textContent.trim();"
+				+ "const details = Array.from(header.querySelectorAll("
+				+ "  '.description app-tag, .diff_display span'))"
+				+ "  .map(item => item.textContent.trim()).filter(Boolean).join(' ');"
+				+ "return (title + ' ' + details).trim().replace(/\\s+/g, ' ');", header );
 	}
 
 	private WebElement visibleElement( By by ) {
@@ -630,17 +641,18 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 
 		WebElement diffPanel = changes.findElements( By.tagName(
 				"mat-expansion-panel" ) ).stream()
-				.filter( e -> diff.equals( e.findElement( By.tagName( "mat-expansion-panel-header" ) )
-						.getText().replace( "\n", " " ) ) )
+				.filter( e -> diff.equals( analysisHeaderText(
+						e.findElement( By.tagName( "mat-expansion-panel-header" ) ) ) ) )
 				.findFirst()
-				.orElseThrow( () -> new IllegalStateException( "" ) );
-		diffPanel.findElement( By.tagName( "mat-expansion-panel-header" ) ).click();
+				.orElseThrow( () -> new IllegalStateException( "Failed to find analysis " + diff ) );
+		WebElement header = diffPanel.findElement( By.tagName( "mat-expansion-panel-header" ) );
+		clickElement( header );
 
 		// wait for expansion to finish
 		new WebDriverWait( driver, ofSeconds( 2 ) )
-				.until( dr -> "visibility: visible;"
-						.equals( diffPanel.findElement( By.className( "mat-expansion-panel-content" ) )
-								.getAttribute( "style" ) ) );
+				.until( dr -> "true".equals( header.getAttribute( "aria-expanded" ) )
+						&& diffPanel.findElement( By.className( "mat-expansion-panel-content" ) )
+								.isDisplayed() );
 
 		return this;
 	}
