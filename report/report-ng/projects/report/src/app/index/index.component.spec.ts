@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { IndexComponent } from './index.component';
 import { RouterTestingModule } from '@angular/router/testing';
 import { IndexDataService } from '../index-data.service';
@@ -53,6 +53,7 @@ describe('IndexComponent', () => {
 @Component({
     selector: 'app-menu',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubMenu {
@@ -60,6 +61,7 @@ class StubMenu {
 @Component({
     selector: 'app-flow-filter',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubFlowFilter {
@@ -68,6 +70,7 @@ class StubFlowFilter {
 @Component({
     selector: 'app-tag-summary',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubTagSummary {
@@ -76,6 +79,7 @@ class StubTagSummary {
 @Component({
     selector: 'app-system-diagram',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubSystemDiagram {

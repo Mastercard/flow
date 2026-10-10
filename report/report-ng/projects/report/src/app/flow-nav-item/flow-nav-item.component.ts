@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, HostListener } from '@angular/core';
+import { Component, OnInit, Input, HostListener, ChangeDetectionStrategy } from '@angular/core';
 import { Entry } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
 import { EntryHoverService } from '../entry-hover.service';
@@ -7,6 +7,7 @@ import { EntryHoverService } from '../entry-hover.service';
     selector: 'app-flow-nav-item',
     templateUrl: './flow-nav-item.component.html',
     styleUrls: ['./flow-nav-item.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class FlowNavItemComponent implements OnInit {

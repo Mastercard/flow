@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { ListPair, PairSelectItemComponent } from './pair-select-item.component';
 import { empty_flow } from '../types';
 import { MatListModule } from '@angular/material/list';
@@ -63,6 +63,7 @@ describe('PairSelectItemComponent', () => {
       [selectedIndex]="selected?.index ?? -1" >
     </app-pair-select-item>
   </mat-selection-list>`,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class TestWrapper {

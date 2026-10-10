@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { DuctFlag, Flow, Index, isDuctFlag, isFlow, isIndex } from './types';
 import { DuctService } from './duct.service';
 
@@ -15,6 +15,7 @@ declare var data: any;
     selector: 'app-root',
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class AppComponent {

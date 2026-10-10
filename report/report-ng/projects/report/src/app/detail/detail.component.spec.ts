@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, Input, provideZoneChangeDetection } from '@angular/core';
+import { Component, Input, provideZoneChangeDetection, ChangeDetectionStrategy } from '@angular/core';
 import { DetailComponent } from './detail.component';
 import { BasisFetchService } from '../basis-fetch.service';
 import { MatMenuModule } from '@angular/material/menu';
@@ -132,6 +132,7 @@ async function testTabs(component: DetailComponent, fixture: ComponentFixture<De
 @Component({
     selector: 'app-log-view',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubLogView {
@@ -141,6 +142,7 @@ class StubLogView {
 @Component({
     selector: 'app-context-view',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubContextView {
@@ -150,6 +152,7 @@ class StubContextView {
 @Component({
     selector: 'app-residue-view',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubResidueView {
@@ -159,6 +162,7 @@ class StubResidueView {
 @Component({
     selector: 'app-flow-sequence',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubFlowSequence {
@@ -168,6 +172,7 @@ class StubFlowSequence {
 @Component({
     selector: 'app-view-options',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubViewOptions {
@@ -177,6 +182,7 @@ class StubViewOptions {
 @Component({
     selector: 'app-transmission',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubTransmission {
@@ -189,6 +195,7 @@ class StubTransmission {
 @Component({
     selector: 'markdown',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubMarkdown {

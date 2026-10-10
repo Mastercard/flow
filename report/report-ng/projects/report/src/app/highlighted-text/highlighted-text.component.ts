@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
 import { MsgSearchService } from '../msg-search.service';
 
 /**
@@ -8,6 +8,7 @@ import { MsgSearchService } from '../msg-search.service';
     selector: 'app-highlighted-text',
     templateUrl: './highlighted-text.component.html',
     styleUrls: ['./highlighted-text.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class HighlightedTextComponent implements OnInit, OnChanges {

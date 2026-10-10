@@ -18,7 +18,7 @@ import { TransmissionComponent } from './transmission/transmission.component';
 import { ViewOptionsComponent } from './view-options/view-options.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi, withXhr } from '@angular/common/http';
 import { MarkdownModule } from 'ngx-markdown';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -140,7 +140,7 @@ const routes: Routes = [
     ReactiveFormsModule,
     RouterModule.forRoot(routes, { useHash: true }),
   ],
-  providers: [Title, provideHttpClient(withInterceptorsFromDi()), provideZoneChangeDetection()],
+  providers: [Title, provideHttpClient(withXhr(), withInterceptorsFromDi()), provideZoneChangeDetection()],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

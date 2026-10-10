@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
 import { Entry } from '../types';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
@@ -6,6 +6,7 @@ import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
     selector: 'app-flow-nav-list',
     templateUrl: './flow-nav-list.component.html',
     styleUrls: ['./flow-nav-list.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class FlowNavListComponent implements OnInit {

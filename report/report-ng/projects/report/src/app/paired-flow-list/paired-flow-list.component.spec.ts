@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { PairedFlowListComponent } from './paired-flow-list.component';
 import { ModelDiffDataService } from '../model-diff-data.service';
 import { FlowPairingService } from '../flow-pairing.service';
@@ -51,6 +51,7 @@ describe('PairedFlowListComponent', () => {
 @Component({
     selector: 'app-flow-nav-list',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubFlowNavList {

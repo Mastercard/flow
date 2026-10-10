@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { FlowFilterService, Type } from '../flow-filter.service';
 import { IconEmbedService } from '../icon-embed.service';
@@ -7,6 +7,7 @@ import { IconEmbedService } from '../icon-embed.service';
     selector: 'app-flow-filter',
     templateUrl: './flow-filter.component.html',
     styleUrls: ['./flow-filter.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class FlowFilterComponent implements OnInit {

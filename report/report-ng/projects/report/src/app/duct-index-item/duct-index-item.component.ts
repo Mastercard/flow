@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { IconEmbedService } from '../icon-embed.service';
 import { Report } from '../duct.service';
 
@@ -6,6 +6,7 @@ import { Report } from '../duct.service';
     selector: 'app-duct-index-item',
     templateUrl: './duct-index-item.component.html',
     styleUrls: ['./duct-index-item.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class DuctIndexItemComponent implements OnInit {

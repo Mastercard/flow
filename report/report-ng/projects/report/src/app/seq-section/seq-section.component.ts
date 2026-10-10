@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
 import { Action, isAction } from '../seq-action/seq-action.component';
 import { Note, isNote } from '../seq-note/seq-note.component';
 
@@ -6,6 +6,7 @@ import { Note, isNote } from '../seq-note/seq-note.component';
     selector: 'app-seq-section',
     templateUrl: './seq-section.component.html',
     styleUrls: ['./seq-section.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class SeqSectionComponent implements OnInit {

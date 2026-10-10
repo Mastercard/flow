@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
 import { QueryService } from '../query.service';
 import { LogEvent } from '../types';
@@ -8,6 +8,7 @@ import { IconEmbedService } from '../icon-embed.service';
     selector: 'app-log-view',
     templateUrl: './log-view.component.html',
     styleUrls: ['./log-view.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class LogViewComponent implements OnInit {

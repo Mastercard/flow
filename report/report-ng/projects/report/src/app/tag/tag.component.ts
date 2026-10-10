@@ -1,10 +1,11 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
 import { FlowFilterService } from '../flow-filter.service';
 
 @Component({
     selector: 'app-tag',
     templateUrl: './tag.component.html',
     styleUrls: ['./tag.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class TagComponent implements OnInit {

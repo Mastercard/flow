@@ -1,4 +1,4 @@
-import { Component, OnInit, OnChanges, Input, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnChanges, Input, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { DiffType, Display, Options } from '../types';
 import { TxSelectionService } from '../tx-selection.service';
 import { QueryService } from '../query.service';
@@ -11,6 +11,7 @@ import { IconEmbedService } from '../icon-embed.service';
     selector: 'app-transmission',
     templateUrl: './transmission.component.html',
     styleUrls: ['./transmission.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class TransmissionComponent implements OnInit, OnChanges {

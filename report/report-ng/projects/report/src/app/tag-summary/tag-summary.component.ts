@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, SimpleChanges } from '@angular/core';
+import { Component, Input, OnInit, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
 import { FlowFilterService } from '../flow-filter.service';
 import { Entry } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
@@ -7,6 +7,7 @@ import { IconEmbedService } from '../icon-embed.service';
     selector: 'app-tag-summary',
     templateUrl: './tag-summary.component.html',
     styleUrls: ['./tag-summary.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class TagSummaryComponent implements OnInit {

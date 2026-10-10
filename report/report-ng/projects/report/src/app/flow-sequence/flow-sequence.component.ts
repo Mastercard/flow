@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
 import { Action, isAction } from '../seq-action/seq-action.component';
 import { Note, isNote } from '../seq-note/seq-note.component';
 import { Section, isSection } from '../seq-section/seq-section.component';
@@ -8,6 +8,7 @@ import { TxSelectionService } from '../tx-selection.service';
     selector: 'app-flow-sequence',
     templateUrl: './flow-sequence.component.html',
     styleUrls: ['./flow-sequence.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class FlowSequenceComponent implements OnInit {

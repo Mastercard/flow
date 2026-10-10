@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, Input, provideZoneChangeDetection } from '@angular/core';
+import { Component, Input, provideZoneChangeDetection, ChangeDetectionStrategy } from '@angular/core';
 import { ModelDiffComponent } from './model-diff.component';
 import { RouterTestingModule } from '@angular/router/testing';
 import { FlowPairingService } from '../flow-pairing.service';
@@ -75,6 +75,7 @@ describe('ModelDiffComponent', () => {
 @Component({
     selector: 'app-menu',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubMenu {
@@ -83,6 +84,7 @@ class StubMenu {
 @Component({
     selector: 'app-flow-filter',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubFlowFilter {
@@ -95,6 +97,7 @@ class StubFlowFilter {
             provide: ModelDiffDataSourceComponent,
             useClass: StubModelDiffDataSource
         }],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubModelDiffDataSource {
@@ -113,6 +116,7 @@ class StubModelDiffDataSource {
 @Component({
     selector: 'app-paired-flow-list',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubPairedFlowList {
@@ -121,6 +125,7 @@ class StubPairedFlowList {
 @Component({
     selector: 'app-unpaired-flow-list',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubUnpairedFlowList {
@@ -133,6 +138,7 @@ class StubUnpairedFlowList {
             provide: ChangeViewComponent,
             useClass: StubChangeView,
         }],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubChangeView {
@@ -147,6 +153,7 @@ class StubChangeView {
             provide: ChangeAnalysisComponent,
             useClass: StubChangeAnalysis,
         }],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubChangeAnalysis {

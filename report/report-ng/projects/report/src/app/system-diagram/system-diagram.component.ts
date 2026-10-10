@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import mermaid from "mermaid";
 import { ModelDiffDataService } from '../model-diff-data.service';
 import { Entry, Flow, Interaction } from '../types';
@@ -22,6 +22,7 @@ interface Edge {
     selector: 'app-system-diagram',
     templateUrl: './system-diagram.component.html',
     styleUrls: ['./system-diagram.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class SystemDiagramComponent implements OnInit {

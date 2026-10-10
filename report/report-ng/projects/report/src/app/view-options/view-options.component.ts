@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { DataDisplay, DiffType, Display, Options } from '../types';
@@ -8,6 +8,7 @@ import { IconEmbedService } from '../icon-embed.service';
     selector: 'app-view-options',
     templateUrl: './view-options.component.html',
     styleUrls: ['./view-options.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ViewOptionsComponent implements OnInit {

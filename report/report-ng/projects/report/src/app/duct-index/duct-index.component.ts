@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { DuctService, Report } from '../duct.service';
 
@@ -6,6 +6,7 @@ import { DuctService, Report } from '../duct.service';
     selector: 'app-duct-index',
     templateUrl: './duct-index.component.html',
     styleUrls: ['./duct-index.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class DuctIndexComponent implements OnInit {

@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { UntypedFormControl } from '@angular/forms';
 import { ProgressBarMode } from '@angular/material/progress-bar';
 import { ActivatedRoute } from '@angular/router';
@@ -12,6 +12,7 @@ import { empty_index, Index, isIndex } from '../types';
     selector: 'app-model-diff-data-source',
     templateUrl: './model-diff-data-source.component.html',
     styleUrls: ['./model-diff-data-source.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ModelDiffDataSourceComponent implements OnInit {

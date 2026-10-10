@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { FlowFilterComponent } from './flow-filter.component';
 import { RouterTestingModule } from '@angular/router/testing';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -54,6 +54,7 @@ describe('FlowFilterComponent', () => {
 @Component({
     selector: 'app-tag-filter',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubTagFilter {

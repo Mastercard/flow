@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
 import { BasisFetchService } from '../basis-fetch.service';
 import { MsgSearchService } from '../msg-search.service';
 import { TxSelectionService } from '../tx-selection.service';
@@ -10,6 +10,7 @@ import { IconEmbedService } from '../icon-embed.service';
     selector: 'app-seq-action',
     templateUrl: './seq-action.component.html',
     styleUrls: ['./seq-action.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class SeqActionComponent implements OnInit {

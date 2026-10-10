@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChangeAnalysisComponent } from './change-analysis.component';
 import { FlowDiffService } from '../flow-diff.service';
@@ -54,6 +54,7 @@ describe('ChangeAnalysisComponent', () => {
 @Component({
     selector: 'app-flow-nav-list',
     template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 class StubFlowNavList {

@@ -1,10 +1,11 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
 import { columnStyle } from '../flow-sequence/flow-sequence.component';
 
 @Component({
     selector: 'app-seq-note',
     templateUrl: './seq-note.component.html',
     styleUrls: ['./seq-note.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class SeqNoteComponent implements OnInit {

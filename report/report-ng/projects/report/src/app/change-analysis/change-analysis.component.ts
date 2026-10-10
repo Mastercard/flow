@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CollatedChange, DiffPair, FlowDiffService } from '../flow-diff.service';
 import { FlowFilterService } from '../flow-filter.service';
@@ -11,6 +11,7 @@ import { IconEmbedService } from '../icon-embed.service';
     selector: 'app-change-analysis',
     templateUrl: './change-analysis.component.html',
     styleUrls: ['./change-analysis.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ChangeAnalysisComponent implements OnInit {

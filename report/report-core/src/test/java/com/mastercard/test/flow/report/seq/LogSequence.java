@@ -62,8 +62,11 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 	public LogSequence levels( String... levels ) {
 		trace( "levels", (Object[]) levels );
 
+		WebElement select = new WebDriverWait( driver, ofSeconds( 3 ) )
+				.until( dr -> dr.findElements( By.id( "level_select" ) ).stream()
+						.findFirst().orElse( null ) );
 		((JavascriptExecutor) driver).executeScript(
-				"arguments[0].click();", driver.findElement( By.id( "level_select" ) ) );
+				"arguments[0].click();", select );
 
 		// wait for the popup
 		WebDriverWait wait = new WebDriverWait( driver, ofSeconds( 2 ) );
