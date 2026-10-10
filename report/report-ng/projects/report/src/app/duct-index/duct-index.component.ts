@@ -3,9 +3,10 @@ import { Title } from '@angular/platform-browser';
 import { DuctService, Report } from '../duct.service';
 
 @Component({
-  selector: 'app-duct-index',
-  templateUrl: './duct-index.component.html',
-  styleUrls: ['./duct-index.component.css']
+    selector: 'app-duct-index',
+    templateUrl: './duct-index.component.html',
+    styleUrls: ['./duct-index.component.css'],
+    standalone: false
 })
 export class DuctIndexComponent implements OnInit {
 

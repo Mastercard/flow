@@ -2,6 +2,7 @@ package com.mastercard.test.flow.report.seq;
 
 import org.junit.jupiter.api.Assertions;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebElement;
 
 import com.mastercard.test.flow.report.Copy;
@@ -50,16 +51,32 @@ public class ResidueSequence extends AbstractSequence<ResidueSequence> {
 	 */
 	public ResidueSequence hasContent( String panel, String... lines ) {
 		trace( "hasContent", panel, lines );
+		WebElement body = driver.findElements( By.tagName( "mat-expansion-panel" ) ).stream()
+				.filter( e -> panel.equals(
+						e.findElement( By.tagName( "mat-panel-title" ) ).getText() ) )
+				.findFirst()
+				.orElseThrow( () -> new IllegalStateException(
+						"Failed to find expansion panel with title " + panel ) )
+				.findElement( By.className( "mat-expansion-panel-body" ) );
 		Assertions.assertEquals(
 				Copy.pasta( lines ),
-				Copy.pasta( driver.findElements( By.tagName( "mat-expansion-panel" ) ).stream()
-						.filter( e -> panel.equals(
-								e.findElement( By.tagName( "mat-panel-title" ) ).getText() ) )
-						.findFirst()
-						.orElseThrow( () -> new IllegalStateException(
-								"Failed to find expansion panel with title " + panel ) )
-						.findElement( By.className( "mat-expansion-panel-body" ) )
-						.getText() ),
+				Copy.pasta( (String) ((JavascriptExecutor) driver).executeScript( ""
+						+ "const lines = [];"
+						+ "const table = arguments[0].querySelector('table');"
+						+ "for (const row of table.rows) {"
+						+ "  lines.push(row.querySelector('th').textContent.trim());"
+						+ "  const pre = row.querySelector('pre');"
+						+ "  if (pre) {"
+						+ "    lines.push(...pre.textContent.trim().split(/\\r?\\n/));"
+						+ "  } else {"
+						+ "    for (const diffRow of row.querySelectorAll('app-text-diff tr')) {"
+						+ "      lines.push(Array.from(diffRow.cells)"
+						+ "        .map(cell => cell.textContent.replace(/\\s+/g, ' ').trim())"
+						+ "        .filter(Boolean).join(' '));"
+						+ "    }"
+						+ "  }"
+						+ "}"
+						+ "return lines.join('\\n');", body ) ),
 				"Content of panel " + panel );
 		return this;
 	}

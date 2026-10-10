@@ -5,9 +5,10 @@ import { IconEmbedService } from '../icon-embed.service';
 
 
 @Component({
-  selector: 'app-msg-view',
-  templateUrl: './msg-view.component.html',
-  styleUrls: ['./msg-view.component.css']
+    selector: 'app-msg-view',
+    templateUrl: './msg-view.component.html',
+    styleUrls: ['./msg-view.component.css'],
+    standalone: false
 })
 export class MsgViewComponent implements OnInit {
 

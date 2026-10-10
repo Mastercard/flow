@@ -5,9 +5,10 @@ import { MsgSearchService } from '../msg-search.service';
  * Thanks to https://stackoverflow.com/a/59159052/494747
  */
 @Component({
-  selector: 'app-highlighted-text',
-  templateUrl: './highlighted-text.component.html',
-  styleUrls: ['./highlighted-text.component.css']
+    selector: 'app-highlighted-text',
+    templateUrl: './highlighted-text.component.html',
+    styleUrls: ['./highlighted-text.component.css'],
+    standalone: false
 })
 export class HighlightedTextComponent implements OnInit, OnChanges {
   @Input() content: string | undefined = "";

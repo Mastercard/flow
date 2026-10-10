@@ -129,48 +129,54 @@ async function testTabs(component: DetailComponent, fixture: ComponentFixture<De
 }
 
 @Component({
-  selector: 'app-log-view',
-  template: ''
+    selector: 'app-log-view',
+    template: '',
+    standalone: false
 })
 class StubLogView {
   @Input() logs: LogEvent[] = [];
 }
 
 @Component({
-  selector: 'app-context-view',
-  template: ''
+    selector: 'app-context-view',
+    template: '',
+    standalone: false
 })
 class StubContextView {
   @Input() context: any = {};
 }
 
 @Component({
-  selector: 'app-residue-view',
-  template: ''
+    selector: 'app-residue-view',
+    template: '',
+    standalone: false
 })
 class StubResidueView {
   @Input() residues: Residue[] = [];
 }
 
 @Component({
-  selector: 'app-flow-sequence',
-  template: ''
+    selector: 'app-flow-sequence',
+    template: '',
+    standalone: false
 })
 class StubFlowSequence {
   @Input() sequence: SequenceData = { entity: [], exercised: [], item: [] };
 }
 
 @Component({
-  selector: 'app-view-options',
-  template: ''
+    selector: 'app-view-options',
+    template: '',
+    standalone: false
 })
 class StubViewOptions {
   @Input() options: Options = new Options();
 }
 
 @Component({
-  selector: 'app-transmission',
-  template: ''
+    selector: 'app-transmission',
+    template: '',
+    standalone: false
 })
 class StubTransmission {
   @Input() options: Options = new Options();
@@ -180,8 +186,9 @@ class StubTransmission {
 }
 
 @Component({
-  selector: 'markdown',
-  template: ''
+    selector: 'markdown',
+    template: '',
+    standalone: false
 })
 class StubMarkdown {
 }

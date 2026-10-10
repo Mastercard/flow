@@ -1,9 +1,10 @@
 import { Component, OnInit, Input } from '@angular/core';
 
 @Component({
-  selector: 'app-hexdump',
-  templateUrl: './hexdump.component.html',
-  styleUrls: ['./hexdump.component.css']
+    selector: 'app-hexdump',
+    templateUrl: './hexdump.component.html',
+    styleUrls: ['./hexdump.component.css'],
+    standalone: false
 })
 export class HexdumpComponent implements OnInit {
 

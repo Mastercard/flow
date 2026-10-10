@@ -3,9 +3,10 @@ import { Entry } from '../types';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
 @Component({
-  selector: 'app-flow-nav-list',
-  templateUrl: './flow-nav-list.component.html',
-  styleUrls: ['./flow-nav-list.component.css']
+    selector: 'app-flow-nav-list',
+    templateUrl: './flow-nav-list.component.html',
+    styleUrls: ['./flow-nav-list.component.css'],
+    standalone: false
 })
 export class FlowNavListComponent implements OnInit {
 

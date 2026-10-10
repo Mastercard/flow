@@ -12,9 +12,10 @@ import { Location } from '@angular/common';
  * list of flows, and the filtering controls
  */
 @Component({
-  selector: 'app-index',
-  templateUrl: './index.component.html',
-  styleUrls: ['./index.component.css']
+    selector: 'app-index',
+    templateUrl: './index.component.html',
+    styleUrls: ['./index.component.css'],
+    standalone: false
 })
 export class IndexComponent implements OnInit {
 

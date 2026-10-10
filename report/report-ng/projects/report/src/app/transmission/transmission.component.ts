@@ -8,9 +8,10 @@ import { DiffDisplay } from '../text-diff/text-diff.component';
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-transmission',
-  templateUrl: './transmission.component.html',
-  styleUrls: ['./transmission.component.css'],
+    selector: 'app-transmission',
+    templateUrl: './transmission.component.html',
+    styleUrls: ['./transmission.component.css'],
+    standalone: false
 })
 export class TransmissionComponent implements OnInit, OnChanges {
   action?: Action;

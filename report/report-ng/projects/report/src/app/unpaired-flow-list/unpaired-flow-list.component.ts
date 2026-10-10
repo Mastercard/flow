@@ -6,9 +6,10 @@ import { Entry } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-unpaired-flow-list',
-  templateUrl: './unpaired-flow-list.component.html',
-  styleUrls: ['./unpaired-flow-list.component.css'],
+    selector: 'app-unpaired-flow-list',
+    templateUrl: './unpaired-flow-list.component.html',
+    styleUrls: ['./unpaired-flow-list.component.css'],
+    standalone: false
 })
 export class UnpairedFlowListComponent implements OnInit {
 

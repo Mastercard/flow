@@ -4,9 +4,10 @@ import { IconEmbedService } from '../icon-embed.service';
 import { EntryHoverService } from '../entry-hover.service';
 
 @Component({
-  selector: 'app-flow-nav-item',
-  templateUrl: './flow-nav-item.component.html',
-  styleUrls: ['./flow-nav-item.component.css']
+    selector: 'app-flow-nav-item',
+    templateUrl: './flow-nav-item.component.html',
+    styleUrls: ['./flow-nav-item.component.css'],
+    standalone: false
 })
 export class FlowNavItemComponent implements OnInit {
 

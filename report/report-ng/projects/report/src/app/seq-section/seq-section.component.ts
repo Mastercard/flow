@@ -3,9 +3,10 @@ import { Action, isAction } from '../seq-action/seq-action.component';
 import { Note, isNote } from '../seq-note/seq-note.component';
 
 @Component({
-  selector: 'app-seq-section',
-  templateUrl: './seq-section.component.html',
-  styleUrls: ['./seq-section.component.css']
+    selector: 'app-seq-section',
+    templateUrl: './seq-section.component.html',
+    styleUrls: ['./seq-section.component.css'],
+    standalone: false
 })
 export class SeqSectionComponent implements OnInit {
 

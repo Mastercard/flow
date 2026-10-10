@@ -5,9 +5,10 @@ import { QueryService } from '../query.service';
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-msg-search-input',
-  templateUrl: './msg-search-input.component.html',
-  styleUrls: ['./msg-search-input.component.css']
+    selector: 'app-msg-search-input',
+    templateUrl: './msg-search-input.component.html',
+    styleUrls: ['./msg-search-input.component.css'],
+    standalone: false
 })
 export class MsgSearchInputComponent implements OnInit {
 

@@ -11,9 +11,10 @@ import { IconEmbedService } from '../icon-embed.service';
 
 
 @Component({
-  selector: 'app-tag-filter',
-  templateUrl: './tag-filter.component.html',
-  styleUrls: ['./tag-filter.component.css']
+    selector: 'app-tag-filter',
+    templateUrl: './tag-filter.component.html',
+    styleUrls: ['./tag-filter.component.css'],
+    standalone: false
 })
 export class TagFilterComponent implements OnInit {
 

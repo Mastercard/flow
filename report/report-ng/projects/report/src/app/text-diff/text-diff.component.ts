@@ -3,9 +3,10 @@ import { DIFF_EQUAL } from 'diff-match-patch';
 import { DIFF_DELETE, DIFF_INSERT, Diff, diff_match_patch } from 'diff-match-patch';
 
 @Component({
-  selector: 'app-text-diff',
-  templateUrl: './text-diff.component.html',
-  styleUrls: ['./text-diff.component.css']
+    selector: 'app-text-diff',
+    templateUrl: './text-diff.component.html',
+    styleUrls: ['./text-diff.component.css'],
+    standalone: false
 })
 export class TextDiffComponent implements OnInit, OnChanges {
 

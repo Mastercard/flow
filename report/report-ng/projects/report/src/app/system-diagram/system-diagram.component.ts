@@ -19,9 +19,10 @@ interface Edge {
  * system diagram showing actor interactions
  */
 @Component({
-  selector: 'app-system-diagram',
-  templateUrl: './system-diagram.component.html',
-  styleUrls: ['./system-diagram.component.css']
+    selector: 'app-system-diagram',
+    templateUrl: './system-diagram.component.html',
+    styleUrls: ['./system-diagram.component.css'],
+    standalone: false
 })
 export class SystemDiagramComponent implements OnInit {
   private readonly modelLabel = "this";

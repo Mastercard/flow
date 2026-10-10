@@ -3,9 +3,10 @@ import { IconEmbedService } from '../icon-embed.service';
 import { Report } from '../duct.service';
 
 @Component({
-  selector: 'app-duct-index-item',
-  templateUrl: './duct-index-item.component.html',
-  styleUrls: ['./duct-index-item.component.css']
+    selector: 'app-duct-index-item',
+    templateUrl: './duct-index-item.component.html',
+    styleUrls: ['./duct-index-item.component.css'],
+    standalone: false
 })
 export class DuctIndexItemComponent implements OnInit {
 

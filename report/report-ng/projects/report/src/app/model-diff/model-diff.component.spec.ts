@@ -72,26 +72,29 @@ describe('ModelDiffComponent', () => {
 
 
 @Component({
-  selector: 'app-menu',
-  template: ''
+    selector: 'app-menu',
+    template: '',
+    standalone: false
 })
 class StubMenu {
 }
 
 @Component({
-  selector: 'app-flow-filter',
-  template: ''
+    selector: 'app-flow-filter',
+    template: '',
+    standalone: false
 })
 class StubFlowFilter {
 }
 
 @Component({
-  selector: 'app-model-diff-data-source',
-  template: '',
-  providers: [{
-    provide: ModelDiffDataSourceComponent,
-    useClass: StubModelDiffDataSource
-  }],
+    selector: 'app-model-diff-data-source',
+    template: '',
+    providers: [{
+            provide: ModelDiffDataSourceComponent,
+            useClass: StubModelDiffDataSource
+        }],
+    standalone: false
 })
 class StubModelDiffDataSource {
 
@@ -104,26 +107,29 @@ class StubModelDiffDataSource {
 }
 
 @Component({
-  selector: 'app-paired-flow-list',
-  template: ''
+    selector: 'app-paired-flow-list',
+    template: '',
+    standalone: false
 })
 class StubPairedFlowList {
 }
 
 @Component({
-  selector: 'app-unpaired-flow-list',
-  template: ''
+    selector: 'app-unpaired-flow-list',
+    template: '',
+    standalone: false
 })
 class StubUnpairedFlowList {
 }
 
 @Component({
-  selector: 'app-change-view',
-  template: '',
-  providers: [{
-    provide: ChangeViewComponent,
-    useClass: StubChangeView,
-  }],
+    selector: 'app-change-view',
+    template: '',
+    providers: [{
+            provide: ChangeViewComponent,
+            useClass: StubChangeView,
+        }],
+    standalone: false
 })
 class StubChangeView {
   onSelection(cb: () => void): void {
@@ -131,12 +137,13 @@ class StubChangeView {
 }
 
 @Component({
-  selector: 'app-change-analysis',
-  template: '',
-  providers: [{
-    provide: ChangeAnalysisComponent,
-    useClass: StubChangeAnalysis,
-  }],
+    selector: 'app-change-analysis',
+    template: '',
+    providers: [{
+            provide: ChangeAnalysisComponent,
+            useClass: StubChangeAnalysis,
+        }],
+    standalone: false
 })
 class StubChangeAnalysis {
   toChangeView(t: (from: string, to: string) => void): void {

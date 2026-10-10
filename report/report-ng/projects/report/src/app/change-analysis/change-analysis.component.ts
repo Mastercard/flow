@@ -8,9 +8,10 @@ import { Entry, removeResultTagsFrom } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-change-analysis',
-  templateUrl: './change-analysis.component.html',
-  styleUrls: ['./change-analysis.component.css'],
+    selector: 'app-change-analysis',
+    templateUrl: './change-analysis.component.html',
+    styleUrls: ['./change-analysis.component.css'],
+    standalone: false
 })
 export class ChangeAnalysisComponent implements OnInit {
 

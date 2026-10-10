@@ -478,9 +478,16 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 
 		new WebDriverWait( driver, ofSeconds( 2 ) )
 				.withMessage( () -> interactionDiagnostics()
-						+ "\nsummary:\n" + summariseSVG( interactionDiagram() ) )
-				.until( dr -> expectedSummary.equals(
-						Copy.pasta( summariseSVG( interactionDiagram() ) ) ) );
+						+ "\ndiagram:\n" + interactionDiagram() )
+				.until( dr -> {
+					try {
+						return expectedSummary.equals(
+								Copy.pasta( summariseSVG( interactionDiagram() ) ) );
+					}
+					catch( IllegalStateException e ) {
+						return false;
+					}
+				} );
 
 		String svgSummary = summariseSVG( interactionDiagram() );
 

@@ -5,9 +5,10 @@ import { removeResultTagsFrom } from '../types';
 export interface ListPair { index: number, pair: DiffPair };
 
 @Component({
-  selector: 'app-pair-select-item',
-  templateUrl: './pair-select-item.component.html',
-  styleUrls: ['./pair-select-item.component.css']
+    selector: 'app-pair-select-item',
+    templateUrl: './pair-select-item.component.html',
+    styleUrls: ['./pair-select-item.component.css'],
+    standalone: false
 })
 export class PairSelectItemComponent implements OnInit {
 

@@ -5,9 +5,10 @@ import { IconEmbedService } from '../icon-embed.service';
  * The navigation menu
  */
 @Component({
-  selector: 'app-menu',
-  templateUrl: './menu.component.html',
-  styleUrls: ['./menu.component.css']
+    selector: 'app-menu',
+    templateUrl: './menu.component.html',
+    styleUrls: ['./menu.component.css'],
+    standalone: false
 })
 export class MenuComponent implements OnInit {
 

@@ -52,8 +52,9 @@ describe('FlowFilterComponent', () => {
 
 
 @Component({
-  selector: 'app-tag-filter',
-  template: ''
+    selector: 'app-tag-filter',
+    template: '',
+    standalone: false
 })
 class StubTagFilter {
   @Input() type: Type = Type.Include;

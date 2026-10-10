@@ -49,8 +49,9 @@ describe('PairedFlowListComponent', () => {
 });
 
 @Component({
-  selector: 'app-flow-nav-list',
-  template: ''
+    selector: 'app-flow-nav-list',
+    template: '',
+    standalone: false
 })
 class StubFlowNavList {
   @Input() basePath: string = "";

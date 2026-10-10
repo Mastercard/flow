@@ -280,8 +280,21 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 						.findFirst()
 						.orElse( null ) );
 		tab.click();
-		waitForTabTransition();
+		waitForTabTransition( tab );
 		return seqConstructor.apply( this );
+	}
+
+	private void waitForTabTransition( WebElement tab ) {
+		new WebDriverWait( driver, Duration.ofSeconds( 3 ) )
+				.withMessage( () -> "Failed to activate tab " + tab.getText() )
+				.until( dr -> {
+					if( !"true".equals( tab.getAttribute( "aria-selected" ) ) ) {
+						return false;
+					}
+					String panelId = tab.getAttribute( "aria-controls" );
+					return panelId != null && dr.findElements( By.id( panelId ) ).stream()
+							.anyMatch( WebElement::isDisplayed );
+				} );
 	}
 
 	/**

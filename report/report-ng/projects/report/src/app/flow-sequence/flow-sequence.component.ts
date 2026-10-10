@@ -5,9 +5,10 @@ import { Section, isSection } from '../seq-section/seq-section.component';
 import { TxSelectionService } from '../tx-selection.service';
 
 @Component({
-  selector: 'app-flow-sequence',
-  templateUrl: './flow-sequence.component.html',
-  styleUrls: ['./flow-sequence.component.css']
+    selector: 'app-flow-sequence',
+    templateUrl: './flow-sequence.component.html',
+    styleUrls: ['./flow-sequence.component.css'],
+    standalone: false
 })
 export class FlowSequenceComponent implements OnInit {
 

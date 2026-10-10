@@ -5,9 +5,10 @@ import { DataDisplay, DiffType, Display, Options } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-view-options',
-  templateUrl: './view-options.component.html',
-  styleUrls: ['./view-options.component.css']
+    selector: 'app-view-options',
+    templateUrl: './view-options.component.html',
+    styleUrls: ['./view-options.component.css'],
+    standalone: false
 })
 export class ViewOptionsComponent implements OnInit {
 

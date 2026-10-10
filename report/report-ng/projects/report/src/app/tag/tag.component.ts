@@ -2,9 +2,10 @@ import { Component, OnInit, Input } from '@angular/core';
 import { FlowFilterService } from '../flow-filter.service';
 
 @Component({
-  selector: 'app-tag',
-  templateUrl: './tag.component.html',
-  styleUrls: ['./tag.component.css']
+    selector: 'app-tag',
+    templateUrl: './tag.component.html',
+    styleUrls: ['./tag.component.css'],
+    standalone: false
 })
 export class TagComponent implements OnInit {
 

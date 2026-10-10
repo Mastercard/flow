@@ -35,8 +35,9 @@ describe('TransmissionComponent', () => {
 });
 
 @Component({
-  selector: 'app-msg-view',
-  template: ''
+    selector: 'app-msg-view',
+    template: '',
+    standalone: false
 })
 class StubMsgView {
   @Input() options: Options = new Options();

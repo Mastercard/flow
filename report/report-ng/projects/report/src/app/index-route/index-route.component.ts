@@ -3,9 +3,10 @@ import { IndexDataService } from '../index-data.service';
 import { empty_index, Index } from '../types';
 
 @Component({
-  selector: 'app-index-route',
-  templateUrl: './index-route.component.html',
-  styleUrls: ['./index-route.component.css']
+    selector: 'app-index-route',
+    templateUrl: './index-route.component.html',
+    styleUrls: ['./index-route.component.css'],
+    standalone: false
 })
 export class IndexRouteComponent implements OnInit {
 

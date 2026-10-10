@@ -4,9 +4,10 @@ import { Entry } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-tag-summary',
-  templateUrl: './tag-summary.component.html',
-  styleUrls: ['./tag-summary.component.css']
+    selector: 'app-tag-summary',
+    templateUrl: './tag-summary.component.html',
+    styleUrls: ['./tag-summary.component.css'],
+    standalone: false
 })
 export class TagSummaryComponent implements OnInit {
   readonly RESULT_TAGS: string[] = ["PASS", "FAIL", "SKIP", "ERROR"];

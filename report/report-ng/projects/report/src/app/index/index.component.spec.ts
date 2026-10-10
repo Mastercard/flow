@@ -51,28 +51,32 @@ describe('IndexComponent', () => {
 });
 
 @Component({
-  selector: 'app-menu',
-  template: ''
+    selector: 'app-menu',
+    template: '',
+    standalone: false
 })
 class StubMenu {
 }
 @Component({
-  selector: 'app-flow-filter',
-  template: ''
+    selector: 'app-flow-filter',
+    template: '',
+    standalone: false
 })
 class StubFlowFilter {
   @Input() tags: Set<string> = new Set();
 }
 @Component({
-  selector: 'app-tag-summary',
-  template: ''
+    selector: 'app-tag-summary',
+    template: '',
+    standalone: false
 })
 class StubTagSummary {
   @Input() entries: Entry[] = [];
 }
 @Component({
-  selector: 'app-system-diagram',
-  template: ''
+    selector: 'app-system-diagram',
+    template: '',
+    standalone: false
 })
 class StubSystemDiagram {
 }

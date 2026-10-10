@@ -54,15 +54,16 @@ describe('PairSelectItemComponent', () => {
  * directly
  */
 @Component({
-  selector: 'app-flow-nav-list',
-  template: `
+    selector: 'app-flow-nav-list',
+    template: `
   <mat-selection-list>
     <app-pair-select-item 
       [showResult]="false"
       [item]="item"
       [selectedIndex]="selected?.index ?? -1" >
     </app-pair-select-item>
-  </mat-selection-list>`
+  </mat-selection-list>`,
+    standalone: false
 })
 class TestWrapper {
   @Input() item!: ListPair;

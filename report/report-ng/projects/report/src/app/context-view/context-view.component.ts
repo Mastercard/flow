@@ -7,9 +7,10 @@ interface Node {
 }
 
 @Component({
-  selector: 'app-context-view',
-  templateUrl: './context-view.component.html',
-  styleUrls: ['./context-view.component.css']
+    selector: 'app-context-view',
+    templateUrl: './context-view.component.html',
+    styleUrls: ['./context-view.component.css'],
+    standalone: false
 })
 
 export class ContextViewComponent implements OnInit {

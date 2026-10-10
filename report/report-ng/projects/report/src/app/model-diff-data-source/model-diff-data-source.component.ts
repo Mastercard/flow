@@ -9,9 +9,10 @@ import { ModelDiffDataService } from '../model-diff-data.service';
 import { empty_index, Index, isIndex } from '../types';
 
 @Component({
-  selector: 'app-model-diff-data-source',
-  templateUrl: './model-diff-data-source.component.html',
-  styleUrls: ['./model-diff-data-source.component.css']
+    selector: 'app-model-diff-data-source',
+    templateUrl: './model-diff-data-source.component.html',
+    styleUrls: ['./model-diff-data-source.component.css'],
+    standalone: false
 })
 export class ModelDiffDataSourceComponent implements OnInit {
 

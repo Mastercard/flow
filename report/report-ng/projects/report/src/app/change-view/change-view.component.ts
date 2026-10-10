@@ -12,9 +12,10 @@ import { IconEmbedService } from '../icon-embed.service';
 
 
 @Component({
-  selector: 'app-change-view',
-  templateUrl: './change-view.component.html',
-  styleUrls: ['./change-view.component.css'],
+    selector: 'app-change-view',
+    templateUrl: './change-view.component.html',
+    styleUrls: ['./change-view.component.css'],
+    standalone: false
 })
 export class ChangeViewComponent implements OnInit {
 

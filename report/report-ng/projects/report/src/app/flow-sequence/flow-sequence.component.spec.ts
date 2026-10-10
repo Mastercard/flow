@@ -28,8 +28,9 @@ describe('FlowSequenceComponent', () => {
 });
 
 @Component({
-  selector: 'app-msg-search-input',
-  template: ''
+    selector: 'app-msg-search-input',
+    template: '',
+    standalone: false
 })
 class StubMsgSearchInput {
 }

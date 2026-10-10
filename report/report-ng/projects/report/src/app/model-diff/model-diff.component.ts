@@ -10,9 +10,10 @@ import { ModelDiffDataSourceComponent } from '../model-diff-data-source/model-di
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-model-diff',
-  templateUrl: './model-diff.component.html',
-  styleUrls: ['./model-diff.component.css']
+    selector: 'app-model-diff',
+    templateUrl: './model-diff.component.html',
+    styleUrls: ['./model-diff.component.css'],
+    standalone: false
 })
 export class ModelDiffComponent implements OnInit {
 

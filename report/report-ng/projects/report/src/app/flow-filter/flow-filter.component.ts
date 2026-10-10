@@ -4,9 +4,10 @@ import { FlowFilterService, Type } from '../flow-filter.service';
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-flow-filter',
-  templateUrl: './flow-filter.component.html',
-  styleUrls: ['./flow-filter.component.css']
+    selector: 'app-flow-filter',
+    templateUrl: './flow-filter.component.html',
+    styleUrls: ['./flow-filter.component.css'],
+    standalone: false
 })
 export class FlowFilterComponent implements OnInit {
 

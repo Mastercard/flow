@@ -5,9 +5,10 @@ import { LogEvent } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-log-view',
-  templateUrl: './log-view.component.html',
-  styleUrls: ['./log-view.component.css']
+    selector: 'app-log-view',
+    templateUrl: './log-view.component.html',
+    styleUrls: ['./log-view.component.css'],
+    standalone: false
 })
 export class LogViewComponent implements OnInit {
 
