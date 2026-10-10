@@ -239,8 +239,8 @@ export class SystemDiagramComponent implements OnInit {
             .querySelector("pre")
             .innerHTML = this.mermaidMarkup;
 
-          mermaid.init();
           this.renderedEdgeCount = this.edges.length;
+          mermaid.init().then(() => requestAnimationFrame(() => this.rerender()));
         }
       }
       else {

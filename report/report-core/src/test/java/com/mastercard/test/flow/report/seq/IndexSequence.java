@@ -26,6 +26,7 @@ import javax.xml.xpath.XPathFactory;
 
 import org.junit.jupiter.api.Assertions;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -473,18 +474,39 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	 */
 	public IndexSequence hasInteractions( String... expected ) {
 		trace( "hasInteractions", (Object[]) expected );
-		String svg = driver
-				.findElement( By.id( "interactions_diagram" ) )
-				.getAttribute( "innerHTML" );
+		String expectedSummary = Copy.pasta( expected );
 
-		String svgSummary = summariseSVG( svg );
+		new WebDriverWait( driver, ofSeconds( 2 ) )
+				.withMessage( () -> interactionDiagnostics()
+						+ "\nsummary:\n" + summariseSVG( interactionDiagram() ) )
+				.until( dr -> expectedSummary.equals(
+						Copy.pasta( summariseSVG( interactionDiagram() ) ) ) );
+
+		String svgSummary = summariseSVG( interactionDiagram() );
 
 		assertEquals(
-				Copy.pasta( expected ),
+				expectedSummary,
 				Copy.pasta( svgSummary ),
 				"interaction diagram structure" );
 
 		return self();
+	}
+
+	private String interactionDiagnostics() {
+		return (String) ((JavascriptExecutor) driver).executeScript( ""
+				+ "return Array.from(document.querySelectorAll('#interactions_diagram path.flowchart-link'))"
+				+ ".map(path => {"
+				+ "  const style = getComputedStyle(path);"
+				+ "  return path.getAttribute('class')"
+				+ "    + ' inline=' + path.getAttribute('style')"
+				+ "    + ' computed=' + style.strokeWidth + '/' + style.visibility;"
+				+ "}).join('\\n');" );
+	}
+
+	private String interactionDiagram() {
+		return driver
+				.findElement( By.id( "interactions_diagram" ) )
+				.getAttribute( "innerHTML" );
 	}
 
 	/**
