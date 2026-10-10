@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, Input } from '@angular/core';
+import { Component, Input, provideZoneChangeDetection } from '@angular/core';
 import { DetailComponent } from './detail.component';
 import { BasisFetchService } from '../basis-fetch.service';
 import { MatMenuModule } from '@angular/material/menu';
@@ -36,6 +36,7 @@ describe('DetailComponent', () => {
       ],
       providers: [
         { provide: BasisFetchService, useValue: mockBasisFetch },
+        provideZoneChangeDetection(),
       ],
       imports: [
         MatMenuModule,

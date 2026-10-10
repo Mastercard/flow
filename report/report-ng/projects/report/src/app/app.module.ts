@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, provideZoneChangeDetection } from '@angular/core';
 import { BrowserModule, Title } from '@angular/platform-browser';
 
 import { AppComponent } from './app.component';
@@ -140,7 +140,7 @@ const routes: Routes = [
     ReactiveFormsModule,
     RouterModule.forRoot(routes, { useHash: true }),
   ],
-  providers: [Title, provideHttpClient(withInterceptorsFromDi())],
+  providers: [Title, provideHttpClient(withInterceptorsFromDi()), provideZoneChangeDetection()],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

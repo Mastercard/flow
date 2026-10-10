@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, Input } from '@angular/core';
+import { Component, Input, provideZoneChangeDetection } from '@angular/core';
 import { ModelDiffComponent } from './model-diff.component';
 import { RouterTestingModule } from '@angular/router/testing';
 import { FlowPairingService } from '../flow-pairing.service';
@@ -43,6 +43,7 @@ describe('ModelDiffComponent', () => {
         StubChangeAnalysis,
       ],
       providers: [
+        provideZoneChangeDetection(),
         { provide: FlowPairingService, useValue: mockFps },
         { provide: ModelDiffDataService, useValue: mockMdds },
       ],
@@ -97,6 +98,9 @@ class StubFlowFilter {
     standalone: false
 })
 class StubModelDiffDataSource {
+
+  path(label: string, value: string): void {
+  }
 
   getValue(): string {
     return "";
