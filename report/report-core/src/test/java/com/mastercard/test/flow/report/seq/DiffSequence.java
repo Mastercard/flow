@@ -330,8 +330,10 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	}
 
 	private DiffSequence checkPairList( String parentTag, String... lines ) {
-		return checkPairList( driver
-				.findElement( By.tagName( parentTag ) ), lines );
+		WebElement parent = new WebDriverWait( driver, ofSeconds( 3 ) )
+				.until( dr -> activeTabPanel().findElements( By.tagName( parentTag ) ).stream()
+						.findFirst().orElse( null ) );
+		return checkPairList( parent, lines );
 	}
 
 	private DiffSequence checkPairList( WebElement parent, String... lines ) {
@@ -547,19 +549,25 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	 */
 	public DiffSequence hasSummary( String... expected ) {
 		trace( "summary", (Object[]) expected );
+		String expectedSummary = Copy.pasta( expected );
 
-		Assertions.assertEquals(
-				Copy.pasta( expected ),
-				Copy.pasta( driver.findElements( By.cssSelector(
-						"#summary > mat-expansion-panel > mat-expansion-panel-header" ) ).stream()
-						.map( e -> (String) ((JavascriptExecutor) driver).executeScript( ""
-								+ "const clone = arguments[0].cloneNode(true);"
-								+ "clone.querySelectorAll('app-tag').forEach(tag => "
-								+ "  tag.after(document.createTextNode(' ')));"
-								+ "return clone.textContent.trim().replace(/\\s+/g, ' ');", e ) )
-						.filter( s -> !s.isEmpty() ) ) );
+		new WebDriverWait( driver, ofSeconds( 3 ) )
+				.withMessage( () -> "Expected:\n" + expectedSummary
+						+ "\nbut was:\n" + summary() )
+				.until( dr -> expectedSummary.equals( summary() ) );
 
 		return this;
+	}
+
+	private String summary() {
+		return Copy.pasta( driver.findElements( By.cssSelector(
+				"#summary > mat-expansion-panel > mat-expansion-panel-header" ) ).stream()
+				.map( e -> (String) ((JavascriptExecutor) driver).executeScript( ""
+						+ "const clone = arguments[0].cloneNode(true);"
+						+ "clone.querySelectorAll('app-tag').forEach(tag => "
+						+ "  tag.after(document.createTextNode(' ')));"
+						+ "return clone.textContent.trim().replace(/\\s+/g, ' ');", e ) )
+				.filter( s -> !s.isEmpty() ) );
 	}
 
 	/**
