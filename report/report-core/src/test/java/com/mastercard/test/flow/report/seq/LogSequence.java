@@ -106,7 +106,6 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 	 */
 	public LogSequence source( String filter ) {
 		WebElement e = driver.findElement( By.id( "source_filter_input" ) );
-		e.click();
 		e.sendKeys( filter );
 		return this;
 	}
@@ -119,7 +118,6 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 	 */
 	public LogSequence message( String filter ) {
 		WebElement e = driver.findElement( By.id( "message_filter_input" ) );
-		e.click();
 		e.sendKeys( filter );
 		return this;
 	}
