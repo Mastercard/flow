@@ -27,10 +27,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
-import com.github.difflib.DiffUtils;
-import com.github.difflib.patch.AbstractDelta;
-import com.github.difflib.patch.DeltaType;
-import com.github.difflib.patch.Patch;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.builder.Deriver;
@@ -96,13 +92,13 @@ class WriterTest {
 				"  1 x detail/823B8031950E57346DCE6FFD4BE56F54.html",
 				"  1 x index.html",
 				"  1 x res/3rdpartylicenses.txt",
-				" 32 x res/_digits_.<hash>.js",
-				"  1 x res/common.<hash>.js",
+				" 35 x res/chunk-<hash>.js",
+				"  1 x res/entry.js",
 				"  1 x res/favicon.ico",
-				"  1 x res/main.<hash>.js",
-				"  1 x res/polyfills.<hash>.js",
-				"  1 x res/runtime.<hash>.js",
-				"  1 x res/styles.<hash>.css" ),
+				"  1 x res/main-<hash>.js",
+				"  1 x res/polyfills-<hash>.js",
+				"  1 x res/styles-<hash>.css",
+				"  1 x res/system.min.js" ),
 				summariseReportFiles( dir ) );
 
 		String detail = new String( Files.readAllBytes( dir.resolve(
@@ -256,6 +252,7 @@ class WriterTest {
 				// files produced by the angular build have a content-hash suffix
 				// to avoid cached versions being used
 				.map( s -> s.replaceAll( "\\.[a-f0-9]{16}\\.(js|css)", ".<hash>.$1" ) )
+				.map( s -> s.replaceAll( "-[A-Za-z0-9_-]{8}\\.(js|css)", "-<hash>.$1" ) )
 				.map( s -> s.replaceAll( "(res/)\\d+(\\.<hash>.js)", "$1_digits_$2" ) )
 				.collect( groupingBy( s -> s ) )
 				.entrySet().stream()
@@ -282,67 +279,38 @@ class WriterTest {
 		Assertions.assertEquals( Copy.pasta(
 				"  1 x index.html",
 				"  1 x res/3rdpartylicenses.txt",
-				" 32 x res/_digits_.<hash>.js",
-				"  1 x res/common.<hash>.js",
+				" 35 x res/chunk-<hash>.js",
+				"  1 x res/entry.js",
 				"  1 x res/favicon.ico",
-				"  1 x res/main.<hash>.js",
-				"  1 x res/polyfills.<hash>.js",
-				"  1 x res/runtime.<hash>.js",
-				"  1 x res/styles.<hash>.css" ),
+				"  1 x res/main-<hash>.js",
+				"  1 x res/polyfills-<hash>.js",
+				"  1 x res/styles-<hash>.css",
+				"  1 x res/system.min.js" ),
 				summariseReportFiles( dir ) );
 	}
 
 	/**
-	 * Illustrates the effect of the edit we make to the runtime.js file so that all
-	 * javascript files can be hidden away in the <code>res</code> dir
+	 * Confirms that application javascript is extracted without brittle text
+	 * transformations.
 	 *
 	 * @throws Exception on failure
 	 */
 	@Test
-	void chunkLoadingPath() throws Exception {
-		Path dir = Paths.get( "target", "WriterTest", "chunkLoadingPath" );
+	void javascriptResourcesAreUnchanged() throws Exception {
+		Path dir = Paths.get( "target", "WriterTest", "javascriptResourcesAreUnchanged" );
 
 		Files.createDirectories( dir );
 		Writer w = writeReport( dir );
 
-		Path runtimeFile = QuietFiles.list( w.path().resolve( "res" ) )
+		Path mainFile = QuietFiles.list( w.path().resolve( "res" ) )
 				.filter( p -> p.getFileName().toString()
-						.matches( "runtime\\.[0-9a-f]+\\.js" ) )
+						.matches( "main-[A-Za-z0-9_-]+\\.js" ) )
 				.findAny()
 				.orElseThrow( () -> new IllegalStateException(
-						"Failed to find runtime.<hash>.js file in " + w.path() ) );
+						"Failed to find main-<hash>.js file in " + w.path() ) );
 
-		// The file that was written in the report
-		String written = new String( QuietFiles.readAllBytes( runtimeFile ), UTF_8 );
-		// The resource that was generated in report-ng
-		String resource = resource( runtimeFile.getFileName().toString() );
-
-		// let's examine the changes that we've made to the runtime file
-		Patch<String> patch = DiffUtils.diffInline( resource, written );
-
-		assertEquals( 1, patch.getDeltas().size(),
-				"edit count" );
-		AbstractDelta<String> delta = patch.getDeltas().get( 0 );
-		assertEquals( DeltaType.INSERT, delta.getType(),
-				"edit type" );
-		assertEquals( "[\"res/\"+]", delta.getTarget().getLines().toString(),
-				"inserted lines count" );
-
-		int context = 14;
-		String before = resource.substring(
-				delta.getSource().getPosition() - context,
-				delta.getSource().getPosition() + context )
-				.replaceAll( "\\d", "#" );
-		String after = written.substring(
-				delta.getTarget().getPosition() - context,
-				delta.getTarget().getPosition() + context
-						+ delta.getTarget().getLines().get( 0 ).length() )
-				.replaceAll( "\\d", "#" );
-
-		assertEquals( "),[])),r.u=e=>(##===e?\"commo",
-				before, "raw resource runtime snippet" );
-		assertEquals( "),[])),r.u=e=>\"res/\"+(##===e?\"commo",
-				after, "written runtime snippet" );
+		String written = new String( QuietFiles.readAllBytes( mainFile ), UTF_8 );
+		assertEquals( resource( mainFile.getFileName().toString() ), written );
 	}
 
 	private static String resource( String name ) {

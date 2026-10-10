@@ -15,12 +15,17 @@
       "prefix": "app",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:browser",
+          "builder": "@angular/build:application",
           "options": {
-            "outputPath": "dist/report",
+            "outputPath": {
+              "base": "dist/report",
+              "browser": ""
+            },
             "index": "projects/report/src/index.html",
-            "main": "projects/report/src/main.ts",
-            "polyfills": "projects/report/src/polyfills.ts",
+            "browser": "projects/report/src/main.ts",
+            "polyfills": [
+              "projects/report/src/polyfills.ts"
+            ],
             "tsConfig": "projects/report/tsconfig.app.json",
             "assets": [
               "projects/report/src/favicon.ico",
@@ -55,9 +60,7 @@
               "outputHashing": "all"
             },
             "development": {
-              "buildOptimizer": false,
               "optimization": false,
-              "vendorChunk": true,
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true
