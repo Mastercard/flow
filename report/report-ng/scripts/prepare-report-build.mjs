@@ -4,6 +4,9 @@ import { transformAsync } from '@babel/core';
 import transformDynamicImport from '@babel/plugin-transform-dynamic-import';
 import transformModulesSystemJs from '@babel/plugin-transform-modules-systemjs';
 
+// Angular's supported builder emits ESM, which browsers reject over file://.
+// Preserve separate lazy chunks while converting them to a script-loadable module
+// format for Flow's primary direct-file report workflow.
 const outputDirectory = new URL('../dist/report/', import.meta.url);
 const entries = await readdir(outputDirectory);
 const scripts = entries.filter(name => name.endsWith('.js'));
