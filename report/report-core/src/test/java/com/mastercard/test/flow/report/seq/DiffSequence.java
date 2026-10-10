@@ -17,6 +17,8 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
@@ -183,7 +185,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	 * @return <code>this</code>
 	 */
 	public DiffSequence unpair( int index ) {
-		List<WebElement> icons = driver.findElements( By.tagName( "mat-icon" ) )
+		List<WebElement> icons = activeTabPanel().findElements( By.tagName( "mat-icon" ) )
 				.stream()
 				.filter( e -> "link_off".equals( e.getAttribute( "svgIcon" ) ) )
 				.collect( toList() );
@@ -193,7 +195,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 					+ " link_off icons, found only " + icons.size() );
 		}
 
-		icons.get( index ).click();
+		clickElement( icons.get( index ).findElement( By.xpath( ".." ) ) );
 
 		return this;
 	}
@@ -226,7 +228,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	 * @return <code>this</code>
 	 */
 	public DiffSequence pair( int index ) {
-		List<WebElement> icons = driver.findElements( By.tagName( "mat-icon" ) )
+		List<WebElement> icons = activeTabPanel().findElements( By.tagName( "mat-icon" ) )
 				.stream()
 				.filter( e -> "link".equals( e.getAttribute( "svgIcon" ) ) )
 				.collect( toList() );
@@ -236,7 +238,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 					+ " link icons, found only " + icons.size() );
 		}
 
-		icons.get( index ).click();
+		clickElement( icons.get( index ).findElement( By.xpath( ".." ) ) );
 
 		return this;
 	}
@@ -266,25 +268,65 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	}
 
 	private DiffSequence drag( String id, String from, String to ) {
-		Map<String, WebElement> items = driver.findElement( By.id( id ) )
-				.findElements( By.tagName( "mat-list-item" ) ).stream()
-				.collect( toMap( e -> e.getText().replaceAll( "\\s+", " " ), e -> e ) );
+		Map<String, WebElement> items = activeTabPanel()
+				.findElement( By.tagName( "app-unpaired-flow-list" ) )
+				.findElement( By.id( id ) )
+				.findElements( By.tagName( "app-flow-nav-item" ) ).stream()
+				.collect( toMap( DiffSequence::flowItemToString, e -> e ) );
 
 		Assertions.assertTrue( items.containsKey( from ),
 				"Expected '" + from + "' in " + items.keySet() );
 		Assertions.assertTrue( items.containsKey( to ),
 				"Expected '" + to + "' in " + items.keySet() );
 
-		actions.moveToElement( items.get( from ) )
-				.clickAndHold()
-				.moveByOffset( 0, 5 ) // shrug
-				.moveToElement( items.get( to ) )
-				.release()
-				.pause( 400 )
-				.build()
-				.perform();
+		WebElement fromDragBox = items.get( from ).findElement( By.xpath( ".." ) );
+		WebElement toDragBox = items.get( to ).findElement( By.xpath( ".." ) );
+		((JavascriptExecutor) driver).executeScript(
+				"arguments[0].scrollIntoView({block: 'center'});", fromDragBox );
+		((JavascriptExecutor) driver).executeAsyncScript( ""
+				+ "const from = arguments[0], to = arguments[1], done = arguments[2];"
+				+ "const start = from.getBoundingClientRect();"
+				+ "const end = to.getBoundingClientRect();"
+				+ "const event = (type, x, y, buttons) => new MouseEvent(type, {"
+				+ "  bubbles: true, cancelable: true, view: window, button: 0, buttons,"
+				+ "  clientX: x, clientY: y"
+				+ "});"
+				+ "const startX = start.left + start.width / 2;"
+				+ "const startY = start.top + start.height / 2;"
+				+ "const endX = end.left + end.width / 2;"
+				+ "const endY = end.top + 2;"
+				+ "from.dispatchEvent(event('mousedown', startX, startY, 1));"
+				+ "requestAnimationFrame(() => {"
+				+ "  document.dispatchEvent(event('mousemove', startX, startY + 10, 1));"
+				+ "  requestAnimationFrame(() => {"
+				+ "    document.dispatchEvent(event('mousemove', endX, endY, 1));"
+				+ "    requestAnimationFrame(() => {"
+				+ "      document.dispatchEvent(event('mouseup', endX, endY, 0));"
+				+ "      setTimeout(done, 250);"
+				+ "    });"
+				+ "  });"
+				+ "});", fromDragBox, toDragBox );
+		new WebDriverWait( driver, ofSeconds( 2 ) )
+				.until( dr -> {
+					List<String> order = dragOrder( id );
+					return order.indexOf( from ) < order.indexOf( to );
+				} );
 
 		return this;
+	}
+
+	@SuppressWarnings("unchecked")
+	private List<String> dragOrder( String id ) {
+		return (List<String>) ((JavascriptExecutor) driver).executeScript( ""
+				+ "const tab = document.querySelector('[role=tab][aria-selected=true]');"
+				+ "const panel = document.getElementById(tab.getAttribute('aria-controls'));"
+				+ "const list = panel.querySelector('app-unpaired-flow-list #' + arguments[0]);"
+				+ "return Array.from(list.querySelectorAll('app-flow-nav-item')).map(item => {"
+				+ "  const description = item.querySelector('.description').textContent.trim();"
+				+ "  const tags = Array.from(item.querySelectorAll('app-tag'))"
+				+ "    .map(tag => tag.textContent.trim()).filter(Boolean).join(' ');"
+				+ "  return tags ? description + ' ' + tags : description;"
+				+ "});", id );
 	}
 
 	private DiffSequence checkPairList( String parentTag, String... lines ) {
@@ -293,14 +335,25 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	}
 
 	private DiffSequence checkPairList( WebElement parent, String... lines ) {
-		String[] fromFlows = parent.findElement( By.id( "left" ) )
-				.findElements( By.tagName( "mat-list-item" ) ).stream()
-				.map( e -> e.getText().replaceAll( "\\s+", " " ) )
-				.toArray( String[]::new );
-		String[] toFlows = parent.findElement( By.id( "right" ) )
-				.findElements( By.tagName( "mat-list-item" ) ).stream()
-				.map( e -> e.getText().replaceAll( "\\s+", " " ) )
-				.toArray( String[]::new );
+		String[][] flows = new WebDriverWait( driver, ofSeconds( 2 ) )
+				.until( dr -> {
+					try {
+						String[] from = parent.findElement( By.id( "left" ) )
+								.findElements( By.tagName( "app-flow-nav-item" ) ).stream()
+								.map( DiffSequence::flowItemToString )
+								.toArray( String[]::new );
+						String[] to = parent.findElement( By.id( "right" ) )
+								.findElements( By.tagName( "app-flow-nav-item" ) ).stream()
+								.map( DiffSequence::flowItemToString )
+								.toArray( String[]::new );
+						return new String[][] { from, to };
+					}
+					catch( StaleElementReferenceException e ) {
+						return null;
+					}
+				} );
+		String[] fromFlows = flows[0];
+		String[] toFlows = flows[1];
 		int w = Stream.of( fromFlows, toFlows )
 				.flatMap( Stream::of )
 				.mapToInt( String::length )
@@ -317,6 +370,16 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 				Copy.pasta( lines ),
 				Copy.pasta( sb.toString() ) );
 		return this;
+	}
+
+	private static String flowItemToString( WebElement item ) {
+		String description = item.findElement( By.className( "description" ) )
+				.getAttribute( "textContent" ).trim();
+		String tags = item.findElements( By.tagName( "app-tag" ) ).stream()
+				.map( tag -> tag.getAttribute( "textContent" ).trim() )
+				.filter( tag -> !tag.isEmpty() )
+				.collect( joining( " " ) );
+		return tags.isEmpty() ? description : description + " " + tags;
 	}
 
 	/**
@@ -346,9 +409,11 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 
 	private static String flowSelectItemToString( WebElement apse ) {
 		StringBuilder sb = new StringBuilder();
-		sb.append( apse.findElement( By.className( "description" ) ).getText() );
+		sb.append( apse.findElement( By.className( "description" ) )
+				.getAttribute( "textContent" ).trim() );
 		apse.findElements( By.tagName( "app-tag" ) )
-				.forEach( t -> sb.append( " " ).append( t.getText() ) );
+				.forEach( t -> sb.append( " " )
+						.append( t.getAttribute( "textContent" ).trim() ) );
 		return sb.toString();
 	}
 
@@ -360,8 +425,9 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	 */
 	public DiffSequence change( String name ) {
 		trace( "change", name );
-		List<WebElement> items = driver.findElements( By.tagName( "app-pair-select-item" ) );
-		items.stream()
+		List<WebElement> items = activeTabPanel()
+				.findElements( By.tagName( "app-pair-select-item" ) );
+		WebElement option = items.stream()
 				.filter( e -> name.equals( flowSelectItemToString( e ) ) )
 				.findFirst()
 				.orElseThrow( () -> new IllegalStateException(
@@ -369,7 +435,8 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 								+ "' in:\n  " + items.stream()
 										.map( DiffSequence::flowSelectItemToString )
 										.collect( joining( "\n  " ) ) ) )
-				.click();
+				.findElement( By.tagName( "mat-list-option" ) );
+		clickElement( option );
 		return this;
 	}
 
@@ -415,7 +482,8 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 		WebElement diffElement = driver.findElement( By.tagName( "app-text-diff" ) );
 		diffElement.findElements( By.tagName( "tr" ) )
 				.forEach( row -> tableCells.add( row.findElements( By.tagName( "td" ) ).stream()
-						.map( WebElement::getText )
+						.map( cell -> cell.getAttribute( "textContent" )
+								.replace( '\u00A0', ' ' ) )
 						.collect( toList() ) ) );
 
 		int[] widths = new int[tableCells.stream()
@@ -482,10 +550,13 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 
 		Assertions.assertEquals(
 				Copy.pasta( expected ),
-				Copy.pasta( driver
-						.findElement( By.id( "summary" ) )
-						.findElements( By.tagName( "mat-expansion-panel-header" ) ).stream()
-						.map( e -> e.getText().replace( "\n", " " ) )
+				Copy.pasta( driver.findElements( By.cssSelector(
+						"#summary > mat-expansion-panel > mat-expansion-panel-header" ) ).stream()
+						.map( e -> (String) ((JavascriptExecutor) driver).executeScript( ""
+								+ "const clone = arguments[0].cloneNode(true);"
+								+ "clone.querySelectorAll('app-tag').forEach(tag => "
+								+ "  tag.after(document.createTextNode(' ')));"
+								+ "return clone.textContent.trim().replace(/\\s+/g, ' ');", e ) )
 						.filter( s -> !s.isEmpty() ) ) );
 
 		return this;
@@ -499,9 +570,8 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	 */
 	public DiffSequence analysisDiffs( String... expected ) {
 		trace( "changeAnalysis", (Object[]) expected );
-		WebElement changed = driver.findElement( By.id( "changed" ) );
-		changed.findElement( By.tagName( "mat-expansion-panel-header" ) )
-				.click();
+		WebElement changed = visibleElement( By.id( "changed" ) );
+		clickElement( changed.findElement( By.tagName( "mat-expansion-panel-header" ) ) );
 
 		// wait for expansion to finish
 		new WebDriverWait( driver, ofSeconds( 2 ) )
@@ -520,6 +590,33 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 		return this;
 	}
 
+	private WebElement visibleElement( By by ) {
+		List<WebElement> elements = activeTabPanel().findElements( by );
+		if( !elements.isEmpty() ) {
+			return elements.get( 0 );
+		}
+		return driver.findElements( by ).stream()
+				.filter( element -> element.isDisplayed()
+						|| element.findElements( By.xpath( "./*" ) ).stream()
+								.anyMatch( WebElement::isDisplayed ) )
+				.findFirst()
+				.orElseThrow( () -> new IllegalStateException( "Failed to find visible element " + by ) );
+	}
+
+	private WebElement activeTabPanel() {
+		WebElement selectedTab = driver.findElement(
+				By.cssSelector( "[role='tab'][aria-selected='true']" ) );
+		return driver.findElement( By.id( selectedTab.getAttribute( "aria-controls" ) ) );
+	}
+
+	private void clickElement( WebElement element ) {
+		((JavascriptExecutor) driver).executeScript(
+				"arguments[0].scrollIntoView({block: 'center'});", element );
+		new WebDriverWait( driver, ofSeconds( 2 ) )
+				.until( elementToBeClickable( element ) )
+				.click();
+	}
+
 	/**
 	 * Clicks on an analysis
 	 *
@@ -528,7 +625,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	 */
 	public DiffSequence expandAnalysis( String diff ) {
 		trace( "analysisFlows", "diff" );
-		WebElement changed = driver.findElement( By.id( "changed" ) );
+		WebElement changed = visibleElement( By.id( "changed" ) );
 		WebElement changes = changed.findElement( By.id( "changes" ) );
 
 		WebElement diffPanel = changes.findElements( By.tagName(
@@ -556,7 +653,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	 */
 	public DiffSequence hasSubjectFlows( String... expected ) {
 		trace( "hasSubjectFlows", (Object[]) expected );
-		WebElement changed = driver.findElement( By.id( "changed" ) );
+		WebElement changed = visibleElement( By.id( "changed" ) );
 		WebElement changes = changed.findElement( By.id( "changes" ) );
 		checkPairList( changes.findElement( By.className( "mat-expansion-panel-content" ) ),
 				expected );

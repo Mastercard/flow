@@ -65,7 +65,7 @@
         <app-context-view [context]="flow.context"></app-context-view>
     </mat-tab>
 
-    <mat-tab *ngIf="flow.residue?.length">
+    <mat-tab *ngIf="flow.residue.length">
         <ng-template mat-tab-label>
             Residue
             <mat-icon *ngIf="rsdPassed" class="pass" svgIcon="check_circle_outline"></mat-icon>

@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -61,16 +62,7 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 	public LogSequence levels( String... levels ) {
 		trace( "levels", (Object[]) levels );
 
-		List<WebElement> fields = driver.findElements( By.tagName( "mat-form-field" ) );
-		WebElement select = fields.stream()
-				.filter( e -> e.getText().endsWith( "Levels" ) )
-				.findFirst()
-				.orElse( null );
-
-		Assertions.assertNotNull( select, () -> "Failed to find levels select in form fields:\n  "
-				+ fields.stream().map( WebElement::getText ).collect( joining( "\n  " ) ) );
-
-		select.click();
+		driver.findElement( By.id( "level_select" ) ).click();
 
 		// wait for the popup
 		WebDriverWait wait = new WebDriverWait( driver, ofSeconds( 2 ) );
@@ -138,8 +130,17 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 		trace( "hasMessages", (Object[]) lines );
 		Assertions.assertEquals(
 				Copy.pasta( lines ),
-				Copy.pasta( driver.findElements( By.className( "mat-row" ) ).stream()
-						.map( r -> r.getText().replace( '\n', ' ' ) ) ) );
+				Copy.pasta( driver.findElements( By.cssSelector( "tr[mat-row]" ) ).stream()
+						.map( this::rowText ) ) );
 		return this;
+	}
+
+	private String rowText( WebElement row ) {
+		return (String) ((JavascriptExecutor) driver).executeScript( ""
+				+ "const clone = arguments[0].cloneNode(true);"
+				+ "clone.querySelectorAll('*').forEach(element => "
+				+ "  element.after(document.createTextNode(' ')));"
+				+ "return clone.textContent.replace(/\\u00a0/g, ' ')"
+				+ "  .replace(/\\s+/g, ' ').trim();", row );
 	}
 }

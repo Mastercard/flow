@@ -237,8 +237,8 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 		driver.findElement( By.id( "menu_trigger" ) ).click();
 
 		Function<WebDriver, Stream<WebElement>> menuItems = dr -> dr
-				.findElement( By.className( "mat-menu-panel" ) )
-				.findElements( By.className( "mat-menu-item" ) )
+				.findElement( By.cssSelector( "[role='menu']" ) )
+				.findElements( By.cssSelector( "[role='menuitem']" ) )
 				.stream();
 
 		new WebDriverWait( driver, Duration.ofSeconds( 1 ) )
@@ -266,16 +266,20 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 	 */
 	public <T extends AbstractSequence<T>> T tab( String name,
 			Function<AbstractSequence<S>, T> seqConstructor ) {
-		List<WebElement> tabs = driver.findElements( By.className( "mat-tab-label-content" ) );
-		tabs.stream()
-				.filter( e -> e.getText().startsWith( name ) )
-				.findFirst()
-				.orElseThrow( () -> new IllegalStateException(
-						"Failed to find '" + name + "' tab in:\n  "
-								+ tabs.stream()
-										.map( WebElement::getText )
-										.collect( joining( "\n  " ) ) ) )
-				.click();
+		Function<WebDriver, List<WebElement>> tabs = dr -> dr.findElements(
+				By.cssSelector( "[role='tab']" ) );
+		WebElement tab = new WebDriverWait( driver, Duration.ofSeconds( 3 ) )
+				.withMessage( () -> "Failed to find '" + name + "' tab in:\n  "
+						+ tabs.apply( driver ).stream()
+								.map( WebElement::getText )
+								.collect( joining( "\n  " ) )
+						+ "\nURL: " + driver.getCurrentUrl()
+						+ "\nBody: " + driver.findElement( By.tagName( "body" ) ).getText() )
+				.until( dr -> tabs.apply( dr ).stream()
+						.filter( e -> e.getText().startsWith( name ) )
+						.findFirst()
+						.orElse( null ) );
+		tab.click();
 		waitForTabTransition();
 		return seqConstructor.apply( this );
 	}
@@ -297,12 +301,12 @@ public abstract class AbstractSequence<S extends AbstractSequence<S>> {
 	protected void waitForTabTransition() {
 		// wait for the tab transition to complete
 		new WebDriverWait( driver, Duration.ofSeconds( 3 ) )
-				.withMessage( () -> "Failed to find a relaxed tab body in:\n  " + driver
-						.findElements( By.className( "mat-tab-body-content" ) ).stream()
-						.map( e -> e.getAttribute( "style" ) )
+				.withMessage( () -> "Failed to find a visible tab panel in:\n  " + driver
+						.findElements( By.cssSelector( "[role='tabpanel']" ) ).stream()
+						.map( e -> e.getAttribute( "aria-hidden" ) )
 						.collect( joining( "\n  " ) ) )
-				.until( dr -> dr.findElements( By.className( "mat-tab-body-content" ) ).stream()
-						.anyMatch( e -> "transform: none;".equals( e.getAttribute( "style" ) ) ) );
+				.until( dr -> dr.findElements( By.cssSelector( "[role='tabpanel']" ) ).stream()
+						.anyMatch( WebElement::isDisplayed ) );
 	}
 
 	/**

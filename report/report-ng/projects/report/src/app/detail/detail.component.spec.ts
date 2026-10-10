@@ -12,6 +12,8 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { SequenceData } from '../flow-sequence/flow-sequence.component';
 import { DiffDisplay } from '../text-diff/text-diff.component';
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
+import { MatTabGroupHarness } from '@angular/material/tabs/testing';
 
 describe('DetailComponent', () => {
   let component: DetailComponent;
@@ -70,35 +72,35 @@ describe('DetailComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should have one tab with no logs, context or residue', () => {
-    expect(testTabs(component, fixture, {
+  it('should have one tab with no logs, context or residue', async () => {
+    expect(await testTabs(component, fixture, {
     }))
       .toEqual(["Flow"]);
   });
 
-  it('should have two tabs with logs', () => {
-    expect(testTabs(component, fixture, {
+  it('should have two tabs with logs', async () => {
+    expect(await testTabs(component, fixture, {
       "logs": [{}]
     }))
       .toEqual(["Flow", "Logs"]);
   });
 
-  it('should have two tabs with a context', () => {
-    expect(testTabs(component, fixture, {
+  it('should have two tabs with a context', async () => {
+    expect(await testTabs(component, fixture, {
       "ctx": { "foo": "bar" }
     }))
       .toEqual(["Flow", "Context"]);
   });
 
-  it('should have two tabs with a residue', () => {
-    expect(testTabs(component, fixture, {
+  it('should have two tabs with a residue', async () => {
+    expect(await testTabs(component, fixture, {
       "rsd": [{ "foo": "bar" }]
     }))
       .toEqual(["Flow", "Residue"]);
   });
 
-  it('should have all tabs', () => {
-    expect(testTabs(component, fixture, {
+  it('should have all tabs', async () => {
+    expect(await testTabs(component, fixture, {
       "logs": [{}],
       "ctx": { "foo": "bar" },
       "rsd": [{ "foo": "bar" }]
@@ -107,7 +109,7 @@ describe('DetailComponent', () => {
   });
 });
 
-function testTabs(component: DetailComponent, fixture: ComponentFixture<DetailComponent>, args: any): string[] {
+async function testTabs(component: DetailComponent, fixture: ComponentFixture<DetailComponent>, args: any): Promise<string[]> {
   if (args.logs != undefined) {
     component.flow.logs = args.logs;
   }
@@ -120,9 +122,10 @@ function testTabs(component: DetailComponent, fixture: ComponentFixture<DetailCo
 
   fixture.detectChanges();
 
-  let nl: NodeList = fixture.nativeElement
-    .querySelectorAll("div.mat-tab-label-content");
-  return Array.from(nl).map(e => e.textContent?.trim() || "???");
+  const loader = TestbedHarnessEnvironment.loader(fixture);
+  const tabGroup = await loader.getHarness(MatTabGroupHarness);
+  const tabs = await tabGroup.getTabs();
+  return Promise.all(tabs.map(tab => tab.getLabel()));
 }
 
 @Component({
