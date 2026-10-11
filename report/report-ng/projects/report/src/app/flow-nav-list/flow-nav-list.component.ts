@@ -22,4 +22,8 @@ export class FlowNavListComponent implements OnInit {
   drop(event: CdkDragDrop<string[]>) {
     moveItemInArray(this.entries, event.previousIndex, event.currentIndex);
   }
+
+  trackByDetail(index: number, entry: Entry): string {
+    return entry.detail;
+  }
 }

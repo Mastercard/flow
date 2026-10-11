@@ -97,6 +97,7 @@ abstract class AbstractIndexTest {
 				"child       [FAIL, abc, def, ghi]",
 				"dependency  [SKIP, abc, ghi, jkl, mno]",
 				"dependent   [ERROR, mno, pqr, stu]" )
+				.hasNoPaginator()
 				.expandTags()
 				.hasTags( "11 tags on 4 flows _PASS_ 25.0% _FAIL_ 25.0% _SKIP_ 25.0% _ERROR_ 25.0%",
 						"abc 75.0%",

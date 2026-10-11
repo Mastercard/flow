@@ -5,6 +5,14 @@ import { tap } from 'rxjs/operators';
 import { IndexDataService } from './index-data.service';
 import { Entry, Flow, Index, isFlow, isIndex } from './types';
 
+export interface FlowLoadStatus {
+  total: number;
+  settled: number;
+  failed: number;
+  complete: boolean;
+  progress: number;
+}
+
 /**
  * Handles loading model data
  */
@@ -22,6 +30,8 @@ export class ModelDiffDataService {
 
   private indexListeners: Map<string, ((label: string) => void)[]> = new Map();
   private flowListeners: Map<string, ((label: string, entry: Entry, flow: Flow) => void)[]> = new Map();
+  private flowLoadStatuses: Map<string, FlowLoadStatus> = new Map();
+  private flowLoadListeners: Map<string, ((label: string, status: FlowLoadStatus) => void)[]> = new Map();
 
   constructor(
     private thisIndex: IndexDataService,
@@ -32,8 +42,9 @@ export class ModelDiffDataService {
    * Call this when a new path is entered by the user
    * @param label A label for the index (probably either 'from' or 'to')
    * @param path The path itself
+  * @param concurrency Maximum active Detail requests; unlimited by default
    */
-  path(label: string, path: string): void {
+  path(label: string, path: string, concurrency: number = Number.POSITIVE_INFINITY): void {
     this.indices.delete(label);
     this.flows.delete(label);
     // let the listeners know that a new index is on the way
@@ -47,7 +58,7 @@ export class ModelDiffDataService {
           status: ""
         });
       this.notifyIndexListeners(label);
-      this.loadFlows(label);
+      this.loadFlows(label, concurrency);
     }
     else {
       this.indexSubs.get(label)?.unsubscribe();
@@ -100,7 +111,7 @@ export class ModelDiffDataService {
           sub.unsubscribe();
           this.indexSubs.set(label, sub);
           this.notifyIndexListeners(label);
-          this.loadFlows(label);
+          this.loadFlows(label, concurrency);
         });
       this.indexSubs.set(label, sub);
     }
@@ -135,12 +146,13 @@ export class ModelDiffDataService {
     }
   }
 
-  private loadFlows(label: string): void {
+  private loadFlows(label: string, concurrency: number): void {
     // cancel existing loads
     let loads: Set<Subscription> = this.flowSubs.get(label) ?? new Set();
     loads.forEach(s => s.unsubscribe());
+    loads.clear();
 
-    let indexData = this.index(label);
+    const indexData = this.index(label);
     if (indexData == null || indexData.index == null) {
       // nothing to get yet
       return;
@@ -149,50 +161,105 @@ export class ModelDiffDataService {
     loads = new Set();
     this.flowSubs.set(label, loads);
 
-    let flowData: Map<string, Flow> = new Map();
+    const flowData: Map<string, Flow> = new Map();
     this.flows.set(label, flowData);
-    indexData.index.entries.forEach((entry, idx) => {
-      let path = indexData!.path.replace("index.html", "");
-      if (path.length !== 0) {
-        path += "/";
-      }
-      path += "detail/" + entry.detail + ".html";
+    this.flowLoadStatuses.set(label, loadStatus(indexData.index.entries.length, 0, 0));
+    this.notifyFlowLoadListeners(label);
+    const entries = [...indexData.index.entries];
+    const limit = Number.isFinite(concurrency)
+      ? Math.max(1, Math.floor(concurrency))
+      : Math.max(1, entries.length);
+    let active = 0;
 
-      const sub = this.http.get(path, { responseType: "text" })
-        .pipe(tap(
-          body => console.log("fetched " + body.length + " bytes of flow content from " + path),
-          error => console.error("Failed to get " + path, error)
-        ))
-        .subscribe(page => {
-          // extract the json content
-          let s = page.indexOf(this.start);
-          let e = page.indexOf(this.end, s);
-          if (s != undefined && e != undefined) {
-            // parse it
-            let json = page.substring(s + this.start.length, e);
-            let data = JSON.parse(json);
-            if (isFlow(data)) {
-              if (indexData?.path === this.index(label)?.path) {
-                // save it
-                flowData.set(entry.detail, data);
-                this.notifyFlowListeners(label, entry, data);
-              }
-              else {
-                // it's an old request from a previous index. Ignore it.
-              }
-            }
-            else {
-              console.error("This isn't a flow at " + path, data);
-            }
-          }
-          else {
-            console.error("No json content found at " + path);
-          }
+    const loadNext = (): void => {
+      while (active < limit && entries.length > 0) {
+        const entry = entries.shift()!;
+        active++;
+        let path = indexData.path.replace("index.html", "");
+        if (path.length !== 0) {
+          path += "/";
+        }
+        path += "detail/" + entry.detail + ".html";
+
+        let sub: Subscription;
+        const settled = (failed: boolean): void => {
+          this.settleFlow(label, indexData, failed);
           loads.delete(sub);
-          sub.unsubscribe();
-        });
-      loads.add(sub);
-    });
+          active--;
+          loadNext();
+        };
+        sub = this.http.get(path, { responseType: "text" })
+          .pipe(tap(
+            body => console.log("fetched " + body.length + " bytes of flow content from " + path),
+            error => console.error("Failed to get " + path, error)
+          ))
+          .subscribe({
+            next: page => {
+              const flow = this.parseFlowPage(path, page);
+              const current = indexData === this.index(label);
+              if (flow !== null && current) {
+                flowData.set(entry.detail, flow);
+                this.notifyFlowListeners(label, entry, flow);
+              }
+              settled(flow === null || !current);
+              sub.unsubscribe();
+            },
+            error: () => {
+              settled(true);
+            },
+          });
+        loads.add(sub);
+      }
+    };
+    loadNext();
+  }
+
+  private parseFlowPage(path: string, page: string): Flow | null {
+    const start = page.indexOf(this.start);
+    const end = page.indexOf(this.end, start);
+    if (start < 0 || end < 0) {
+      console.error("No json content found at " + path);
+      return null;
+    }
+
+    const json = page.substring(start + this.start.length, end);
+    try {
+      const data = JSON.parse(json);
+      if (isFlow(data)) {
+        return data;
+      }
+      console.error("This isn't a flow at " + path, data);
+    }
+    catch (error) {
+      console.error("Failed to parse flow content from " + path, error);
+    }
+    return null;
+  }
+
+  private settleFlow(
+    label: string,
+    indexData: { path: string, index: Index | null, status: string },
+    failed: boolean): void {
+    if (indexData !== this.index(label)) {
+      return;
+    }
+    const current = this.flowLoadStatuses.get(label);
+    if (current === undefined || current.complete) {
+      return;
+    }
+    this.flowLoadStatuses.set(label, loadStatus(
+      current.total,
+      current.settled + 1,
+      current.failed + (failed ? 1 : 0),
+    ));
+    this.notifyFlowLoadListeners(label);
+  }
+
+  private notifyFlowLoadListeners(label: string): void {
+    const status = this.flowLoadStatuses.get(label);
+    if (status !== undefined) {
+      (this.flowLoadListeners.get(label) ?? []).forEach(listener => listener(label, status));
+    }
   }
 
   private notifyFlowListeners(label: string, entry: Entry, flow: Flow): void {
@@ -231,7 +298,30 @@ export class ModelDiffDataService {
       });
   }
 
+  onFlowLoadStatus(
+    label: string,
+    callback: (label: string, status: FlowLoadStatus) => void): void {
+    let listeners = this.flowLoadListeners.get(label) ?? [];
+    listeners.push(callback);
+    this.flowLoadListeners.set(label, listeners);
+
+    const status = this.flowLoadStatuses.get(label);
+    if (status !== undefined) {
+      callback(label, status);
+    }
+  }
+
   flowFor(label: string, entry: Entry): Flow | null {
     return this.flows.get(label)?.get(entry.detail) ?? null;
   }
+}
+
+function loadStatus(total: number, settled: number, failed: number): FlowLoadStatus {
+  return {
+    total,
+    settled,
+    failed,
+    complete: settled === total,
+    progress: total === 0 ? 100 : 100 * settled / total,
+  };
 }

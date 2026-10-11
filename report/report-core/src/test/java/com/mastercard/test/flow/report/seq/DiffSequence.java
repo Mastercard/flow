@@ -291,6 +291,8 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	}
 
 	private DiffSequence drag( String id, String from, String to ) {
+		List<String> initialOrder = dragOrder( id );
+		boolean movingUp = initialOrder.indexOf( from ) > initialOrder.indexOf( to );
 		Map<String, WebElement> items = activeTabPanel()
 				.findElement( By.tagName( "app-unpaired-flow-list" ) )
 				.findElement( By.id( id ) )
@@ -332,7 +334,9 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 		new WebDriverWait( driver, ofSeconds( 2 ) )
 				.until( dr -> {
 					List<String> order = dragOrder( id );
-					return order.indexOf( from ) < order.indexOf( to );
+					return movingUp
+							? order.indexOf( from ) < order.indexOf( to )
+							: order.indexOf( from ) > order.indexOf( to );
 				} );
 
 		return this;
