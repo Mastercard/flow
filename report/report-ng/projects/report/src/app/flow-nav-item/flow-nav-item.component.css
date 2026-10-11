@@ -3,8 +3,11 @@
 }
 
 .flow-nav-row {
-  height: auto;
+  column-gap: 1rem;
+  height: auto !important;
   min-height: 48px;
+  padding-bottom: 0.25rem;
+  padding-top: 0.25rem;
 }
 
 .flow-link {
@@ -19,6 +22,7 @@
 }
 
 .description {
+  flex: 1 1 auto;
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -26,8 +30,18 @@
 .tag-region {
   align-items: center;
   display: flex;
+  flex: 0 1 45%;
   flex-wrap: wrap;
   justify-content: flex-end;
+  max-width: 45%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.tag-region app-tag {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 mat-icon {

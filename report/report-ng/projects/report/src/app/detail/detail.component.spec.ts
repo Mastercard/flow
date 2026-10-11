@@ -128,6 +128,21 @@ describe('DetailComponent', () => {
     expect(getComputedStyle(summary).borderBottomStyle).toBe('solid');
     expect(getComputedStyle(tabs).borderTopStyle).toBe('solid');
   });
+
+  it('wraps long summary descriptions and tags within the viewport', () => {
+    component.flow.description = 'A very long flow description '.repeat(20);
+    component.flow.tags = Array.from({ length: 12 }, (_, index) => `long-tag-${index}`);
+    fixture.detectChanges();
+
+    const summary: HTMLElement = fixture.nativeElement.querySelector('.flow-summary');
+    const description: HTMLElement = summary.querySelector('.description')!;
+    const summaryStyle = getComputedStyle(summary);
+
+    expect(summaryStyle.flexWrap).toBe('wrap');
+    expect(summaryStyle.height).not.toBe('64px');
+    expect(getComputedStyle(description).whiteSpace).toBe('normal');
+    expect(summary.scrollWidth).toBeLessThanOrEqual(summary.clientWidth);
+  });
 });
 
 async function testTabs(component: DetailComponent, fixture: ComponentFixture<DetailComponent>, args: any): Promise<string[]> {

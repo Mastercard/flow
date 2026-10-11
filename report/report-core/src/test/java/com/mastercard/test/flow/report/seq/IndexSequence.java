@@ -216,6 +216,8 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 		Assertions.assertTrue(
 				link.getRect().getX() + link.getRect().getWidth() <= tags.getRect().getX(),
 				"tag region should trail the link" );
+		Assertions.assertTrue( tags.getRect().getWidth() <= item.getRect().getWidth() * 0.45,
+				"tag region should leave room for the description" );
 
 		String longDescription = "A deliberately long flow description that must wrap without losing any text";
 		int originalHeight = item.getRect().getHeight();
@@ -224,6 +226,23 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 				item, description, longDescription );
 		assertEquals( longDescription, description.getAttribute( "textContent" ), "description" );
 		Assertions.assertTrue( item.getRect().getHeight() > originalHeight, "wrapped row height" );
+
+		WebElement nextItem = driver.findElements( By.tagName( "app-flow-nav-item" ) ).get( 1 )
+				.findElement( By.tagName( "mat-list-item" ) );
+		((JavascriptExecutor) driver).executeScript(
+				"for(let i=0;i<12;i++){"
+						+ "const tag=arguments[0].firstElementChild.cloneNode(true);"
+						+ "tag.textContent='very-long-domain-tag-'+i;arguments[0].appendChild(tag)}",
+				tags );
+		double contentBottom = ((Number) ((JavascriptExecutor) driver).executeScript(
+				"return Math.max(...[arguments[0],...arguments[1].children]"
+						+ ".map(element=>element.getBoundingClientRect().bottom))",
+				link, tags )).doubleValue();
+		Assertions.assertTrue( item.getRect().getY() + item.getRect().getHeight() >= contentBottom,
+				"row should contain wrapped tags" );
+		Assertions.assertTrue(
+				item.getRect().getY() + item.getRect().getHeight() <= nextItem.getRect().getY(),
+				"adjacent rows should not overlap" );
 
 		return self();
 	}

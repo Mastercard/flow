@@ -33,8 +33,29 @@
 }
 
 .flow-summary {
+    align-content: center;
     background-color: #f5f5f5;
     border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+    column-gap: 0.5ch;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 64px;
+    overflow-wrap: anywhere;
+    padding-bottom: 0.75rem;
+    padding-top: 0.75rem;
+    row-gap: 0.25rem;
+    white-space: normal;
+}
+
+.flow-summary .description {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.flow-summary .tag {
+    overflow-wrap: anywhere;
+    white-space: normal;
 }
 
 .detail-tabs {
