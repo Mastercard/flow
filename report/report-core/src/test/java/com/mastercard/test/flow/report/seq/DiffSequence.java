@@ -428,18 +428,8 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 		Assertions.assertEquals(
 				Copy.pasta( expected ),
 				Copy.pasta( driver.findElements( By.tagName( "app-pair-select-item" ) ).stream()
-						.map( DiffSequence::flowSelectItemToString ) ) );
+						.map( DiffSequence::flowItemToString ) ) );
 		return this;
-	}
-
-	private static String flowSelectItemToString( WebElement apse ) {
-		StringBuilder sb = new StringBuilder();
-		sb.append( apse.findElement( By.className( "description" ) )
-				.getAttribute( "textContent" ).trim() );
-		apse.findElements( By.tagName( "app-tag" ) )
-				.forEach( t -> sb.append( " " )
-						.append( t.getAttribute( "textContent" ).trim() ) );
-		return sb.toString();
 	}
 
 	/**
@@ -453,12 +443,12 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 		List<WebElement> items = activeTabPanel()
 				.findElements( By.tagName( "app-pair-select-item" ) );
 		WebElement option = items.stream()
-				.filter( e -> name.equals( flowSelectItemToString( e ) ) )
+				.filter( e -> name.equals( flowItemToString( e ) ) )
 				.findFirst()
 				.orElseThrow( () -> new IllegalStateException(
 						"Failed to find expected change item '" + name
 								+ "' in:\n  " + items.stream()
-										.map( DiffSequence::flowSelectItemToString )
+										.map( DiffSequence::flowItemToString )
 										.collect( joining( "\n  " ) ) ) )
 				.findElement( By.tagName( "mat-list-option" ) );
 		clickElement( option );

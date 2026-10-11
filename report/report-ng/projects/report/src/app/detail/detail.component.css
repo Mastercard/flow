@@ -60,8 +60,6 @@
     flex: 1 1 60%;
     max-width: 65%;
     min-width: 0;
-    overflow-wrap: anywhere;
-    white-space: normal;
 }
 
 .flow-summary .description:only-child {
@@ -76,14 +74,11 @@
     justify-content: flex-end;
     max-width: 35%;
     min-width: 0;
-    overflow-wrap: anywhere;
     row-gap: 0.25rem;
-    white-space: normal;
 }
 
 .summary-tags .tag {
     max-width: 100%;
-    overflow-wrap: anywhere;
 }
 
 .detail-tabs {
