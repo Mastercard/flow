@@ -32,7 +32,7 @@
     </a>
 </mat-nav-list>
 
-<mat-toolbar>
+<mat-toolbar class="flow-summary">
     <span class="description">{{flow.description}}</span>
     <span class="tag" *ngFor="let tag of flow.tags">{{tag}}</span>
 </mat-toolbar>
@@ -42,7 +42,7 @@
 </div>
 <div id="trace">{{flow.trace}}</div>
 
-<mat-tab-group dynamicHeight [mat-stretch-tabs]="false" [(selectedIndex)]=" tabIndex"
+<mat-tab-group class="detail-tabs" dynamicHeight [mat-stretch-tabs]="false" [(selectedIndex)]=" tabIndex"
     (selectedTabChange)="onTabChange()">
     <mat-tab>
         <ng-template mat-tab-label>

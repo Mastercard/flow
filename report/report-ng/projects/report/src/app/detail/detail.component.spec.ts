@@ -115,6 +115,19 @@ describe('DetailComponent', () => {
     const tabGroup = fixture.debugElement.query(By.directive(MatTabGroup));
     expect((tabGroup.componentInstance as MatTabGroup).stretchTabs).toBeFalse();
   });
+
+  it('separates navigation, flow summary and detail tabs', () => {
+    const navigation: HTMLElement = fixture.nativeElement.querySelector('.list_horizontal');
+    const summary: HTMLElement = fixture.nativeElement.querySelector('.flow-summary');
+    const tabs: HTMLElement = fixture.nativeElement.querySelector('.detail-tabs');
+    const navigationItems = Array.from(navigation.children, item => item as HTMLElement);
+
+    expect(getComputedStyle(navigation).borderBottomStyle).toBe('solid');
+    navigationItems.forEach(item => expect(getComputedStyle(item).borderRightStyle).toBe('solid'));
+    expect(getComputedStyle(summary).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(summary).borderBottomStyle).toBe('solid');
+    expect(getComputedStyle(tabs).borderTopStyle).toBe('solid');
+  });
 });
 
 async function testTabs(component: DetailComponent, fixture: ComponentFixture<DetailComponent>, args: any): Promise<string[]> {
