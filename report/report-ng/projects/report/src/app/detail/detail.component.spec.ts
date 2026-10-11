@@ -14,6 +14,8 @@ import { SequenceData } from '../flow-sequence/flow-sequence.component';
 import { DiffDisplay } from '../text-diff/text-diff.component';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { MatTabGroupHarness } from '@angular/material/tabs/testing';
+import { By } from '@angular/platform-browser';
+import { MatTabGroup } from '@angular/material/tabs';
 
 describe('DetailComponent', () => {
   let component: DetailComponent;
@@ -107,6 +109,11 @@ describe('DetailComponent', () => {
       "rsd": [{ "foo": "bar" }]
     }))
       .toEqual(["Flow", "Context", "Residue", "Logs"]);
+  });
+
+  it('keeps detail tabs at their natural width', () => {
+    const tabGroup = fixture.debugElement.query(By.directive(MatTabGroup));
+    expect((tabGroup.componentInstance as MatTabGroup).stretchTabs).toBeFalse();
   });
 });
 

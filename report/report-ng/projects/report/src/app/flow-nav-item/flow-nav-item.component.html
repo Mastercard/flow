@@ -1,15 +1,15 @@
-<mat-list-item>
-  <span matListItemTitle>
-    <a href="{{basePath}}detail/{{entry.detail}}.html" class="{{lineClass}}">
-      <mat-icon *ngIf="isPass" svgIcon="check_circle_outline"></mat-icon>
-      <mat-icon *ngIf="isFail" svgIcon="error_outline"></mat-icon>
-      <mat-icon *ngIf="isSkip" svgIcon="help_outline"></mat-icon>
-      <mat-icon *ngIf="isError" svgIcon="new_releases"></mat-icon>
-      <span *ngIf="isPass || isFail || isSkip || isError" class="icon_pad"></span>
-      <span class="description">
-        {{entry.description}}
-      </span>
-    </a>
+<mat-list-item class="flow-nav-row">
+  <a href="{{basePath}}detail/{{entry.detail}}.html" class="flow-link {{lineClass}}">
+    <mat-icon *ngIf="isPass" svgIcon="check_circle_outline"></mat-icon>
+    <mat-icon *ngIf="isFail" svgIcon="error_outline"></mat-icon>
+    <mat-icon *ngIf="isSkip" svgIcon="help_outline"></mat-icon>
+    <mat-icon *ngIf="isError" svgIcon="new_releases"></mat-icon>
+    <span *ngIf="isPass || isFail || isSkip || isError" class="icon_pad"></span>
+    <span class="description">
+      {{entry.description}}
+    </span>
+  </a>
+  <span matListItemMeta class="tag-region">
     <app-tag *ngFor="let tag of tags()" [tag]="tag"></app-tag>
   </span>
 </mat-list-item>

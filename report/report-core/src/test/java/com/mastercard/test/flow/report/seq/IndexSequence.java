@@ -194,6 +194,41 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	}
 
 	/**
+	 * Checks the user-visible flow-row presentation.
+	 *
+	 * @return <code>this</code>
+	 */
+	public IndexSequence hasFlowRowPresentation() {
+		trace( "hasFlowRowPresentation" );
+		WebElement item = driver.findElements( By.tagName( "app-flow-nav-item" ) ).get( 0 )
+				.findElement( By.tagName( "mat-list-item" ) );
+		WebElement link = item.findElement( By.className( "flow-link" ) );
+		WebElement description = link.findElement( By.className( "description" ) );
+		WebElement tags = item.findElement( By.className( "tag-region" ) );
+
+		assertEquals( "none",
+				((JavascriptExecutor) driver).executeScript(
+						"return getComputedStyle(arguments[0]).textDecorationLine", link ),
+				"link decoration" );
+		assertEquals( 0, link.findElements( By.tagName( "app-tag" ) ).size(), "linked tags" );
+		Assertions.assertFalse( tags.findElements( By.tagName( "app-tag" ) ).isEmpty(),
+				"trailing tags" );
+		Assertions.assertTrue(
+				link.getRect().getX() + link.getRect().getWidth() <= tags.getRect().getX(),
+				"tag region should trail the link" );
+
+		String longDescription = "A deliberately long flow description that must wrap without losing any text";
+		int originalHeight = item.getRect().getHeight();
+		((JavascriptExecutor) driver).executeScript(
+				"arguments[0].style.width='240px'; arguments[1].textContent=arguments[2]",
+				item, description, longDescription );
+		assertEquals( longDescription, description.getAttribute( "textContent" ), "description" );
+		Assertions.assertTrue( item.getRect().getHeight() > originalHeight, "wrapped row height" );
+
+		return self();
+	}
+
+	/**
 	 * Asserts on the active filter display
 	 *
 	 * @param description Active description filter

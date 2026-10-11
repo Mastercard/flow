@@ -13,6 +13,8 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ModelDiffDataSourceComponent } from '../model-diff-data-source/model-diff-data-source.component';
 import { ChangeViewComponent } from '../change-view/change-view.component';
 import { ChangeAnalysisComponent } from '../change-analysis/change-analysis.component';
+import { By } from '@angular/platform-browser';
+import { MatTabGroup } from '@angular/material/tabs';
 
 describe('ModelDiffComponent', () => {
   let component: ModelDiffComponent;
@@ -68,6 +70,11 @@ describe('ModelDiffComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('keeps model-diff tabs stretched', () => {
+    const tabGroup = fixture.debugElement.query(By.directive(MatTabGroup));
+    expect((tabGroup.componentInstance as MatTabGroup).stretchTabs).toBeTrue();
   });
 });
 

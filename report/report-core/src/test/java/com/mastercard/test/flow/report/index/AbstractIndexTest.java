@@ -124,6 +124,14 @@ abstract class AbstractIndexTest {
 	}
 
 	/**
+	 * Checks flow-row link, wrapping and trailing-tag presentation
+	 */
+	@Test
+	void flowRowPresentation() {
+		iseq.hasFlowRowPresentation();
+	}
+
+	/**
 	 * Demonstrates filtering by description text
 	 */
 	@Test
@@ -243,6 +251,30 @@ abstract class AbstractIndexTest {
 						"basis       [PASS, abc, def]",
 						"child       [FAIL, abc, def, ghi]",
 						"dependency  [SKIP, abc, ghi, jkl, mno]" );
+	}
+
+	/**
+	 * Demonstrates drag behaviour when filter chips wrap over multiple rows
+	 */
+	@Test
+	void wrappedTagFilterDrag() {
+		iseq.index(
+				"inc=alpha-long-filter",
+				"inc=beta-long-filter",
+				"inc=delta-long-filter",
+				"inc=epsilon-long-filter",
+				"inc=gamma-long-filter",
+				"inc=zeta-long-filter" )
+				.expandFilters()
+				.hasFilters( "",
+						"alpha-long-filter, beta-long-filter, delta-long-filter, "
+								+ "epsilon-long-filter, gamma-long-filter, zeta-long-filter",
+						"" )
+				.dragToExclude( "gamma-long-filter" )
+				.hasFilters( "",
+						"alpha-long-filter, beta-long-filter, delta-long-filter, "
+								+ "epsilon-long-filter, zeta-long-filter",
+						"gamma-long-filter" );
 	}
 
 	/**
