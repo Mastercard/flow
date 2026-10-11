@@ -1,10 +1,15 @@
+:host {
+    align-items: flex-start;
+    display: flex;
+}
+
 app-flow-nav-list {
-    width: calc(50% - 36px);
-    display: inline-block;
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 mat-list {
-    display: inline-block;
+    flex: 0 0 72px;
 }
 
 button {

@@ -179,6 +179,29 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	}
 
 	/**
+	 * Asserts that the pairing controls are visible.
+	 *
+	 * @param icon expected control icon
+	 * @return <code>this</code>
+	 */
+	public DiffSequence hasVisiblePairingControls( String icon ) {
+		trace( "hasVisiblePairingControls", icon );
+		List<WebElement> icons = activeTabPanel().findElements( By.tagName( "mat-icon" ) ).stream()
+				.filter( e -> icon.equals( e.getAttribute( "svgIcon" ) ) )
+				.collect( toList() );
+		Assertions.assertFalse( icons.isEmpty(), "pairing controls" );
+		icons.forEach( e -> {
+			Assertions.assertTrue( e.getRect().getWidth() > 0, icon + " should have width" );
+			Assertions.assertTrue( e.getRect().getHeight() > 0, icon + " should have height" );
+			assertEquals( "visible",
+					((JavascriptExecutor) driver).executeScript(
+							"return getComputedStyle(arguments[0]).visibility", e ),
+					icon + " visibility" );
+		} );
+		return self();
+	}
+
+	/**
 	 * Clicks an unlink button to break an existing flow pairing
 	 *
 	 * @param index the index of the button in the list
