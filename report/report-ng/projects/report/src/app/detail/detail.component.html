@@ -34,7 +34,9 @@
 
 <mat-toolbar class="flow-summary">
     <span class="description">{{flow.description}}</span>
-    <span class="tag" *ngFor="let tag of flow.tags">{{tag}}</span>
+    <span class="summary-tags" *ngIf="flow.tags.length">
+        <span class="tag" *ngFor="let tag of flow.tags">{{tag}}</span>
+    </span>
 </mat-toolbar>
 
 <div id="motivation">

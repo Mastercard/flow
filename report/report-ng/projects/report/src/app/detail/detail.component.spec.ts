@@ -130,18 +130,23 @@ describe('DetailComponent', () => {
   });
 
   it('wraps long summary descriptions and tags within the viewport', () => {
-    component.flow.description = 'A very long flow description '.repeat(20);
+    component.flow.description = 'VISA_AND_MASTERCARD_TRANSIT_MERCHANT_INITIATED_DEBT_RECOVERY_'.repeat(8);
     component.flow.tags = Array.from({ length: 12 }, (_, index) => `long-tag-${index}`);
     fixture.detectChanges();
 
     const summary: HTMLElement = fixture.nativeElement.querySelector('.flow-summary');
     const description: HTMLElement = summary.querySelector('.description')!;
+    const tags: HTMLElement = summary.querySelector('.summary-tags')!;
+    const detailTabs: HTMLElement = fixture.nativeElement.querySelector('.detail-tabs');
     const summaryStyle = getComputedStyle(summary);
 
     expect(summaryStyle.flexWrap).toBe('wrap');
     expect(summaryStyle.height).not.toBe('64px');
     expect(getComputedStyle(description).whiteSpace).toBe('normal');
+    expect(getComputedStyle(tags).display).toBe('flex');
+    expect(tags.getBoundingClientRect().width).toBeLessThanOrEqual(summary.getBoundingClientRect().width * 0.4);
     expect(summary.scrollWidth).toBeLessThanOrEqual(summary.clientWidth);
+    expect(getComputedStyle(detailTabs).overflowX).toBe('auto');
   });
 });
 
