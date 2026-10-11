@@ -73,11 +73,11 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 		List<WebElement> options = wait
 				.withMessage( "Failed to find non-empty level options, found " +
 						driver.findElements( By.tagName( "mat-option" ) ).stream()
-								.map( e -> "\n  " + e.getText() )
+								.map( e -> "\n  " + optionText( e ) )
 								.collect( joining() ) )
 				.until( dr -> {
 					List<WebElement> opts = dr.findElements( By.tagName( "mat-option" ) );
-					if( opts.stream().anyMatch( e -> e.getText().isEmpty() ) ) {
+					if( opts.isEmpty() || opts.stream().anyMatch( e -> optionText( e ).isEmpty() ) ) {
 						return null;
 					}
 					return opts;
@@ -86,9 +86,9 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 		Set<String> desired = new HashSet<>( Arrays.asList( levels ) );
 		options.forEach( e -> {
 			boolean isSelected = "true".equals( e.getAttribute( "aria-selected" ) );
-			boolean wantSelected = desired.contains( e.getText() );
+			boolean wantSelected = desired.contains( optionText( e ) );
 			if( isSelected != wantSelected ) {
-				e.click();
+				((JavascriptExecutor) driver).executeScript( "arguments[0].click();", e );
 			}
 		} );
 
@@ -96,6 +96,10 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 		actions.sendKeys( Keys.ESCAPE ).build().perform();
 
 		return this;
+	}
+
+	private static String optionText( WebElement option ) {
+		return option.getAttribute( "textContent" ).trim();
 	}
 
 	/**

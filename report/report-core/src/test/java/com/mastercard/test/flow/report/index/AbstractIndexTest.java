@@ -1,5 +1,7 @@
 package com.mastercard.test.flow.report.index;
 
+import static org.junit.jupiter.api.Assertions.assertSame;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -128,7 +130,7 @@ abstract class AbstractIndexTest {
 	 */
 	@Test
 	void flowRowPresentation() {
-		iseq.hasFlowRowPresentation();
+		assertSame( iseq, iseq.hasFlowRowPresentation() );
 	}
 
 	/**
@@ -258,7 +260,7 @@ abstract class AbstractIndexTest {
 	 */
 	@Test
 	void wrappedTagFilterDrag() {
-		iseq.index(
+		assertSame( iseq, iseq.index(
 				"inc=alpha-long-filter",
 				"inc=beta-long-filter",
 				"inc=delta-long-filter",
@@ -274,7 +276,7 @@ abstract class AbstractIndexTest {
 				.hasFilters( "",
 						"alpha-long-filter, beta-long-filter, delta-long-filter, "
 								+ "epsilon-long-filter, zeta-long-filter",
-						"gamma-long-filter" );
+						"gamma-long-filter" ) );
 	}
 
 	/**

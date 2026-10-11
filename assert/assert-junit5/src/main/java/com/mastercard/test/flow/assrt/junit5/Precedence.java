@@ -263,13 +263,9 @@ final class Precedence {
 		 * @return Successors newly made ready, in canonical order
 		 */
 		List<Integer> finished( int index ) {
-			List<Integer> ready = new ArrayList<>();
-			for( int successor : successors.get( index ) ) {
-				if( --remaining[successor] == 0 ) {
-					ready.add( successor );
-				}
-			}
-			return ready;
+			return successors.get( index ).stream()
+					.filter( successor -> --remaining[successor] == 0 )
+					.toList();
 		}
 	}
 }

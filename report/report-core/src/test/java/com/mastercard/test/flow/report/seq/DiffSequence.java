@@ -188,7 +188,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 		trace( "hasVisiblePairingControls", icon );
 		List<WebElement> icons = activeTabPanel().findElements( By.tagName( "mat-icon" ) ).stream()
 				.filter( e -> icon.equals( e.getAttribute( "svgIcon" ) ) )
-				.collect( toList() );
+				.toList();
 		Assertions.assertFalse( icons.isEmpty(), "pairing controls" );
 		icons.forEach( e -> {
 			Assertions.assertTrue( e.getRect().getWidth() > 0, icon + " should have width" );

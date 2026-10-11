@@ -34,7 +34,8 @@ import io.github.bonigarcia.wdm.WebDriverManager;
 public class Browser implements
 		BeforeAllCallback,
 		AfterAllCallback,
-		ExtensionContext.Store.CloseableResource {
+		ExtensionContext.Store.CloseableResource,
+		AutoCloseable {
 
 	private static final org.slf4j.Logger LOG = LoggerFactory.getLogger( Browser.class );
 
@@ -134,7 +135,7 @@ public class Browser implements
 	 * when invoked by maven, but eclipse seems to call it prematurely
 	 */
 	@Override
-	public void close() throws Throwable {
+	public void close() {
 		quitBrowser();
 		shutdownHooked = false;
 	}
