@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -386,8 +387,19 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 		String expected = Copy.pasta( lines );
 		new WebDriverWait( driver, ofSeconds( 5 ) )
 				.ignoring( StaleElementReferenceException.class )
+				.withMessage( () -> "Expected pair list:\n" + expected
+						+ "\nbut was:\n" + pairListOrEmpty( parent ) )
 				.until( dr -> expected.equals( pairList( parent ) ) );
 		return this;
+	}
+
+	private String pairListOrEmpty( WebElement parent ) {
+		try {
+			return pairList( parent );
+		}
+		catch( StaleElementReferenceException ignored ) {
+			return "";
+		}
 	}
 
 	private String pairList( String parentTag ) {
@@ -739,7 +751,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	private WebElement findActiveTabPanel() {
 		return driver.findElements( By.cssSelector( "[role='tab'][aria-selected='true']" ) ).stream()
 				.map( tab -> tab.getAttribute( "aria-controls" ) )
-				.filter( id -> id != null )
+				.filter( Objects::nonNull )
 				.flatMap( id -> driver.findElements( By.id( id ) ).stream() )
 				.filter( WebElement::isDisplayed )
 				.findFirst()
