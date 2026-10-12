@@ -306,31 +306,16 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 
 		WebElement fromDragBox = items.get( from ).findElement( By.xpath( ".." ) );
 		WebElement toDragBox = items.get( to ).findElement( By.xpath( ".." ) );
-		((JavascriptExecutor) driver).executeScript(
-				"arguments[0].scrollIntoView({block: 'center'});", fromDragBox );
-		((JavascriptExecutor) driver).executeAsyncScript( ""
-				+ "const from = arguments[0], to = arguments[1], movingUp = arguments[2], done = arguments[3];"
-				+ "const start = from.getBoundingClientRect();"
-				+ "const end = to.getBoundingClientRect();"
-				+ "const event = (type, x, y, buttons) => new MouseEvent(type, {"
-				+ "  bubbles: true, cancelable: true, view: window, button: 0, buttons, detail: 1,"
-				+ "  clientX: x, clientY: y"
-				+ "});"
-				+ "const startX = start.left + start.width / 2;"
-				+ "const startY = start.top + start.height / 2;"
-				+ "const endX = end.left + end.width / 2;"
-				+ "const endY = movingUp ? end.top + 2 : end.bottom - 2;"
-				+ "from.dispatchEvent(event('mousedown', startX, startY, 1));"
-				+ "requestAnimationFrame(() => {"
-				+ "  document.dispatchEvent(event('mousemove', startX, startY + 10, 1));"
-				+ "  requestAnimationFrame(() => {"
-				+ "    document.dispatchEvent(event('mousemove', endX, endY, 1));"
-				+ "    requestAnimationFrame(() => {"
-				+ "      document.dispatchEvent(event('mouseup', endX, endY, 0));"
-				+ "      setTimeout(done, 250);"
-				+ "    });"
-				+ "  });"
-				+ "});", fromDragBox, toDragBox, movingUp );
+		int targetOffset = toDragBox.getRect().getHeight() / 2 - 2;
+		actions.moveToElement( fromDragBox )
+				.clickAndHold()
+				.pause( 100 )
+				.moveByOffset( 0, movingUp ? -10 : 10 )
+				.pause( 100 )
+				.moveToElement( toDragBox, 0, movingUp ? -targetOffset : targetOffset )
+				.pause( 250 )
+				.release()
+				.perform();
 		new WebDriverWait( driver, ofSeconds( 5 ) )
 				.withMessage( () -> String.format(
 						"Failed to move '%s' %s '%s' in %s list; current order: %s",
