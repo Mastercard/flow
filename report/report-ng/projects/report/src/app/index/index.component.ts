@@ -1,20 +1,21 @@
-import { Component, OnInit } from '@angular/core';
-import { FormControl } from '@angular/forms';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Title } from '@angular/platform-browser';
-import { FlowFilterService, Type } from '../flow-filter.service';
+import { FlowFilterService } from '../flow-filter.service';
 import { IndexDataService } from '../index-data.service';
 import { Entry, Index } from '../types';
-import { ActivatedRoute } from '@angular/router';
 import { Location } from '@angular/common';
+import { PageEvent } from '@angular/material/paginator';
 
 /**
  * This is the main component of the index view - shows the
  * list of flows, and the filtering controls
  */
 @Component({
-  selector: 'app-index',
-  templateUrl: './index.component.html',
-  styleUrls: ['./index.component.css']
+    selector: 'app-index',
+    templateUrl: './index.component.html',
+    styleUrls: ['./index.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class IndexComponent implements OnInit {
 
@@ -24,7 +25,7 @@ export class IndexComponent implements OnInit {
     private indexData: IndexDataService,
     private title: Title) {
     filterService.onUpdate(() => {
-      this.updateQuery();
+      this.updateQuery(true);
     });
   }
 
@@ -32,7 +33,12 @@ export class IndexComponent implements OnInit {
   timestamp: string = "";
 
   filteredFlows: Entry[] = [];
+  pagedFlows: Entry[] = [];
   tags: Set<string> = new Set();
+
+  readonly pageSizeOptions: number[] = [50, 100, 200];
+  pageIndex: number = 0;
+  pageSize: number = 50;
 
   error: string = "";
   error_data: any;
@@ -42,7 +48,7 @@ export class IndexComponent implements OnInit {
       this.sortTags();
       this.timestamp = new Date(this.index.meta.timestamp).toLocaleString();
 
-      this.updateQuery();
+      this.updateQuery(false);
       this.title.setTitle(this.index.meta.modelTitle
         + " | " + this.index.meta.testTitle
         + " @ " + this.timestamp);
@@ -56,7 +62,7 @@ export class IndexComponent implements OnInit {
   /**
    * Updates the query args in the URL bar
    */
-  private updateQuery(): void {
+  private updateQuery(resetPage: boolean): void {
     this.filteredFlows = [];
     this.index.entries.forEach(e => {
       if (this.filterService.passes(e)) {
@@ -66,6 +72,28 @@ export class IndexComponent implements OnInit {
     this.tags.clear();
     this.filteredFlows.forEach(e => e.tags.forEach(t => this.tags.add(t)));
 
+    if (resetPage) {
+      this.pageIndex = 0;
+    }
+    this.updatePage();
+
+    this.updateUrl();
+  }
+
+  onPage(event: PageEvent): void {
+    this.pageIndex = event.pageIndex;
+    this.pageSize = event.pageSize;
+    this.updatePage();
+  }
+
+  private updatePage(): void {
+    const lastPage = Math.max(0, Math.ceil(this.filteredFlows.length / this.pageSize) - 1);
+    this.pageIndex = Math.min(Math.max(0, this.pageIndex), lastPage);
+    const first = this.pageIndex * this.pageSize;
+    this.pagedFlows = this.filteredFlows.slice(first, first + this.pageSize);
+  }
+
+  private updateUrl(): void {
     try {
       let path = this.location.path();
       const i = path.indexOf('?');

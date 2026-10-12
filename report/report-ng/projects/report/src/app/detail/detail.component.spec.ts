@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, Input } from '@angular/core';
+import { Component, Input, provideZoneChangeDetection, ChangeDetectionStrategy } from '@angular/core';
 import { DetailComponent } from './detail.component';
 import { BasisFetchService } from '../basis-fetch.service';
 import { MatMenuModule } from '@angular/material/menu';
@@ -12,6 +12,10 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { SequenceData } from '../flow-sequence/flow-sequence.component';
 import { DiffDisplay } from '../text-diff/text-diff.component';
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
+import { MatTabGroupHarness } from '@angular/material/tabs/testing';
+import { By } from '@angular/platform-browser';
+import { MatTabGroup } from '@angular/material/tabs';
 
 describe('DetailComponent', () => {
   let component: DetailComponent;
@@ -34,6 +38,7 @@ describe('DetailComponent', () => {
       ],
       providers: [
         { provide: BasisFetchService, useValue: mockBasisFetch },
+        provideZoneChangeDetection(),
       ],
       imports: [
         MatMenuModule,
@@ -70,44 +75,82 @@ describe('DetailComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should have one tab with no logs, context or residue', () => {
-    expect(testTabs(component, fixture, {
+  it('should have one tab with no logs, context or residue', async () => {
+    expect(await testTabs(component, fixture, {
     }))
       .toEqual(["Flow"]);
   });
 
-  it('should have two tabs with logs', () => {
-    expect(testTabs(component, fixture, {
+  it('should have two tabs with logs', async () => {
+    expect(await testTabs(component, fixture, {
       "logs": [{}]
     }))
       .toEqual(["Flow", "Logs"]);
   });
 
-  it('should have two tabs with a context', () => {
-    expect(testTabs(component, fixture, {
+  it('should have two tabs with a context', async () => {
+    expect(await testTabs(component, fixture, {
       "ctx": { "foo": "bar" }
     }))
       .toEqual(["Flow", "Context"]);
   });
 
-  it('should have two tabs with a residue', () => {
-    expect(testTabs(component, fixture, {
+  it('should have two tabs with a residue', async () => {
+    expect(await testTabs(component, fixture, {
       "rsd": [{ "foo": "bar" }]
     }))
       .toEqual(["Flow", "Residue"]);
   });
 
-  it('should have all tabs', () => {
-    expect(testTabs(component, fixture, {
+  it('should have all tabs', async () => {
+    expect(await testTabs(component, fixture, {
       "logs": [{}],
       "ctx": { "foo": "bar" },
       "rsd": [{ "foo": "bar" }]
     }))
       .toEqual(["Flow", "Context", "Residue", "Logs"]);
   });
+
+  it('keeps detail tabs at their natural width', () => {
+    const tabGroup = fixture.debugElement.query(By.directive(MatTabGroup));
+    expect((tabGroup.componentInstance as MatTabGroup).stretchTabs).toBeFalse();
+  });
+
+  it('separates navigation, flow summary and detail tabs', () => {
+    const navigation: HTMLElement = fixture.nativeElement.querySelector('.list_horizontal');
+    const summary: HTMLElement = fixture.nativeElement.querySelector('.flow-summary');
+    const tabs: HTMLElement = fixture.nativeElement.querySelector('.detail-tabs');
+    const navigationItems = Array.from(navigation.children, item => item as HTMLElement);
+
+    expect(getComputedStyle(navigation).borderBottomStyle).toBe('solid');
+    navigationItems.forEach(item => expect(getComputedStyle(item).borderRightStyle).toBe('solid'));
+    expect(getComputedStyle(summary).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(summary).borderBottomStyle).toBe('solid');
+    expect(getComputedStyle(tabs).borderTopStyle).toBe('solid');
+  });
+
+  it('wraps long summary descriptions and tags within the viewport', () => {
+    component.flow.description = 'VISA_AND_MASTERCARD_TRANSIT_MERCHANT_INITIATED_DEBT_RECOVERY_'.repeat(8);
+    component.flow.tags = Array.from({ length: 12 }, (_, index) => `long-tag-${index}`);
+    fixture.detectChanges();
+
+    const summary: HTMLElement = fixture.nativeElement.querySelector('.flow-summary');
+    const description: HTMLElement = summary.querySelector('.description')!;
+    const tags: HTMLElement = summary.querySelector('.summary-tags')!;
+    const detailTabs: HTMLElement = fixture.nativeElement.querySelector('.detail-tabs');
+    const summaryStyle = getComputedStyle(summary);
+
+    expect(summaryStyle.flexWrap).toBe('wrap');
+    expect(summaryStyle.height).not.toBe('64px');
+    expect(getComputedStyle(description).whiteSpace).toBe('normal');
+    expect(getComputedStyle(tags).display).toBe('flex');
+    expect(tags.getBoundingClientRect().width).toBeLessThanOrEqual(summary.getBoundingClientRect().width * 0.4);
+    expect(summary.scrollWidth).toBeLessThanOrEqual(summary.clientWidth);
+    expect(getComputedStyle(detailTabs).overflowX).toBe('auto');
+  });
 });
 
-function testTabs(component: DetailComponent, fixture: ComponentFixture<DetailComponent>, args: any): string[] {
+async function testTabs(component: DetailComponent, fixture: ComponentFixture<DetailComponent>, args: any): Promise<string[]> {
   if (args.logs != undefined) {
     component.flow.logs = args.logs;
   }
@@ -120,54 +163,67 @@ function testTabs(component: DetailComponent, fixture: ComponentFixture<DetailCo
 
   fixture.detectChanges();
 
-  let nl: NodeList = fixture.nativeElement
-    .querySelectorAll("div.mat-tab-label-content");
-  return Array.from(nl).map(e => e.textContent?.trim() || "???");
+  const loader = TestbedHarnessEnvironment.loader(fixture);
+  const tabGroup = await loader.getHarness(MatTabGroupHarness);
+  const tabs = await tabGroup.getTabs();
+  return Promise.all(tabs.map(tab => tab.getLabel()));
 }
 
 @Component({
-  selector: 'app-log-view',
-  template: ''
+    selector: 'app-log-view',
+    template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubLogView {
   @Input() logs: LogEvent[] = [];
 }
 
 @Component({
-  selector: 'app-context-view',
-  template: ''
+    selector: 'app-context-view',
+    template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubContextView {
   @Input() context: any = {};
 }
 
 @Component({
-  selector: 'app-residue-view',
-  template: ''
+    selector: 'app-residue-view',
+    template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubResidueView {
   @Input() residues: Residue[] = [];
 }
 
 @Component({
-  selector: 'app-flow-sequence',
-  template: ''
+    selector: 'app-flow-sequence',
+    template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubFlowSequence {
   @Input() sequence: SequenceData = { entity: [], exercised: [], item: [] };
 }
 
 @Component({
-  selector: 'app-view-options',
-  template: ''
+    selector: 'app-view-options',
+    template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubViewOptions {
   @Input() options: Options = new Options();
 }
 
 @Component({
-  selector: 'app-transmission',
-  template: ''
+    selector: 'app-transmission',
+    template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubTransmission {
   @Input() options: Options = new Options();
@@ -177,8 +233,10 @@ class StubTransmission {
 }
 
 @Component({
-  selector: 'markdown',
-  template: ''
+    selector: 'markdown',
+    template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubMarkdown {
 }

@@ -1,19 +1,14 @@
 
 package com.mastercard.test.flow.assrt;
 
-import static com.mastercard.test.flow.assrt.History.Result.NOT_OBSERVED;
-import static java.time.Instant.now;
-import static java.time.ZoneId.systemDefault;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toCollection;
-import static java.util.stream.Collectors.toList;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import static java.time.Instant.now;
+import static java.time.ZoneId.systemDefault;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,6 +27,9 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toCollection;
+import static java.util.stream.Collectors.toList;
 import java.util.stream.Stream;
 
 import com.mastercard.test.flow.Actor;
@@ -42,10 +40,12 @@ import com.mastercard.test.flow.Message;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.Residue;
 import com.mastercard.test.flow.Unpredictable;
+import static com.mastercard.test.flow.assrt.History.Result.NOT_OBSERVED;
 import com.mastercard.test.flow.assrt.filter.Filter;
 import com.mastercard.test.flow.assrt.filter.FilterConfiguration;
 import com.mastercard.test.flow.assrt.filter.FilterOptions;
 import com.mastercard.test.flow.report.Writer;
+import com.mastercard.test.flow.report.Writer.Indexing;
 import com.mastercard.test.flow.report.data.AssertedData;
 import com.mastercard.test.flow.report.data.FlowData;
 import com.mastercard.test.flow.report.data.InteractionData;
@@ -95,6 +95,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 
 	private final Model model;
 	private final String title;
+	private boolean prepared;
 	private Dependencies dependencies;
 	private Reporting reporting = Reporting.NEVER;
 	private String[] reportPath = {};
@@ -184,14 +185,25 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	};
 
 	private MotivationCustomizer motivationCustomizer = ( motivation, assrt ) -> motivation;
+	private final Indexing indexing;
 
 	/**
 	 * @param title The title of this test
 	 * @param model The model to process
 	 */
 	protected AbstractFlocessor( String title, Model model ) {
+		this( title, model, Indexing.IMMEDIATE );
+	}
+
+	/**
+	 * @param title    The title of this test
+	 * @param model    The model to process
+	 * @param indexing When to publish complete report indexes
+	 */
+	protected AbstractFlocessor( String title, Model model, Indexing indexing ) {
 		this.title = title;
 		this.model = model;
+		this.indexing = indexing;
 	}
 
 	/**
@@ -204,6 +216,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T reporting( Reporting r, String... path ) {
+		checkConfigurable();
 		reporting = r;
 		reportPath = path;
 		replaySource = Replay.source( path );
@@ -219,6 +232,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T masking( Unpredictable... sources ) {
+		checkConfigurable();
 		masks = sources.clone();
 		return self();
 	}
@@ -232,6 +246,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T system( State state, Actor... actors ) {
+		checkConfigurable();
 		statefulness = state;
 		systemUnderTest.clear();
 		Collections.addAll( systemUnderTest, actors );
@@ -246,6 +261,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T autonomous( Actor... actors ) {
+		checkConfigurable();
 		autonomous.clear();
 		Collections.addAll( autonomous, actors );
 		if( !systemUnderTest.containsAll( autonomous ) ) {
@@ -264,6 +280,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T applicators( Applicator<?>... applctrs ) {
+		checkConfigurable();
 		for( Applicator<?> applicator : applctrs ) {
 			applicators.put( applicator.contextType(), applicator );
 		}
@@ -277,6 +294,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T checkers( Checker<?>... chckrs ) {
+		checkConfigurable();
 		for( Checker<?> checker : chckrs ) {
 			checkers.put( checker.residueType(), checker );
 		}
@@ -291,6 +309,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T logs( LogCapture lc ) {
+		checkConfigurable();
 		logCapture = lc;
 		return self();
 	}
@@ -302,6 +321,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T listening( Listener prg ) {
+		checkConfigurable();
 		progress = prg;
 		return self();
 	}
@@ -324,6 +344,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T filtering( Consumer<FilterConfiguration> cfg ) {
+		checkConfigurable();
 		filterCfg = cfg;
 		return self();
 	}
@@ -354,6 +375,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @see AssertionOptions#SUPPRESS_FILTER
 	 */
 	public T exercising( Predicate<Flow> filter, Consumer<String> rejectionLog ) {
+		checkConfigurable();
 		flowFilter = filter;
 		filterRejectionLog = rejectionLog;
 		return self();
@@ -366,6 +388,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code>
 	 */
 	public T behaviour( Consumer<Assertion> t ) {
+		checkConfigurable();
 		test = t;
 		return self();
 	}
@@ -380,8 +403,33 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 * @return <code>this</code> for method chaining.
 	 */
 	public T motivation( MotivationCustomizer customizer ) {
+		checkConfigurable();
 		motivationCustomizer = customizer;
 		return self();
+	}
+
+	/**
+	 * Freezes configuration and computes the canonical flow list for one run.
+	 *
+	 * @return The flows to process, in canonical order
+	 */
+	protected final synchronized List<Flow> prepareFlows() {
+		checkConfigurable();
+		prepared = true;
+		return flows().toList();
+	}
+
+	/**
+	 * @return Whether this run reads actual data from an execution report
+	 */
+	protected final boolean replaying() {
+		return replay.hasData();
+	}
+
+	private void checkConfigurable() {
+		if( prepared ) {
+			throw new IllegalStateException( "Flow processing has already been prepared" );
+		}
 	}
 
 	/**
@@ -694,6 +742,12 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 	 *                          generated
 	 */
 	private void applyContexts( Flow flow, List<RuntimeException> executionFailures ) {
+		synchronized( currentContext ) {
+			applyContextsLocked( flow, executionFailures );
+		}
+	}
+
+	private void applyContextsLocked( Flow flow, List<RuntimeException> executionFailures ) {
 		try {
 			// work out the context updates
 			Set<Class<? extends Context>> unupdated = new HashSet<>( currentContext.keySet() );
@@ -966,7 +1020,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 			.ofPattern( "yyMMdd-HHmmss" )
 			.format( now().atZone( systemDefault() ) );
 
-	private void report( Consumer<Writer> data, boolean error ) {
+	private synchronized void report( Consumer<Writer> data, boolean error ) {
 		if( reporting.writing() ) {
 			Path testDir = null;
 			Path reportDir = null;
@@ -994,7 +1048,7 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 
 				reportDir = testDir.resolve( name );
 
-				report = new Writer( model.title(), testTitle, reportDir );
+				report = new Writer( model.title(), testTitle, reportDir, indexing );
 			}
 
 			data.accept( report );
@@ -1045,6 +1099,13 @@ public abstract class AbstractFlocessor<T extends AbstractFlocessor<T>> {
 					}
 				}
 			}
+		}
+	}
+
+	/** Publishes report index updates accumulated by lifecycle-aware subclasses. */
+	protected synchronized void publishReportIndex() {
+		if( report != null ) {
+			report.publishIndex();
 		}
 	}
 

@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideZoneChangeDetection } from '@angular/core';
 
 import { SeqActionComponent } from './seq-action.component';
 import { BasisFetchService } from '../basis-fetch.service';
@@ -17,6 +18,7 @@ describe('SeqActionComponent', () => {
       ],
       providers: [
         { provide: BasisFetchService, useValue: mockBfs },
+        provideZoneChangeDetection(),
       ],
       imports: [
         MatIconModule,

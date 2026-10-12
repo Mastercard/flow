@@ -12,6 +12,9 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
+import { By } from '@angular/platform-browser';
+import { MatButtonToggleGroup } from '@angular/material/button-toggle';
+import { MatSelectionList } from '@angular/material/list';
 
 describe('ChangeViewComponent', () => {
   let component: ChangeViewComponent;
@@ -56,5 +59,16 @@ describe('ChangeViewComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('hides indicators on the change controls and selection list', () => {
+    const groups = fixture.debugElement.queryAll(By.directive(MatButtonToggleGroup));
+    const selectionList = fixture.debugElement.query(By.directive(MatSelectionList));
+
+    expect(groups.length).toBe(4);
+    groups.forEach(group => expect(
+      group.injector.get(MatButtonToggleGroup).hideSingleSelectionIndicator
+    ).toBeTrue());
+    expect(selectionList.injector.get(MatSelectionList).hideSingleSelectionIndicator).toBeTrue();
   });
 });
