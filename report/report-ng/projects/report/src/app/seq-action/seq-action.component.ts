@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
 import { BasisFetchService } from '../basis-fetch.service';
 import { MsgSearchService } from '../msg-search.service';
 import { TxSelectionService } from '../tx-selection.service';
@@ -7,9 +7,11 @@ import { Diff, diff_match_patch } from 'diff-match-patch';
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-seq-action',
-  templateUrl: './seq-action.component.html',
-  styleUrls: ['./seq-action.component.css']
+    selector: 'app-seq-action',
+    templateUrl: './seq-action.component.html',
+    styleUrls: ['./seq-action.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class SeqActionComponent implements OnInit {
   private readonly dmp: diff_match_patch = new diff_match_patch();

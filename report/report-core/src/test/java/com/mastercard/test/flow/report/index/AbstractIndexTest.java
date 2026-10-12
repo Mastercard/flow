@@ -1,5 +1,7 @@
 package com.mastercard.test.flow.report.index;
 
+import static org.junit.jupiter.api.Assertions.assertSame;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,6 +97,7 @@ abstract class AbstractIndexTest {
 				"child       [FAIL, abc, def, ghi]",
 				"dependency  [SKIP, abc, ghi, jkl, mno]",
 				"dependent   [ERROR, mno, pqr, stu]" )
+				.hasNoPaginator()
 				.expandTags()
 				.hasTags( "11 tags on 4 flows _PASS_ 25.0% _FAIL_ 25.0% _SKIP_ 25.0% _ERROR_ 25.0%",
 						"abc 75.0%",
@@ -121,6 +124,14 @@ abstract class AbstractIndexTest {
 						"mno 50.0%",
 						"pqr 25.0%",
 						"stu 25.0%" );
+	}
+
+	/**
+	 * Checks flow-row link, wrapping and trailing-tag presentation
+	 */
+	@Test
+	void flowRowPresentation() {
+		assertSame( iseq, iseq.hasFlowRowPresentation() );
 	}
 
 	/**
@@ -200,6 +211,21 @@ abstract class AbstractIndexTest {
 						"dependent   [ERROR, pqr, stu]" );
 	}
 
+	/** Result summaries add their corresponding tag to the inclusion filter. */
+	@Test
+	void resultTagInclusion() {
+		assertSame( iseq, iseq.expandTags()
+				.clickResult( "FAIL" )
+				.hasExpandedTags()
+				.hasUrlArgs( "inc=FAIL" )
+				.hasFilters( "", "FAIL", "" )
+				.hasFlows( "child  [abc, def, ghi]" )
+				.hasTags( "3 tags on 1 flow _FAIL_ 100.0%",
+						"abc 100.0%",
+						"def 100.0%",
+						"ghi 100.0%" ) );
+	}
+
 	/**
 	 * Demonstrates tag exclusion filtering
 	 */
@@ -243,6 +269,30 @@ abstract class AbstractIndexTest {
 						"basis       [PASS, abc, def]",
 						"child       [FAIL, abc, def, ghi]",
 						"dependency  [SKIP, abc, ghi, jkl, mno]" );
+	}
+
+	/**
+	 * Demonstrates drag behaviour when filter chips wrap over multiple rows
+	 */
+	@Test
+	void wrappedTagFilterDrag() {
+		assertSame( iseq, iseq.index(
+				"inc=alpha-long-filter",
+				"inc=beta-long-filter",
+				"inc=delta-long-filter",
+				"inc=epsilon-long-filter",
+				"inc=gamma-long-filter",
+				"inc=zeta-long-filter" )
+				.expandFilters()
+				.hasFilters( "",
+						"alpha-long-filter, beta-long-filter, delta-long-filter, "
+								+ "epsilon-long-filter, gamma-long-filter, zeta-long-filter",
+						"" )
+				.dragToExclude( "gamma-long-filter" )
+				.hasFilters( "",
+						"alpha-long-filter, beta-long-filter, delta-long-filter, "
+								+ "epsilon-long-filter, zeta-long-filter",
+						"gamma-long-filter" ) );
 	}
 
 	/**

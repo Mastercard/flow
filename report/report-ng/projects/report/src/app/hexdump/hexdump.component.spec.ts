@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideZoneChangeDetection } from '@angular/core';
 
 import { HexdumpComponent } from './hexdump.component';
 
@@ -8,7 +9,8 @@ describe('HexdumpComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [HexdumpComponent]
+      declarations: [HexdumpComponent],
+      providers: [provideZoneChangeDetection()]
     })
       .compileComponents();
   });

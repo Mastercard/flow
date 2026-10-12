@@ -1,5 +1,5 @@
-<mat-list-item>
-  <a mat-list-item href="{{basePath}}detail/{{entry.detail}}.html" class="{{lineClass}}">
+<mat-list-item class="flow-nav-row">
+  <a href="{{basePath}}detail/{{entry.detail}}.html" class="flow-link {{lineClass}}">
     <mat-icon *ngIf="isPass" svgIcon="check_circle_outline"></mat-icon>
     <mat-icon *ngIf="isFail" svgIcon="error_outline"></mat-icon>
     <mat-icon *ngIf="isSkip" svgIcon="help_outline"></mat-icon>
@@ -9,5 +9,7 @@
       {{entry.description}}
     </span>
   </a>
-  <app-tag *ngFor="let tag of tags()" [tag]="tag"></app-tag>
+  <span matListItemMeta class="tag-region">
+    <app-tag *ngFor="let tag of tags()" [tag]="tag"></app-tag>
+  </span>
 </mat-list-item>

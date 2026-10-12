@@ -1,5 +1,5 @@
 import { Location } from '@angular/common';
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import { ChangeAnalysisComponent } from '../change-analysis/change-analysis.component';
@@ -10,9 +10,11 @@ import { ModelDiffDataSourceComponent } from '../model-diff-data-source/model-di
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-model-diff',
-  templateUrl: './model-diff.component.html',
-  styleUrls: ['./model-diff.component.css']
+    selector: 'app-model-diff',
+    templateUrl: './model-diff.component.html',
+    styleUrls: ['./model-diff.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class ModelDiffComponent implements OnInit {
 

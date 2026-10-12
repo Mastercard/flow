@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { FlowFilterService } from '../flow-filter.service';
 import { FlowPairingService, Pair } from '../flow-pairing.service';
 import { ModelDiffDataService } from '../model-diff-data.service';
@@ -6,9 +6,11 @@ import { Entry } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-paired-flow-list',
-  templateUrl: './paired-flow-list.component.html',
-  styleUrls: ['./paired-flow-list.component.css']
+    selector: 'app-paired-flow-list',
+    templateUrl: './paired-flow-list.component.html',
+    styleUrls: ['./paired-flow-list.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class PairedFlowListComponent implements OnInit {
 
