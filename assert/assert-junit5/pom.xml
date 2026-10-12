@@ -7,8 +7,8 @@
 		<version>1.1.11-SNAPSHOT</version>
 	</parent>
 	<artifactId>assert-junit5</artifactId>
-	<name>assert-junit5</name>
 	<packaging>jar</packaging>
+	<name>assert-junit5</name>
 	<description>JUnit5 comparison components</description>
 
 	<dependencies>

@@ -7,8 +7,8 @@
 		<version>1.1.11-SNAPSHOT</version>
 	</parent>
 	<artifactId>assert</artifactId>
-	<name>assert</name>
 	<packaging>pom</packaging>
+	<name>assert</name>
 	<description>Comparing models against systems</description>
 	<modules>
 		<module>assert-filter</module>

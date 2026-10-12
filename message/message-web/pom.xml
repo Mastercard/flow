@@ -7,8 +7,8 @@
 		<version>1.1.11-SNAPSHOT</version>
 	</parent>
 	<artifactId>message-web</artifactId>
-	<name>message-web</name>
 	<packaging>jar</packaging>
+	<name>message-web</name>
 	<description>Browser interaction messages</description>
 
 	<dependencies>
