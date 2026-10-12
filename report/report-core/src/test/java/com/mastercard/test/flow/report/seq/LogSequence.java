@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -61,27 +62,22 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 	public LogSequence levels( String... levels ) {
 		trace( "levels", (Object[]) levels );
 
-		List<WebElement> fields = driver.findElements( By.tagName( "mat-form-field" ) );
-		WebElement select = fields.stream()
-				.filter( e -> e.getText().endsWith( "Levels" ) )
-				.findFirst()
-				.orElse( null );
-
-		Assertions.assertNotNull( select, () -> "Failed to find levels select in form fields:\n  "
-				+ fields.stream().map( WebElement::getText ).collect( joining( "\n  " ) ) );
-
-		select.click();
+		WebElement select = new WebDriverWait( driver, ofSeconds( 3 ) )
+				.until( dr -> dr.findElements( By.id( "level_select" ) ).stream()
+						.findFirst().orElse( null ) );
+		((JavascriptExecutor) driver).executeScript(
+				"arguments[0].click();", select );
 
 		// wait for the popup
 		WebDriverWait wait = new WebDriverWait( driver, ofSeconds( 2 ) );
 		List<WebElement> options = wait
 				.withMessage( "Failed to find non-empty level options, found " +
 						driver.findElements( By.tagName( "mat-option" ) ).stream()
-								.map( e -> "\n  " + e.getText() )
+								.map( e -> "\n  " + optionText( e ) )
 								.collect( joining() ) )
 				.until( dr -> {
 					List<WebElement> opts = dr.findElements( By.tagName( "mat-option" ) );
-					if( opts.stream().anyMatch( e -> e.getText().isEmpty() ) ) {
+					if( opts.isEmpty() || opts.stream().anyMatch( e -> optionText( e ).isEmpty() ) ) {
 						return null;
 					}
 					return opts;
@@ -90,9 +86,9 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 		Set<String> desired = new HashSet<>( Arrays.asList( levels ) );
 		options.forEach( e -> {
 			boolean isSelected = "true".equals( e.getAttribute( "aria-selected" ) );
-			boolean wantSelected = desired.contains( e.getText() );
+			boolean wantSelected = desired.contains( optionText( e ) );
 			if( isSelected != wantSelected ) {
-				e.click();
+				((JavascriptExecutor) driver).executeScript( "arguments[0].click();", e );
 			}
 		} );
 
@@ -100,6 +96,10 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 		actions.sendKeys( Keys.ESCAPE ).build().perform();
 
 		return this;
+	}
+
+	private static String optionText( WebElement option ) {
+		return option.getAttribute( "textContent" ).trim();
 	}
 
 	/**
@@ -110,7 +110,6 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 	 */
 	public LogSequence source( String filter ) {
 		WebElement e = driver.findElement( By.id( "source_filter_input" ) );
-		e.click();
 		e.sendKeys( filter );
 		return this;
 	}
@@ -123,7 +122,6 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 	 */
 	public LogSequence message( String filter ) {
 		WebElement e = driver.findElement( By.id( "message_filter_input" ) );
-		e.click();
 		e.sendKeys( filter );
 		return this;
 	}
@@ -138,8 +136,17 @@ public class LogSequence extends AbstractSequence<LogSequence> {
 		trace( "hasMessages", (Object[]) lines );
 		Assertions.assertEquals(
 				Copy.pasta( lines ),
-				Copy.pasta( driver.findElements( By.className( "mat-row" ) ).stream()
-						.map( r -> r.getText().replace( '\n', ' ' ) ) ) );
+				Copy.pasta( driver.findElements( By.cssSelector( "tr[mat-row]" ) ).stream()
+						.map( this::rowText ) ) );
 		return this;
+	}
+
+	private String rowText( WebElement row ) {
+		return (String) ((JavascriptExecutor) driver).executeScript( ""
+				+ "const clone = arguments[0].cloneNode(true);"
+				+ "clone.querySelectorAll('*').forEach(element => "
+				+ "  element.after(document.createTextNode(' ')));"
+				+ "return clone.textContent.replace(/\\u00a0/g, ' ')"
+				+ "  .replace(/\\s+/g, ' ').trim();", row );
 	}
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, OnInit, Input, AfterViewInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 
 interface Node {
   name: string;
@@ -7,9 +7,11 @@ interface Node {
 }
 
 @Component({
-  selector: 'app-context-view',
-  templateUrl: './context-view.component.html',
-  styleUrls: ['./context-view.component.css']
+    selector: 'app-context-view',
+    templateUrl: './context-view.component.html',
+    styleUrls: ['./context-view.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 
 export class ContextViewComponent implements OnInit {

@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'enumIterate'
+    name: 'enumIterate',
+    standalone: false
 })
 export class EnumIteratePipe implements PipeTransform {
 

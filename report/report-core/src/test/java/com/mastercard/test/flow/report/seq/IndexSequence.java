@@ -26,6 +26,7 @@ import javax.xml.xpath.XPathFactory;
 
 import org.junit.jupiter.api.Assertions;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -140,7 +141,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 							.collect( joining() ) ) );
 		}
 		else {
-			linkItem.click();
+			linkItem.findElement( By.tagName( "a" ) ).click();
 		}
 		return new DetailSequence( this );
 	}
@@ -189,6 +190,60 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 		assertEquals( Copy.pasta( flows ),
 				Copy.pasta( flowItems.stream()
 						.map( e -> printFlow( width, e ) ) ) );
+		return self();
+	}
+
+	/**
+	 * Checks the user-visible flow-row presentation.
+	 *
+	 * @return <code>this</code>
+	 */
+	public IndexSequence hasFlowRowPresentation() {
+		trace( "hasFlowRowPresentation" );
+		WebElement item = driver.findElements( By.tagName( "app-flow-nav-item" ) ).get( 0 )
+				.findElement( By.tagName( "mat-list-item" ) );
+		WebElement link = item.findElement( By.className( "flow-link" ) );
+		WebElement description = link.findElement( By.className( "description" ) );
+		WebElement tags = item.findElement( By.className( "tag-region" ) );
+
+		assertEquals( "none",
+				((JavascriptExecutor) driver).executeScript(
+						"return getComputedStyle(arguments[0]).textDecorationLine", link ),
+				"link decoration" );
+		assertEquals( 0, link.findElements( By.tagName( "app-tag" ) ).size(), "linked tags" );
+		Assertions.assertFalse( tags.findElements( By.tagName( "app-tag" ) ).isEmpty(),
+				"trailing tags" );
+		Assertions.assertTrue(
+				link.getRect().getX() + link.getRect().getWidth() <= tags.getRect().getX(),
+				"tag region should trail the link" );
+		Assertions.assertTrue( tags.getRect().getWidth() <= item.getRect().getWidth() * 0.45,
+				"tag region should leave room for the description" );
+
+		String longDescription = "A deliberately long flow description that must wrap without losing any text";
+		int originalHeight = item.getRect().getHeight();
+		((JavascriptExecutor) driver).executeScript(
+				"arguments[0].style.width='240px'; arguments[1].textContent=arguments[2]",
+				item, description, longDescription );
+		assertEquals( longDescription, description.getAttribute( "textContent" ), "description" );
+		Assertions.assertTrue( item.getRect().getHeight() > originalHeight, "wrapped row height" );
+
+		WebElement nextItem = driver.findElements( By.tagName( "app-flow-nav-item" ) ).get( 1 )
+				.findElement( By.tagName( "mat-list-item" ) );
+		((JavascriptExecutor) driver).executeScript(
+				"for(let i=0;i<12;i++){"
+						+ "const tag=arguments[0].firstElementChild.cloneNode(true);"
+						+ "tag.textContent='very-long-domain-tag-'+i;arguments[0].appendChild(tag)}",
+				tags );
+		double contentBottom = ((Number) ((JavascriptExecutor) driver).executeScript(
+				"return Math.max(...[arguments[0],...arguments[1].children]"
+						+ ".map(element=>element.getBoundingClientRect().bottom))",
+				link, tags )).doubleValue();
+		Assertions.assertTrue( item.getRect().getY() + item.getRect().getHeight() >= contentBottom,
+				"row should contain wrapped tags" );
+		Assertions.assertTrue(
+				item.getRect().getY() + item.getRect().getHeight() <= nextItem.getRect().getY(),
+				"adjacent rows should not overlap" );
+
 		return self();
 	}
 
@@ -473,18 +528,46 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	 */
 	public IndexSequence hasInteractions( String... expected ) {
 		trace( "hasInteractions", (Object[]) expected );
-		String svg = driver
-				.findElement( By.id( "interactions_diagram" ) )
-				.getAttribute( "innerHTML" );
+		String expectedSummary = Copy.pasta( expected );
 
-		String svgSummary = summariseSVG( svg );
+		new WebDriverWait( driver, ofSeconds( 2 ) )
+				.withMessage( () -> interactionDiagnostics()
+						+ "\ndiagram:\n" + interactionDiagram() )
+				.until( dr -> {
+					try {
+						return expectedSummary.equals(
+								Copy.pasta( summariseSVG( interactionDiagram() ) ) );
+					}
+					catch( IllegalStateException e ) {
+						return false;
+					}
+				} );
+
+		String svgSummary = summariseSVG( interactionDiagram() );
 
 		assertEquals(
-				Copy.pasta( expected ),
+				expectedSummary,
 				Copy.pasta( svgSummary ),
 				"interaction diagram structure" );
 
 		return self();
+	}
+
+	private String interactionDiagnostics() {
+		return (String) ((JavascriptExecutor) driver).executeScript( ""
+				+ "return Array.from(document.querySelectorAll('#interactions_diagram path.flowchart-link'))"
+				+ ".map(path => {"
+				+ "  const style = getComputedStyle(path);"
+				+ "  return path.getAttribute('class')"
+				+ "    + ' inline=' + path.getAttribute('style')"
+				+ "    + ' computed=' + style.strokeWidth + '/' + style.visibility;"
+				+ "}).join('\\n');" );
+	}
+
+	private String interactionDiagram() {
+		return driver
+				.findElement( By.id( "interactions_diagram" ) )
+				.getAttribute( "innerHTML" );
 	}
 
 	/**
@@ -548,7 +631,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 
 	private IndexSequence dragChip( String text, String sourceId, String destId ) {
 		WebElement source = driver.findElement( By.id( sourceId ) );
-		WebElement chip = source.findElements( By.tagName( "mat-chip" ) ).stream()
+		WebElement chip = source.findElements( By.tagName( "mat-chip-row" ) ).stream()
 				.filter( c -> text.equals( c.findElement( By.className( "tag_text" ) ).getText() ) )
 				.findFirst()
 				.orElseThrow( () -> new AssertionError( ""
@@ -556,7 +639,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 						+ "Have you called expandFilters()?" ) );
 		WebElement destination = driver
 				.findElement( By.id( destId ) )
-				.findElement( By.tagName( "mat-chip-list" ) );
+				.findElement( By.tagName( "mat-chip-grid" ) );
 		actions.moveToElement( chip )
 				.clickAndHold( chip )
 				.moveToElement( destination )

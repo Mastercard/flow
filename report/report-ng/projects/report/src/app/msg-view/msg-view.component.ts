@@ -1,13 +1,15 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
 import { QueryService } from '../query.service';
 import { DataDisplay, Options } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
 
 
 @Component({
-  selector: 'app-msg-view',
-  templateUrl: './msg-view.component.html',
-  styleUrls: ['./msg-view.component.css']
+    selector: 'app-msg-view',
+    templateUrl: './msg-view.component.html',
+    styleUrls: ['./msg-view.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class MsgViewComponent implements OnInit {
 
