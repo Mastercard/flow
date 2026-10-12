@@ -1,5 +1,7 @@
 package com.mastercard.test.flow.report.index;
 
+import static org.junit.jupiter.api.Assertions.assertSame;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,6 +26,21 @@ class ServedIndexTest extends AbstractIndexTest {
 	/***/
 	ServedIndexTest() {
 		super( report.url() );
+	}
+
+	/** Diagram Detail data is requested only after the user expands its panel. */
+	@Test
+	void deferredInteractions() {
+		assertSame( iseq, iseq.index()
+				.hasFlows(
+						"basis       [PASS, abc, def]",
+						"child       [FAIL, abc, def, ghi]",
+						"dependency  [SKIP, abc, ghi, jkl, mno]",
+						"dependent   [ERROR, mno, pqr, stu]" )
+				.hasInteractionSummary( "" )
+				.hasNoDetailRequests()
+				.expandInteractions()
+				.hasDetailRequests() );
 	}
 
 	/**
@@ -55,8 +72,8 @@ class ServedIndexTest extends AbstractIndexTest {
 			disabledReason = "mysterious failure in CI")
 	void filteredInteractions() {
 		iseq.clickTag( "PASS" )
-				.hasInteractionSummary( "1 interactions between 2 actors" )
 				.expandInteractions()
+				.hasInteractionSummary( "1 interactions between 2 actors" )
 				.hasInteractions(
 						"Nodes:",
 						"  AVA",

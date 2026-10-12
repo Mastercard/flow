@@ -80,7 +80,7 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 				.findFirst()
 				.orElseThrow( () -> new IllegalStateException(
 						"Failed to find transmission with label '" + label + "'" ) )
-				.findElement( By.className( "mat-ripple" ) )
+				.findElement( By.className( "action" ) )
 				.click();
 		return this;
 	}
@@ -171,7 +171,7 @@ public class FlowSequence extends AbstractSequence<FlowSequence> {
 	public FlowSequence toggleSearch() {
 		trace( "toggleSearch" );
 		driver.findElement( By.id( "search_toggle" ) )
-				.findElement( By.className( "mat-icon" ) )
+				.findElement( By.tagName( "mat-icon" ) )
 				.click();
 		return this;
 	}

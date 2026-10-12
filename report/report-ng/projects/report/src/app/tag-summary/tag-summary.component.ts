@@ -1,12 +1,14 @@
-import { Component, Input, OnInit, SimpleChanges } from '@angular/core';
+import { Component, Input, OnInit, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
 import { FlowFilterService } from '../flow-filter.service';
 import { Entry } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-tag-summary',
-  templateUrl: './tag-summary.component.html',
-  styleUrls: ['./tag-summary.component.css']
+    selector: 'app-tag-summary',
+    templateUrl: './tag-summary.component.html',
+    styleUrls: ['./tag-summary.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class TagSummaryComponent implements OnInit {
   readonly RESULT_TAGS: string[] = ["PASS", "FAIL", "SKIP", "ERROR"];
@@ -64,6 +66,12 @@ export class TagSummaryComponent implements OnInit {
         return d;
       });
     }
+  }
+
+  /** Includes a result without toggling the enclosing expansion panel. */
+  includeResult(tag: string, event: MouseEvent): void {
+    event.stopPropagation();
+    this.filters.addInclude(tag);
   }
 
 }
