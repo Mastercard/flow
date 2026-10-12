@@ -27,6 +27,7 @@ import javax.xml.xpath.XPathFactory;
 import org.junit.jupiter.api.Assertions;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -194,6 +195,141 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	}
 
 	/**
+	 * Asserts the number of rendered Flow rows.
+	 *
+	 * @param expected expected row count
+	 * @return {@code this}
+	 */
+	public IndexSequence hasFlowCount( int expected ) {
+		trace( "hasFlowCount", expected );
+		assertEquals( expected,
+				driver.findElements( By.tagName( "app-flow-nav-item" ) ).size(),
+				"rendered Flow rows" );
+		return self();
+	}
+
+	/**
+	 * Asserts the visible filtered-result range.
+	 *
+	 * @param expected range label
+	 * @return {@code this}
+	 */
+	public IndexSequence hasFlowRange( String expected ) {
+		trace( "hasFlowRange", expected );
+		new WebDriverWait( driver, ofSeconds( 2 ) )
+				.withMessage( "Expected paginator range '" + expected + "'" )
+				.until(
+						d -> d.findElement( By.tagName( "mat-paginator" ) ).getText().contains( expected ) );
+		return self();
+	}
+
+	/**
+	 * Uses one of the Material paginator navigation controls.
+	 *
+	 * @param action First, Previous, Next, or Last
+	 * @return {@code this}
+	 */
+	public IndexSequence page( String action ) {
+		trace( "page", action );
+		driver.findElement( By.cssSelector(
+				String.format( "button[aria-label='%s page']", action ) ) ).click();
+		return self();
+	}
+
+	/**
+	 * Asserts that no custom direct-page controls are rendered.
+	 *
+	 * @return {@code this}
+	 */
+	public IndexSequence hasNoDirectPageControls() {
+		trace( "hasNoDirectPageControls" );
+		Assertions.assertTrue( driver.findElements( By.id( "page_input" ) ).isEmpty(), "Page input" );
+		Assertions.assertTrue( driver.findElements( By.id( "page_go" ) ).isEmpty(), "Go button" );
+		return self();
+	}
+
+	/**
+	 * Asserts that no paginator is rendered for a small result set.
+	 *
+	 * @return {@code this}
+	 */
+	public IndexSequence hasNoPaginator() {
+		trace( "hasNoPaginator" );
+		Assertions.assertTrue( driver.findElements( By.tagName( "mat-paginator" ) ).isEmpty(),
+				"paginator" );
+		return self();
+	}
+
+	/**
+	 * Selects a supported Material paginator page size.
+	 *
+	 * @param size desired rows per page
+	 * @return {@code this}
+	 */
+	public IndexSequence pageSize( int size ) {
+		trace( "pageSize", size );
+		driver.findElement( By.tagName( "mat-paginator" ) )
+				.findElement( By.tagName( "mat-select" ) ).sendKeys( Keys.ENTER );
+		new WebDriverWait( driver, ofSeconds( 2 ) )
+				.until( d -> {
+					try {
+						WebElement option = d.findElements( By.tagName( "mat-option" ) ).stream()
+								.filter( element -> String.valueOf( size ).equals( element.getText().trim() ) )
+								.findFirst().orElse( null );
+						if( option == null || !option.isDisplayed() || !option.isEnabled() ) {
+							return false;
+						}
+						option.click();
+						return true;
+					}
+					catch( org.openqa.selenium.StaleElementReferenceException e ) {
+						return false;
+					}
+				} );
+		return self();
+	}
+
+	/**
+	 * Asserts that filtering produced the explicit empty-result message.
+	 *
+	 * @return {@code this}
+	 */
+	public IndexSequence hasNoFlows() {
+		trace( "hasNoFlows" );
+		hasFlowCount( 0 );
+		return has( By.id( "no_flows" ), "No flows match the current filters." );
+	}
+
+	/**
+	 * Asserts that the browser has not requested any Detail pages.
+	 *
+	 * @return {@code this}
+	 */
+	public IndexSequence hasNoDetailRequests() {
+		trace( "hasNoDetailRequests" );
+		assertEquals( 0L, detailRequestCount(), "Detail requests" );
+		return self();
+	}
+
+	/**
+	 * Waits until System diagram activation has requested Detail data.
+	 *
+	 * @return {@code this}
+	 */
+	public IndexSequence hasDetailRequests() {
+		trace( "hasDetailRequests" );
+		new WebDriverWait( driver, ofSeconds( 2 ) ).until( d -> detailRequestCount() > 0 );
+		return self();
+	}
+
+	private long detailRequestCount() {
+		return (Long) ((JavascriptExecutor) driver).executeScript( "return performance"
+				+ ".getEntriesByType('resource')"
+				+ ".filter(entry => entry.name.includes('/detail/') && entry.name.endsWith('.html'))"
+				+ ".length" );
+	}
+
+	/**
 	 * Checks the user-visible flow-row presentation.
 	 *
 	 * @return <code>this</code>
@@ -289,10 +425,34 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	public IndexSequence expandTags() {
 		trace( "expandTags" );
 		driver.findElement( By.id( "tag_summary" ) )
-				.findElement( By.tagName( "mat-expansion-panel-header" ) )
+				.findElement( By.tagName( "mat-panel-title" ) )
 				.click();
 		new WebDriverWait( driver, ofSeconds( 2 ) )
 				.until( elementToBeClickable( By.id( "tag_sort_toggle" ) ) );
+		return self();
+	}
+
+	/**
+	 * Adds a result tag to the inclusion filter by clicking its summary button.
+	 *
+	 * @param result PASS, FAIL, SKIP, or ERROR
+	 * @return <code>this</code>
+	 */
+	public IndexSequence clickResult( String result ) {
+		trace( "clickResult", result );
+		driver.findElement( By.cssSelector( "#tag_summary button#" + result ) ).click();
+		return self();
+	}
+
+	/**
+	 * Asserts that filtering from a result button did not collapse the Tags panel.
+	 *
+	 * @return <code>this</code>
+	 */
+	public IndexSequence hasExpandedTags() {
+		trace( "hasExpandedTags" );
+		assertEquals( "true", driver.findElement( By.cssSelector(
+				"#tag_summary mat-expansion-panel-header" ) ).getAttribute( "aria-expanded" ) );
 		return self();
 	}
 
@@ -309,8 +469,8 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 				Copy.pasta( expected ),
 				Copy.pasta( Stream.of(
 						tagSummary.findElement( By.tagName( "mat-panel-description" ) )
-								.findElements( By.tagName( "span" ) ).stream()
-								.map( IndexSequence::spanIconText )
+								.findElements( By.cssSelector( ".summary, .result" ) ).stream()
+								.map( IndexSequence::elementIconText )
 								.collect( joining( " " ) )
 								.replace( "check_circle_outline", "_PASS_" )
 								.replace( "error_outline", "_FAIL_" )
@@ -321,7 +481,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 		return this;
 	}
 
-	private static String spanIconText( WebElement e ) {
+	private static String elementIconText( WebElement e ) {
 		List<String> content = new ArrayList<>();
 		e.findElements( By.tagName( "mat-icon" ) ).stream()
 				.map( i -> i.getAttribute( "svgIcon" ) )
@@ -421,6 +581,11 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	 */
 	public IndexSequence hasInteractionSummary( String expected ) {
 		trace( "hasInteractionSummary", expected );
+		if( !expected.isEmpty() ) {
+			new WebDriverWait( driver, ofSeconds( 2 ) )
+					.until(
+							d -> expected.equals( d.findElement( By.id( "interaction_summary" ) ).getText() ) );
+		}
 
 		assertEquals( expected,
 				driver.findElements( By.id( "interaction_summary" ) ).stream()

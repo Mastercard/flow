@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build && node scripts/prepare-report-build.mjs",
+    "build": "node scripts/clean-report-build.mjs && ng build && node scripts/prepare-report-build.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test --browsers ChromeHeadless --watch=false",
     "testing": "ng test"

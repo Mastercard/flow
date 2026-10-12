@@ -13,15 +13,19 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { FormsModule } from '@angular/forms';
+import { MatExpansionPanel } from '@angular/material/expansion';
+import { FlowLoadStatus } from '../model-diff-data.service';
 
 describe('SystemDiagramComponent', () => {
   let component: SystemDiagramComponent;
   let fixture: ComponentFixture<SystemDiagramComponent>;
-  let mockMdds;
+  let mockMdds: jasmine.SpyObj<ModelDiffDataService>;
+  let loadStatus: (label: string, status: FlowLoadStatus) => void;
 
   beforeEach(async () => {
     mockMdds = jasmine.createSpyObj([
-      'path', 'index', 'onFlow', 'flowLoadProgress', 'flowFor']);
+      'path', 'index', 'onFlow', 'onFlowLoadStatus', 'flowFor']);
+    mockMdds.onFlowLoadStatus.and.callFake((label, callback) => loadStatus = callback);
     await TestBed.configureTestingModule({
       declarations: [SystemDiagramComponent],
       providers: [
@@ -50,11 +54,102 @@ describe('SystemDiagramComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('loads flow details only after expansion', () => {
+    fixture.detectChanges();
+
+    expect(mockMdds.path).not.toHaveBeenCalled();
+
+    const panel = fixture.debugElement.query(By.directive(MatExpansionPanel))
+      .injector.get(MatExpansionPanel);
+    panel.open();
+    fixture.detectChanges();
+
+    expect(mockMdds.path).toHaveBeenCalledOnceWith('this', '', 16);
+
+    panel.close();
+    panel.open();
+    fixture.detectChanges();
+    expect(mockMdds.path).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows only a centered accessible progress bar while loading', () => {
+    fixture.detectChanges();
+    fixture.debugElement.query(By.directive(MatExpansionPanel))
+      .injector.get(MatExpansionPanel).open();
+    loadStatus('this', status(2, 1, 0));
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('[aria-label="Loading System diagram"]'))).not.toBeNull();
+    const loading = fixture.debugElement.query(By.css('.interaction-loading'));
+    expect(getComputedStyle(loading.nativeElement).alignItems).toBe('center');
+    const progress = loading.query(By.css('mat-progress-bar'));
+    expect(progress.componentInstance.mode).toBe('determinate');
+    expect(progress.componentInstance.value).toBe(50);
+    expect(fixture.debugElement.query(By.css('#interaction_controls_diagram'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('#interaction_summary'))).toBeNull();
+  });
+
+  it('renders the completed empty diagram without an indefinite spinner', () => {
+    mockMdds.index.and.returnValue({ path: '', index: {
+      meta: { modelTitle: '', testTitle: '', timestamp: 0 }, entries: []
+    }, status: '' });
+    fixture.detectChanges();
+    fixture.debugElement.query(By.directive(MatExpansionPanel))
+      .injector.get(MatExpansionPanel).open();
+    loadStatus('this', status(0, 0, 0));
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('[aria-label="Loading System diagram"]'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('#interaction_controls_diagram'))).not.toBeNull();
+    expect(fixture.debugElement.query(By.css('#interaction_summary')).nativeElement.textContent)
+      .toContain('0 interactions between 0 actors');
+  });
+
+  it('shows one incomplete diagram after mixed success and failure', () => {
+    mockMdds.index.and.returnValue({ path: '', index: {
+      meta: { modelTitle: '', testTitle: '', timestamp: 0 }, entries: []
+    }, status: '' });
+    fixture.detectChanges();
+    fixture.debugElement.query(By.directive(MatExpansionPanel))
+      .injector.get(MatExpansionPanel).open();
+    loadStatus('this', status(2, 2, 1));
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('[role="status"]')).nativeElement.textContent)
+      .toContain('Incomplete diagram — loaded 1 of 2 Flow details.');
+    expect(fixture.debugElement.query(By.css('#interaction_controls_diagram'))).not.toBeNull();
+  });
+
+  it('shows a concise failure when every Detail request fails', () => {
+    fixture.detectChanges();
+    fixture.debugElement.query(By.directive(MatExpansionPanel))
+      .injector.get(MatExpansionPanel).open();
+    loadStatus('this', status(2, 2, 2));
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('[role="alert"]')).nativeElement.textContent)
+      .toContain('Unable to load 2 Flow details.');
+    expect(fixture.debugElement.query(By.css('#interaction_controls_diagram'))).toBeNull();
+  });
+
   it('hides the orientation selection indicator', () => {
-    component.loadProgress = 100;
+    fixture.detectChanges();
+    fixture.debugElement.query(By.directive(MatExpansionPanel))
+      .injector.get(MatExpansionPanel).open();
+    loadStatus('this', status(0, 0, 0));
     fixture.detectChanges();
 
     const group = fixture.debugElement.query(By.directive(MatButtonToggleGroup));
     expect(group.injector.get(MatButtonToggleGroup).hideSingleSelectionIndicator).toBeTrue();
   });
 });
+
+function status(total: number, settled: number, failed: number): FlowLoadStatus {
+  return {
+    total,
+    settled,
+    failed,
+    complete: settled === total,
+    progress: total === 0 ? 100 : 100 * settled / total,
+  };
+}

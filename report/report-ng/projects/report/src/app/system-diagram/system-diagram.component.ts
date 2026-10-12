@@ -1,17 +1,23 @@
-import { Component, OnInit, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import mermaid from "mermaid";
-import { ModelDiffDataService } from '../model-diff-data.service';
-import { Entry, Flow, Interaction } from '../types';
+import { FlowLoadStatus, ModelDiffDataService } from '../model-diff-data.service';
+import { Entry, Interaction } from '../types';
 import { FlowFilterService } from '../flow-filter.service';
 import { EntryHoverService } from '../entry-hover.service';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
-import { ClipboardModule } from '@angular/cdk/clipboard';
 import { IconEmbedService } from '../icon-embed.service';
 
 interface Edge {
   from: string;
   edge: string;
   to: string;
+}
+
+enum DiagramLoadState {
+  Inactive = "inactive",
+  Loading = "loading",
+  Loaded = "loaded",
+  Failed = "failed",
 }
 
 /**
@@ -25,7 +31,8 @@ interface Edge {
     changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
-export class SystemDiagramComponent implements OnInit {
+export class SystemDiagramComponent {
+  readonly loadStates = DiagramLoadState;
   private readonly modelLabel = "this";
   private readonly invisibleEdge = '~~~';
   private readonly dottedEdge = '-.->';
@@ -40,8 +47,23 @@ export class SystemDiagramComponent implements OnInit {
   orientation: string = "LR";
   hideFilteredActors: boolean = false;
   mermaidMarkup: string = "";
+  available: boolean = location.protocol !== "file:";
+  loadState: DiagramLoadState = DiagramLoadState.Inactive;
+  loadError: string = "";
+  loadWarning: string = "";
+  private activated: boolean = false;
+  private readonly loadConcurrency: number = 16;
 
-  @ViewChild('myTestDiv') containerElRef: ElementRef | null = null;
+  containerElRef: ElementRef | null = null;
+
+  @ViewChild('myTestDiv')
+  set diagramContainer(container: ElementRef | undefined) {
+    this.containerElRef = container ?? null;
+    if (this.containerElRef !== null && this.loadState === DiagramLoadState.Loaded) {
+      this.renderedEdgeCount = -1;
+      this.rerender();
+    }
+  }
 
   constructor(
     private modelData: ModelDiffDataService,
@@ -49,21 +71,40 @@ export class SystemDiagramComponent implements OnInit {
     private hover: EntryHoverService,
     icons: IconEmbedService,
   ) {
-    modelData.onFlow(this.modelLabel, (label: string, entry: Entry, flow: Flow) => {
-      this.loadProgress = modelData.flowLoadProgress(this.modelLabel);
-      this.refreshEdges();
+    modelData.onFlowLoadStatus(this.modelLabel, (_, status: FlowLoadStatus) => {
+      this.loadProgress = status.progress;
+      if (status.complete) {
+        const loaded = status.total - status.failed;
+        if (status.total > 0 && loaded === 0) {
+          this.loadState = DiagramLoadState.Failed;
+          this.loadError = `Unable to load ${status.failed} Flow ${status.failed === 1 ? "detail" : "details"}.`;
+        }
+        else {
+          this.loadState = DiagramLoadState.Loaded;
+          this.loadWarning = status.failed === 0
+            ? ""
+            : `Incomplete diagram — loaded ${loaded} of ${status.total} Flow details. `
+              + `Interaction counts exclude ${status.failed} ${status.failed === 1 ? "Flow" : "Flows"} `
+              + `that could not be loaded.`;
+          this.refreshEdges();
+        }
+      }
     });
     filter.onUpdate(() => {
-      if (this.hideFilteredActors) {
-        this.refreshEdges();
-      }
-      else {
-        this.refilterEdges();
+      if (this.loadState === DiagramLoadState.Loaded) {
+        if (this.hideFilteredActors) {
+          this.refreshEdges();
+        }
+        else {
+          this.refilterEdges();
+        }
       }
     });
     hover.onHover((entry: Entry | null) => {
       this.hovered = entry;
-      this.rehoverFlow();
+      if (this.loadState === DiagramLoadState.Loaded) {
+        this.rehoverFlow();
+      }
     });
 
     icons.register(
@@ -71,13 +112,12 @@ export class SystemDiagramComponent implements OnInit {
       "filter_alt", "content_copy");
   }
 
-  ngOnInit(): void {
-    // we can't do the get requests to load flow data
-    // when we're browsing on the file system, so let's
-    // avoid errors in the log by not even trying
-    if (location.protocol !== "file:") {
-      // start the model load
-      this.modelData.path(this.modelLabel, "");
+  /** Starts Detail loading on first expansion; subsequent calls are no-ops. */
+  activate(): void {
+    if (!this.activated) {
+      this.activated = true;
+      this.loadState = DiagramLoadState.Loading;
+      this.modelData.path(this.modelLabel, "", this.loadConcurrency);
     }
   }
 

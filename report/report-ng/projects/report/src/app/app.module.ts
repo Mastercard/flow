@@ -140,7 +140,11 @@ const routes: Routes = [
     ReactiveFormsModule,
     RouterModule.forRoot(routes, { useHash: true }),
   ],
-  providers: [Title, provideHttpClient(withXhr(), withInterceptorsFromDi()), provideZoneChangeDetection()],
+  providers: [
+    Title,
+    provideHttpClient(withXhr(), withInterceptorsFromDi()),
+    provideZoneChangeDetection(),
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

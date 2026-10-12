@@ -68,4 +68,10 @@ export class TagSummaryComponent implements OnInit {
     }
   }
 
+  /** Includes a result without toggling the enclosing expansion panel. */
+  includeResult(tag: string, event: MouseEvent): void {
+    event.stopPropagation();
+    this.filters.addInclude(tag);
+  }
+
 }

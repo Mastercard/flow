@@ -97,6 +97,7 @@ abstract class AbstractIndexTest {
 				"child       [FAIL, abc, def, ghi]",
 				"dependency  [SKIP, abc, ghi, jkl, mno]",
 				"dependent   [ERROR, mno, pqr, stu]" )
+				.hasNoPaginator()
 				.expandTags()
 				.hasTags( "11 tags on 4 flows _PASS_ 25.0% _FAIL_ 25.0% _SKIP_ 25.0% _ERROR_ 25.0%",
 						"abc 75.0%",
@@ -208,6 +209,21 @@ abstract class AbstractIndexTest {
 				.hasFlows(
 						"dependency  [SKIP, abc, ghi, jkl]",
 						"dependent   [ERROR, pqr, stu]" );
+	}
+
+	/** Result summaries add their corresponding tag to the inclusion filter. */
+	@Test
+	void resultTagInclusion() {
+		assertSame( iseq, iseq.expandTags()
+				.clickResult( "FAIL" )
+				.hasExpandedTags()
+				.hasUrlArgs( "inc=FAIL" )
+				.hasFilters( "", "FAIL", "" )
+				.hasFlows( "child  [abc, def, ghi]" )
+				.hasTags( "3 tags on 1 flow _FAIL_ 100.0%",
+						"abc 100.0%",
+						"def 100.0%",
+						"ghi 100.0%" ) );
 	}
 
 	/**
