@@ -1,6 +1,15 @@
-<mat-nav-list class="drag-list" cdkDropList (cdkDropListDropped)="drop($event)">
-  <div class="drag-box" *ngFor="let entry of entries" cdkDrag [cdkDragDisabled]="!draggable">
+<mat-nav-list *ngIf="draggable; else ordinaryList" class="drag-list" cdkDropList
+  (cdkDropListDropped)="drop($event)">
+  <div class="drag-box" *ngFor="let entry of entries; trackBy: trackByDetail" cdkDrag>
     <app-flow-nav-item class="flow_item" [entry]="entry" [basePath]="basePath" [showResult]="showResult">
     </app-flow-nav-item>
   </div>
 </mat-nav-list>
+<ng-template #ordinaryList>
+  <mat-nav-list>
+    <div *ngFor="let entry of entries; trackBy: trackByDetail">
+      <app-flow-nav-item class="flow_item" [entry]="entry" [basePath]="basePath" [showResult]="showResult">
+      </app-flow-nav-item>
+    </div>
+  </mat-nav-list>
+</ng-template>

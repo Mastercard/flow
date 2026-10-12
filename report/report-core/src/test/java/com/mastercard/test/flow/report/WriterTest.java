@@ -12,23 +12,27 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
-import com.github.difflib.DiffUtils;
-import com.github.difflib.patch.AbstractDelta;
-import com.github.difflib.patch.DeltaType;
-import com.github.difflib.patch.Patch;
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.builder.Creator;
 import com.mastercard.test.flow.builder.Deriver;
 import com.mastercard.test.flow.msg.txt.Text;
 import com.mastercard.test.flow.report.Mdl.Actrs;
+import com.mastercard.test.flow.report.data.FlowData;
 
 /**
  * Exercises {@link Writer}
@@ -88,13 +92,13 @@ class WriterTest {
 				"  1 x detail/823B8031950E57346DCE6FFD4BE56F54.html",
 				"  1 x index.html",
 				"  1 x res/3rdpartylicenses.txt",
-				" 31 x res/_digits_.<hash>.js",
-				"  1 x res/common.<hash>.js",
+				" 35 x res/chunk-<hash>.js",
+				"  1 x res/entry.js",
 				"  1 x res/favicon.ico",
-				"  1 x res/main.<hash>.js",
-				"  1 x res/polyfills.<hash>.js",
-				"  1 x res/runtime.<hash>.js",
-				"  1 x res/styles.<hash>.css" ),
+				"  1 x res/main-<hash>.js",
+				"  1 x res/polyfills-<hash>.js",
+				"  1 x res/styles-<hash>.css",
+				"  1 x res/system.min.js" ),
 				summariseReportFiles( dir ) );
 
 		String detail = new String( Files.readAllBytes( dir.resolve(
@@ -166,6 +170,79 @@ class WriterTest {
 						.replaceAll( ":\\d+", ":##" ) );
 	}
 
+	/**
+	 * Concurrent updates are isolated for their complete callback and publication
+	 * sequence.
+	 *
+	 * @throws Exception on failure
+	 */
+	@Test
+	void concurrentUpdates() throws Exception {
+		Path dir = Paths.get( "target", "WriterTest", "concurrentUpdates" );
+		Writer writer = new Writer( "model", "test", dir );
+		CountDownLatch firstEntered = new CountDownLatch( 1 );
+		CountDownLatch secondSubmitted = new CountDownLatch( 1 );
+		CountDownLatch releaseFirst = new CountDownLatch( 1 );
+		List<String> callbackEvents = new CopyOnWriteArrayList<>();
+		ExecutorService updates = Executors.newFixedThreadPool( 2 );
+
+		try {
+			Future<?> first = updates.submit( () -> writer.with( Mdl.CHILD, data -> {
+				callbackEvents.add( "child entered" );
+				firstEntered.countDown();
+				await( secondSubmitted );
+				assertEquals( List.of( "child entered" ), callbackEvents,
+						"the competing callback must not enter during the first update" );
+				await( releaseFirst );
+				data.tags.add( Writer.FAIL_TAG );
+				callbackEvents.add( "child completed" );
+			} ) );
+
+			await( firstEntered );
+			Future<?> second = updates.submit( () -> {
+				secondSubmitted.countDown();
+				writer.with( Mdl.BASIS, data -> {
+					data.tags.add( Writer.PASS_TAG );
+					callbackEvents.add( "basis entered" );
+				} );
+			} );
+
+			releaseFirst.countDown();
+			first.get( 10, TimeUnit.SECONDS );
+			second.get( 10, TimeUnit.SECONDS );
+		}
+		finally {
+			updates.shutdownNow();
+		}
+
+		assertEquals( List.of( "child entered", "child completed", "basis entered" ),
+				callbackEvents, "callback order" );
+
+		Reader reader = new Reader( dir );
+		Map<String, com.mastercard.test.flow.report.data.Entry> entries = reader.read().entries.stream()
+				.collect( Collectors.toMap( e -> e.description, e -> e ) );
+		assertEquals( 2, entries.size(), "each flow appears exactly once" );
+		assertEquals( 2, reader.read().entries.size(), "index entry count" );
+
+		FlowData child = reader.detail( entries.get( "child" ) );
+		FlowData basis = reader.detail( entries.get( "basis" ) );
+		Assertions.assertNotNull( child, "child detail" );
+		Assertions.assertNotNull( basis, "basis detail" );
+		Assertions.assertTrue( child.tags.contains( Writer.FAIL_TAG ), "child update data" );
+		Assertions.assertTrue( basis.tags.contains( Writer.PASS_TAG ), "basis update data" );
+		assertEquals( entries.get( "basis" ).detail, child.basis, "corrected basis link" );
+	}
+
+	private static void await( CountDownLatch event ) {
+		try {
+			Assertions.assertTrue( event.await( 10, TimeUnit.SECONDS ), "event deadline" );
+		}
+		catch( InterruptedException e ) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException( "Interrupted while awaiting test event", e );
+		}
+	}
+
 	private String summariseReportFiles( Path dir ) throws IOException {
 		return Copy.pasta( Files.walk( dir )
 				.filter( Files::isRegularFile )
@@ -175,6 +252,7 @@ class WriterTest {
 				// files produced by the angular build have a content-hash suffix
 				// to avoid cached versions being used
 				.map( s -> s.replaceAll( "\\.[a-f0-9]{16}\\.(js|css)", ".<hash>.$1" ) )
+				.map( s -> s.replaceAll( "-[A-Za-z0-9_-]{8}\\.(js|css)", "-<hash>.$1" ) )
 				.map( s -> s.replaceAll( "(res/)\\d+(\\.<hash>.js)", "$1_digits_$2" ) )
 				.collect( groupingBy( s -> s ) )
 				.entrySet().stream()
@@ -201,67 +279,38 @@ class WriterTest {
 		Assertions.assertEquals( Copy.pasta(
 				"  1 x index.html",
 				"  1 x res/3rdpartylicenses.txt",
-				" 31 x res/_digits_.<hash>.js",
-				"  1 x res/common.<hash>.js",
+				" 35 x res/chunk-<hash>.js",
+				"  1 x res/entry.js",
 				"  1 x res/favicon.ico",
-				"  1 x res/main.<hash>.js",
-				"  1 x res/polyfills.<hash>.js",
-				"  1 x res/runtime.<hash>.js",
-				"  1 x res/styles.<hash>.css" ),
+				"  1 x res/main-<hash>.js",
+				"  1 x res/polyfills-<hash>.js",
+				"  1 x res/styles-<hash>.css",
+				"  1 x res/system.min.js" ),
 				summariseReportFiles( dir ) );
 	}
 
 	/**
-	 * Illustrates the effect of the edit we make to the runtime.js file so that all
-	 * javascript files can be hidden away in the <code>res</code> dir
+	 * Confirms that application javascript is extracted without brittle text
+	 * transformations.
 	 *
 	 * @throws Exception on failure
 	 */
 	@Test
-	void chunkLoadingPath() throws Exception {
-		Path dir = Paths.get( "target", "WriterTest", "chunkLoadingPath" );
+	void javascriptResourcesAreUnchanged() throws Exception {
+		Path dir = Paths.get( "target", "WriterTest", "javascriptResourcesAreUnchanged" );
 
 		Files.createDirectories( dir );
 		Writer w = writeReport( dir );
 
-		Path runtimeFile = QuietFiles.list( w.path().resolve( "res" ) )
+		Path mainFile = QuietFiles.list( w.path().resolve( "res" ) )
 				.filter( p -> p.getFileName().toString()
-						.matches( "runtime\\.[0-9a-f]+\\.js" ) )
+						.matches( "main-[A-Za-z0-9_-]+\\.js" ) )
 				.findAny()
 				.orElseThrow( () -> new IllegalStateException(
-						"Failed to find runtime.<hash>.js file in " + w.path() ) );
+						"Failed to find main-<hash>.js file in " + w.path() ) );
 
-		// The file that was written in the report
-		String written = new String( QuietFiles.readAllBytes( runtimeFile ), UTF_8 );
-		// The resource that was generated in report-ng
-		String resource = resource( runtimeFile.getFileName().toString() );
-
-		// let's examine the changes that we've made to the runtime file
-		Patch<String> patch = DiffUtils.diffInline( resource, written );
-
-		assertEquals( 1, patch.getDeltas().size(),
-				"edit count" );
-		AbstractDelta<String> delta = patch.getDeltas().get( 0 );
-		assertEquals( DeltaType.INSERT, delta.getType(),
-				"edit type" );
-		assertEquals( "[\"res/\"+]", delta.getTarget().getLines().toString(),
-				"inserted lines count" );
-
-		int context = 14;
-		String before = resource.substring(
-				delta.getSource().getPosition() - context,
-				delta.getSource().getPosition() + context )
-				.replaceAll( "\\d", "#" );
-		String after = written.substring(
-				delta.getTarget().getPosition() - context,
-				delta.getTarget().getPosition() + context
-						+ delta.getTarget().getLines().get( 0 ).length() )
-				.replaceAll( "\\d", "#" );
-
-		assertEquals( "),[])),a.u=e=>(###===e?\"comm",
-				before, "raw resource runtime snippet" );
-		assertEquals( "),[])),a.u=e=>\"res/\"+(###===e?\"comm",
-				after, "written runtime snippet" );
+		String written = new String( QuietFiles.readAllBytes( mainFile ), UTF_8 );
+		assertEquals( resource( mainFile.getFileName().toString() ), written );
 	}
 
 	private static String resource( String name ) {

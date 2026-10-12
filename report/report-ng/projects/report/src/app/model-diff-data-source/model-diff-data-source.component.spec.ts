@@ -14,7 +14,7 @@ describe('ModelDiffDataSourceComponent', () => {
   let mockMdds;
 
   beforeEach(async () => {
-    mockMdds = jasmine.createSpyObj(['onFlow', 'onIndex']);
+    mockMdds = jasmine.createSpyObj(['onFlow', 'onIndex', 'path']);
     await TestBed.configureTestingModule({
       declarations: [
         ModelDiffDataSourceComponent,

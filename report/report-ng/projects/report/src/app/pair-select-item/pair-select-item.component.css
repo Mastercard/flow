@@ -1,3 +1,7 @@
+:host {
+    display: block;
+}
+
 .line {
     max-width: 300px;
 }

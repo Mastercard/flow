@@ -1,8 +1,11 @@
 package com.mastercard.test.flow.report.seq;
 
+import static java.time.Duration.ofSeconds;
+
 import org.junit.jupiter.api.Assertions;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 import com.mastercard.test.flow.report.Copy;
 
@@ -32,6 +35,9 @@ public class ContextSequence extends AbstractSequence<ContextSequence> {
 	 */
 	public ContextSequence hasPanels( String... names ) {
 		trace( "hasPanels", (Object[]) names );
+		new WebDriverWait( driver, ofSeconds( 3 ) )
+				.until( dr -> dr.findElements( By.tagName( "mat-panel-title" ) ).stream()
+						.anyMatch( title -> !title.getText().isEmpty() ) );
 		Assertions.assertEquals(
 				Copy.pasta( names ),
 				Copy.pasta( driver.findElements( By.tagName( "mat-panel-title" ) ).stream()
