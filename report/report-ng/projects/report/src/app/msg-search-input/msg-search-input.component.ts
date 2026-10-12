@@ -1,13 +1,15 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 
 import { MsgSearchService } from '../msg-search.service';
 import { QueryService } from '../query.service';
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-msg-search-input',
-  templateUrl: './msg-search-input.component.html',
-  styleUrls: ['./msg-search-input.component.css']
+    selector: 'app-msg-search-input',
+    templateUrl: './msg-search-input.component.html',
+    styleUrls: ['./msg-search-input.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class MsgSearchInputComponent implements OnInit {
 

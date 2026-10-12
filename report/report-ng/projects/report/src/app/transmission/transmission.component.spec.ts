@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { TransmissionComponent } from './transmission.component';
 import { BasisFetchService } from '../basis-fetch.service';
 import { DataDisplay, Options } from '../types';
@@ -35,8 +35,10 @@ describe('TransmissionComponent', () => {
 });
 
 @Component({
-  selector: 'app-msg-view',
-  template: ''
+    selector: 'app-msg-view',
+    template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubMsgView {
   @Input() options: Options = new Options();

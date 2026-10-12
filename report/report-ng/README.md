@@ -130,7 +130,7 @@ The first build will populate a `node_modules` folder. It will take a long time.
 
 ### Subsequent
 
-Running `ng build` will compile the angular app and store the resulting artifacts in the `dist/` directory.
+Running `npm run build` will compile the Angular app, apply the direct-file SystemJS transformation, and store the resulting artifacts in the `dist/` directory.
 Once the `dist/` directory has been so populated, running `mvn process-resources` (or indeed any [maven phase](https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html#lifecycle-reference) that implies `process-resources`, which is all of the interesting ones) will package them up into the output artifact of this module.
 
 These steps can be combined by running either of:
@@ -146,4 +146,4 @@ As noted above, these tests will be skipped if system property `node` is set to 
 
 Credit for the sequence diagram on the flow detail pages belongs to [geraintluff/sequence-diagram-html](https://github.com/geraintluff/sequence-diagram-html). A pale shadow of that work has been angularised here.
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 12.1.2 and has since been upgraded to 14.1.2.
+This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 12.1.2 and has since been upgraded to 22.2.2.

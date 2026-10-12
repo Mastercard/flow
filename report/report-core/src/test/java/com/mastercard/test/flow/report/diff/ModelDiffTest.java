@@ -153,6 +153,7 @@ class ModelDiffTest {
 	@Test
 	void naturalPairs() {
 		dseq.paired()
+				.hasVisiblePairingControls( "link_off" )
 				.hasPairs(
 						"unchanged b c d | unchanged b c d",
 						"  updated c d e | updated c d e  " );
@@ -164,6 +165,7 @@ class ModelDiffTest {
 	@Test
 	void naturalUnpairs() {
 		dseq.unpaired()
+				.hasVisiblePairingControls( "link" )
 				.hasUnpairs(
 						"removed a b c | added d e f  " );
 	}
