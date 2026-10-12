@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, Input } from '@angular/core';
+import { Component, Input, provideZoneChangeDetection, ChangeDetectionStrategy } from '@angular/core';
 import { ModelDiffComponent } from './model-diff.component';
 import { RouterTestingModule } from '@angular/router/testing';
 import { FlowPairingService } from '../flow-pairing.service';
@@ -13,6 +13,8 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ModelDiffDataSourceComponent } from '../model-diff-data-source/model-diff-data-source.component';
 import { ChangeViewComponent } from '../change-view/change-view.component';
 import { ChangeAnalysisComponent } from '../change-analysis/change-analysis.component';
+import { By } from '@angular/platform-browser';
+import { MatTabGroup } from '@angular/material/tabs';
 
 describe('ModelDiffComponent', () => {
   let component: ModelDiffComponent;
@@ -43,6 +45,7 @@ describe('ModelDiffComponent', () => {
         StubChangeAnalysis,
       ],
       providers: [
+        provideZoneChangeDetection(),
         { provide: FlowPairingService, useValue: mockFps },
         { provide: ModelDiffDataService, useValue: mockMdds },
       ],
@@ -68,32 +71,46 @@ describe('ModelDiffComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('keeps model-diff tabs stretched', () => {
+    const tabGroup = fixture.debugElement.query(By.directive(MatTabGroup));
+    expect((tabGroup.componentInstance as MatTabGroup).stretchTabs).toBeTrue();
+  });
 });
 
 
 @Component({
-  selector: 'app-menu',
-  template: ''
+    selector: 'app-menu',
+    template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubMenu {
 }
 
 @Component({
-  selector: 'app-flow-filter',
-  template: ''
+    selector: 'app-flow-filter',
+    template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubFlowFilter {
 }
 
 @Component({
-  selector: 'app-model-diff-data-source',
-  template: '',
-  providers: [{
-    provide: ModelDiffDataSourceComponent,
-    useClass: StubModelDiffDataSource
-  }],
+    selector: 'app-model-diff-data-source',
+    template: '',
+    providers: [{
+            provide: ModelDiffDataSourceComponent,
+            useClass: StubModelDiffDataSource
+        }],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubModelDiffDataSource {
+
+  path(label: string, value: string): void {
+  }
 
   getValue(): string {
     return "";
@@ -104,26 +121,32 @@ class StubModelDiffDataSource {
 }
 
 @Component({
-  selector: 'app-paired-flow-list',
-  template: ''
+    selector: 'app-paired-flow-list',
+    template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubPairedFlowList {
 }
 
 @Component({
-  selector: 'app-unpaired-flow-list',
-  template: ''
+    selector: 'app-unpaired-flow-list',
+    template: '',
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubUnpairedFlowList {
 }
 
 @Component({
-  selector: 'app-change-view',
-  template: '',
-  providers: [{
-    provide: ChangeViewComponent,
-    useClass: StubChangeView,
-  }],
+    selector: 'app-change-view',
+    template: '',
+    providers: [{
+            provide: ChangeViewComponent,
+            useClass: StubChangeView,
+        }],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubChangeView {
   onSelection(cb: () => void): void {
@@ -131,12 +154,14 @@ class StubChangeView {
 }
 
 @Component({
-  selector: 'app-change-analysis',
-  template: '',
-  providers: [{
-    provide: ChangeAnalysisComponent,
-    useClass: StubChangeAnalysis,
-  }],
+    selector: 'app-change-analysis',
+    template: '',
+    providers: [{
+            provide: ChangeAnalysisComponent,
+            useClass: StubChangeAnalysis,
+        }],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 class StubChangeAnalysis {
   toChangeView(t: (from: string, to: string) => void): void {
