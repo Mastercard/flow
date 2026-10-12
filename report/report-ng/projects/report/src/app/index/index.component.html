@@ -13,8 +13,17 @@
 
 <app-system-diagram></app-system-diagram>
 
-<app-flow-nav-list [entries]="filteredFlows" *ngIf="!error">
-</app-flow-nav-list>
+<ng-container *ngIf="!error">
+    <app-flow-nav-list [entries]="pagedFlows" [draggable]="false">
+    </app-flow-nav-list>
+    <p id="no_flows" *ngIf="filteredFlows.length === 0">No flows match the current filters.</p>
+    <div class="pagination" *ngIf="filteredFlows.length > pageSizeOptions[0]">
+        <mat-paginator [length]="filteredFlows.length" [pageIndex]="pageIndex" [pageSize]="pageSize"
+            [pageSizeOptions]="pageSizeOptions" [showFirstLastButtons]="true" aria-label="Flow pages"
+            (page)="onPage($event)">
+        </mat-paginator>
+    </div>
+</ng-container>
 
 
 <pre *ngIf="error">

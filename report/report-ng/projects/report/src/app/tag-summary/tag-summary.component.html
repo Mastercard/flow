@@ -3,13 +3,15 @@
         <mat-panel-title>Tags</mat-panel-title>
         <mat-panel-description>
             <span class="summary">{{summary}}</span>
-            <span *ngFor="let rt of results;" class="result" id="{{rt}}" matTooltip="{{rt}} : {{tagCounts[rt]}}">
+            <button *ngFor="let rt of results;" type="button" class="result" id="{{rt}}"
+                matTooltip="{{rt}} : {{tagCounts[rt]}}" aria-label="Include {{rt}} flows"
+                (click)="includeResult(rt, $event)">
                 <mat-icon *ngIf="rt === 'PASS'" svgIcon="check_circle_outline"></mat-icon>
                 <mat-icon *ngIf="rt === 'SKIP'" svgIcon="help_outline"></mat-icon>
                 <mat-icon *ngIf="rt === 'FAIL'" svgIcon="error_outline"></mat-icon>
                 <mat-icon *ngIf="rt === 'ERROR'" svgIcon="new_releases"></mat-icon>
                 {{(100 * tagCounts[rt] / entries.length).toFixed(1)}}%
-            </span>
+            </button>
         </mat-panel-description>
     </mat-expansion-panel-header>
     <div id="content">

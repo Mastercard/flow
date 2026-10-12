@@ -3,8 +3,20 @@ mat-icon {
 }
 
 .result {
+    appearance: none;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
     padding: 0.5em;
     white-space: nowrap;
+}
+
+.result:hover,
+.result:focus-visible {
+    background-color: rgba(0, 0, 0, 0.06);
+    border-radius: 4px;
 }
 
 #PASS mat-icon {

@@ -1,15 +1,22 @@
-<mat-expansion-panel *ngIf="loadProgress != 0">
+<mat-expansion-panel *ngIf="available" (opened)="activate()">
     <mat-expansion-panel-header>
         <mat-panel-title id="interactions_title">Interactions</mat-panel-title>
-        <mat-panel-description id="interaction_summary">{{summary}}</mat-panel-description>
+        <mat-panel-description *ngIf="loadState === loadStates.Loaded" id="interaction_summary">{{summary}}</mat-panel-description>
     </mat-expansion-panel-header>
-    <div #myTestDiv id="interaction_root">
-        <mat-progress-bar *ngIf="loadProgress != 100" [value]="loadProgress"></mat-progress-bar>
+    <div *ngIf="loadState === loadStates.Loading" class="interaction-loading">
+        <mat-progress-bar mode="determinate" [value]="loadProgress"
+            aria-label="Loading System diagram"></mat-progress-bar>
+        <span>Loading interactions… {{loadProgress.toFixed(0)}}%</span>
+    </div>
+    <p *ngIf="loadState === loadStates.Failed" role="alert">{{loadError}}</p>
+    <div *ngIf="loadState === loadStates.Loaded" #myTestDiv id="interaction_root">
+        <p *ngIf="loadWarning" role="status">{{loadWarning}}</p>
         <div id="interaction_controls_diagram">
             <div id="interaction_controls">
                 <section>
                     <mat-button-toggle-group id="interactions_orientation_group" [vertical]="true"
-                        [(ngModel)]="orientation" (change)="forceRerender()">
+                        [hideSingleSelectionIndicator]="true" [(ngModel)]="orientation"
+                        (change)="forceRerender()">
                         <mat-button-toggle matTooltip="Vertical layout" matTooltipPosition="right" value="TD">
                             <mat-icon svgIcon="panorama_vertical"></mat-icon>
                         </mat-button-toggle>

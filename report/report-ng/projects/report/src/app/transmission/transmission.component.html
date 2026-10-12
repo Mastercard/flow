@@ -3,7 +3,7 @@
   Actual data not available, displaying expected message.
 </div>
 <app-msg-view *ngIf="effectiveDisplay==='Expected'" [options]="options" [dataDisplay]="options.dataDisplay"
-  [human]="action?.transmission?.full?.expect" [base64]="action?.transmission?.full?.expectBytes">
+  [human]="$safeNavigationMigration(action?.transmission?.full?.expect)" [base64]="$safeNavigationMigration(action?.transmission?.full?.expectBytes)">
 </app-msg-view>
 <div *ngIf="effectiveDisplay === 'Diff' || effectiveDisplay === 'Basis'">
   <app-text-diff *ngIf="hasDiffData(); else no_data_warning" [left]="diffLeft()" [right]="diffRight()"
@@ -17,5 +17,5 @@
   </ng-template>
 </div>
 <app-msg-view *ngIf="effectiveDisplay === 'Actual'" [options]="options" [dataDisplay]="options.dataDisplay"
-  [human]="action?.transmission?.full?.actual" [base64]="action?.transmission?.full?.actualBytes">
+  [human]="$safeNavigationMigration(action?.transmission?.full?.actual)" [base64]="$safeNavigationMigration(action?.transmission?.full?.actualBytes)">
 </app-msg-view>

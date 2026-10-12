@@ -1,30 +1,25 @@
 package com.mastercard.test.flow.assrt.junit5;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.DynamicContainer;
 import org.junit.jupiter.api.DynamicNode;
-import org.junit.jupiter.api.DynamicTest;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import org.opentest4j.IncompleteExecutionException;
 import org.opentest4j.TestAbortedException;
-
-import static com.mastercard.test.flow.assrt.Order.CHAIN_TAG_PREFIX;
-import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 import com.mastercard.test.flow.Flow;
 import com.mastercard.test.flow.Model;
 import com.mastercard.test.flow.assrt.AbstractFlocessor;
 import com.mastercard.test.flow.assrt.History.Result;
-import com.mastercard.test.flow.util.Tags;
+import com.mastercard.test.flow.report.Writer.Indexing;
 
 /**
  * Integrates {@link Flow} processing into junit 5. This should be used as the
@@ -50,7 +45,7 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 	 * @param model The system model to exercise
 	 */
 	public Flocessor( String title, Model model ) {
-		super( title, model );
+		super( title, model, Indexing.FIRST_THEN_EXPLICIT );
 	}
 
 	/**
@@ -60,46 +55,14 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 	 * @return A stream of test cases
 	 */
 	public Stream<DynamicNode> tests() {
-		List<DynamicNode> nodes = new ArrayList<>();
-		List<Flow> currentChain = new ArrayList<>();
-		String currentChainId = null;
-
-		// Iterate over flows once and separate them into chained and non-chained
-		for( Flow flow : flows().collect( Collectors.toList() ) ) {
-			Optional<String> chainSuffix = Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX );
-			if( chainSuffix.isPresent() ) {
-				String chainId = chainSuffix.get();
-				if( currentChainId == null || currentChainId.equals( chainId ) ) {
-					currentChainId = chainId;
-					currentChain.add( flow );
-				}
-				else {
-					// End of the previous chain, add the current chain to nodes
-					nodes.add( createDynamicContainer( currentChain ) );
-					currentChain.clear();
-					currentChainId = chainId;
-					currentChain.add( flow );
-				}
-			}
-			else {
-				if( currentChainId != null ) {
-					// End of the current chain, add the current chain to nodes
-					nodes.add( createDynamicContainer( currentChain ) );
-					currentChain.clear();
-					currentChainId = null;
-				}
-				nodes.add( dynamicTest(
-						flow.meta().id(),
-						testSource( flow ),
-						() -> processFlow( flow ) ) );
-			}
-		}
-
-		// If the last flows were part of a chain, add them as well
-		if( !currentChain.isEmpty() ) {
-			nodes.add( createDynamicContainer( currentChain ) );
-		}
-		return nodes.stream();
+		List<Flow> flows = prepareFlows();
+		FlowAdmission admission = new FlowAdmission( flows, replaying() );
+		return StreamSupport.stream( admission, false )
+				.<DynamicNode>map( index -> {
+					Flow flow = flows.get( index );
+					return dynamicTest( flow.meta().id(), testSource( flow ),
+							() -> run( flow, index, admission ) );
+				} );
 	}
 
 	private void processFlow( Flow flow ) {
@@ -127,21 +90,37 @@ public class Flocessor extends AbstractFlocessor<Flocessor> {
 		}
 	}
 
-	private DynamicContainer createDynamicContainer( List<Flow> chain ) {
-		List<DynamicTest> tests = chain.stream()
-				.map( flow -> dynamicTest(
-						flow.meta().id(),
-						testSource( flow ),
-						() -> processFlow( flow ) ) )
-				.collect( Collectors.toList() );
+	@SuppressWarnings({ "java:S112", "java:S1181" }) // Jupiter bodies may fail with any Throwable
+	private void run( Flow flow, int index, FlowAdmission admission ) throws Throwable {
+		Throwable bodyFailure = null;
+		try {
+			processFlow( flow );
+		}
+		catch( Throwable failure ) {
+			bodyFailure = failure;
+		}
 
-		// Use the chain tag for the display name
-		String chainTag = chain.stream()
-				.findFirst()
-				.flatMap( flow -> Tags.suffix( flow.meta().tags(), CHAIN_TAG_PREFIX ) )
-				.orElse( chain.get( 0 ).meta().id() );
+		boolean last = admission.finished( index );
+		if( last ) {
+			try {
+				publishReportIndex();
+			}
+			catch( Throwable publicationFailure ) {
+				if( bodyFailure == null ) {
+					bodyFailure = publicationFailure;
+				}
+				// Keep the body failure primary, and avoid adding the same failure (or its
+				// direct wrapper) a second time.
+				else if( publicationFailure != bodyFailure
+						&& publicationFailure.getCause() != bodyFailure ) {
+					bodyFailure.addSuppressed( publicationFailure );
+				}
+			}
+		}
 
-		return DynamicContainer.dynamicContainer( "chain:" + chainTag, tests );
+		if( bodyFailure != null ) {
+			throw bodyFailure;
+		}
 	}
 
 	/**

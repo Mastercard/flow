@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { BasisFetchService } from '../basis-fetch.service';
 import { SequenceData } from '../flow-sequence/flow-sequence.component';
@@ -25,9 +25,11 @@ import { IconEmbedService } from '../icon-embed.service';
  * The root component of the flow detail view
  */
 @Component({
-  selector: 'app-detail',
-  templateUrl: './detail.component.html',
-  styleUrls: ['./detail.component.css']
+    selector: 'app-detail',
+    templateUrl: './detail.component.html',
+    styleUrls: ['./detail.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class DetailComponent implements OnInit {
   @Input() flow: Flow = empty_flow;

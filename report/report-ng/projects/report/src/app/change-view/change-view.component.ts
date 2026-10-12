@@ -1,5 +1,5 @@
 import { ViewportScroller } from '@angular/common';
-import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { MatSelectionListChange } from '@angular/material/list';
 import { ActivatedRoute } from '@angular/router';
@@ -12,9 +12,11 @@ import { IconEmbedService } from '../icon-embed.service';
 
 
 @Component({
-  selector: 'app-change-view',
-  templateUrl: './change-view.component.html',
-  styleUrls: ['./change-view.component.css'],
+    selector: 'app-change-view',
+    templateUrl: './change-view.component.html',
+    styleUrls: ['./change-view.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class ChangeViewComponent implements OnInit {
 

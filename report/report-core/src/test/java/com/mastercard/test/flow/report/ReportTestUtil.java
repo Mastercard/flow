@@ -5,10 +5,16 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.mastercard.test.flow.Flow;
+import com.mastercard.test.flow.report.data.Entry;
+import com.mastercard.test.flow.report.data.Index;
 
 import spark.Service;
 
@@ -16,6 +22,8 @@ import spark.Service;
  * Utility methods for testing execution reports
  */
 public class ReportTestUtil {
+	private static final ObjectMapper JSON = new ObjectMapper()
+			.enable( SerializationFeature.INDENT_OUTPUT );
 
 	/**
 	 * Base directory for where we write our reports
@@ -121,11 +129,50 @@ public class ReportTestUtil {
 		Service server = Service.ignite()
 				.port( 0 )
 				.externalStaticFileLocation( REPORT_ROOT.toString() );
+		Served served = new Served( server, dir );
 		server.staticFiles.header( "Access-Control-Allow-Origin", "*" );
 		server.init();
 		server.awaitInitialization();
 
-		return new Served( server, dir );
+		return served;
+	}
+
+	/**
+	 * Builds a generated report whose Index is large enough to exercise pagination.
+	 * Detail files are copied from the supplied representative flow so all links
+	 * remain valid.
+	 *
+	 * @param dir        report directory
+	 * @param flow       representative Detail content
+	 * @param entryCount number of Index entries
+	 * @return the served report
+	 * @throws Exception if generation or fixture expansion fails
+	 */
+	public static Served serveLargeIndex( String dir, Flow flow, int entryCount ) throws Exception {
+		Served served = serve( dir, flow );
+		Path reportDir = REPORT_ROOT.resolve( dir );
+		Path indexPath = reportDir.resolve( "index.html" );
+		String content = Files.readString( indexPath, UTF_8 );
+		Index original = Template.extract( content, Index.class );
+		Entry source = original.entries.get( 0 );
+		Path sourceDetail = reportDir.resolve( "detail" ).resolve( source.detail + ".html" );
+
+		List<Entry> entries = new ArrayList<>();
+		for( int i = 1; i <= entryCount; i++ ) {
+			String detail = String.format( "flow-%03d", i );
+			entries.add( new Entry( String.format( "Flow %03d", i ), source.tags, detail ) );
+			Files.copy( sourceDetail, reportDir.resolve( "detail" ).resolve( detail + ".html" ) );
+		}
+
+		String startMarker = "// START_JSON_DATA";
+		String endMarker = "// END_JSON_DATA";
+		int dataStart = content.indexOf( '\n', content.indexOf( startMarker ) ) + 1;
+		int dataEnd = content.lastIndexOf( '\n', content.indexOf( endMarker ) );
+		String expanded = content.substring( 0, dataStart )
+				+ JSON.writeValueAsString( new Index( original.meta, entries ) )
+				+ content.substring( dataEnd );
+		Files.writeString( indexPath, expanded, UTF_8 );
+		return served;
 	}
 
 }
