@@ -1,13 +1,15 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { DiffPair } from '../flow-diff.service';
 import { removeResultTagsFrom } from '../types';
 
 export interface ListPair { index: number, pair: DiffPair };
 
 @Component({
-  selector: 'app-pair-select-item',
-  templateUrl: './pair-select-item.component.html',
-  styleUrls: ['./pair-select-item.component.css']
+    selector: 'app-pair-select-item',
+    templateUrl: './pair-select-item.component.html',
+    styleUrls: ['./pair-select-item.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class PairSelectItemComponent implements OnInit {
 

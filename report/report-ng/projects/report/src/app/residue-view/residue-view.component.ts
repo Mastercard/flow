@@ -1,12 +1,14 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Residue, residueAsserted, residueAssertionPassed } from '../types';
 import { DiffDisplay } from '../text-diff/text-diff.component';
 import { IconEmbedService } from '../icon-embed.service';
 
 @Component({
-  selector: 'app-residue-view',
-  templateUrl: './residue-view.component.html',
-  styleUrls: ['./residue-view.component.css']
+    selector: 'app-residue-view',
+    templateUrl: './residue-view.component.html',
+    styleUrls: ['./residue-view.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class ResidueViewComponent implements OnInit {
   @Input() residues: Residue[] = [];

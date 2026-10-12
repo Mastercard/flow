@@ -1,13 +1,15 @@
-import { Component, Input, OnChanges, OnInit, SimpleChanges, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { DIFF_EQUAL } from 'diff-match-patch';
 import { DIFF_DELETE, DIFF_INSERT, Diff, diff_match_patch } from 'diff-match-patch';
 
 @Component({
-  selector: 'app-text-diff',
-  templateUrl: './text-diff.component.html',
-  styleUrls: ['./text-diff.component.css']
+    selector: 'app-text-diff',
+    templateUrl: './text-diff.component.html',
+    styleUrls: ['./text-diff.component.css'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
-export class TextDiffComponent implements OnInit, OnChanges {
+export class TextDiffComponent implements OnChanges {
 
   /**
    * One half of the diff - the "before"
@@ -37,10 +39,6 @@ export class TextDiffComponent implements OnInit, OnChanges {
   constructor(
     private cdRef: ChangeDetectorRef
   ) {
-  }
-
-  ngOnInit(): void {
-    this.ngOnChanges();
   }
 
   ngOnChanges(changes?: SimpleChanges): void {

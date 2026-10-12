@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed, tick } from '@angular/core/testing';
+import { provideZoneChangeDetection } from '@angular/core';
 
 import { DiffDisplay, TextDiffComponent } from './text-diff.component';
 
@@ -8,7 +9,8 @@ describe('TextDiffComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [TextDiffComponent]
+      declarations: [TextDiffComponent],
+      providers: [provideZoneChangeDetection()]
     })
       .compileComponents();
 
