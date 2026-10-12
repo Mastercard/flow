@@ -309,7 +309,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 		((JavascriptExecutor) driver).executeScript(
 				"arguments[0].scrollIntoView({block: 'center'});", fromDragBox );
 		((JavascriptExecutor) driver).executeAsyncScript( ""
-				+ "const from = arguments[0], to = arguments[1], done = arguments[2];"
+				+ "const from = arguments[0], to = arguments[1], movingUp = arguments[2], done = arguments[3];"
 				+ "const start = from.getBoundingClientRect();"
 				+ "const end = to.getBoundingClientRect();"
 				+ "const event = (type, x, y, buttons) => new MouseEvent(type, {"
@@ -319,7 +319,7 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 				+ "const startX = start.left + start.width / 2;"
 				+ "const startY = start.top + start.height / 2;"
 				+ "const endX = end.left + end.width / 2;"
-				+ "const endY = end.top + 2;"
+				+ "const endY = movingUp ? end.top + 2 : end.bottom - 2;"
 				+ "from.dispatchEvent(event('mousedown', startX, startY, 1));"
 				+ "requestAnimationFrame(() => {"
 				+ "  document.dispatchEvent(event('mousemove', startX, startY + 10, 1));"
@@ -330,8 +330,11 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 				+ "      setTimeout(done, 250);"
 				+ "    });"
 				+ "  });"
-				+ "});", fromDragBox, toDragBox );
-		new WebDriverWait( driver, ofSeconds( 2 ) )
+				+ "});", fromDragBox, toDragBox, movingUp );
+		new WebDriverWait( driver, ofSeconds( 5 ) )
+				.withMessage( () -> String.format(
+						"Failed to move '%s' %s '%s' in %s list; current order: %s",
+						from, movingUp ? "before" : "after", to, id, dragOrder( id ) ) )
 				.until( dr -> {
 					List<String> order = dragOrder( id );
 					return movingUp
@@ -429,11 +432,23 @@ public class DiffSequence extends AbstractSequence<DiffSequence> {
 	 */
 	public DiffSequence hasChangeList( String... expected ) {
 		trace( "hasChangeList", (Object[]) expected );
-		Assertions.assertEquals(
-				Copy.pasta( expected ),
-				Copy.pasta( driver.findElements( By.tagName( "app-pair-select-item" ) ).stream()
-						.map( DiffSequence::flowItemToString ) ) );
+		String expectedList = Copy.pasta( expected );
+		new WebDriverWait( driver, ofSeconds( 5 ) )
+				.withMessage( () -> "Expected changes:\n" + expectedList
+						+ "\nbut was:\n" + changeList() )
+				.until( dr -> expectedList.equals( changeList() ) );
 		return this;
+	}
+
+	private String changeList() {
+		try {
+			return Copy.pasta( activeTabPanel()
+					.findElements( By.tagName( "app-pair-select-item" ) ).stream()
+					.map( DiffSequence::flowItemToString ) );
+		}
+		catch( StaleElementReferenceException ignored ) {
+			return "";
+		}
 	}
 
 	/**
