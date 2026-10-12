@@ -52,7 +52,6 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { RouterModule, Routes } from '@angular/router';
 import { TagSummaryComponent } from './tag-summary/tag-summary.component';
 import { ResidueViewComponent } from './residue-view/residue-view.component';
@@ -130,7 +129,6 @@ const routes: Routes = [
     MatMenuModule,
     MatPaginatorModule,
     MatProgressBarModule,
-    MatProgressSpinnerModule,
     MatRippleModule,
     MatSelectModule,
     MatSidenavModule,

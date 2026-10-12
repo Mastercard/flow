@@ -14,7 +14,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { FormsModule } from '@angular/forms';
 import { MatExpansionPanel } from '@angular/material/expansion';
-import { MatProgressSpinner, MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FlowLoadStatus } from '../model-diff-data.service';
 
 describe('SystemDiagramComponent', () => {
@@ -39,7 +38,6 @@ describe('SystemDiagramComponent', () => {
         MatButtonToggleModule,
         MatIconModule,
         MatProgressBarModule,
-        MatProgressSpinnerModule,
         MatTooltipModule,
         ClipboardModule,
         FormsModule,
@@ -74,7 +72,7 @@ describe('SystemDiagramComponent', () => {
     expect(mockMdds.path).toHaveBeenCalledTimes(1);
   });
 
-  it('shows only an accessible spinner while loading', () => {
+  it('shows only a centered accessible progress bar while loading', () => {
     fixture.detectChanges();
     fixture.debugElement.query(By.directive(MatExpansionPanel))
       .injector.get(MatExpansionPanel).open();
@@ -84,7 +82,9 @@ describe('SystemDiagramComponent', () => {
     expect(fixture.debugElement.query(By.css('[aria-label="Loading System diagram"]'))).not.toBeNull();
     const loading = fixture.debugElement.query(By.css('.interaction-loading'));
     expect(getComputedStyle(loading.nativeElement).alignItems).toBe('center');
-    expect(loading.query(By.directive(MatProgressSpinner)).componentInstance.diameter).toBe(48);
+    const progress = loading.query(By.css('mat-progress-bar'));
+    expect(progress.componentInstance.mode).toBe('determinate');
+    expect(progress.componentInstance.value).toBe(50);
     expect(fixture.debugElement.query(By.css('#interaction_controls_diagram'))).toBeNull();
     expect(fixture.debugElement.query(By.css('#interaction_summary'))).toBeNull();
   });

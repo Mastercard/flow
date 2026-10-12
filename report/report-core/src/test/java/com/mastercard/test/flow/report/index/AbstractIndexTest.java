@@ -211,6 +211,21 @@ abstract class AbstractIndexTest {
 						"dependent   [ERROR, pqr, stu]" );
 	}
 
+	/** Result summaries add their corresponding tag to the inclusion filter. */
+	@Test
+	void resultTagInclusion() {
+		assertSame( iseq, iseq.expandTags()
+				.clickResult( "FAIL" )
+				.hasExpandedTags()
+				.hasUrlArgs( "inc=FAIL" )
+				.hasFilters( "", "FAIL", "" )
+				.hasFlows( "child  [abc, def, ghi]" )
+				.hasTags( "3 tags on 1 flow _FAIL_ 100.0%",
+						"abc 100.0%",
+						"def 100.0%",
+						"ghi 100.0%" ) );
+	}
+
 	/**
 	 * Demonstrates tag exclusion filtering
 	 */

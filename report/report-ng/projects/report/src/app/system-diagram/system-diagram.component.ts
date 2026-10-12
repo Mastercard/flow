@@ -39,6 +39,7 @@ export class SystemDiagramComponent {
   private readonly lineEdge = '-->';
   private readonly thickEdge = '==>';
 
+  loadProgress: number = 0;
   summary: string = "";
   edges: Edge[] = [];
   renderedEdgeCount: number = 0;
@@ -71,6 +72,7 @@ export class SystemDiagramComponent {
     icons: IconEmbedService,
   ) {
     modelData.onFlowLoadStatus(this.modelLabel, (_, status: FlowLoadStatus) => {
+      this.loadProgress = status.progress;
       if (status.complete) {
         const loaded = status.total - status.failed;
         if (status.total > 0 && loaded === 0) {

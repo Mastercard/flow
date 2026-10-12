@@ -14,8 +14,9 @@
     padding: 16px;
 }
 
-.interaction-loading mat-spinner {
-    color: #777;
+.interaction-loading mat-progress-bar {
+    max-width: 420px;
+    width: 100%;
 }
 
 #interaction_controls_diagram {

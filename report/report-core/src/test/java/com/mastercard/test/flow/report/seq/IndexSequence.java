@@ -425,10 +425,34 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 	public IndexSequence expandTags() {
 		trace( "expandTags" );
 		driver.findElement( By.id( "tag_summary" ) )
-				.findElement( By.tagName( "mat-expansion-panel-header" ) )
+				.findElement( By.tagName( "mat-panel-title" ) )
 				.click();
 		new WebDriverWait( driver, ofSeconds( 2 ) )
 				.until( elementToBeClickable( By.id( "tag_sort_toggle" ) ) );
+		return self();
+	}
+
+	/**
+	 * Adds a result tag to the inclusion filter by clicking its summary button.
+	 *
+	 * @param result PASS, FAIL, SKIP, or ERROR
+	 * @return <code>this</code>
+	 */
+	public IndexSequence clickResult( String result ) {
+		trace( "clickResult", result );
+		driver.findElement( By.cssSelector( "#tag_summary button#" + result ) ).click();
+		return self();
+	}
+
+	/**
+	 * Asserts that filtering from a result button did not collapse the Tags panel.
+	 *
+	 * @return <code>this</code>
+	 */
+	public IndexSequence hasExpandedTags() {
+		trace( "hasExpandedTags" );
+		assertEquals( "true", driver.findElement( By.cssSelector(
+				"#tag_summary mat-expansion-panel-header" ) ).getAttribute( "aria-expanded" ) );
 		return self();
 	}
 
@@ -445,8 +469,8 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 				Copy.pasta( expected ),
 				Copy.pasta( Stream.of(
 						tagSummary.findElement( By.tagName( "mat-panel-description" ) )
-								.findElements( By.tagName( "span" ) ).stream()
-								.map( IndexSequence::spanIconText )
+								.findElements( By.cssSelector( ".summary, .result" ) ).stream()
+								.map( IndexSequence::elementIconText )
 								.collect( joining( " " ) )
 								.replace( "check_circle_outline", "_PASS_" )
 								.replace( "error_outline", "_FAIL_" )
@@ -457,7 +481,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 		return this;
 	}
 
-	private static String spanIconText( WebElement e ) {
+	private static String elementIconText( WebElement e ) {
 		List<String> content = new ArrayList<>();
 		e.findElements( By.tagName( "mat-icon" ) ).stream()
 				.map( i -> i.getAttribute( "svgIcon" ) )
