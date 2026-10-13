@@ -1,3 +1,29 @@
+<a id="v1.1.11"></a>
+# [v1.1.11](https://github.com/Mastercard/flow/releases/tag/v1.1.11) - 2026-10-13
+
+<!-- Release notes generated using configuration in .github/release.yml at v1.1.11 -->
+
+## What's Changed
+### Enhancements
+* Linear uniqueness checks by [@vchaitanya](https://github.com/vchaitanya) in [#1440](https://github.com/Mastercard/flow/pull/1440)
+* Make reporting thread-safe by [@vchaitanya](https://github.com/vchaitanya) in [#1447](https://github.com/Mastercard/flow/pull/1447)
+* Execute flows in parallel using junit configuration by [@vchaitanya](https://github.com/vchaitanya) in [#1448](https://github.com/Mastercard/flow/pull/1448)
+* Optimize JUnit report index publication by [@vchaitanya](https://github.com/vchaitanya) in [#1450](https://github.com/Mastercard/flow/pull/1450)
+* Update angular version to 22 by [@vchaitanya](https://github.com/vchaitanya) in [#1460](https://github.com/Mastercard/flow/pull/1460)
+* Improve report UI performance and size by [@vchaitanya](https://github.com/vchaitanya) in [#1461](https://github.com/Mastercard/flow/pull/1461)
+
+### Other changes
+* test(report): stabilise model diff dragging by [@vchaitanya](https://github.com/vchaitanya) in [#1467](https://github.com/Mastercard/flow/pull/1467)
+* test(report): await model diff state changes by [@vchaitanya](https://github.com/vchaitanya) in [#1469](https://github.com/Mastercard/flow/pull/1469)
+* Pin Maven with the official wrapper by [@vchaitanya](https://github.com/vchaitanya) in [#1470](https://github.com/Mastercard/flow/pull/1470)
+* Fix/pin maven wrapper 3.9.16 by [@vchaitanya](https://github.com/vchaitanya) in [#1471](https://github.com/Mastercard/flow/pull/1471)
+
+
+**Full Changelog**: https://github.com/Mastercard/flow/compare/v1.1.9...v1.1.11
+
+[Changes][v1.1.11]
+
+
 <a id="v1.1.9"></a>
 # [v1.1.9](https://github.com/Mastercard/flow/releases/tag/v1.1.9) - 2026-09-24
 
@@ -9,6 +35,9 @@
 * Update java version to 17 by [@vchaitanya](https://github.com/vchaitanya) in [#1035](https://github.com/Mastercard/flow/pull/1035)
 * Improve message-web text format [#596](https://github.com/Mastercard/flow/issues/596) by [@lezhdz98](https://github.com/lezhdz98) in [#1029](https://github.com/Mastercard/flow/pull/1029)
 ### Dependencies
+<details>
+  <summary>Details</summary> 
+
 * Bump @babel/core from 7.25.2 to 7.25.7 in /report/report-ng by [@dependabot](https://github.com/dependabot)[bot] in [#952](https://github.com/Mastercard/flow/pull/952)
 * Bump github/codeql-action from 3.26.9 to 3.26.11 by [@dependabot](https://github.com/dependabot)[bot] in [#954](https://github.com/Mastercard/flow/pull/954)
 * Bump actions/cache from 4.0.2 to 4.1.0 by [@dependabot](https://github.com/dependabot)[bot] in [#955](https://github.com/Mastercard/flow/pull/955)
@@ -254,6 +283,8 @@
 * Bump org.jacoco:jacoco-maven-plugin from 0.8.14 to 0.8.15 by [@dependabot](https://github.com/dependabot)[bot] in [#1413](https://github.com/Mastercard/flow/pull/1413)
 * Bump org.pitest:pitest-maven from 1.25.7 to 1.25.8 by [@dependabot](https://github.com/dependabot)[bot] in [#1414](https://github.com/Mastercard/flow/pull/1414)
 * Bump github/codeql-action/upload-sarif from 4.34.1 to 4.37.4 by [@dependabot](https://github.com/dependabot)[bot] in [#1415](https://github.com/Mastercard/flow/pull/1415)
+</details>
+
 ### Other Changes
 * Disabling mysterious CI failures by [@therealryan](https://github.com/therealryan) in [#974](https://github.com/Mastercard/flow/pull/974)
 * Add timezone to chrome driver for ModelDiffTest by [@vchaitanya](https://github.com/vchaitanya) in [#986](https://github.com/Mastercard/flow/pull/986)
@@ -1183,6 +1214,7 @@
 [Changes][v0.0.3]
 
 
+[v1.1.11]: https://github.com/Mastercard/flow/compare/v1.1.9...v1.1.11
 [v1.1.9]: https://github.com/Mastercard/flow/compare/v1.1.6...v1.1.9
 [v1.1.6]: https://github.com/Mastercard/flow/compare/v1.1.5...v1.1.6
 [v1.1.5]: https://github.com/Mastercard/flow/compare/v1.1.4...v1.1.5
