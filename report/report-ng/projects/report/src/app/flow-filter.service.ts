@@ -55,12 +55,12 @@ export class FlowFilterService {
     let dsc;
     try {
       dsc = this.descMatch.length == 0
-        || entry.description.search(new RegExp(this.descMatch)) != -1;
+        || entry.description.search(new RegExp(this.descMatch, "i")) != -1;
     }
     catch (e) {
       // failed to compile regex, just look for text match
       dsc = this.descMatch.length == 0
-        || entry.description.includes(this.descMatch);
+        || entry.description.toLowerCase().includes(this.descMatch.toLowerCase());
     }
 
     let included = this.include.size == 0
