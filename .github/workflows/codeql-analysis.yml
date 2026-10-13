@@ -37,7 +37,7 @@ jobs:
         languages: ${{ matrix.language }}
 
     - name: Build with Maven
-      run: mvn -B -Dnode=none test-compile
+      run: ./mvnw -B -Dnode=none test-compile
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@38697555549f1db7851b81482ff19f1fa5c4fedc # v3.29.5

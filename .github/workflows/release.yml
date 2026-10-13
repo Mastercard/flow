@@ -34,4 +34,4 @@ jobs:
     - name: Create release
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      run: mvn -B -Dnode=system release:prepare
+      run: ./mvnw -B -Dnode=system release:prepare
