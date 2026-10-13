@@ -61,7 +61,7 @@ jobs:
           echo "Checked-out commit does not match tag ${RELEASE_TAG}" >&2
           exit 1
         fi
-        VERSION="$(mvn -q help:evaluate -Dexpression=project.version -DforceStdout | tail -n 1)"
+        VERSION="$(./mvnw -q help:evaluate -Dexpression=project.version -DforceStdout | tail -n 1)"
         if [[ "${VERSION}" == *-SNAPSHOT ]]; then
           echo "Refusing to publish snapshot version ${VERSION}" >&2
           exit 1
@@ -72,13 +72,13 @@ jobs:
         fi
 
     - name: Build and test
-      run: mvn -B clean -Dnode=system -Dbrowser.skip=true -P '!node-system-test' package
+      run: ./mvnw -B clean -Dnode=system -Dbrowser.skip=true -P '!node-system-test' package
 
     - name: Validate artifact signing
       if: ${{ !inputs.publish }}
       env:
         GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-      run: mvn -B -Dnode=system -Prelease -DskipTests verify
+      run: ./mvnw -B -Dnode=system -Prelease -DskipTests verify
 
     - name: Save signatures
       if: ${{ !inputs.publish }}
@@ -94,4 +94,4 @@ jobs:
         GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
         MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
-      run: mvn -B -Dnode=system -Prelease -DskipTests deploy
+      run: ./mvnw -B -Dnode=system -Prelease -DskipTests deploy
