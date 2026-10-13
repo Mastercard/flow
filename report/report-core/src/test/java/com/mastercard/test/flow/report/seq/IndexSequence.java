@@ -697,6 +697,7 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 
 		new WebDriverWait( driver, ofSeconds( 2 ) )
 				.withMessage( () -> interactionDiagnostics()
+						+ "\nsummary:\n" + Copy.pasta( summariseSVG( interactionDiagram() ) )
 						+ "\ndiagram:\n" + interactionDiagram() )
 				.until( dr -> {
 					try {
@@ -723,7 +724,8 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 				+ "return Array.from(document.querySelectorAll('#interactions_diagram path.flowchart-link'))"
 				+ ".map(path => {"
 				+ "  const style = getComputedStyle(path);"
-				+ "  return path.getAttribute('class')"
+				+ "  return 'data-id=' + path.getAttribute('data-id')"
+				+ "    + ' class=' + path.getAttribute('class')"
 				+ "    + ' inline=' + path.getAttribute('style')"
 				+ "    + ' computed=' + style.strokeWidth + '/' + style.visibility;"
 				+ "}).join('\\n');" );
@@ -779,12 +781,15 @@ public class IndexSequence extends AbstractSequence<IndexSequence> {
 											.findFirst().orElse( prefix + "???" ) );
 						} );
 
-				Optional.of( nl.item( i ) )
+				boolean hidden = Optional.of( nl.item( i ) )
 						.map( Node::getAttributes )
-						.map( a -> a.getNamedItem( "style" ) )
+						.map( a -> a.getNamedItem( "visibility" ) )
 						.map( Node::getTextContent )
-						.filter( s -> s.contains( "stroke-width: 0" ) )
-						.ifPresent( s -> sb.append( " <INVISIBLE>" ) );
+						.filter( "hidden"::equals )
+						.isPresent();
+				if( hidden ) {
+					sb.append( " <INVISIBLE>" );
+				}
 			}
 
 			return sb.toString();

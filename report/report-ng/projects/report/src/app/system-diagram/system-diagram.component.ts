@@ -281,11 +281,19 @@ export class SystemDiagramComponent {
             .innerHTML = this.mermaidMarkup;
 
           this.renderedEdgeCount = this.edges.length;
-          import("mermaid")
-            .then(({ default: mermaid }) => mermaid.run({
-              nodes: [this.containerElRef!.nativeElement.querySelector("pre")],
-            }))
-            .then(() => requestAnimationFrame(() => this.rerender()));
+          import('mermaid')
+            .then(({ default: mermaid }) => {
+              mermaid.initialize({
+                layout: 'dagre',
+                look: 'classic',
+                startOnLoad: false,
+                theme: 'default',
+              });
+              return mermaid.run({
+                nodes: [this.containerElRef!.nativeElement.querySelector('pre')],
+                postRenderCallback: () => this.rerender(),
+              });
+            });
         }
       }
       else {
@@ -294,40 +302,48 @@ export class SystemDiagramComponent {
         // style names have the svg's ID (which is dynamic) as a prefix, so we have to find that first
         let markers: HTMLElement[] = (Array.from(this.containerElRef?.nativeElement
           .querySelectorAll("marker")) as HTMLElement[])
-          .filter(marker => marker.id.includes("flowchart-pointEnd"));
+          .filter(marker => marker.id.includes('pointEnd'));
         let pointEndId = markers.length > 0 ? markers[0].id : "unknown!";
 
-        let paths: HTMLElement[] = (Array.from(this.containerElRef?.nativeElement
-          .querySelectorAll("path")) as HTMLElement[])
-          .filter(path => path.classList.contains("flowchart-link"));
+        const paths: HTMLElement[] = Array.from(this.containerElRef.nativeElement
+          .querySelectorAll('path[data-edge="true"]')) as HTMLElement[];
 
-        this.edges.forEach(edge => {
-          paths
-            .filter(path => path.classList.contains("LS-" + edge.from)
-              && path.classList.contains("LE-" + edge.to))
-            .forEach(path => {
-              if (edge.edge === this.dottedEdge) {
-                this.dottedEdgeStyle(path, pointEndId);
-              }
-              else if (edge.edge === this.thickEdge) {
-                this.thickEdgeStyle(path, pointEndId);
-              }
-              else if (edge.edge === this.invisibleEdge) {
-                this.invisibleEdgeStyle(path);
-              }
-              else {
-                this.lineEdgeStyle(path, pointEndId);
-              }
-            });
+        this.edges.forEach((edge, index) => {
+          // Mermaid 12 omits endpoint metadata from invisible links, but keeps source order.
+          const path = paths.find(candidate => this.connects(candidate, edge)) ?? paths[index];
+          if (path === undefined) {
+            return;
+          }
+          path.classList.add('LS-' + edge.from, 'LE-' + edge.to);
+          if (edge.edge === this.dottedEdge) {
+            this.dottedEdgeStyle(path, pointEndId);
+          }
+          else if (edge.edge === this.thickEdge) {
+            this.thickEdgeStyle(path, pointEndId);
+          }
+          else if (edge.edge === this.invisibleEdge) {
+            this.invisibleEdgeStyle(path);
+          }
+          else {
+            this.lineEdgeStyle(path, pointEndId);
+          }
         });
       }
     }
+  }
+
+  private connects(path: HTMLElement, edge: Edge): boolean {
+    const dataId = path.getAttribute('data-id');
+    return (path.classList.contains('LS-' + edge.from)
+      && path.classList.contains('LE-' + edge.to))
+      || dataId?.startsWith('L_' + edge.from + '_' + edge.to + '_') === true;
   }
 
   private lineEdgeStyle(e: HTMLElement, pointEndId: string): void {
     this.replaceClass(e, "edge-thickness-", "normal");
     this.replaceClass(e, "edge-pattern-", "solid");
     this.setAttr(e, "style", "");
+    this.setAttr(e, 'visibility', '');
     this.setAttr(e, "marker-end", "url(#" + pointEndId + ")");
   }
 
@@ -335,6 +351,7 @@ export class SystemDiagramComponent {
     this.replaceClass(e, "edge-thickness-", "thick");
     this.replaceClass(e, "edge-pattern-", "solid");
     this.setAttr(e, "style", "");
+    this.setAttr(e, 'visibility', '');
     this.setAttr(e, "marker-end", "url(#" + pointEndId + ")");
   }
 
@@ -342,6 +359,7 @@ export class SystemDiagramComponent {
     this.replaceClass(e, "edge-thickness-", "normal");
     this.replaceClass(e, "edge-pattern-", "dotted");
     this.setAttr(e, "style", "");
+    this.setAttr(e, 'visibility', '');
     this.setAttr(e, "marker-end", "url(#" + pointEndId + ")");
   }
 
@@ -349,6 +367,7 @@ export class SystemDiagramComponent {
     this.replaceClass(e, "edge-thickness-", "normal");
     this.replaceClass(e, "edge-pattern-", "solid");
     this.setAttr(e, "style", "stroke-width: 0");
+    this.setAttr(e, 'visibility', 'hidden');
     this.setAttr(e, "marker-end", "");
   }
 

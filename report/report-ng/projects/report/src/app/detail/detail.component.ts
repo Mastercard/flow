@@ -43,7 +43,7 @@ export class DetailComponent implements OnChanges, OnInit {
   sequence: SequenceData = { entity: [], exercised: [], item: [] };
   options: Options = new Options();
   tabIndex = 0;
-  motivationHtml: string = "";
+  motivationHtml: string = '';
 
 
   constructor(
