@@ -7,8 +7,8 @@
 		<version>1.1.12-SNAPSHOT</version>
 	</parent>
 	<artifactId>report-ng</artifactId>
-	<name>report-ng</name>
 	<packaging>jar</packaging>
+	<name>report-ng</name>
 	<description>Report webapp</description>
 
 	<properties>

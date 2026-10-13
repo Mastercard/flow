@@ -7,8 +7,8 @@
 		<version>1.1.12-SNAPSHOT</version>
 	</parent>
 	<artifactId>validation-junit5</artifactId>
-	<name>validation-junit5</name>
 	<packaging>jar</packaging>
+	<name>validation-junit5</name>
 	<description>Junit5 validation components</description>
 
 	<dependencies>

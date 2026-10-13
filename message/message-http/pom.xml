@@ -7,8 +7,8 @@
 		<version>1.1.12-SNAPSHOT</version>
 	</parent>
 	<artifactId>message-http</artifactId>
-	<name>message-http</name>
 	<packaging>jar</packaging>
+	<name>message-http</name>
 	<description>HyperText Transfer Protocol messages</description>
 
 	<dependencies>

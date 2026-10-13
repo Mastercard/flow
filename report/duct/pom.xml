@@ -7,8 +7,8 @@
 		<version>1.1.12-SNAPSHOT</version>
 	</parent>
 	<artifactId>duct</artifactId>
-	<name>duct</name>
 	<packaging>jar</packaging>
+	<name>duct</name>
 	<description>Report server</description>
 
 	<dependencies>
