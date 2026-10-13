@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { BasisFetchService } from '../basis-fetch.service';
 import { SequenceData } from '../flow-sequence/flow-sequence.component';
@@ -20,6 +20,7 @@ import {
   residuesAsserted,
 } from '../types';
 import { IconEmbedService } from '../icon-embed.service';
+import { marked } from 'marked';
 
 /**
  * The root component of the flow detail view
@@ -31,7 +32,7 @@ import { IconEmbedService } from '../icon-embed.service';
     changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
-export class DetailComponent implements OnInit {
+export class DetailComponent implements OnChanges, OnInit {
   @Input() flow: Flow = empty_flow;
   msgPassed: boolean = false;
   msgFailed: boolean = false;
@@ -42,6 +43,7 @@ export class DetailComponent implements OnInit {
   sequence: SequenceData = { entity: [], exercised: [], item: [] };
   options: Options = new Options();
   tabIndex = 0;
+  motivationHtml: string = "";
 
 
   constructor(
@@ -63,6 +65,10 @@ export class DetailComponent implements OnInit {
     icons.register(
       "list", "task_alt", "foundation", "groups",
       "check_circle_outline", "error_outline");
+  }
+
+  ngOnChanges(): void {
+    this.motivationHtml = marked.parse(this.flow.motivation, { async: false });
   }
 
   ngOnInit(): void {

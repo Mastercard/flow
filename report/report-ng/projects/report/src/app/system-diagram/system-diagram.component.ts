@@ -1,5 +1,4 @@
 import { Component, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
-import mermaid from "mermaid";
 import { FlowLoadStatus, ModelDiffDataService } from '../model-diff-data.service';
 import { Entry, Interaction } from '../types';
 import { FlowFilterService } from '../flow-filter.service';
@@ -282,7 +281,11 @@ export class SystemDiagramComponent {
             .innerHTML = this.mermaidMarkup;
 
           this.renderedEdgeCount = this.edges.length;
-          mermaid.init().then(() => requestAnimationFrame(() => this.rerender()));
+          import("mermaid")
+            .then(({ default: mermaid }) => mermaid.run({
+              nodes: [this.containerElRef!.nativeElement.querySelector("pre")],
+            }))
+            .then(() => requestAnimationFrame(() => this.rerender()));
         }
       }
       else {

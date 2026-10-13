@@ -19,7 +19,6 @@ import { ViewOptionsComponent } from './view-options/view-options.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { provideHttpClient, withInterceptorsFromDi, withXhr } from '@angular/common/http';
-import { MarkdownModule } from 'ngx-markdown';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -116,7 +115,6 @@ const routes: Routes = [
     ClipboardModule,
     DragDropModule,
     FormsModule,
-    MarkdownModule.forRoot(),
     MatAutocompleteModule,
     MatButtonToggleModule,
     MatChipsModule,

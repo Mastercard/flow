@@ -40,7 +40,7 @@
 </mat-toolbar>
 
 <div id="motivation">
-    <markdown>{{flow.motivation}}</markdown>
+    <div [innerHTML]="motivationHtml"></div>
 </div>
 <div id="trace">{{flow.trace}}</div>
 

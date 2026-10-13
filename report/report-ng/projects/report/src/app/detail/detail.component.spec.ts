@@ -33,7 +33,6 @@ describe('DetailComponent', () => {
         StubResidueView,
         StubFlowSequence,
         StubTransmission,
-        StubMarkdown,
         StubViewOptions,
       ],
       providers: [
@@ -73,6 +72,18 @@ describe('DetailComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should render and sanitize motivation markdown', () => {
+    fixture.componentRef.setInput('flow', {
+      ...component.flow,
+      motivation: '**important** <script>unsafe</script>',
+    });
+    fixture.detectChanges();
+
+    const motivation = fixture.debugElement.query(By.css('#motivation')).nativeElement;
+    expect(motivation.querySelector('strong').textContent).toBe('important');
+    expect(motivation.querySelector('script')).toBeNull();
   });
 
   it('should have one tab with no logs, context or residue', async () => {
@@ -230,13 +241,4 @@ class StubTransmission {
   @Input() display: Display = Display.Actual;
   @Input() diffType: DiffType = DiffType.Asserted;
   @Input() diffFormat: DiffDisplay = 'unified';
-}
-
-@Component({
-    selector: 'markdown',
-    template: '',
-    changeDetection: ChangeDetectionStrategy.Eager,
-    standalone: false
-})
-class StubMarkdown {
 }
