@@ -103,7 +103,7 @@ describe('IndexComponent', () => {
     expect(fixture.debugElement.query(By.css('mat-paginator'))).not.toBeNull();
   });
 
-  it('resets to the first page when filters change', () => {
+  it('resets to the first page and filters descriptions case-insensitively', () => {
     const entries = Array.from({ length: 205 }, (_, index) => entry(index + 1));
     mockIndexData.get.and.returnValue(index(entries));
     fixture.destroy();
@@ -112,7 +112,7 @@ describe('IndexComponent', () => {
     fixture.detectChanges();
     component.onPage({ pageIndex: 2, pageSize: 50, length: 205 } as PageEvent);
 
-    TestBed.inject(FlowFilterService).setDescriptionMatch('Flow 1');
+    TestBed.inject(FlowFilterService).setDescriptionMatch('flow 1');
 
     expect(component.pageIndex).toBe(0);
     expect(component.pagedFlows[0].detail).toBe('flow-1');
