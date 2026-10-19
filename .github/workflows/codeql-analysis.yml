@@ -40,4 +40,4 @@ jobs:
       run: ./mvnw -B -Dnode=none test-compile
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@38697555549f1db7851b81482ff19f1fa5c4fedc # v3.29.5
+      uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v3.29.5
