@@ -26,7 +26,7 @@ import com.mastercard.test.flow.msg.Mask;
  *
  * @param <T> self
  */
-public abstract class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
+public abstract sealed class HttpMsg<T extends HttpMsg<T>> extends AbstractMessage<T> {
 
 	/**
 	 * Use this as the field path to set the HTTP request version
